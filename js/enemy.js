@@ -11,9 +11,9 @@
 // 另外两种（archer / mage）只写好了配置，第一关不生成，
 // 等第二关接投射物与光环逻辑。字段含义见各自的注释。
 // ============================================================
-import * as THREE from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
+import * as THREE from '../lib/three.module.js';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js';
+import { clone as cloneSkinned } from '../lib/jsm/utils/SkeletonUtils.js';
 import { distance2D } from './stats.js';
 import { createRangeRing } from './rangeRing.js';
 

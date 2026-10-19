@@ -12,8 +12,8 @@
 //   yaw      —— 朝向组（rotation.y = 面朝方向，模型正面是 +Z）
 //   update(dt, speed01) —— speed01 = 当前速度 / 最大速度，0 待机、1 全速
 // ============================================================
-import * as THREE from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import * as THREE from '../lib/three.module.js';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js';
 
 // 切分点与蛙步 dancer.js 的 SPLIT 保持一致（换模型时对照这里调）
 const RIG = {
@@ -30,6 +30,51 @@ const RIG = {
 // 模型自身朝向修正：0 = 模型正面朝 +Z（和蛙步舞台一致）。
 // 如果哪天换了模型发现角色倒着走，把这里改成 Math.PI。
 export const MODEL_YAW = 0;
+
+// 攻击动作参数：一次「单臂拍击」= 抬手 → 拍下 → 回收。
+// dur 要小于攻击间隔（攻速 1.2 次/秒 = 0.83 秒），否则连击时会互相打断。
+const ATK = {
+  dur: 0.34,
+  windup: 0.28,        // 抬手在整段动作里的占比
+  strike: 0.22,        // 拍下占比（占比小 = 出手快）
+  armUp: -1.65,        // 抬手角度（负 = 往后抬）
+  armSwing: 2.15,      // 拍下时手臂最前角度
+  lean: 0.14,          // 抬手时后仰
+  leanDown: -0.34,     // 拍下时前倾
+  twist: 0.55,         // 躯干扭转幅度
+  lunge: 0.16,         // 出手时往前顶的距离
+};
+
+// k: 0→1 的动作进度，返回这一帧的叠加姿态
+function attackPose(k) {
+  const w = ATK.windup, s = ATK.strike;
+  if (k < w) {                                  // 抬手：慢慢蓄力
+    const e = Math.pow(k / w, 2);
+    return {
+      arm: ATK.armUp * e,
+      lean: ATK.lean * e,
+      twist: -ATK.twist * 0.5 * e,
+      lunge: -ATK.lunge * 0.3 * e,
+    };
+  }
+  if (k < w + s) {                              // 拍下：一口气甩出去
+    const e = 1 - Math.pow(1 - (k - w) / s, 3);
+    return {
+      arm: ATK.armUp + (ATK.armSwing - ATK.armUp) * e,
+      lean: ATK.lean + (ATK.leanDown - ATK.lean) * e,
+      twist: -ATK.twist * 0.5 + ATK.twist * e,
+      lunge: -ATK.lunge * 0.3 + ATK.lunge * 1.3 * e,
+    };
+  }
+  const e = 1 - Math.pow(1 - (k - w - s) / (1 - w - s), 2);   // 回收：慢慢收回
+  const back = 1 - e;
+  return {
+    arm: ATK.armSwing * back,
+    lean: ATK.leanDown * back,
+    twist: ATK.twist * back,
+    lunge: ATK.lunge * back,
+  };
+}
 
 const _v1 = new THREE.Vector3();
 const _v2 = new THREE.Vector3();
@@ -61,7 +106,11 @@ export function loadFrog(url, onProgress) {
         catch (err) { reject(err); }
       },
       (ev) => {
-        if (onProgress && ev && ev.total) onProgress(ev.loaded / ev.total);
+        if (!onProgress || !ev || !ev.loaded) return;
+        // 手机浏览器 / 部分代理拿不到 Content-Length（total 为 0），
+        // 这里按 rigged.glb 的实际大小估个进度，免得进度条一直停在 0%。
+        const total = ev.total > 0 ? ev.total : 740000;
+        onProgress(Math.min(1, ev.loaded / total));
       },
       (err) => reject(err)
     );
@@ -290,9 +339,13 @@ function makeFrogObject(parts) {
   const { spine, head, armL, armR, legL, legR } = bones;
 
   const st = { phase: 0, t: 0, speed: 0 };
+  let atkT = 0;    // 攻击动作剩余时间
 
   return {
     root, yaw, tilt, mesh, bones,
+    // 出手瞬间调用：重播一次拍击，不排队（连击就是重新起手）
+    playAttack() { atkT = ATK.dur; },
+    get attacking() { return atkT > 0; },
     update(dt, speed01) {
       st.t += dt;
       // 速度做二次平滑：起步/刹车不会瞬间切换动画
@@ -326,6 +379,22 @@ function makeFrogObject(parts) {
       head.rotation.x = -0.03 * b + Math.sin(st.t * 1.3) * 0.02 * idle;
       head.rotation.y = Math.sin(st.t * 0.8) * 0.07 * idle;
       head.rotation.z = -swing * 0.05 * b;
+
+      // ---- 攻击覆盖层：叠在走/待机之上，所以放在最后加 ----
+      if (atkT > 0) {
+        atkT = Math.max(0, atkT - dt);
+        const p = attackPose(1 - atkT / ATK.dur);
+        armR.rotation.x += p.arm;
+        armL.rotation.x += p.arm * 0.28;          // 另一只手跟着甩一点，别太僵
+        armR.rotation.z += Math.sin((1 - atkT / ATK.dur) * Math.PI) * 0.16;
+        tilt.rotation.x += p.lean;
+        tilt.position.z = p.lunge;
+        spine.rotation.y += p.twist;
+        head.rotation.x -= p.lean * 0.45;         // 头稳住，别整个栽下去
+        head.rotation.y -= p.twist * 0.3;
+      } else {
+        tilt.position.z = 0;
+      }
     },
   };
 }
@@ -367,8 +436,11 @@ export function buildFallbackFrog() {
   root.scale.setScalar(1);
 
   const bones = {};
+  let atkT = 0;
   return {
     root, yaw, tilt, mesh: body, bones, fallback: true,
+    playAttack() { atkT = ATK.dur; },
+    get attacking() { return atkT > 0; },
     // 兜底角色没有骨骼，只有整体起伏，但接口保持一致
     update(dt, speed01) {
       const b = Math.max(0, Math.min(1, speed01));
@@ -376,6 +448,15 @@ export function buildFallbackFrog() {
       tilt.position.y = Math.abs(Math.sin(fallbackT * 2)) * 0.06 * b;
       tilt.rotation.x = -0.06 * b;
       tilt.rotation.z = Math.sin(fallbackT) * 0.05 * b;
+      // 攻击：没有手臂可动，整体往前一扑
+      if (atkT > 0) {
+        atkT = Math.max(0, atkT - dt);
+        const push = Math.sin((1 - atkT / ATK.dur) * Math.PI);
+        tilt.position.z = push * 0.22;
+        tilt.rotation.x -= push * 0.3;
+      } else {
+        tilt.position.z = 0;
+      }
     },
   };
 }

@@ -5,7 +5,7 @@
 // 边界石圈。战斗/敌人都还没进来，所以这里没有任何逻辑，
 // 只有 buildNightScene() 和每帧的 update()。
 // ============================================================
-import * as THREE from 'three';
+import * as THREE from '../lib/three.module.js';
 
 export function buildNightScene({ arenaRadius = 15 } = {}) {
   const scene = new THREE.Scene();
