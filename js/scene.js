@@ -9,14 +9,14 @@ import * as THREE from 'three';
 
 export function buildNightScene({ arenaRadius = 15 } = {}) {
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x070d12);
-  scene.fog = new THREE.FogExp2(0x0a1822, 0.021);
+  scene.background = new THREE.Color(0x0b1319);
+  scene.fog = new THREE.FogExp2(0x0d1f2b, 0.0175);
 
   // ---------------- 灯光：冷月光 + 环境天光 ----------------
-  const hemi = new THREE.HemisphereLight(0x4a6f96, 0x112218, 0.95);
+  const hemi = new THREE.HemisphereLight(0x4a6f96, 0x112218, 1.15);
   scene.add(hemi);
 
-  const moonLight = new THREE.DirectionalLight(0xc7dcff, 2.7);
+  const moonLight = new THREE.DirectionalLight(0xc7dcff, 2.95);
   moonLight.position.set(-11, 17, 9);
   moonLight.castShadow = true;
   moonLight.shadow.mapSize.set(2048, 2048);
@@ -33,7 +33,7 @@ export function buildNightScene({ arenaRadius = 15 } = {}) {
   scene.add(moonLight.target);
 
   // 一点点偏青的补光，避免背光面死黑
-  const rim = new THREE.DirectionalLight(0x3f7f74, 0.5);
+  const rim = new THREE.DirectionalLight(0x3f7f74, 0.62);
   rim.position.set(9, 6, -12);
   scene.add(rim);
 
@@ -92,7 +92,7 @@ export function buildNightScene({ arenaRadius = 15 } = {}) {
   // ---------------- 草丛（细锥体，纯粹是地面细节） ----------------
   const tuftGeo = new THREE.ConeGeometry(0.055, 0.34, 4, 1, true);
   const tuftMat = new THREE.MeshStandardMaterial({
-    color: 0x3a6a49, roughness: 1, side: THREE.DoubleSide, flatShading: true,
+    color: 0x437a56, roughness: 1, side: THREE.DoubleSide, flatShading: true,
   });
   const TUFTS = 900;
   const tufts = new THREE.InstancedMesh(tuftGeo, tuftMat, TUFTS);
@@ -194,7 +194,7 @@ function makeGrassTexture() {
   cv.width = cv.height = S;
   const g = cv.getContext('2d');
 
-  g.fillStyle = '#20392a';
+  g.fillStyle = '#26402f';
   g.fillRect(0, 0, S, S);
 
   // 大块明暗斑（模拟草皮的深浅）
