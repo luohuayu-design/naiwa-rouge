@@ -9,15 +9,16 @@ import * as THREE from 'three';
 import { buildNightScene } from './scene.js';
 import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js';
 import { createInput } from './input.js';
+import { createStats, STAT_DEFS } from './stats.js';
 
 // ---------------- 可调参数 ----------------
 const ARENA_R = 15;          // 可走半径（石头圈在 15.55）
 const BODY_R = 0.65;         // 角色自身半径（贴边留一点余量）
-const MOVE_SPEED = 4.4;      // 最大移动速度（世界单位/秒）
 const ACCEL = 14;            // 速度趋近系数，越大越「跟手」
 const TURN_SPEED = 13;       // 转身角速度系数
 const CAM_OFFSET = new THREE.Vector3(0, 10.6, 9.2);
 const CAM_LERP = 7;
+// 移动速度不在这里调了 —— 见 stats.js 的 STAT_DEFS 里 moveSpeed（属性面板实时生效）
 
 // ---------------- 渲染器 ----------------
 const app = document.getElementById('app');
@@ -99,10 +100,102 @@ const input = createInput(
   document.getElementById('stick')
 );
 
+// ---------------- 属性 ----------------
+const stats = createStats();
+
 // ---------------- HUD ----------------
-const statsEl = document.getElementById('stats');
+const dbgEl = document.getElementById('stats');
 const hintEl = document.getElementById('hint');
+const hpCard = document.getElementById('hpCard');
+const hpCurEl = document.getElementById('hpCur');
+const hpMaxEl = document.getElementById('hpMax');
+const hpFillEl = document.getElementById('hpFill');
+const hpBarEl = hpFillEl.parentElement;
+const hudKeyEl = document.getElementById('hudKey');
+const apPanel = document.getElementById('attrPanel');
+const apList = document.getElementById('apList');
+const apSub = document.getElementById('apSub');
 let hintDone = false;
+
+// 关键属性（生命走血条，这里放三个最常看的）
+const KEY_STATS = ['moveSpeed', 'armor', 'critRate'];
+
+function renderHud() {
+  const maxHp = stats.get('maxHp');
+  const cur = stats.hp.cur;
+  const ratio = maxHp > 0 ? Math.max(0, Math.min(1, cur / maxHp)) : 0;
+
+  hpCurEl.textContent = Math.ceil(cur);
+  hpMaxEl.textContent = Math.round(maxHp);
+  hpFillEl.style.width = (ratio * 100).toFixed(1) + '%';
+  hpBarEl.classList.toggle('low', ratio <= 0.25);
+  hpBarEl.classList.toggle('mid', ratio > 0.25 && ratio <= 0.5);
+
+  hudKeyEl.textContent = '';
+  for (const key of KEY_STATS) {
+    const def = STAT_DEFS.find((d) => d.key === key);
+    if (!def) continue;
+    const wrap = document.createElement('span');
+    const label = document.createElement('i');
+    label.textContent = def.name;
+    const val = document.createElement('b');
+    val.textContent = def.fmt(stats.get(key));
+    wrap.append(label, val);
+    hudKeyEl.appendChild(wrap);
+  }
+}
+
+// 属性面板：每次打开时重建，数值永远是最新的
+function renderPanel() {
+  apSub.textContent = `生命 ${Math.ceil(stats.hp.cur)} / ${Math.round(stats.get('maxHp'))} · 共 ${STAT_DEFS.length} 项`;
+  apList.textContent = '';
+  for (const def of STAT_DEFS) {
+    const row = document.createElement('div');
+    row.className = 'ap-row';
+    const name = document.createElement('div');
+    name.className = 'ap-name';
+    name.textContent = def.name;
+    const val = document.createElement('div');
+    val.className = 'ap-val';
+    val.textContent = def.fmt(stats.get(def.key));
+    const desc = document.createElement('div');
+    desc.className = 'ap-desc';
+    desc.textContent = def.desc;
+    row.append(name, val, desc);
+    apList.appendChild(row);
+  }
+}
+
+let panelOpen = false;
+function setPanel(open) {
+  panelOpen = open;
+  if (open) {
+    input.joystick.release();   // 面板盖住屏幕，别让摇杆一直输出
+    renderPanel();
+    apPanel.classList.add('on');
+    apPanel.setAttribute('aria-hidden', 'false');
+  } else {
+    apPanel.classList.remove('on');
+    apPanel.setAttribute('aria-hidden', 'true');
+  }
+}
+
+hpCard.addEventListener('click', () => setPanel(!panelOpen));
+document.getElementById('apClose').addEventListener('click', () => setPanel(false));
+apPanel.addEventListener('click', (e) => {
+  // 点卡片外的遮罩区域关闭
+  if (e.target === apPanel) setPanel(false);
+});
+addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && panelOpen) setPanel(false);
+});
+
+renderHud();
+
+// 调试钩子：只有 ?debug=1 才挂到 window，方便自动化测试读内部状态（正常游玩不暴露）
+if (new URLSearchParams(location.search).has('debug')) {
+  window.__game = { stats, pos, vel, input, getYaw: () => yaw };
+}
 
 // ---------------- 主循环 ----------------
 const clock = new THREE.Clock();
@@ -122,9 +215,11 @@ function tick() {
   const t = clock.elapsedTime;
 
   // 1) 输入 → 目标速度（屏幕 y 向下 = 世界 +Z，相机在 +Z 方向看向场景）
+  //    移速取属性面板里的实时值：升级加成就立刻跑得更快
+  const moveSpeed = stats.get('moveSpeed');
   const dir = input.read();
-  const targetVX = dir.x * MOVE_SPEED;
-  const targetVZ = dir.y * MOVE_SPEED;
+  const targetVX = dir.x * moveSpeed;
+  const targetVZ = dir.y * moveSpeed;
   const k = 1 - Math.exp(-ACCEL * dt);
   vel.x += (targetVX - vel.x) * k;
   vel.z += (targetVZ - vel.z) * k;
@@ -148,7 +243,7 @@ function tick() {
 
   // 3) 朝向：只在真的在走的时候转身，停下保持原朝向
   const speed = Math.hypot(vel.x, vel.z);
-  const speed01 = Math.min(1, speed / MOVE_SPEED);
+  const speed01 = Math.min(1, speed / Math.max(0.01, moveSpeed));
   if (speed > 0.35) {
     const targetYaw = Math.atan2(vel.x, vel.z);
     yaw = lerpAngle(yaw, targetYaw, 1 - Math.exp(-TURN_SPEED * dt));
@@ -170,11 +265,14 @@ function tick() {
   camera.position.z += (desiredZ - camera.position.z) * ck;
   camera.lookAt(leadX, 0.95, leadZ);
 
-  // 5) 小鸟小虫 + 渲染
+  // 5) 生命回复（满血时不溢出；受伤后自动慢慢回）
+  if (stats.hp.cur < stats.get('maxHp')) stats.heal(stats.get('hpRegen') * dt);
+
+  // 6) 小鸟小虫 + 渲染
   updateScene(dt);
   renderer.render(scene, camera);
 
-  // 6) HUD（每 0.25 秒刷一次，别每帧动 DOM）
+  // 7) HUD（每 0.25 秒刷一次，别每帧动 DOM）
   frames++;
   acc += dt;
   hudAcc += dt;
@@ -184,9 +282,12 @@ function tick() {
   }
   if (hudAcc >= 0.25) {
     hudAcc = 0;
-    statsEl.textContent =
+    renderHud();
+    // yaw 内部是累加值（转身插值会跨 ±180° 继续加减），显示前规范到 0~360
+    const deg = ((yaw * 180 / Math.PI) % 360 + 360) % 360;
+    dbgEl.textContent =
       `FPS ${fps.toFixed(0)}   速度 ${speed.toFixed(2)}\n` +
-      `坐标 ${pos.x.toFixed(1)}, ${pos.z.toFixed(1)}   朝向 ${(yaw * 180 / Math.PI).toFixed(0)}°`;
+      `坐标 ${pos.x.toFixed(1)}, ${pos.z.toFixed(1)}   朝向 ${deg.toFixed(0)}°`;
   }
 
   // 第一次真的走起来就把提示淡掉
