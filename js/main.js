@@ -10,6 +10,9 @@ import { buildNightScene } from './scene.js';
 import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js';
 import { createInput } from './input.js';
 import { createStats, STAT_DEFS } from './stats.js';
+import { createFx } from './fx.js';
+import { createEnemySystem } from './enemy.js';
+import { createLevel1, LEVEL_1 } from './wave.js';
 
 // ---------------- 可调参数 ----------------
 const ARENA_R = 15;          // 可走半径（石头圈在 15.55）
@@ -18,6 +21,7 @@ const ACCEL = 14;            // 速度趋近系数，越大越「跟手」
 const TURN_SPEED = 13;       // 转身角速度系数
 const CAM_OFFSET = new THREE.Vector3(0, 10.6, 9.2);
 const CAM_LERP = 7;
+const IFRAME = 0.55;         // 受击后的无敌时间（防止被多只小兵同帧秒杀）
 // 移动速度不在这里调了 —— 见 stats.js 的 STAT_DEFS 里 moveSpeed（属性面板实时生效）
 
 // ---------------- 渲染器 ----------------
@@ -74,7 +78,7 @@ function setProgress(p) {
 let frog;
 let loadFailed = false;
 try {
-  frog = await loadFrog('assets/rigged.glb', setProgress);
+  frog = await loadFrog('assets/rigged.glb', (p) => setProgress(p * 0.55));
 } catch (err) {
   console.warn('[奶蛙] 模型加载失败，改用几何体占位：', err);
   loadFailed = true;
@@ -115,10 +119,23 @@ const hudKeyEl = document.getElementById('hudKey');
 const apPanel = document.getElementById('attrPanel');
 const apList = document.getElementById('apList');
 const apSub = document.getElementById('apSub');
+// 波次 / 受击 / 结算
+const whWave = document.getElementById('whWave');
+const whSub = document.getElementById('whSub');
+const whFill = document.getElementById('whFill');
+const waveToast = document.getElementById('waveToast');
+const wtTitle = document.getElementById('wtTitle');
+const wtSub = document.getElementById('wtSub');
+const hurtFx = document.getElementById('hurtFx');
+const resultEl = document.getElementById('result');
+const rsTitle = document.getElementById('rsTitle');
+const rsSub = document.getElementById('rsSub');
+const rsGrid = document.getElementById('rsGrid');
+const rsTag = document.getElementById('rsTag');
 let hintDone = false;
 
 // 关键属性（生命走血条，这里放三个最常看的）
-const KEY_STATS = ['moveSpeed', 'armor', 'critRate'];
+const KEY_STATS = ['attack', 'attackRange', 'moveSpeed'];
 
 function renderHud() {
   const maxHp = stats.get('maxHp');
@@ -192,9 +209,152 @@ addEventListener('keydown', (e) => {
 
 renderHud();
 
+// ============================================================
+// 战斗：特效 → 怪物 → 第一关
+// ============================================================
+const fx = createFx(scene);
+let kills = 0;
+
+const enemies = createEnemySystem({
+  scene, fx, arenaRadius: ARENA_R,
+  onDeath: () => { kills++; },
+});
+
+let enemyLoadOk = true;
+try {
+  await enemies.preload(['minion', 'warrior'], (p) => setProgress(0.55 + p * 0.45));
+} catch (err) {
+  enemyLoadOk = false;
+  console.warn('[怪物] 模型加载失败：', err);
+  const warn = document.createElement('div');
+  warn.className = 'ld-err on';
+  warn.textContent = '怪物模型加载失败（检查 assets/monsters/ 是否可访问）';
+  loadingEl.querySelector('.ld-box').appendChild(warn);
+}
+
+// ---------------- 战斗状态 ----------------
+let gameState = 'playing';   // playing | over
+let elapsed = 0;             // 本局时长（秒）
+let iframe = 0;              // 无敌帧剩余
+let shake = 0;               // 相机震动强度
+let attackCd = 0;            // 主角攻击冷却
+let deadT = 0;               // 死亡倒地动画计时
+let won = false;
+
+// 受击红闪用的战场冻结开关：只有 ?debug=1 的调试钩子会置 true（自动化测试用）
+let debugNoWaves = false;    // 冻结波次推进（不再刷怪）
+let debugNoEnemies = false;  // 冻结怪物 AI（已生成的怪原地不动）
+
+// 受击：先过无敌帧，再按防御减伤扣血；血量归零即结束
+function hurtPlayer(amount) {
+  if (gameState !== 'playing' || iframe > 0) return;
+  stats.damage(amount);
+  iframe = IFRAME;
+  shake = 0.55;
+  hurtFx.classList.add('on');
+  setTimeout(() => hurtFx.classList.remove('on'), 90);
+  renderHud();
+  if (stats.hp.cur <= 0) endGame(false);
+}
+
+// 主角近战：找攻击范围内最近的怪打一下（没有目标时不空挥）
+function playerAttack() {
+  const found = stats.findTarget(
+    pos, enemies.list,
+    (e) => e.state !== 'dead' && e.state !== 'spawn'
+  );
+  if (!found) return false;
+
+  const e = found.target;
+  // 出手瞬间转向目标，避免背对着怪拍地
+  const ty = Math.atan2(e.pos.x - pos.x, e.pos.z - pos.z);
+  yaw += ((ty - yaw + Math.PI * 3) % (Math.PI * 2) - Math.PI) * 0.85;
+
+  const roll = stats.rollDamage({ targetArmor: e.cfg.armor });
+  enemies.takeDamage(e, roll.damage, roll.crit);
+  fx.swing(pos, stats.get('attackRange'));
+  attackCd = 1 / Math.max(0.2, stats.get('attackSpeed'));
+  return true;
+}
+
+// ---------------- 波次 HUD ----------------
+let toastTimer = 0;
+function showToast(title, sub) {
+  wtTitle.textContent = title;
+  wtSub.textContent = sub || '';
+  waveToast.classList.add('on');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => waveToast.classList.remove('on'), 2000);
+}
+
+function setWaveLabel(cur, total) {
+  whWave.textContent = `第 ${cur}/${total} 波`;
+  whFill.style.width = ((cur / total) * 100).toFixed(1) + '%';
+}
+
+// ---------------- 第一关 ----------------
+const level = createLevel1({
+  enemies, fx,
+  getPlayerPos: () => pos,
+  onWave: (cur, total, label, tip) => {
+    setWaveLabel(cur, total);
+    showToast(label, tip);
+  },
+  onVictory: () => endGame(true),
+});
+
+// ---------------- 结算 ----------------
+function endGame(isWin) {
+  if (gameState === 'over') return;
+  gameState = 'over';
+  won = isWin;
+  deadT = 0;
+  input.joystick.release();
+  vel.set(0, 0, 0);
+
+  rsTag.textContent = LEVEL_1.name;
+  rsTitle.textContent = isWin ? '通 关' : '倒 下';
+  rsTitle.classList.toggle('fail', !isWin);
+  rsSub.textContent = isWin
+    ? '夜色里的骷髅被清干净了，草地重新安静下来'
+    : '奶蛙被骷髅拖进了草丛……下一局记得边打边退';
+  rsGrid.textContent = '';
+
+  const cells = [
+    ['用时', elapsed.toFixed(1) + ' 秒'],
+    ['击杀', kills + ' 只'],
+    ['波次', `${Math.max(1, level.waveIndex + 1)} / ${level.totals.waves}`],
+    ['剩余生命', `${Math.max(0, Math.ceil(stats.hp.cur))} / ${Math.round(stats.get('maxHp'))}`],
+  ];
+  for (const [k, v] of cells) {
+    const cell = document.createElement('div');
+    cell.className = 'rs-cell';
+    const i = document.createElement('i'); i.textContent = k;
+    const b = document.createElement('b'); b.textContent = v;
+    cell.append(i, b);
+    rsGrid.appendChild(cell);
+  }
+  resultEl.classList.add('on');
+  resultEl.setAttribute('aria-hidden', 'false');
+}
+
+document.getElementById('rsBtn').addEventListener('click', () => location.reload());
+
 // 调试钩子：只有 ?debug=1 才挂到 window，方便自动化测试读内部状态（正常游玩不暴露）
 if (new URLSearchParams(location.search).has('debug')) {
-  window.__game = { stats, pos, vel, input, getYaw: () => yaw };
+  window.__game = {
+    stats, pos, vel, input, enemies, level, fx,
+    getYaw: () => yaw,
+    getState: () => gameState,
+    getKills: () => kills,
+    getElapsed: () => elapsed,
+    hurt: (n) => hurtPlayer(n),
+    win: () => endGame(true),
+    setPaused(p) { debugNoWaves = debugNoEnemies = !!p; },
+    setWaves(p) { debugNoWaves = !!p; },
+    setEnemies(p) { debugNoEnemies = !!p; },
+    isPaused: () => debugNoWaves || debugNoEnemies,
+  };
 }
 
 // ---------------- 主循环 ----------------
@@ -208,52 +368,86 @@ function lerpAngle(a, b, t) {
   return a + d * t;
 }
 
+// 传给怪物 AI 的上下文（每帧复用同一个对象，避免反复分配）
+const combatCtx = {
+  playerPos: pos,
+  playerRadius: BODY_R,
+  arenaRadius: ARENA_R,
+  hurtPlayer,
+};
+
 function tick() {
   requestAnimationFrame(tick);
 
   const dt = Math.min(0.05, clock.getDelta());
-  const t = clock.elapsedTime;
 
-  // 1) 输入 → 目标速度（屏幕 y 向下 = 世界 +Z，相机在 +Z 方向看向场景）
-  //    移速取属性面板里的实时值：升级加成就立刻跑得更快
-  const moveSpeed = stats.get('moveSpeed');
-  const dir = input.read();
-  const targetVX = dir.x * moveSpeed;
-  const targetVZ = dir.y * moveSpeed;
-  const k = 1 - Math.exp(-ACCEL * dt);
-  vel.x += (targetVX - vel.x) * k;
-  vel.z += (targetVZ - vel.z) * k;
+  let speed = 0;
+  let speed01 = 0;
 
-  // 2) 位移 + 边界约束（圆形场地，撞边只丢掉向外那部分速度）
-  pos.x += vel.x * dt;
-  pos.z += vel.z * dt;
+  if (gameState === 'playing') {
+    elapsed += dt;
 
-  const limit = ARENA_R - BODY_R;
-  const dist = Math.hypot(pos.x, pos.z);
-  if (dist > limit) {
-    const nx = pos.x / dist, nz = pos.z / dist;
-    pos.x = nx * limit;
-    pos.z = nz * limit;
-    const outward = vel.x * nx + vel.z * nz;
-    if (outward > 0) {
-      vel.x -= nx * outward;
-      vel.z -= nz * outward;
+    // 1) 输入 → 目标速度（屏幕 y 向下 = 世界 +Z，相机在 +Z 方向看向场景）
+    //    移速取属性面板里的实时值：升级加成就立刻跑得更快
+    const moveSpeed = stats.get('moveSpeed');
+    const dir = input.read();
+    const targetVX = dir.x * moveSpeed;
+    const targetVZ = dir.y * moveSpeed;
+    const k = 1 - Math.exp(-ACCEL * dt);
+    vel.x += (targetVX - vel.x) * k;
+    vel.z += (targetVZ - vel.z) * k;
+
+    // 2) 位移 + 边界约束（圆形场地，撞边只丢掉向外那部分速度）
+    pos.x += vel.x * dt;
+    pos.z += vel.z * dt;
+
+    const limit = ARENA_R - BODY_R;
+    const dist = Math.hypot(pos.x, pos.z);
+    if (dist > limit) {
+      const nx = pos.x / dist, nz = pos.z / dist;
+      pos.x = nx * limit;
+      pos.z = nz * limit;
+      const outward = vel.x * nx + vel.z * nz;
+      if (outward > 0) {
+        vel.x -= nx * outward;
+        vel.z -= nz * outward;
+      }
     }
+
+    // 3) 朝向：只在真的在走的时候转身，停下保持原朝向
+    speed = Math.hypot(vel.x, vel.z);
+    speed01 = Math.min(1, speed / Math.max(0.01, moveSpeed));
+    if (speed > 0.35) {
+      const targetYaw = Math.atan2(vel.x, vel.z);
+      yaw = lerpAngle(yaw, targetYaw, 1 - Math.exp(-TURN_SPEED * dt));
+    }
+
+    // 4) 自动近战：冷却好了就打攻击范围内最近的怪
+    if (attackCd > 0) attackCd -= dt;
+    if (attackCd <= 0) playerAttack();
+
+    // 5) 怪物 AI → 波次推进 → 生命回复 / 无敌帧
+    if (!debugNoEnemies) enemies.update(dt, combatCtx);
+    if (!debugNoWaves) level.update(dt);
+    if (stats.hp.cur < stats.get('maxHp')) stats.heal(stats.get('hpRegen') * dt);
+    if (iframe > 0) iframe -= dt;
+  } else {
+    // 结算后：失败就慢慢侧倒，胜利保持站姿待机
+    deadT += dt;
+    const k = Math.min(1, deadT / 0.6);
+    if (!won) {
+      frog.root.rotation.z = -Math.PI * 0.5 * k * k;
+      frog.root.position.y = pos.y - 0.12 * k;
+    }
+    frog.update(dt, 0);
   }
 
-  // 3) 朝向：只在真的在走的时候转身，停下保持原朝向
-  const speed = Math.hypot(vel.x, vel.z);
-  const speed01 = Math.min(1, speed / Math.max(0.01, moveSpeed));
-  if (speed > 0.35) {
-    const targetYaw = Math.atan2(vel.x, vel.z);
-    yaw = lerpAngle(yaw, targetYaw, 1 - Math.exp(-TURN_SPEED * dt));
-  }
-
-  frog.root.position.copy(pos);
+  frog.root.position.x = pos.x;
+  frog.root.position.z = pos.z;
   frog.yaw.rotation.y = yaw + MODEL_YAW;
-  frog.update(dt, speed01);
+  if (gameState === 'playing') frog.update(dt, speed01);
 
-  // 4) 相机：位置缓动跟随，注视点略微超前于角色
+  // 6) 相机：位置缓动跟随，注视点略微超前于角色
   const leadX = pos.x + vel.x * 0.22;
   const leadZ = pos.z + vel.z * 0.22;
   const desiredX = pos.x + camOffset.x;
@@ -265,10 +459,17 @@ function tick() {
   camera.position.z += (desiredZ - camera.position.z) * ck;
   camera.lookAt(leadX, 0.95, leadZ);
 
-  // 5) 生命回复（满血时不溢出；受伤后自动慢慢回）
-  if (stats.hp.cur < stats.get('maxHp')) stats.heal(stats.get('hpRegen') * dt);
+  // 受击震屏：只抖相机位置，注视点不变
+  if (shake > 0) {
+    shake = Math.max(0, shake - dt * 2.0);
+    const s = shake * 0.16;
+    camera.position.x += (Math.random() - 0.5) * s;
+    camera.position.y += (Math.random() - 0.5) * s;
+    camera.position.z += (Math.random() - 0.5) * s;
+  }
 
-  // 6) 小鸟小虫 + 渲染
+  // 7) 特效 → 场景动画 → 渲染
+  fx.update(dt);
   updateScene(dt);
   renderer.render(scene, camera);
 
@@ -283,11 +484,12 @@ function tick() {
   if (hudAcc >= 0.25) {
     hudAcc = 0;
     renderHud();
+    whSub.textContent = `荒草地 · 击杀 ${kills}`;
     // yaw 内部是累加值（转身插值会跨 ±180° 继续加减），显示前规范到 0~360
     const deg = ((yaw * 180 / Math.PI) % 360 + 360) % 360;
     dbgEl.textContent =
       `FPS ${fps.toFixed(0)}   速度 ${speed.toFixed(2)}\n` +
-      `坐标 ${pos.x.toFixed(1)}, ${pos.z.toFixed(1)}   朝向 ${deg.toFixed(0)}°`;
+      `坐标 ${pos.x.toFixed(1)}, ${pos.z.toFixed(1)}   朝向 ${deg.toFixed(0)}°   怪 ${enemies.aliveCount()}`;
   }
 
   // 第一次真的走起来就把提示淡掉
@@ -304,6 +506,8 @@ tick();
 setTimeout(() => {
   loadingEl.classList.add('off');
   setTimeout(() => { loadingEl.style.display = 'none'; }, 500);
+  // 遮罩淡出后再开波，避免第一波在看不见的时候刷出来
+  if (enemyLoadOk) setTimeout(() => level.start(), 450);
 }, loadFailed ? 2200 : 60);
 
 // 5 秒后不管有没有动，提示都淡掉，避免挡视线

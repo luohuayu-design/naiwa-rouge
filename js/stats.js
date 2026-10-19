@@ -14,16 +14,43 @@ const pct = (v) => (v * 100).toFixed(0) + '%';
 
 // 属性定义：name 显示名、base 初始值、fmt 显示格式、desc 面板里的一句话说明
 export const STAT_DEFS = [
-  { key: 'maxHp',       name: '生命上限', base: 100,  fmt: (v) => String(Math.round(v)),  desc: '归零即本局失败' },
-  { key: 'hpRegen',     name: '生命回复', base: 0.5,  fmt: (v) => v.toFixed(1) + '/秒',   desc: '每秒自动恢复的生命' },
+  { key: 'maxHp',       name: '生命上限', base: 6,    fmt: (v) => String(Math.round(v)),  desc: '归零即本局失败；受到伤害按整数扣' },
+  { key: 'hpRegen',     name: '生命回复', base: 0,    fmt: (v) => v.toFixed(1) + '/秒',   desc: '每秒自动恢复的生命' },
   { key: 'moveSpeed',   name: '移动速度', base: 4.4,  fmt: (v) => v.toFixed(2),           desc: '每秒移动的世界单位' },
-  { key: 'armor',       name: '防御',     base: 5,    fmt: (v) => String(Math.round(v)),  desc: '减伤率 = 防御 /(100 + 防御)' },
-  { key: 'attack',      name: '攻击力',   base: 10,   fmt: (v) => String(Math.round(v)),  desc: '每次命中造成的基础伤害' },
-  { key: 'attackSpeed', name: '攻击速度', base: 1.00, fmt: (v) => v.toFixed(2) + ' 次/秒', desc: '每秒自动攻击的次数' },
-  { key: 'critRate',    name: '暴击率',   base: 0.05, fmt: pct,                            desc: '命中时触发暴击的概率' },
+  { key: 'armor',       name: '防御',     base: 0,    fmt: (v) => String(Math.round(v)),  desc: '减伤率 = 防御 /(100 + 防御)' },
+  { key: 'attack',      name: '攻击力',   base: 1,    fmt: (v) => String(Math.round(v)),  desc: '每次近战命中的基础伤害' },
+  { key: 'attackRange', name: '攻击范围', base: 2.1,  fmt: (v) => v.toFixed(2),           desc: '近战能打到的最远距离（世界单位）' },
+  { key: 'attackSpeed', name: '攻击速度', base: 1.20, fmt: (v) => v.toFixed(2) + ' 次/秒', desc: '每秒自动攻击的次数' },
+  { key: 'critRate',    name: '暴击率',   base: 0.00, fmt: pct,                            desc: '命中时触发暴击的概率' },
   { key: 'critDamage',  name: '暴击伤害', base: 1.50, fmt: (v) => (v * 100).toFixed(0) + '%', desc: '暴击时的伤害倍率' },
   { key: 'lifesteal',   name: '吸血',     base: 0.00, fmt: pct,                            desc: '造成伤害按此比例回血' },
 ];
+
+// ------------------------------------------------------------
+// 距离：攻击范围判定、索敌都用这一组。
+// 参数都是 { x, z }（Vector3 直接传进来也行），只算水平面距离，
+// 不考虑高度 —— 角色和怪物都在地面上，Y 轴不参与手感。
+// ------------------------------------------------------------
+export function distance2D(a, b) {
+  return Math.hypot(a.x - b.x, a.z - b.z);
+}
+
+export function inRange2D(a, b, range) {
+  return distance2D(a, b) <= range;
+}
+
+// 在候选列表里找「射程内、距离最近」的一个，没找到返回 null。
+// 幸存者类自动索敌就是这一句，主角与远程怪共用。
+export function nearestInRange(from, list, range, isAlive = () => true) {
+  let best = null;
+  let bestD = Infinity;
+  for (const it of list) {
+    if (!isAlive(it)) continue;
+    const d = distance2D(from, it.pos);
+    if (d <= range && d < bestD) { bestD = d; best = it; }
+  }
+  return best ? { target: best, distance: bestD } : null;
+}
 
 export function createStats() {
   const base = {};
@@ -114,5 +141,9 @@ export function createStats() {
     hp, heal, damage, syncHp, clampHp,
     mitigate, rollDamage, snapshot,
     defs: STAT_DEFS,
+    // 近战判定入口：主角自动攻击时直接调用
+    distanceTo: distance2D,
+    inAttackRange(from, to) { return inRange2D(from, to, get('attackRange')); },
+    findTarget(from, list, isAlive) { return nearestInRange(from, list, get('attackRange'), isAlive); },
   };
 }

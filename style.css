@@ -100,10 +100,70 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
 .ap-foot{padding:10px 16px 14px;text-align:center;font-size:10px;
   letter-spacing:.06em;color:rgba(140,190,172,.42)}
 
+/* ---------------- 右上角：波次 ---------------- */
+#waveHud{position:fixed;right:0;top:0;z-index:6;padding:calc(14px + env(safe-area-inset-top)) 18px 0 0;
+  width:170px;text-align:right;pointer-events:none;text-shadow:0 2px 10px rgba(0,0,0,.7)}
+.wh-top{display:flex;align-items:baseline;justify-content:flex-end;gap:8px}
+.wh-level{font-size:10px;letter-spacing:.16em;color:rgba(160,210,190,.58)}
+.wh-wave{font-size:15px;font-weight:700;letter-spacing:.06em;color:#e6fff4}
+.wh-sub{margin-top:3px;font-size:10.5px;letter-spacing:.08em;color:rgba(140,195,175,.5)}
+.wh-bar{margin-top:7px;height:3px;border-radius:99px;overflow:hidden;
+  background:rgba(6,18,15,.72);border:1px solid rgba(126,235,196,.16)}
+.wh-bar i{display:block;height:100%;width:0%;border-radius:99px;
+  background:linear-gradient(90deg,#3fd39b,#8ef7c8);box-shadow:0 0 8px rgba(110,240,200,.5);
+  transition:width .25s ease}
+
+/* ---------------- 波次提示 ---------------- */
+#waveToast{position:fixed;left:50%;top:21%;z-index:7;display:flex;flex-direction:column;
+  align-items:center;gap:5px;text-align:center;pointer-events:none;
+  transform:translate(-50%,-8px);opacity:0;
+  transition:opacity .26s ease,transform .26s ease}
+#waveToast.on{opacity:1;transform:translate(-50%,0)}
+#waveToast b{font-size:22px;font-weight:800;letter-spacing:.18em;color:#eafff5;
+  text-shadow:0 4px 20px rgba(0,0,0,.72),0 0 26px rgba(110,240,200,.3)}
+#waveToast span{font-size:11.5px;letter-spacing:.1em;color:rgba(196,238,220,.75)}
+
+/* ---------------- 受击红闪 ---------------- */
+#hurtFx{position:fixed;inset:0;z-index:9;pointer-events:none;opacity:0;
+  background:radial-gradient(circle at 50% 50%,rgba(255,40,20,0) 40%,rgba(255,28,8,.58) 100%);
+  transition:opacity .36s ease}
+#hurtFx.on{opacity:1;transition:opacity .05s ease}
+
+/* ---------------- 结算面板 ---------------- */
+.result{position:fixed;inset:0;z-index:18;display:flex;align-items:center;justify-content:center;
+  padding:calc(24px + env(safe-area-inset-top)) 18px calc(24px + env(safe-area-inset-bottom));
+  background:rgba(3,8,7,.72);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);
+  opacity:0;pointer-events:none;transition:opacity .25s ease}
+.result.on{opacity:1;pointer-events:auto}
+.rs-card{width:min(90vw,380px);padding:22px 20px 18px;border-radius:18px;text-align:center;
+  border:1px solid rgba(126,235,196,.22);
+  background:linear-gradient(180deg,rgba(20,42,36,.98),rgba(7,17,15,.99));
+  box-shadow:0 24px 60px rgba(0,0,0,.7),inset 0 1px 0 rgba(180,255,228,.08);
+  transform:translateY(12px) scale(.98);transition:transform .25s ease}
+.result.on .rs-card{transform:none}
+.rs-tag{font-size:10px;letter-spacing:.2em;color:rgba(150,200,182,.55)}
+.rs-title{margin-top:8px;font-size:26px;font-weight:800;letter-spacing:.12em;color:#c9ffe6;
+  text-shadow:0 0 26px rgba(110,240,200,.35)}
+.rs-title.fail{color:#ffb3a0;text-shadow:0 0 26px rgba(255,110,80,.32)}
+.rs-sub{margin-top:7px;font-size:11.5px;line-height:1.6;color:rgba(180,220,205,.62)}
+.rs-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:16px 0 18px}
+.rs-cell{padding:9px 8px;border-radius:10px;
+  background:rgba(126,235,196,.055);border:1px solid rgba(126,235,196,.1)}
+.rs-cell i{display:block;font-style:normal;font-size:9.5px;letter-spacing:.1em;color:rgba(150,200,182,.55)}
+.rs-cell b{display:block;margin-top:3px;font-size:15px;letter-spacing:.02em;color:#d9fff0;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.rs-btn{width:100%;padding:12px;border-radius:12px;cursor:pointer;font-family:inherit;
+  border:1px solid rgba(126,235,196,.4);color:#e9fff6;font-size:13.5px;font-weight:700;
+  letter-spacing:.14em;background:linear-gradient(180deg,rgba(90,230,185,.22),rgba(60,180,145,.14));
+  -webkit-tap-highlight-color:transparent}
+.rs-btn:hover{background:linear-gradient(180deg,rgba(90,230,185,.32),rgba(60,180,145,.2))}
+
 @media (max-height:520px){
   .ap-card{max-height:88vh}
   .ap-desc{display:none}
   .hud-stats{display:none}
+  .rs-grid{margin:12px 0 14px}
+  .rs-card{padding:16px 16px 14px}
 }
 
 /* 首次操作提示 */

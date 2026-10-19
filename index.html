@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#080f14">
 <link rel="icon" href="data:,">
 <title>蛙步 · 夜行</title>
-<link rel="stylesheet" href="style.css?v=2">
+<link rel="stylesheet" href="style.css?v=3">
 </head>
 <body>
 
@@ -29,7 +29,7 @@
   <button class="hp-card" id="hpCard" type="button" aria-label="查看奶蛙属性">
     <div class="hp-top">
       <span class="hp-label">生命</span>
-      <span class="hp-num"><b id="hpCur">100</b><i>/</i><span id="hpMax">100</span></span>
+      <span class="hp-num"><b id="hpCur">6</b><i>/</i><span id="hpMax">6</span></span>
       <span class="hp-more">属性 ▸</span>
     </div>
     <div class="hp-bar"><i id="hpFill"></i></div>
@@ -37,6 +37,25 @@
   <div class="hud-key" id="hudKey"></div>
   <div class="hud-stats" id="stats"></div>
 </div>
+
+<!-- 右上角：波次进度 -->
+<div id="waveHud">
+  <div class="wh-top">
+    <span class="wh-level">第 1 关</span>
+    <span class="wh-wave" id="whWave">准备</span>
+  </div>
+  <div class="wh-sub" id="whSub">荒草地</div>
+  <div class="wh-bar"><i id="whFill"></i></div>
+</div>
+
+<!-- 波次提示（居中淡入淡出） -->
+<div id="waveToast">
+  <b id="wtTitle">第 1 波</b>
+  <span id="wtSub">小兵从草里钻出来了</span>
+</div>
+
+<!-- 受击红闪 -->
+<div id="hurtFx"></div>
 
 <!-- 属性详情面板 -->
 <div id="attrPanel" class="attr-panel" aria-hidden="true">
@@ -56,6 +75,17 @@
 <!-- 首次操作提示：走起来之后自动淡出 -->
 <div id="hint">在左半屏任意位置按住拖动</div>
 
+<!-- 结算面板 -->
+<div id="result" class="result" aria-hidden="true">
+  <div class="rs-card">
+    <div class="rs-tag" id="rsTag">第一关 · 荒草地</div>
+    <div class="rs-title" id="rsTitle">通关</div>
+    <div class="rs-sub" id="rsSub">—</div>
+    <div class="rs-grid" id="rsGrid"></div>
+    <button class="rs-btn" id="rsBtn" type="button">再来一次</button>
+  </div>
+</div>
+
 <!-- 加载遮罩 -->
 <div id="loading">
   <div class="ld-box">
@@ -73,6 +103,6 @@
   }
 }
 </script>
-<script type="module" src="js/main.js?v=2"></script>
+<script type="module" src="js/main.js?v=3"></script>
 </body>
 </html>
