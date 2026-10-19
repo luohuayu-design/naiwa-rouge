@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#080f14">
+<title>蛙步 · 夜行</title>
+<link rel="stylesheet" href="style.css?v=1">
+</head>
+<body>
+
+<!-- 3D 画布 -->
+<div id="app"></div>
+
+<!-- 触摸层：只负责接收浮动摇杆的手势，不挡 HUD -->
+<div id="touchLayer"></div>
+
+<!-- 浮动摇杆：按下前隐藏，按在左半屏任意位置才在落点出现 -->
+<div id="stick" class="stick">
+  <div class="stick-ring"></div>
+  <div class="stick-knob"></div>
+</div>
+
+<!-- HUD -->
+<div id="hud">
+  <div class="hud-title">蛙步 · 夜行</div>
+  <div class="hud-sub">拖动左半屏移动 · 键盘 WASD / 方向键</div>
+  <div class="hud-stats" id="stats"></div>
+</div>
+
+<!-- 首次操作提示：走起来之后自动淡出 -->
+<div id="hint">在左半屏任意位置按住拖动</div>
+
+<!-- 加载遮罩 -->
+<div id="loading">
+  <div class="ld-box">
+    <div class="ld-title">正在唤醒奶蛙</div>
+    <div class="ld-bar"><i id="ldBar"></i></div>
+    <div class="ld-txt" id="ldTxt">0%</div>
+  </div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "./lib/three.module.js",
+    "three/addons/": "./lib/jsm/"
+  }
+}
+</script>
+<script type="module" src="js/main.js?v=1"></script>
+</body>
+</html>

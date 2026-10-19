@@ -1,0 +1,67 @@
+/* 蛙步 · 夜行 —— 全屏 3D 舞台 + 浮动摇杆 + HUD
+   配色取自夜间草地：墨绿 / 月光青 / 暖黄萤火 */
+
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+  color:#e8f3ee;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;
+  overscroll-behavior:none;touch-action:none}
+
+#app{position:fixed;inset:0;z-index:1}
+#app canvas{display:block;width:100%;height:100%}
+
+/* 触摸层：覆盖全屏但只吃手势，不显示 */
+#touchLayer{position:fixed;inset:0;z-index:5;touch-action:none}
+
+/* ---------------- 浮动摇杆 ---------------- */
+.stick{position:fixed;left:0;top:0;width:132px;height:132px;z-index:8;
+  transform:translate(-50%,-50%) scale(.86);opacity:0;pointer-events:none;
+  transition:opacity .12s ease,transform .12s ease;will-change:transform,opacity}
+.stick.on{opacity:1;transform:translate(-50%,-50%) scale(1)}
+.stick-ring{position:absolute;inset:0;border-radius:50%;
+  background:radial-gradient(circle at 50% 50%,rgba(120,240,200,.10) 0%,rgba(10,26,24,.42) 68%,rgba(10,26,24,.16) 100%);
+  border:2px solid rgba(126,235,196,.42);
+  box-shadow:0 0 24px rgba(70,220,180,.18),inset 0 0 18px rgba(70,220,180,.10)}
+.stick-ring::after{content:"";position:absolute;inset:14px;border-radius:50%;
+  border:1px dashed rgba(126,235,196,.18)}
+.stick-knob{position:absolute;left:50%;top:50%;width:56px;height:56px;margin:-28px 0 0 -28px;
+  border-radius:50%;background:radial-gradient(circle at 38% 32%,rgba(214,255,240,.95),rgba(104,224,184,.86) 52%,rgba(38,132,110,.92) 100%);
+  border:2px solid rgba(232,255,246,.7);
+  box-shadow:0 6px 18px rgba(0,0,0,.45),0 0 22px rgba(110,240,200,.45);
+  will-change:transform}
+
+/* ---------------- HUD ---------------- */
+#hud{position:fixed;left:0;top:0;z-index:6;padding:calc(14px + env(safe-area-inset-top)) 18px 0;
+  pointer-events:none;text-shadow:0 2px 10px rgba(0,0,0,.65)}
+.hud-title{font-size:17px;font-weight:700;letter-spacing:.16em;color:#dff8ee}
+.hud-title::after{content:"";display:block;width:34px;height:2px;margin-top:6px;border-radius:2px;
+  background:linear-gradient(90deg,rgba(126,235,196,.9),rgba(126,235,196,0))}
+.hud-sub{margin-top:9px;font-size:12px;letter-spacing:.02em;color:rgba(206,232,222,.62)}
+.hud-stats{margin-top:10px;font-size:11px;line-height:1.7;color:rgba(170,220,200,.5);
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;white-space:pre}
+
+/* 首次操作提示 */
+#hint{position:fixed;left:50%;bottom:calc(58px + env(safe-area-inset-bottom));z-index:6;
+  transform:translateX(-50%);padding:8px 16px;border-radius:999px;
+  background:rgba(8,20,18,.62);border:1px solid rgba(126,235,196,.26);
+  font-size:12px;letter-spacing:.06em;color:rgba(214,245,233,.82);
+  backdrop-filter:blur(6px);pointer-events:none;
+  transition:opacity .5s ease,transform .5s ease}
+#hint.off{opacity:0;transform:translate(-50%,6px)}
+
+/* ---------------- 加载遮罩 ---------------- */
+#loading{position:fixed;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(circle at 50% 46%,#132420 0%,#080f14 62%,#05090c 100%);
+  transition:opacity .45s ease}
+#loading.off{opacity:0;pointer-events:none}
+.ld-box{width:min(74vw,300px);text-align:center}
+.ld-title{font-size:14px;letter-spacing:.22em;color:#bff0dd;opacity:.9}
+.ld-bar{margin-top:16px;height:4px;border-radius:4px;background:rgba(126,235,196,.14);overflow:hidden}
+.ld-bar i{display:block;height:100%;width:0%;border-radius:4px;
+  background:linear-gradient(90deg,#4fd6a8,#9cf5cf);box-shadow:0 0 12px rgba(110,240,200,.6);
+  transition:width .2s ease}
+.ld-txt{margin-top:10px;font-size:11px;letter-spacing:.1em;color:rgba(180,225,208,.55)}
+
+/* 加载失败时的提示 */
+.ld-err{margin-top:14px;font-size:12px;line-height:1.7;color:#ffb3a7;display:none}
+.ld-err.on{display:block}
