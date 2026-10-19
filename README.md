@@ -43,7 +43,12 @@ naiwa-rouge/
 │       ├── loaders/GLTFLoader.js
 │       └── utils/BufferGeometryUtils.js   # GLTFLoader 的依赖
 ├── assets/
-│   └── rigged.glb          # 奶蛙模型（719KB，单网格无骨骼，内嵌 3 张 WebP 贴图）
+│   ├── rigged.glb          # 奶蛙模型（719KB，单网格无骨骼，内嵌 3 张 WebP 贴图）
+│   └── monsters/           # 怪物模型（KayKit Skeletons，CC0）
+│       ├── skeleton-minion.glb   # 骷髅小兵 643KB
+│       ├── skeleton-warrior.glb  # 骷髅战士 691KB
+│       ├── skeleton-rogue.glb    # 骷髅盗贼 655KB
+│       └── skeleton-mage.glb     # 骷髅法师 591KB
 └── .gitignore
 ```
 
@@ -56,12 +61,22 @@ naiwa-rouge/
 - 调手感改 `main.js` 顶部常量：`MOVE_SPEED`(4.4)、`ACCEL`(14)、`TURN_SPEED`(13)、`CAM_OFFSET`、`ARENA_R`(15)。
 - 摇杆参数在 `joystick.js` 的 `createJoystick`：`maxRadius`(46px)、`leftRatio`(0.58)、`deadZone`(0.12)。
 
+## 怪物模型（已入库，未接入游戏）
+
+来源 [KayKit - Character Pack: Skeletons](https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Skeletons-1.0)，作者 Kay Lousberg，授权 **CC0**（可商用、可修改、无需署名，见其仓库 LICENSE.txt）。
+
+- 原始模型 95 段动画占约 87% 体积（单只 ~4.7MB）。入库前用裁剪脚本（项目根 `.tmp-shrink-glb.py`）只保留 7 段游戏动画：`Idle / Walking_A / Running_A / Hit_A / Death_A / Spawn_Ground / Unarmed_Melee_Attack_Punch_A`，单只压到 591~691KB。
+- 每只 41 骨骼、9 个 SkinnedMesh（蒙皮网格），动画由 Three `AnimationMixer` 驱动（与奶蛙的程序化动画是两套机制，接入时注意）。
+- 已用无头 Chrome 验证：四只全部加载、蒙皮、`Walking_A` 播放正常。
+- 敌人系统（第 2 块）尚未开始，模型先入库备用。
+
 ## 已验证
 
 无头 Chrome（CDP）实测：模型 22022 顶点 / 7 骨 / 0 兜底顶点；键盘走位速度 4.40、朝向 180°/90° 正确；松键停稳；触摸摇杆按下即现、摇杆头钳制在 46px、松手归零；顶到边界后沿切向滑动不穿透。
 
 ## 后续计划
 
+- [x] 怪物模型入库（KayKit 骷髅 4 种，已裁剪验证）
 - [ ] 敌人生成与波次
 - [ ] 自动攻击（武器打最近的敌人）、伤害与死亡
 - [ ] 升级三选一
@@ -70,4 +85,5 @@ naiwa-rouge/
 ## 素材与致谢
 
 - 角色模型与灵感来自同作者的音游《蛙步》，其玩法灵感来自原作者**念因**的《奶娃街舞》。
+- 怪物模型来自 KayKit（Kay Lousberg），CC0 授权。
 - 请勿将本项目用于商业用途；转载/二次创作前请先联系作者。
