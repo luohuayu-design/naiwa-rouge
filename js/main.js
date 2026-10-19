@@ -13,6 +13,7 @@ import { createStats, STAT_DEFS } from './stats.js';
 import { createFx } from './fx.js';
 import { createEnemySystem } from './enemy.js';
 import { createLevel1, LEVEL_1 } from './wave.js';
+import { createRangeRing } from './rangeRing.js';
 
 // ---------------- 可调参数 ----------------
 const ARENA_R = 15;          // 可走半径（石头圈在 15.55）
@@ -106,6 +107,17 @@ const input = createInput(
 
 // ---------------- 属性 ----------------
 const stats = createStats();
+
+// 脚下的攻击范围环：半径实时跟着 attackRange 走（升级加范围会立刻变大）。
+// 挂在 scene 上而不是角色身上，免得走路/倒地的起伏把环带离地面。
+const playerRing = createRangeRing({
+  radius: stats.get('attackRange'),
+  color: 0x7ff0c6,
+  opacity: 0.46,
+  pulse: 0.06,
+});
+playerRing.mesh.position.set(pos.x, 0.028, pos.z);
+scene.add(playerRing.mesh);
 
 // ---------------- HUD ----------------
 const dbgEl = document.getElementById('stats');
@@ -311,6 +323,7 @@ function endGame(isWin) {
   deadT = 0;
   input.joystick.release();
   vel.set(0, 0, 0);
+  playerRing.setVisible(false);   // 倒下/通关后不再提示攻击范围
 
   rsTag.textContent = LEVEL_1.name;
   rsTitle.textContent = isWin ? '通 关' : '倒 下';
@@ -343,7 +356,7 @@ document.getElementById('rsBtn').addEventListener('click', () => location.reload
 // 调试钩子：只有 ?debug=1 才挂到 window，方便自动化测试读内部状态（正常游玩不暴露）
 if (new URLSearchParams(location.search).has('debug')) {
   window.__game = {
-    stats, pos, vel, input, enemies, level, fx,
+    stats, pos, vel, input, enemies, level, fx, playerRing,
     getYaw: () => yaw,
     getState: () => gameState,
     getKills: () => kills,
@@ -446,6 +459,12 @@ function tick() {
   frog.root.position.z = pos.z;
   frog.yaw.rotation.y = yaw + MODEL_YAW;
   if (gameState === 'playing') frog.update(dt, speed01);
+
+  // 脚下的攻击范围环：位置跟人走，半径跟属性走
+  playerRing.setRadius(stats.get('attackRange'));
+  playerRing.mesh.position.x = pos.x;
+  playerRing.mesh.position.z = pos.z;
+  playerRing.update(dt);
 
   // 6) 相机：位置缓动跟随，注视点略微超前于角色
   const leadX = pos.x + vel.x * 0.22;

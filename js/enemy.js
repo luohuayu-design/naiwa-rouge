@@ -15,6 +15,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
 import { distance2D } from './stats.js';
+import { createRangeRing } from './rangeRing.js';
 
 // KayKit 模型正面朝 +Z；如果哪天换模型发现怪倒着走，把这里改成 Math.PI
 export const ENEMY_MODEL_YAW = 0;
@@ -53,6 +54,7 @@ export const ENEMY_TYPES = {
     deathTime: 0.35,       // 自爆后的消散时间
     selfDestruct: true,
     color: 0xffd9a0,
+    ringColor: 0xffc07a,   // 脚下接触圈的颜色（半径见 updateOne：主角半径 + contactRange）
     anim: { walk: ANIM.walk, idle: ANIM.idle, death: ANIM.death, spawn: ANIM.spawn },
   },
 
@@ -74,6 +76,7 @@ export const ENEMY_TYPES = {
     deathTime: 1.5,
     selfDestruct: false,
     color: 0xa8e0ff,
+    ringColor: 0xff8a6a,   // 脚下近战圈 = attackRange
     anim: {
       walk: ANIM.walk, idle: ANIM.idle, attack: ANIM.punch,
       death: ANIM.death, spawn: ANIM.spawn,
@@ -210,6 +213,23 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
     });
     root.add(model);
 
+    // 脚下的范围环：只给「能近身伤到主角」的怪。
+    // 远程（archer/mage）暂时不画，等第二关做射程提示时再上虚线环。
+    const hasRing = cfg.ringColor != null && (
+      cfg.contactRange != null
+      || (cfg.attackRange != null && cfg.projectile == null && cfg.castTime == null)
+    );
+    const ring = hasRing
+      ? createRangeRing({
+          radius: cfg.attackRange ?? 1,   // 接触圈要主角半径，updateOne 第一帧就会算准
+          color: cfg.ringColor,
+          opacity: 0.34,
+          pulse: 0.04,
+          y: 0.03,
+        })
+      : null;
+    if (ring) root.add(ring.mesh);
+
     const bar = createBar(cfg);
     root.add(bar.spr);
     scene.add(root);
@@ -250,6 +270,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
       deathT: 0,
       mats,
       bar,
+      ring,
       baseEmissive: mats.map((m) => (m.emissive ? m.emissive.clone() : null)),
       currentAnim: '',
     };
@@ -308,6 +329,15 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
   function updateOne(e, dt, ctx) {
     e.mixer.update(dt);
     e.t += dt;
+
+    // 脚下范围环：小兵 = 主角半径 + 接触距离（它自爆能够到的圈），
+    // 战士 = 自己的近战范围。半径每帧同步，改了配置立刻生效。
+    if (e.ring) {
+      e.ring.setRadius(e.cfg.contactRange != null
+        ? ctx.playerRadius + e.cfg.contactRange
+        : e.cfg.attackRange);
+      e.ring.update(dt);
+    }
 
     // 受击闪白（复制一份 emissive，闪完原样还回去）
     if (e.flashT > 0) {
@@ -465,6 +495,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
       for (const m of e.mats) m.dispose();
       e.bar.tex.dispose();
       e.bar.mat.dispose();
+      if (e.ring) e.ring.dispose();
       e.mixer.stopAllAction();
       e.mixer.uncacheRoot(e.model);
       list.splice(i, 1);
@@ -483,6 +514,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
       for (const m of e.mats) m.dispose();
       e.bar.tex.dispose();
       e.bar.mat.dispose();
+      if (e.ring) e.ring.dispose();
       e.mixer.stopAllAction();
       e.mixer.uncacheRoot(e.model);
     }
