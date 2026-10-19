@@ -1,10 +1,20 @@
 // ============================================================
-// wave.js —— 第一关：波次编排与刷怪位置
+// wave.js —— 第一关：10 个回合的编排与刷怪位置
 //
 // 关卡设计（数值都在这一个文件里，改这里就能调节奏）：
-//   第一关 · 荒草地：5 波，25 只小兵 + 8 只战士，合计 33 只
-//   每波「生成完 + 清空」后停 2.8 秒进下一波；单波超过 15 秒也会推进，
-//   避免玩家绕圈遛怪导致卡关。
+//   第一关 · 荒草地：10 回合，61 只小兵 + 18 只战士，合计 79 只
+//   清空一回合后停 2.6 秒进下一回合；**必须清完**才推进（不设超时跳过，
+//   否则会带着上一回合的怪滚雪球，也没法在回合结束时弹升级）
+//
+// 回合成长（用户要求「怪物不止数目变多，属性也适当提高」）：
+//   数量：3 → 13 只/回合（见 rounds）
+//   生命：每回合 +16%（第 10 回合 ×2.44，战士 3 → 7 血）
+//   伤害：每回合 +10%（第 10 回合 ×1.90，1 → 2 点）
+//   速度：每回合 +3.5%（第 10 回合 ×1.32，小兵 2.15 → 2.84，主角 4.4 仍能拉开）
+//   小兵基础 1 血，四舍五入后第 5 回合起变 2 血（R1~R4 仍是一刀一只）；
+//   战士 3 血，第 5 回合 5 血、第 10 回合 7 血。
+//
+// 升级：第 1/3/5/8/10 回合清空后弹三选一（见 upgrade.js）。
 //
 // 刷怪位置规则（用户要求的「生成位置」）：
 //   1. 只从场地边缘的圆环上出现（半径 13.2 ± 0.5），不会凭空出现在脚下
@@ -19,54 +29,69 @@ export const LEVEL_1 = {
   spawnJitter: 0.5,        // 半径随机浮动
   minPlayerDistance: 7.0,  // 离主角至少这么远
   minSpawnGap: 2.0,        // 两次刷怪的最小间距
-  gap: 2.8,                // 清场后到下一波的间隔（秒）
-  autoNextAfter: 15,       // 单波最长停留（秒），防止遛怪卡关
-  waves: [
-    {
-      label: '第 1 波', tip: '小兵从草里钻出来了',
-      spawns: pack('minion', 4, 1.0, 0.75),
-    },
-    {
-      label: '第 2 波', tip: '战士会抬手，看到红圈就躲',
-      spawns: [...pack('minion', 4, 0.6, 0.6), { type: 'warrior', delay: 2.4 }],
-    },
-    {
-      label: '第 3 波', tip: '别被围住，边打边退',
-      spawns: [...pack('minion', 5, 0.5, 0.55), { type: 'warrior', delay: 1.8 }, { type: 'warrior', delay: 3.0 }],
-    },
-    {
-      label: '第 4 波', tip: '先点掉战士，小兵会自己送',
-      spawns: [...pack('minion', 6, 0.4, 0.5), { type: 'warrior', delay: 2.2 }, { type: 'warrior', delay: 3.4 }],
-    },
-    {
-      label: '第 5 波', tip: '最后一波，撑住',
-      spawns: [...pack('minion', 6, 0.4, 0.5), { type: 'warrior', delay: 1.4 }, { type: 'warrior', delay: 2.6 }, { type: 'warrior', delay: 3.8 }],
-    },
+  gap: 2.6,                // 清场后到下一回合的间隔（秒）
+  upgradeAfter: [1, 3, 5, 8, 10],   // 打完这些回合弹三选一
+  // 属性随回合成长：1 + k × (回合 - 1)
+  scale: { hp: 0.16, damage: 0.10, speed: 0.035 },
+  rounds: [
+    { minion: 3, warrior: 0, gap: 0.90, tip: '小兵从草里钻出来了' },
+    { minion: 4, warrior: 0, gap: 0.80, tip: '数量多起来了，边走边拍' },
+    { minion: 5, warrior: 1, gap: 0.80, tip: '战士会抬手，看到红圈就躲' },
+    { minion: 5, warrior: 1, gap: 0.75, tip: '它们变硬了一点，别硬顶' },
+    { minion: 6, warrior: 2, gap: 0.70, tip: '两个战士，先点掉它们' },
+    { minion: 6, warrior: 2, gap: 0.65, tip: '小兵开始要两下了，稳住节奏' },
+    { minion: 7, warrior: 2, gap: 0.60, tip: '别贪刀，血留着' },
+    { minion: 8, warrior: 3, gap: 0.55, tip: '这一波很凶，绕圈拉扯' },
+    { minion: 8, warrior: 3, gap: 0.50, tip: '撑住，马上就到最后了' },
+    { minion: 9, warrior: 4, gap: 0.50, tip: '最后一回合，全部拍碎' },
   ],
 };
 
-// 把「n 只同类型怪，从 start 秒开始每 gap 秒一只」写成生成列表
-function pack(type, n, start, gap) {
-  return Array.from({ length: n }, (_, i) => ({ type, delay: start + i * gap }));
+// 第 roundNo 回合（从 1 开始）的怪物属性倍率
+export function roundScale(roundNo) {
+  const s = LEVEL_1.scale;
+  const k = Math.max(0, roundNo - 1);
+  return {
+    hp: 1 + s.hp * k,
+    damage: 1 + s.damage * k,
+    speed: 1 + s.speed * k,
+  };
 }
 
 export function levelStats(level = LEVEL_1) {
   let minion = 0, warrior = 0;
-  for (const w of level.waves) {
-    for (const s of w.spawns) {
-      if (s.type === 'minion') minion++;
-      else if (s.type === 'warrior') warrior++;
-    }
+  for (const r of level.rounds) {
+    minion += r.minion || 0;
+    warrior += r.warrior || 0;
   }
-  return { minion, warrior, total: minion + warrior, waves: level.waves.length };
+  return { minion, warrior, total: minion + warrior, rounds: level.rounds.length };
 }
 
-export function createLevel1({ enemies, fx, getPlayerPos, onWave, onVictory, onKill }) {
+// 把「n 只小兵 + m 只战士」展开成带延迟的生成列表：
+// 小兵先到，战士晚半拍出场（给玩家先清小兵的窗口）
+function buildSpawns(roundNo) {
+  const cfg = LEVEL_1.rounds[roundNo - 1];
+  const out = [];
+  let t = 0.75;
+  for (let i = 0; i < cfg.minion; i++) {
+    out.push({ type: 'minion', delay: t });
+    t += cfg.gap;
+  }
+  t += 0.35;
+  for (let i = 0; i < cfg.warrior; i++) {
+    out.push({ type: 'warrior', delay: t });
+    t += cfg.gap * 1.6;
+  }
+  return out;
+}
+
+export function createLevel1({ enemies, fx, getPlayerPos, onRound, onRoundClear, onVictory, onKill }) {
   const level = LEVEL_1;
   const recentSpawns = [];
-  let waveIndex = -1;
-  let phase = 'idle';     // idle | spawning | gap | done
+  let roundIndex = -1;      // 0 基：0 = 第 1 回合
+  let phase = 'idle';       // idle | spawning | gap | done
   let t = 0;
+  let spawns = [];
   let spawnIdx = 0;
   let gapT = 0;
   let spawned = 0;
@@ -108,64 +133,70 @@ export function createLevel1({ enemies, fx, getPlayerPos, onWave, onVictory, onK
 
   function start() {
     reset();
-    nextWave();
+    nextRound();
   }
 
-  function nextWave() {
-    waveIndex++;
-    if (waveIndex >= level.waves.length) {
+  function nextRound() {
+    roundIndex++;
+    if (roundIndex >= level.rounds.length) {
       phase = 'done';
       onVictory?.();
       return;
     }
-    const w = level.waves[waveIndex];
+    const roundNo = roundIndex + 1;
+    const cfg = level.rounds[roundIndex];
     phase = 'spawning';
     t = 0;
     spawnIdx = 0;
     gapT = 0;
-    onWave?.(waveIndex + 1, level.waves.length, w.label, w.tip);
+    spawns = buildSpawns(roundNo);
+    onRound?.(roundNo, level.rounds.length, cfg.tip);
   }
 
   function update(dt) {
     if (phase === 'spawning') {
       t += dt;
-      const w = level.waves[waveIndex];
-
-      while (spawnIdx < w.spawns.length && t >= w.spawns[spawnIdx].delay) {
-        const sp = w.spawns[spawnIdx++];
+      while (spawnIdx < spawns.length && t >= spawns[spawnIdx].delay) {
+        const sp = spawns[spawnIdx++];
         const at = pickSpawn();
-        if (enemies.spawn(sp.type, at)) spawned++;
+        const sc = roundScale(roundIndex + 1);
+        const e = enemies.spawn(sp.type, at, {
+          hpScale: sc.hp, damageScale: sc.damage, speedScale: sc.speed,
+        });
+        if (e) spawned++;
       }
 
-      if (spawnIdx >= w.spawns.length) {
-        const isLast = waveIndex === level.waves.length - 1;
-        const cleared = enemies.aliveCount() === 0;
-        const timeout = !isLast && t >= level.autoNextAfter;
-        if (cleared || timeout) {
-          phase = 'gap';
-          gapT = 0;
-        }
+      // 必须全部清掉才算这回合结束（含刚钻出来、还没死的）
+      if (spawnIdx >= spawns.length && enemies.aliveCount() === 0) {
+        phase = 'gap';
+        gapT = 0;
+        onRoundClear?.(roundIndex + 1, level.rounds.length);
       }
     } else if (phase === 'gap') {
       gapT += dt;
-      if (gapT >= level.gap) nextWave();
+      if (gapT >= level.gap) nextRound();
     }
   }
 
   function reset() {
-    waveIndex = -1;
+    roundIndex = -1;
     phase = 'idle';
     t = 0; spawnIdx = 0; gapT = 0; spawned = 0;
+    spawns = [];
     recentSpawns.length = 0;
   }
 
   return {
     start, update, reset,
     level,
-    get waveIndex() { return waveIndex; },
+    // waveIndex 是 0 基的历史名字，按「第几回合」用时读 roundNo
+    get waveIndex() { return roundIndex; },
+    get roundIndex() { return roundIndex; },
+    get roundNo() { return roundIndex + 1; },
     get phase() { return phase; },
     get spawned() { return spawned; },
     totals: levelStats(level),
+    shouldUpgrade(roundNo) { return level.upgradeAfter.includes(roundNo); },
     onKill,
   };
 }

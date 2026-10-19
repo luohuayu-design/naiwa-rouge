@@ -125,7 +125,7 @@ function lerpAngle(a, b, t) {
 // ------------------------------------------------------------
 function createBar(cfg) {
   const cv = document.createElement('canvas');
-  cv.width = 96; cv.height = 12;
+  cv.width = 128; cv.height = 16;
   const g = cv.getContext('2d');
   const tex = new THREE.CanvasTexture(cv);
   tex.colorSpace = THREE.SRGBColorSpace;
@@ -133,21 +133,23 @@ function createBar(cfg) {
 
   const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false });
   const spr = new THREE.Sprite(mat);
-  spr.scale.set(1.05, 0.13, 1);
-  spr.position.y = cfg.height + 0.26;
-  spr.visible = false;
+  // 头顶常驻血条：宽随身高、高固定。
+  // ⚠️ 必须抬到头顶上方约 0.6 —— 相机是俯视 45°，贴得太近会被怪自己的头挡住。
+  spr.scale.set(cfg.height * 1.0, 0.26, 1);
+  spr.position.y = cfg.height + 0.62;
+  spr.visible = true;
   spr.renderOrder = 5;
 
   function draw(ratio) {
     const r = Math.max(0, Math.min(1, ratio));
-    g.clearRect(0, 0, 96, 12);
-    g.fillStyle = 'rgba(2,10,8,0.78)';
-    g.fillRect(0, 0, 96, 12);
-    g.strokeStyle = 'rgba(180,255,225,0.35)';
-    g.lineWidth = 1;
-    g.strokeRect(0.5, 0.5, 95, 11);
+    g.clearRect(0, 0, 128, 16);
+    g.fillStyle = 'rgba(2,10,8,0.82)';
+    g.fillRect(0, 0, 128, 16);
+    g.strokeStyle = 'rgba(180,255,225,0.4)';
+    g.lineWidth = 1.5;
+    g.strokeRect(0.75, 0.75, 126.5, 14.5);
     g.fillStyle = r > 0.5 ? '#8ef7c8' : r > 0.25 ? '#ffd166' : '#ff7a66';
-    g.fillRect(2, 2, 92 * r, 8);
+    g.fillRect(3, 3, 122 * r, 10);
     tex.needsUpdate = true;
   }
   draw(1);
@@ -183,13 +185,20 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
   }
 
   // ---------------- 生成 ----------------
-  function spawn(type, at) {
+  // opts 里是**本只怪**的属性倍率（按回合成长传进来，见 wave.js 的 roundScale）：
+  //   hpScale / damageScale / speedScale
+  // 注意倍率只落在实例上，绝不改 ENEMY_TYPES —— 否则后一波会叠乘前一波。
+  function spawn(type, at, opts = {}) {
     const cfg = ENEMY_TYPES[type];
     const src = assets.get(type);
     if (!cfg || !src) {
       console.warn('[怪物] 未加载的类型：', type);
       return null;
     }
+
+    const maxHp = Math.max(1, Math.round(cfg.hp * (opts.hpScale ?? 1)));
+    const damage = Math.max(1, Math.round(cfg.damage * (opts.damageScale ?? 1)));
+    const speed = cfg.speed * (opts.speedScale ?? 1);
 
     const root = new THREE.Group();
     root.position.set(at.x, 0, at.z);
@@ -260,8 +269,10 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
       id: ++uid,
       type, cfg, root, model, mixer, actions, play,
       pos: root.position,
-      hp: cfg.hp,
-      maxHp: cfg.hp,
+      hp: maxHp,
+      maxHp,
+      damage,
+      speed,
       state: 'spawn',
       t: 0,
       attackCd: 0.4 + Math.random() * 0.5,
@@ -391,7 +402,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
         if (!e.hitDone && e.t >= e.cfg.windup) {
           e.hitDone = true;
           if (dist <= e.cfg.attackRange + 0.3) {
-            ctx.hurtPlayer(e.cfg.damage, e);
+            ctx.hurtPlayer(e.damage, e);
             if (fx) fx.ring(e.pos, { from: 0.3, to: e.cfg.attackRange, color: 0xff9a78, life: 0.22, opacity: 0.6, y: 0.06 });
           }
         }
@@ -433,7 +444,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
     // ---- 小兵：贴脸自爆 ----
     const contact = ctx.playerRadius + e.cfg.contactRange;
     if (dist <= contact) {
-      ctx.hurtPlayer(e.cfg.damage, e);
+      ctx.hurtPlayer(e.damage, e);
       if (fx) fx.burst(e.pos, { color: 0xffcf8a, count: 16, speed: 3.6, life: 0.5, size: 0.16, y: 0.55, up: 2.2 });
       die(e);
       return;
@@ -448,7 +459,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
 
   function moveToward(e, dx, dz, dist, dt, ctx) {
     if (dist < 0.0001) return;
-    const step = e.cfg.speed * dt;
+    const step = e.speed * dt;
     e.pos.x += (dx / dist) * step;
     e.pos.z += (dz / dist) * step;
 

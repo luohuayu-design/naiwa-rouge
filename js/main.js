@@ -12,8 +12,9 @@ import { createInput } from './input.js';
 import { createStats, STAT_DEFS } from './stats.js';
 import { createFx } from './fx.js';
 import { createEnemySystem } from './enemy.js';
-import { createLevel1, LEVEL_1 } from './wave.js';
-import { createRangeRing } from './rangeRing.js';
+  import { createLevel1, LEVEL_1 } from './wave.js';
+  import { createRangeRing } from './rangeRing.js';
+  import { rollChoices, applyUpgrade, upgradeText, UPGRADES } from './upgrade.js';
 
 // 标记模块已经跑起来了：index.html 的兜底自检靠它判断
 // 「模块根本没执行」还是「执行了但加载慢」。
@@ -155,6 +156,10 @@ async function boot() {
   const rsSub = document.getElementById('rsSub');
   const rsGrid = document.getElementById('rsGrid');
   const rsTag = document.getElementById('rsTag');
+  const upPanel = document.getElementById('upgrade');
+  const upList = document.getElementById('upList');
+  const upTitle = document.getElementById('upTitle');
+  const upSub = document.getElementById('upSub');
   let hintDone = false;
 
   // 关键属性（生命走血条，这里放三个最常看的）
@@ -256,13 +261,18 @@ async function boot() {
   }
 
   // ---------------- 战斗状态 ----------------
-  let gameState = 'playing';   // playing | over
+  let gameState = 'playing';   // playing | upgrade（三选一面板）| over
   let elapsed = 0;             // 本局时长（秒）
   let iframe = 0;              // 无敌帧剩余
   let shake = 0;               // 相机震动强度
   let attackCd = 0;            // 主角攻击冷却
   let deadT = 0;               // 死亡倒地动画计时
   let won = false;
+  let upgradesTaken = 0;       // 已经选过几次升级
+  let upSerial = 0;            // 升级加成的唯一序号（src 用）
+  let upgradeOpen = false;
+  let pendingRound = 0;        // 这次面板是打完第几回合弹的
+  const takenUpgrades = [];    // 结算里展示这一局都选了什么
 
   // 受击红闪用的战场冻结开关：只有 ?debug=1 的调试钩子会置 true（自动化测试用）
   let debugNoWaves = false;    // 冻结波次推进（不再刷怪）
@@ -295,13 +305,19 @@ async function boot() {
 
     const roll = stats.rollDamage({ targetArmor: e.cfg.armor });
     enemies.takeDamage(e, roll.damage, roll.crit);
+    // 吸血：按实际造成的伤害回血（属性为 0 时不触发）
+    const lifesteal = stats.get('lifesteal');
+    if (lifesteal > 0 && roll.damage > 0) {
+      stats.heal(roll.damage * lifesteal);
+      renderHud();
+    }
     frog.playAttack();                 // 抬手 → 拍下，和冲击环同一瞬间起手
     fx.swing(pos, stats.get('attackRange'));
     attackCd = 1 / Math.max(0.2, stats.get('attackSpeed'));
     return true;
   }
 
-  // ---------------- 波次 HUD ----------------
+  // ---------------- 回合 HUD ----------------
   let toastTimer = 0;
   function showToast(title, sub) {
     wtTitle.textContent = title;
@@ -311,18 +327,92 @@ async function boot() {
     toastTimer = setTimeout(() => waveToast.classList.remove('on'), 2000);
   }
 
-  function setWaveLabel(cur, total) {
-    whWave.textContent = `第 ${cur}/${total} 波`;
+  function setRoundLabel(cur, total) {
+    whWave.textContent = `第 ${cur}/${total} 回合`;
     whFill.style.width = ((cur / total) * 100).toFixed(1) + '%';
+  }
+
+  // ---------------- 回合结束的三选一 ----------------
+  // 打开面板时整局进入 upgrade 状态：怪物/波次/无敌帧全部冻结，只留渲染与待机动画。
+  function showUpgrade(roundNo) {
+    pendingRound = roundNo;
+    const picks = rollChoices();
+
+    upTitle.textContent = `第 ${roundNo} 回合结束 · 三选一`;
+    upSub.textContent = upgradesTaken > 0
+      ? `已获得 ${upgradesTaken} 次强化 · 选一个带进下一回合`
+      : '选一个带进下一回合';
+    upList.textContent = '';
+
+    for (const up of picks) {
+      const btn = document.createElement('button');
+      btn.className = 'up-item';
+      btn.type = 'button';
+      btn.dataset.tag = up.tag;
+      btn.dataset.id = up.id;
+
+      const glyph = document.createElement('span');
+      glyph.className = 'up-glyph';
+      glyph.textContent = up.glyph;
+
+      const name = document.createElement('span');
+      name.className = 'up-name';
+      name.textContent = up.name;
+
+      const effect = document.createElement('b');
+      effect.className = 'up-effect';
+      effect.textContent = up.title;
+
+      const desc = document.createElement('span');
+      desc.className = 'up-desc';
+      desc.textContent = up.desc;
+
+      btn.append(glyph, name, effect, desc);
+      btn.addEventListener('click', () => chooseUpgrade(up));
+      upList.appendChild(btn);
+    }
+
+    upgradeOpen = true;
+    gameState = 'upgrade';
+    input.joystick.release();
+    vel.set(0, 0, 0);
+    upPanel.classList.add('on');
+    upPanel.setAttribute('aria-hidden', 'false');
+  }
+
+  function chooseUpgrade(up) {
+    if (!upgradeOpen) return;
+    upgradeOpen = false;
+
+    upSerial++;
+    upgradesTaken++;
+    const res = applyUpgrade(stats, up, upSerial);
+    takenUpgrades.push(up);
+
+    upPanel.classList.remove('on');
+    upPanel.setAttribute('aria-hidden', 'true');
+    renderHud();
+    showToast(`获得 · ${up.name}`, upgradeText(res));
+
+    // 第 10 回合是最后一格：选完就结算，不用再等 2.6 秒的回合间隔
+    if (pendingRound >= level.totals.rounds) {
+      endGame(true);
+      return;
+    }
+    gameState = 'playing';
   }
 
   // ---------------- 第一关 ----------------
   const level = createLevel1({
     enemies, fx,
     getPlayerPos: () => pos,
-    onWave: (cur, total, label, tip) => {
-      setWaveLabel(cur, total);
-      showToast(label, tip);
+    onRound: (cur, total, tip) => {
+      setRoundLabel(cur, total);
+      showToast(`第 ${cur} 回合`, tip);
+    },
+    onRoundClear: (roundNo) => {
+      // 第 1/3/5/8/10 回合打完弹三选一；其余回合直接走 2.6 秒间隔进下一回合
+      if (level.shouldUpgrade(roundNo)) showUpgrade(roundNo);
     },
     onVictory: () => endGame(true),
   });
@@ -345,11 +435,14 @@ async function boot() {
       : '奶蛙被骷髅拖进了草丛……下一局记得边打边退';
     rsGrid.textContent = '';
 
+    const roundShown = Math.min(level.totals.rounds, Math.max(1, level.roundNo));
     const cells = [
       ['用时', elapsed.toFixed(1) + ' 秒'],
       ['击杀', kills + ' 只'],
-      ['波次', `${Math.max(1, level.waveIndex + 1)} / ${level.totals.waves}`],
+      ['回合', `${roundShown} / ${level.totals.rounds}`],
+      ['升级', `${upgradesTaken} 次`],
       ['剩余生命', `${Math.max(0, Math.ceil(stats.hp.cur))} / ${Math.round(stats.get('maxHp'))}`],
+      ['攻击力', String(Math.round(stats.get('attack')))],
     ];
     for (const [k, v] of cells) {
       const cell = document.createElement('div');
@@ -379,6 +472,15 @@ async function boot() {
       setWaves(p) { debugNoWaves = !!p; },
       setEnemies(p) { debugNoEnemies = !!p; },
       isPaused: () => debugNoWaves || debugNoEnemies,
+      // 三选一：手动弹面板 / 直接选 / 读池子（自动化测试用）
+      upgrade: {
+        show: (roundNo = level.roundNo) => showUpgrade(roundNo),
+        choose: (up) => chooseUpgrade(up),
+        roll: () => rollChoices(),
+        list: UPGRADES,
+        get taken() { return takenUpgrades.map((u) => u.id); },
+        isOpen: () => upgradeOpen,
+      },
     };
   }
 
@@ -456,6 +558,10 @@ async function boot() {
       if (!debugNoWaves) level.update(dt);
       if (stats.hp.cur < stats.get('maxHp')) stats.heal(stats.get('hpRegen') * dt);
       if (iframe > 0) iframe -= dt;
+    } else if (gameState === 'upgrade') {
+      // 三选一面板打开：怪物/波次/计时全冻结，只留奶蛙的待机呼吸，
+      // 不然整个世界像被按了暂停键一样僵住。
+      frog.update(dt, 0);
     } else {
       // 结算后：失败就慢慢侧倒，胜利保持站姿待机
       deadT += dt;

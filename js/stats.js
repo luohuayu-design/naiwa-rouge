@@ -73,6 +73,8 @@ export function createStats() {
   }
 
   // 加成：stat 属性 key，flat 加法，pct 百分比（0.1 = +10%），src 来源标识（便于整批撤销）
+  // ⚠️ 百分比是「乘在 (base + flat) 上」的，所以 base 为 0 的属性（暴击率、吸血、防御…）
+  //    用 pct 不会生效 —— 这类属性一律用 flat 加绝对值。
   function addMod({ stat, flat = 0, pct: p = 0, src = '' }) {
     if (!mods.has(stat)) return;
     mods.get(stat).push({ flat, pct: p, src });
