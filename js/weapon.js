@@ -4,17 +4,18 @@
 // 玩法（用户定案）：
 //   · 第 5 回合打完自动获得 3 把铁剑环绕主角旋转，各有自己的判定。
 //   · 剑碰到怪物 → 造成伤害并消失（少一把）；
-//   · 被消耗的剑每 swordRegen 秒恢复一把，上限 swordMax（初始 3）。
+//   · 被消耗的剑每 swordRegen 秒恢复一把。**数量不设上限**（第 9 块定案）：
+//     拥有几把就上环几把，买多少把都能同时转，没有「闲置的剑」。
 //   · 技能「万剑齐发」：把环上所有剑沿各自朝向四周射出，并在每两把
 //     之间插入一把（一次 2n 把）；没有冷却，有剑就能放。
 //
 // 元素剑（见 swordKinds.js）：每把剑有一种元素，命中触发附加效果——
 //   poison 毒（DoT）/ frost 冰缓（减速）/ thunder 雷（连锁闪电）/
 //   leech 血（回血）/ iron 铁（无附加）。
-//   商店可以买新剑（addSword）；swordMax 升上去的空位会自动补铁剑。
+//   商店可以买新剑（addSword），买到就立刻上环。
 //
 // 数值全部走**武器自己的属性表** wstats（weaponStats.js）：
-//   swordDamage / swordCrit / swordCritMul / swordMax / swordOrbit / swordRegen
+//   swordDamage / swordCrit / swordCritMul / swordOrbit / swordRegen
 //   + poisonDps / poisonTime / frostSlow / frostTime / chainCount / leechRate
 // ⚠️ 第 6 块起武器与主角彻底解耦：剑的伤害、暴击、吸血都不吃主角属性，
 //    stats 在武器系统里只剩一个用途 —— 给主角回血（血剑/吸血）。
@@ -153,24 +154,18 @@ export function createWeaponSystem({ scene, stats, wstats, fx, enemies }) {
     if (fx) fx.ring({ x: 0, z: 0 }, { from: 0.4, to: ORBIT_R + 0.6, color: 0x9fe8ff, life: 0.6, opacity: 0.8, y: 0.06 });
   }
 
-  // 商店买新剑：加入 owned；环上还有空位就立刻长出来
+  // 商店买新剑：加入 owned 并立刻上环（数量不设上限）
   function addSword(kind) {
     const k = SWORD_KINDS[kind] ? kind : 'iron';
     if (!granted) return { ok: false, onRing: false };
     owned.push(k);
-    let onRing = false;
-    if (orbiting.length < maxCount()) {
-      orbiting.push({ kind: k, holder: acquire(k), spawnT: t });
-      onRing = true;
-    }
+    orbiting.push({ kind: k, holder: acquire(k), spawnT: t });
     if (fx) fx.ring({ x: 0, z: 0 }, { from: 0.3, to: ORBIT_R, color: SWORD_KINDS[k].emissive, life: 0.5, opacity: 0.8, y: 0.06 });
-    return { ok: true, onRing };
+    return { ok: true, onRing: true };
   }
 
-  // 剑数量上限（武器自己的属性，不吃主角）
-  function maxCount() { return Math.round(wstats.get('swordMax')); }
-  // 环上应有的剑数：拥有数与上限取小
-  function targetCount() { return Math.min(owned.length, maxCount()); }
+  // 环上应有多少把剑 = 拥有多少把（不设上限，用户第 9 块定案）
+  function targetCount() { return owned.length; }
 
   // 环上还缺哪种剑：owned 里有、环上没有的（多把取第一把）
   function missingKind() {
@@ -305,15 +300,14 @@ export function createWeaponSystem({ scene, stats, wstats, fx, enemies }) {
       }
     }
 
-    // 1) 恢复：环上不满且还有「拥有但不在环上」的剑时，每 swordRegen 秒补一把；
-    //    上限升高的空位（owned 不够）自动补一把铁剑。
+    // 1) 恢复：环上不满时，每 swordRegen 秒补回一把被消耗的剑。
+    //    owned 是总库存，环上少的那几把一定是被消耗掉的，missingKind 直接找得到。
     if (orbiting.length < target) {
       regenT += dt;
       const need = Math.max(0.2, wstats.get('swordRegen'));
       while (orbiting.length < target && regenT >= need) {
         regenT -= need;
-        let kind = missingKind();
-        if (!kind) { kind = 'iron'; owned.push('iron'); }   // 上限空位 → 自动锻造铁剑
+        const kind = missingKind() || 'iron';
         orbiting.push({ kind, holder: acquire(kind), spawnT: t });
         if (fx) fx.ring({ x: p.x, z: p.z }, { from: ORBIT_R * 0.4, to: ORBIT_R, color: SWORD_KINDS[kind].emissive, life: 0.45, opacity: 0.7, y: 0.06 });
       }
@@ -406,7 +400,7 @@ export function createWeaponSystem({ scene, stats, wstats, fx, enemies }) {
     get granted() { return granted; },
     get count() { return orbiting.length; },
     get owned() { return owned.slice(); },
-    get max() { return maxCount(); },
+    get max() { return owned.length; },        // 已不再限制，保留字段给旧调用/测试
     get target() { return targetCount(); },
     get orbitingCount() { return orbiting.length; },
     get flyingCount() { return flyers.length; },

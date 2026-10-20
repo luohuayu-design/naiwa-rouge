@@ -6,6 +6,10 @@
 //     第 15 回合是最后一关，清完直接结算不弹商店）；
 //   · 用金币购买三类东西：生命药水 / 属性加成 / 武器（元素剑）；
 //   · 一个商店可以连买多件（金币够就行），关掉继续打。
+//   · **每次进店只随机摆 4 件**（第 9 块）：同一批货在本次商店里保持不变，
+//     关掉再进来（下一回合）才重新抽 —— 所以每次逛店看到的东西都不一样。
+//     抽签会先剔掉「现在买了也没用」的（没环剑时的剑类、满血时的药水），
+//     池子不够 4 件才把它们放回来兜底。
 //
 // type 说明：
 //   heal      立刻回复 amount 生命
@@ -91,4 +95,27 @@ export function itemLocked(item, ctx = {}) {
   if (item.needWeapon && !ctx.hasWeapon) return '第 5 回合获得环剑后解锁';
   if (item.type === 'heal' && ctx.hpFull) return '生命已满';
   return null;
+}
+
+// 每次进店摆几件
+export const SHOP_SHOW = 4;
+
+// 抽本次商店的货物：返回一个**不含重复**的物品数组（默认 4 件）。
+// hasWeapon = 已拿到环剑（没有时剑类买了也用不了，先不进池）
+// hpFull    = 满血（药水先不进池，否则白发一格；池子不够再兜底）
+// rng 可注入，测试里能固定结果。
+export function rollShopItems(rng = Math.random, {
+  hasWeapon = false, hpFull = false, count = SHOP_SHOW,
+} = {}) {
+  const usable = SHOP_ITEMS.filter((it) => !(it.needWeapon && !hasWeapon));
+  const useful = hpFull
+    ? usable.filter((it) => it.type !== 'heal' && it.type !== 'healFull')
+    : usable;
+  const pool = (useful.length >= count ? useful : usable).slice();
+  // Fisher–Yates 洗牌，取前 count 个（不重复）
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    const t = pool[i]; pool[i] = pool[j]; pool[j] = t;
+  }
+  return pool.slice(0, Math.min(count, pool.length));
 }

@@ -19,7 +19,7 @@ import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES } from
 import { createWeaponSystem } from './weapon.js';
 import { SWORD_KINDS, KIND_ORDER } from './swordKinds.js';
 import { createGoldSystem } from './gold.js';
-import { SHOP_ITEMS, itemLocked } from './shop.js';
+import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW } from './shop.js';
 import audio from './audio.js';
 import {
   EVENTS, ALL_EVENTS, getEventById, pickEvent, effectLines,
@@ -579,7 +579,7 @@ async function boot() {
       // 精确的「原值 → 选后值」：用 stats.preview 算，和真选下去的数字完全一致
       const delta = document.createElement('div');
       delta.className = 'up-delta';
-      for (const c of previewUpgrade(stats, up, wstats)) {
+      for (const c of previewUpgrade(stats, up, wstats, weapon)) {
         const row = document.createElement('span');
         row.className = 'up-chg';
         const label = document.createElement('i');
@@ -619,7 +619,7 @@ async function boot() {
 
     upSerial++;
     upgradesTaken++;
-    const res = applyUpgrade(stats, up, upSerial, wstats);
+    const res = applyUpgrade(stats, up, upSerial, wstats, weapon);
     takenUpgrades.push(up);
 
     upPanel.classList.remove('on');
@@ -1115,9 +1115,17 @@ async function boot() {
   let shopAfterCb = null;      // 商店关掉后要不要继续（链式：事件→升级→商店→开打）
   let shopSerial = 0;          // 商店属性加成的 src 序号
 
+  // 本次商店摆的货：每进一次店重新抽 4 件（第 9 块），关掉重开不变
+  let shopStock = SHOP_ITEMS.slice(0, SHOP_SHOW);
+
   function openShop(roundNo, after) {
     shopAfterCb = after || null;
     shopOpen = true;
+    // 抽签前先按「现在买有没有用」过滤：没环剑时的剑类、满血时的药水都不占格子
+    shopStock = rollShopItems(Math.random, {
+      hasWeapon: weapon.granted,
+      hpFull: stats.hp.cur >= stats.get('maxHp') - 1e-9,
+    });
     gameState = 'shop';
     input.joystick.release();
     vel.set(0, 0, 0);
@@ -1147,9 +1155,9 @@ async function boot() {
     const mul = repPriceMul();
     const tag = mul < 0.995 ? ` · 民心 ${Math.round(reputation)}，市价 ${Math.round(mul * 100)}%`
       : mul > 1.005 ? ` · 民心 ${Math.round(reputation)}，市价 ${Math.round(mul * 100)}%` : '';
-    shSub.textContent = `第 ${level.roundNo} 回合清空 · 打完这一波，来点补给？${tag}`;
+    shSub.textContent = `第 ${level.roundNo} 回合清空 · 本店只摆 ${shopStock.length} 件${tag}`;
     shList.textContent = '';
-    for (const item of SHOP_ITEMS) {
+    for (const item of shopStock) {
       const price = priceOf(item);
       const locked = itemLocked(item, {
         hasWeapon: weapon.granted,
@@ -1221,9 +1229,8 @@ async function boot() {
       if (item.stat === 'maxHp') target.syncHp(item.heal || 0);
       showToast(item.name, '永久生效 · ' + item.desc);
     } else if (item.type === 'sword') {
-      const r = weapon.addSword(item.kind);
-      showToast(`${SWORD_KINDS[item.kind].name} 入列`,
-        r.onRing ? '已经转到环上了' : '环上满员，下一把剑消耗后补位');
+      weapon.addSword(item.kind);
+      showToast(`${SWORD_KINDS[item.kind].name} 入列`, `环上现在有 ${weapon.count} 把剑在转`);
       renderSkill();
     }
     renderHud();
@@ -1347,6 +1354,51 @@ async function boot() {
   if (new URLSearchParams(location.search).has('debug')) {
     window.__game = {
       stats, wstats, pos, vel, input, enemies, level, fx, playerRing, frog, camera, weapon, scene,
+      renderer,
+      // 性能探针：draw call / 三角数 / 显存对象数（第 9 块排查后期卡顿）
+      renderInfo: () => ({
+        calls: renderer.info.render.calls,
+        triangles: renderer.info.render.triangles,
+        points: renderer.info.render.points,
+        geometries: renderer.info.memory.geometries,
+        textures: renderer.info.memory.textures,
+        programs: renderer.info.programs ? renderer.info.programs.length : -1,
+        pixelRatio: renderer.getPixelRatio(),
+        drawingBuffer: [renderer.domElement.width, renderer.domElement.height],
+        sceneChildren: scene.children.length,
+      }),
+      // 场景里各类对象计数（诊断用）
+      sceneStats: () => {
+        let mesh = 0, skinned = 0, sprite = 0, points = 0, lights = 0, shadows = 0;
+        const matSet = new Set();
+        scene.traverse((o) => {
+          if (o.isSkinnedMesh) { skinned++; mesh++; }
+          else if (o.isMesh) mesh++;
+          if (o.isSprite) sprite++;
+          if (o.isPoints) points++;
+          if (o.isLight) lights++;
+          if (o.castShadow) shadows++;
+          if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => matSet.add(m.uuid));
+        });
+        return { mesh, skinned, sprite, points, lights, shadows, materials: matSet.size,
+          enemies: enemies.aliveCount(), fx: fx.count() };
+      },
+      // 单帧 CPU 计时：连续 N 帧里，enemies.update + weapon.update 的毫秒数
+      probeTick: (frames = 30) => new Promise((resolve) => {
+        const costs = [];
+        let n = 0;
+        const step = () => {
+          const t0 = performance.now();
+          enemies.update(1 / 60, combatCtx);
+          weapon.update(1 / 60, { playerPos: pos });
+          fx.update(1 / 60);
+          costs.push(performance.now() - t0);
+          if (++n < frames) requestAnimationFrame(step);
+          else resolve({ avg: costs.reduce((a, b) => a + b, 0) / costs.length,
+            max: Math.max(...costs), frames });
+        };
+        requestAnimationFrame(step);
+      }),
       fireSwords: tryFireSwords,
       renderSkill,
       getYaw: () => yaw,
@@ -1398,6 +1450,8 @@ async function boot() {
         buy: (id) => { const it = SHOP_ITEMS.find((s) => s.id === id); if (it) buyItem(it); },
         isOpen: () => shopOpen,
         items: SHOP_ITEMS,
+        get stock() { return shopStock.slice(); },
+        roll: (rng) => rollShopItems(rng, { hasWeapon: weapon.granted, hpFull: stats.hp.cur >= stats.get('maxHp') - 1e-9 }),
         render: () => renderShop(),
       },
       event: {

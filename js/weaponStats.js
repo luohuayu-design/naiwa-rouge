@@ -5,6 +5,8 @@
 // 伤害、暴击都是自己的数据」。所以这里是一套**完全独立**的数值：
 //   · 剑的伤害 / 暴击 / 暴伤 / 吸血 全在剑自己身上，主角的攻击力、
 //     暴击、吸血一点也吃不到；
+//   · **剑的数量不设上限**（用户第 9 块定案）：拥有几把就上环几把，
+//     所以属性表里没有 swordMax 这一项；
 //   · 元素效果（毒 / 冰 / 雷 / 血）也归剑，不归主角；
 //   · 升级（三选一的剑系）、商店（剑油 / 磨剑石）、事件 buff 都能改这里，
 //     作用域由 scope:'weapon' 标出，见 upgrade.js / shop.js / events.js。
@@ -21,7 +23,6 @@ export const WEAPON_STAT_DEFS = [
   { key: 'swordDamage',  name: '剑伤害',     base: 1.60,  fmt: num1, group: '剑本体', desc: '每把剑命中一次的基础伤害，与主角攻击力无关' },
   { key: 'swordCrit',    name: '剑暴击率',   base: 0.10,  fmt: pct,  group: '剑本体', desc: '环剑自己的暴击概率，不吃主角暴击率' },
   { key: 'swordCritMul', name: '剑暴击伤害', base: 1.50,  fmt: pct,  group: '剑本体', desc: '剑暴击时的伤害倍率' },
-  { key: 'swordMax',     name: '剑数量上限', base: 3,     fmt: num1, group: '剑本体', desc: '环剑最多同时存在几把（空位会自动补铁剑）' },
   { key: 'swordOrbit',   name: '剑转速',     base: 0.55,  fmt: (v) => v.toFixed(2) + ' 圈/秒', group: '剑本体', desc: '环剑绕主角旋转的速度' },
   { key: 'swordRegen',   name: '剑回复',     base: 3.0,   fmt: (v) => v.toFixed(1) + ' 秒/把', group: '剑本体', desc: '被消耗后恢复一把剑所需的时间，越小越快' },
   // ---------------- 元素（毒 / 冰 / 雷 / 血 见 swordKinds.js） ----------------

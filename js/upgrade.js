@@ -101,8 +101,8 @@ export const UPGRADES = [
   {
     id: 'swordArray', tag: 'atk', glyph: '✹', name: '剑阵', needsWeapon: true, scope: 'weapon',
     w0: 1.00, gw: +0.050,   // 权重 = w0 + gw × (回合-1)
-    title: '剑数量上限 +1', desc: '多一把剑轮转，环上更密、散射覆盖更广',
-    stat: 'swordMax', flat: 1,
+    title: '环上再多一把剑', desc: '永久 +1 把铁剑。剑的数量没有上限，有多少把就转多少把',
+    sword: 'iron',
   },
   {
     id: 'swordSpin', tag: 'atk', glyph: ' ⟳', name: '疾轮', needsWeapon: true, scope: 'weapon',
@@ -246,8 +246,24 @@ export function rollChoices(rng = Math.random, opts = {}) {
 
 // 应用一张升级。serial 只用来让每次加成的 src 唯一（便于 removeBySource 回滚）。
 // wstats = 武器属性表：scope:'weapon' 的条目改它，其余改主角 stats。
+// weapon = 武器系统本身：只有「直接给一把剑」的卡（sword 字段）才需要它。
 // 返回 { src, changes }：changes 是精确的「选前 → 选后」（用于卡片/提示文案）。
-export function applyUpgrade(stats, up, serial = 0, wstats = null) {
+export function applyUpgrade(stats, up, serial = 0, wstats = null, weapon = null) {
+  // 剑阵这类「直接加一把剑」的卡：不碰属性表，交给武器系统上环
+  if (up.sword) {
+    const before = weapon ? weapon.count : 0;
+    if (weapon) weapon.addSword(up.sword);
+    const kindName = up.sword === 'iron' ? '铁剑' : up.sword;
+    return {
+      src: `upg:${up.id}:${serial}`,
+      changes: [{
+        key: 'sword', scope: 'weapon', name: `环剑（${kindName}）`,
+        from: before, to: before + 1,
+        fromText: `${before} 把`, toText: `${before + 1} 把`,
+        text: `${before} → ${before + 1} 把`,
+      }],
+    };
+  }
   const list = [up, up.extra].filter(Boolean);
   const scopeOf = (m) => m.scope || up.scope || 'player';
   const before = list.map((m) => tableFor(scopeOf(m), stats, wstats).get(m.stat));
@@ -279,7 +295,16 @@ export function applyUpgrade(stats, up, serial = 0, wstats = null) {
 
 // 预演一张升级：返回与 applyUpgrade 同结构的 changes，但不改任何状态。
 // 三选一卡片上的「1 → 2」就是用它算的，所以点下去之后数值一定与预览一致。
-export function previewUpgrade(stats, up, wstats = null) {
+export function previewUpgrade(stats, up, wstats = null, weapon = null) {
+  if (up.sword) {
+    const n = weapon ? weapon.count : 0;
+    return [{
+      key: 'sword', scope: 'weapon', name: '环剑',
+      from: n, to: n + 1,
+      fromText: `${n} 把`, toText: `${n + 1} 把`,
+      text: `${n} → ${n + 1} 把`,
+    }];
+  }
   const list = [up, up.extra].filter(Boolean);
   const scopeOf = (m) => m.scope || up.scope || 'player';
   return list.map((m) => {
