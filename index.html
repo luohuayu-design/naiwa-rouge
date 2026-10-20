@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#080f14">
 <link rel="icon" href="data:,">
 <title>蛙步 · 夜行</title>
-<link rel="stylesheet" href="style.css?v=9">
+<link rel="stylesheet" href="style.css?v=10">
 </head>
 <body>
 
@@ -75,18 +75,22 @@
 <!-- 受击红闪 -->
 <div id="hurtFx"></div>
 
-<!-- 属性详情面板 -->
+<!-- 属性详情面板：分两页（奶蛙 / 环剑），页内按组显示 -->
 <div id="attrPanel" class="attr-panel" aria-hidden="true">
   <div class="ap-card">
     <div class="ap-head">
       <div>
-        <div class="ap-title">奶蛙 · 属性</div>
+        <div class="ap-title">属性</div>
         <div class="ap-sub" id="apSub">—</div>
       </div>
       <button class="ap-close" id="apClose" type="button" aria-label="关闭">✕</button>
     </div>
+    <div class="ap-tabs" id="apTabs" role="tablist">
+      <button class="ap-tab on" type="button" data-tab="player" role="tab">奶蛙</button>
+      <button class="ap-tab" type="button" data-tab="weapon" role="tab">环剑</button>
+    </div>
     <div class="ap-list" id="apList"></div>
-    <div class="ap-foot">点空白处关闭 · 后续升级会在这里成长</div>
+    <div class="ap-foot">两页数值互不影响 · 点空白处关闭</div>
   </div>
 </div>
 
@@ -110,7 +114,7 @@
     <div class="wc-name">环 剑</div>
     <div class="wc-desc">三把剑绕着你转，碰到怪就砍一刀然后消失；<br>被消耗的剑每 3 秒补回一把（上限 3 把）。</div>
     <div class="wc-rows">
-      <span>剑伤害<i>攻击伤害 × 剑刃倍率</i></span>
+      <span>剑伤害<i>1.6 · 自带 10% 暴击，和主角攻击力无关</i></span>
       <span>万剑齐发<i>右下角剑形按钮 · 把现有的剑全射出去</i></span>
     </div>
     <button class="wc-btn" id="wcOk" type="button">装备并继续</button>
@@ -207,7 +211,7 @@
 <!-- 不用 importmap：老手机浏览器（iOS 16.4 以下、旧版微信/安卓 WebView）
      不支持 import maps，会让整个模块解析失败、加载页永远停在 0%。
      项目内所有 import 都写成相对路径，直接靠原生 ES Module 解析。 -->
-<script type="module" src="js/main.js?v=9"></script>
+<script type="module" src="js/main.js?v=10"></script>
 
 <!-- 兜底自检：模块没跑起来时把原因写出来，别让用户对着 0% 干等 -->
 <script>

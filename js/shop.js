@@ -30,7 +30,7 @@ export const SHOP_ITEMS = [
   {
     id: 'whetstone', type: 'stat', stat: 'attack', flat: 1, price: 15,
     glyph: '🪨', name: '磨刀石',
-    desc: '攻击力 +1.0（永久）。前期最扎实的投资。',
+    desc: '近战攻击力 +1.0（永久）。只加奶蛙自己的普攻，不加剑。',
   },
   {
     id: 'shell', type: 'stat', stat: 'maxHp', flat: 2, heal: 2, price: 14,
@@ -45,7 +45,18 @@ export const SHOP_ITEMS = [
   {
     id: 'oilstone', type: 'stat', stat: 'attackSpeed', pct: 0.10, price: 16,
     glyph: '🫗', name: '滑石粉',
-    desc: '攻击速度 +10%（永久）。出手更密。',
+    desc: '近战攻击速度 +10%（永久）。出手更密。',
+  },
+  // ---------------- 武器属性（永久，改武器自己的表） ----------------
+  {
+    id: 'swordOil', type: 'stat', scope: 'weapon', stat: 'swordDamage', pct: 0.15, price: 18,
+    needWeapon: true, glyph: '🫙', name: '剑油',
+    desc: '剑伤害 +15%（永久）。只加环剑，不加主角普攻。',
+  },
+  {
+    id: 'grindstone', type: 'stat', scope: 'weapon', stat: 'swordCrit', flat: 0.05, price: 22,
+    needWeapon: true, glyph: '🔪', name: '磨剑石',
+    desc: '剑暴击率 +5%（永久）。环剑自己的暴击，与主角暴击无关。',
   },
   // ---------------- 武器（元素剑，永久 +1 把） ----------------
   {

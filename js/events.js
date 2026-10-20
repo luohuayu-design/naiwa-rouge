@@ -7,7 +7,8 @@
 //   · 伏笔类（乞丐报恩）延迟几回合回来兑现。
 //
 // effects 字段（main.js 负责落地）：
-//   mods   [{stat, flat?, pct?}]  本回合临时属性（回合结束自动撤销）
+//   mods   [{stat, flat?, pct?, scope?}]  本回合临时属性（回合结束自动撤销）
+//          scope:'weapon' 的改武器表（剑转速等），不写就是主角表
 //   gold   ±n                     立刻结算金币
 //   hp     ±n                     立刻结算生命（负数保底 0.5，不会一口咬死）
 //   drain  n                      本回合每秒流失生命（可以磨死人，危险）
@@ -19,6 +20,7 @@
 // 出现规则：加权随机；同一事件 3 回合内不重复；cond 不满足的跳过。
 // ============================================================
 import { STAT_DEFS } from './stats.js';
+import { WEAPON_STAT_DEFS } from './weaponStats.js';
 
 export const EVENTS = [
   // ---------------- 纯坏 ----------------
@@ -77,7 +79,7 @@ export const EVENTS = [
     id: 'wind', icon: '🌬', title: '夜风顺了',
     story: '一阵夜风从背后推来，你的剑转得飞快，快得只剩一圈残影。',
     cond: (ctx) => ctx.hasWeapon,
-    effects: { mods: [{ stat: 'swordOrbit', pct: 0.40 }] },
+    effects: { mods: [{ stat: 'swordOrbit', pct: 0.40, scope: 'weapon' }] },
   },
   {
     id: 'breeze', icon: '🍃', title: '顺风',
@@ -189,7 +191,10 @@ export function pickEvent(ctx = {}, recentIds = [], rng = Math.random) {
 // ---------------- 文案 ----------------
 // 把 effects 翻译成事件卡上能直接展示的几行字
 function modLine(m) {
-  const def = STAT_DEFS.find((d) => d.key === m.stat);
+  // 两块属性表都查：武器项（剑转速等）在 WEAPON_STAT_DEFS 里
+  const def = (m.scope === 'weapon' ? WEAPON_STAT_DEFS : STAT_DEFS).find((d) => d.key === m.stat)
+    || STAT_DEFS.find((d) => d.key === m.stat)
+    || WEAPON_STAT_DEFS.find((d) => d.key === m.stat);
   const name = def ? def.name : m.stat;
   if (m.pct != null) return `${name} ${(m.pct >= 0 ? '+' : '')}${(m.pct * 100).toFixed(1)}%（本回合）`;
   return `${name} ${(m.flat >= 0 ? '+' : '')}${m.flat.toFixed(1)}（本回合）`;

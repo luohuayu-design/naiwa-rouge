@@ -90,6 +90,23 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
   color:#bfeedd;font-size:13px;line-height:1;-webkit-tap-highlight-color:transparent}
 .ap-close:hover{background:rgba(126,235,196,.18)}
 .ap-list{overflow-y:auto;-webkit-overflow-scrolling:touch;padding:6px 10px 10px}
+/* 标签页：奶蛙 / 环剑（两套属性完全独立，分页看不会串味） */
+.ap-tabs{display:flex;gap:8px;padding:10px 14px 4px}
+.ap-tab{flex:1;height:32px;border-radius:10px;cursor:pointer;
+  font-size:12px;letter-spacing:.1em;color:rgba(168,214,196,.66);
+  background:rgba(10,30,25,.55);border:1px solid rgba(126,235,196,.14);
+  transition:background .16s,color .16s,border-color .16s}
+.ap-tab:hover{background:rgba(126,235,196,.1)}
+.ap-tab.on{color:#07130f;font-weight:700;letter-spacing:.12em;
+  background:linear-gradient(180deg,#8ef2c8,#4fd8a0);
+  border-color:rgba(160,255,220,.6);box-shadow:0 0 16px rgba(110,240,190,.32)}
+.ap-note{margin:6px 4px 2px;padding:8px 10px;border-radius:10px;font-size:10.5px;line-height:1.6;
+  color:rgba(255,214,150,.8);background:rgba(60,44,16,.5);border:1px solid rgba(255,199,120,.18)}
+.ap-group + .ap-group{margin-top:4px}
+.ap-gt{padding:10px 6px 2px;font-size:10px;letter-spacing:.18em;
+  color:rgba(140,205,180,.62);text-transform:none}
+.ap-gt::before{content:'';display:inline-block;width:4px;height:4px;margin-right:7px;
+  border-radius:50%;vertical-align:middle;background:rgba(126,235,196,.6)}
 .ap-row{display:grid;grid-template-columns:1fr auto;gap:3px 12px;
   padding:10px 6px;border-radius:10px}
 .ap-row + .ap-row{border-top:1px solid rgba(126,235,196,.07)}

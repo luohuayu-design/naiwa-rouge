@@ -48,7 +48,7 @@ export const ENEMY_TYPES = {
     radius: 0.38,          // 碰撞半径
     hp: 1,
     armor: 0,
-    speed: 2.15,           // 世界单位/秒（主角 4.4，能被拉开）
+    speed: 2.30,           // 世界单位/秒（主角 4.4，能被拉开）：小兵最快，追得凶
     contactRange: 0.62,    // 额外接触距离（主角半径 + 这个值即触发自爆）
     damage: 1,
     spawnTime: 0.9,        // 从地里钻出来的时间，期间无敌不动
@@ -68,7 +68,7 @@ export const ENEMY_TYPES = {
     radius: 0.50,
     hp: 3,
     armor: 0,
-    speed: 1.32,
+    speed: 1.15,           // 最慢的一只：穿着甲，一步一步挪过来（能绕到背后打）
     attackRange: 1.55,     // 近战范围（主角攻击范围 2.1，玩家可以先手）
     damage: 1,
     attackInterval: 1.7,   // 两次挥拳的间隔
@@ -85,10 +85,11 @@ export const ENEMY_TYPES = {
   },
 
   // ---------------- 第三种：远程投手（第 11 回合起登场） ----------------
-  // 行为：远远地绕着主角跑，进射程（7.0）就拉弓，前摇 0.55 秒后掷骨刀。
-  // 骨刀是**实体弹道**（速度 8.5，飞 2.4 秒或出界消失）—— 主角移速 4.4，
-  // 横向走两步就能躲开，所以伤害给到 2 也不算离谱。
-  // 主角贴到 4.2 以内它会后退（风筝），但移速只有 1.55，跑不掉，追上去能秒。
+  // 行为：远远地绕着主角跑，进射程（7.0）就拉弓，前摇 0.72 秒后掷骨刀。
+  // 骨刀是**实体弹道**（速度 5.6，飞 2.6 秒或出界消失）—— 主角移速 4.4，
+  // 横着走两步就能躲开。第 6 块按用户反馈把伤害/频率/弹速都压下来了：
+  // 伤害 2 → 1、攻击间隔 2.6 → 3.6 秒、弹速 8.5 → 5.6、前摇 0.55 → 0.72
+  // （前摇变长 = 看得出来要出手，有反应时间）。
   archer: {
     name: '骷髅投手',
     file: 'assets/monsters/skeleton-rogue.glb',
@@ -97,17 +98,17 @@ export const ENEMY_TYPES = {
     radius: 0.42,
     hp: 2,
     armor: 0,
-    speed: 1.55,
+    speed: 1.50,           // 比小兵慢、比战士快（三种怪的速度刻意拉开，不再齐步走）
     attackRange: 7.0,      // 射程：进了这个圈才开始拉弓
     keepDistance: 4.2,     // 比这个近就后退（不会站着被贴脸）
-    damage: 2,             // 骨刀命中伤害（第 1 回合基准，之后按回合倍率成长）
-    attackInterval: 2.6,   // 两次掷刀的间隔
-    windup: 0.55,          // 前摇：拉弓到出手
-    attackDuration: 0.85,  // 整段投掷动画时长（前摇 + 收势）
+    damage: 1,             // 骨刀命中伤害（第 1 回合基准，之后按回合倍率成长）
+    attackInterval: 3.6,   // 两次掷刀的间隔
+    windup: 0.72,          // 前摇：拉弓到出手
+    attackDuration: 1.0,   // 整段投掷动画时长（前摇 + 收势）
     projectile: {
-      speed: 8.5,          // 骨刀飞行速度（世界单位/秒）
+      speed: 5.6,          // 骨刀飞行速度（世界单位/秒）
       radius: 0.30,        // 弹体判定半径
-      life: 2.4,           // 最长存活时间（超时自散）
+      life: 2.6,           // 最长存活时间（超时自散）
       y: 0.85,             // 飞行高度
       color: 0xffc46a,
     },
@@ -239,7 +240,10 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
 
     const maxHp = Math.max(1, Math.round(cfg.hp * (opts.hpScale ?? 1)));
     const damage = Math.max(1, Math.round(cfg.damage * (opts.damageScale ?? 1)));
-    const speed = cfg.speed * (opts.speedScale ?? 1);
+    // 同一种怪也**不是同一个速度**：生成时在 ±15% 内随机（用户要求「浮动速率」）。
+    // 这一条加上「各自随机休息」和「曲线接近」，是打散怪群的第一层手段。
+    const speedMul = 0.85 + Math.random() * 0.30;
+    const speed = cfg.speed * (opts.speedScale ?? 1) * speedMul;
 
     const root = new THREE.Group();
     root.position.set(at.x, 0, at.z);
@@ -323,6 +327,13 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
       dot: null,       // 中毒：{ dps, t, tick }
       slowT: 0,        // 冰缓剩余时间
       slowFactor: 0,   // 冰缓减速比例
+      // —— 打散怪群的三件套（第 6 块）——
+      speedMul,        // 生成时随机出来的速度倍率（0.85~1.15，同种怪也不一样）
+      restCd: 2.5 + Math.random() * 3.5,  // 再走多久开始歇（第一次 2.5~6 秒）
+      restT: 0,        // 正在休息的剩余时间（0 = 在走）
+      driftAmp: 0.10 + Math.random() * 0.20,   // 路线摆动幅度（弧度，约 6°~17°）
+      driftFreq: 0.45 + Math.random() * 0.70,  // 摆动快慢（弧度/秒）
+      driftPhase: Math.random() * Math.PI * 2, // 各自错开的相位
       mats,
       bar,
       ring,
@@ -546,6 +557,29 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
       e.root.rotation.y = lerpAngle(e.root.rotation.y, Math.atan2(dx, dz), 1 - Math.exp(-9 * dt));
     }
 
+    // ---- 随机休息：走一阵子就站着喘口气（第 6 块）----
+    // 作用：一群怪不会再像列队一样踩着同一个节拍压过来。
+    // 正在出手（attack）的不歇；歇 0.7~1.5 秒，然后重新走 3~6 秒。
+    if (e.state === 'attack') {
+      e.restT = 0;                 // 打人的时候不算休息
+    } else if (e.restT > 0) {
+      e.restT -= dt;
+      if (e.currentAnim !== e.cfg.anim.idle) {
+        e.currentAnim = e.cfg.anim.idle;
+        e.play(e.cfg.anim.idle, { fade: 0.2 });
+      }
+      return;                      // 站定：不移动、不出手
+    } else {
+      e.restCd -= dt;
+      if (e.restCd <= 0) {
+        e.restT = 0.7 + Math.random() * 0.8;
+        e.restCd = 3.0 + Math.random() * 3.0;
+        e.currentAnim = e.cfg.anim.idle;
+        e.play(e.cfg.anim.idle, { fade: 0.2 });
+        return;
+      }
+    }
+
     // ---- 投手：拉弓 → 掷骨刀 → 收势 ----
     if (e.cfg.projectile) {
       if (e.state === 'attack') {
@@ -671,8 +705,17 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
     // 冰缓：被冰剑命中后移速打折（slowFactor = 减速比例）
     const sp = e.speed * (e.slowT > 0 ? (1 - Math.min(0.9, e.slowFactor || 0)) : 1);
     const step = sp * dt;
-    e.pos.x += (dx / dist) * step;
-    e.pos.z += (dz / dist) * step;
+
+    // 曲线接近：把「指向玩家」的方向绕竖轴旋转一个随时间摆动的角度，
+    // 于是路径是一条轻轻摆动的弧线而不是笔直的冲锋线。
+    // 越靠近主角摆幅越小（near 因子），否则最后会在主角身边绕圈打不到人。
+    const amp = e.driftAmp || 0;
+    const near = Math.min(1, Math.max(0.2, dist / 2.5));
+    const w = amp * near * Math.sin(e.t * (e.driftFreq || 0) + (e.driftPhase || 0));
+    const c = Math.cos(w), s = Math.sin(w);
+    const ux = dx / dist, uz = dz / dist;
+    e.pos.x += (ux * c - uz * s) * step;
+    e.pos.z += (ux * s + uz * c) * step;
 
     // 场地边界
     const lim = ctx.arenaRadius - e.cfg.radius;

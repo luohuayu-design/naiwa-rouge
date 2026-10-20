@@ -10,6 +10,7 @@ import { buildNightScene } from './scene.js';
 import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js';
 import { createInput } from './input.js';
 import { createStats, STAT_DEFS } from './stats.js';
+import { createWeaponStats } from './weaponStats.js';
 import { createFx } from './fx.js';
 import { createEnemySystem } from './enemy.js';
 import { createLevel1, LEVEL_1 } from './wave.js';
@@ -131,7 +132,11 @@ async function boot() {
   );
 
   // ---------------- 属性 ----------------
+  // 第 6 块起是两套完全独立的表：
+  //   stats  奶蛙自己（生命 / 近战 / 机动 / 经济）
+  //   wstats 环剑自己（剑伤害 / 剑暴击 / 元素）—— 与主角零关系
   const stats = createStats();
+  const wstats = createWeaponStats();
 
   // 脚下的攻击范围环：半径实时跟着 attackRange 走（升级加范围会立刻变大）。
   // 挂在 scene 上而不是角色身上，免得走路/倒地的起伏把环带离地面。
@@ -216,33 +221,76 @@ async function boot() {
     }
   }
 
-  // 属性面板：每次打开时重建，数值永远是最新的
+  // 属性面板：分两页（奶蛙 / 环剑），页内按 group 分组。
+  // 主角与武器是两套独立属性表，混在一页里玩家分不清「这个攻击力管不管剑」，
+  // 所以第 6 块改成标签页 + 分组小标题。
+  const apTabsEl = document.getElementById('apTabs');
+  let panelTab = 'player';     // player | weapon
+
+  function apRow(def, value) {
+    const row = document.createElement('div');
+    row.className = 'ap-row';
+    const name = document.createElement('div');
+    name.className = 'ap-name';
+    name.textContent = def.name;
+    const val = document.createElement('div');
+    val.className = 'ap-val';
+    val.textContent = def.fmt(value);
+    const desc = document.createElement('div');
+    desc.className = 'ap-desc';
+    desc.textContent = def.desc;
+    row.append(name, val, desc);
+    return row;
+  }
+
   function renderPanel() {
-    apSub.textContent = `生命 ${fmtHp(stats.hp.cur)} / ${stats.get('maxHp').toFixed(1)} · 共 ${STAT_DEFS.length} 项 · 已暂停`;
+    const tabName = panelTab === 'weapon' ? '环剑' : '奶蛙';
+    const table = panelTab === 'weapon' ? wstats : stats;
+    apSub.textContent = `生命 ${fmtHp(stats.hp.cur)} / ${stats.get('maxHp').toFixed(1)}`
+      + ` · ${tabName} ${table.defs.length} 项 · 已暂停`;
+
+    // 标签页高亮
+    for (const btn of apTabsEl.querySelectorAll('.ap-tab')) {
+      btn.classList.toggle('on', btn.dataset.tab === panelTab);
+    }
+
     apList.textContent = '';
-    for (const def of STAT_DEFS) {
-      const row = document.createElement('div');
-      row.className = 'ap-row';
-      const name = document.createElement('div');
-      name.className = 'ap-name';
-      name.textContent = def.name;
-      const val = document.createElement('div');
-      val.className = 'ap-val';
-      val.textContent = def.fmt(stats.get(def.key));
-      const desc = document.createElement('div');
-      desc.className = 'ap-desc';
-      desc.textContent = def.desc;
-      row.append(name, val, desc);
-      apList.appendChild(row);
+
+    // 武器页：还没拿到环剑时先说明一句，数值照常显示（都是真实生效值）
+    if (panelTab === 'weapon' && !weapon.granted) {
+      const tip = document.createElement('div');
+      tip.className = 'ap-note';
+      tip.textContent = '第 5 回合结束会自动获得环剑，下面是它的独立数值（不吃主角的攻击与暴击）。';
+      apList.appendChild(tip);
+    }
+
+    for (const g of table.grouped()) {
+      const box = document.createElement('div');
+      box.className = 'ap-group';
+      const head = document.createElement('div');
+      head.className = 'ap-gt';
+      head.textContent = g.group;
+      box.appendChild(head);
+      for (const row of g.rows) box.appendChild(apRow(row, row.value));
+      apList.appendChild(box);
     }
   }
 
+  apTabsEl.addEventListener('click', (e) => {
+    const btn = e.target.closest('.ap-tab');
+    if (!btn) return;
+    panelTab = btn.dataset.tab === 'weapon' ? 'weapon' : 'player';
+    renderPanel();
+  });
+
   let panelOpen = false;
   let panelOpenedOnce = false;
-  function setPanel(open) {
+  // tab：可选，打开时切到指定页（教程/测试用）
+  function setPanel(open, tab) {
     panelOpen = open;
     if (open) {
       panelOpenedOnce = true;
+      if (tab) panelTab = tab === 'weapon' ? 'weapon' : 'player';
       input.joystick.release();   // 面板盖住屏幕，别让摇杆一直输出
       vel.set(0, 0, 0);           // 暂停时不留残余速度，关掉面板不会突然窜出去
       renderPanel();
@@ -296,7 +344,7 @@ async function boot() {
 
   // ---------------- 武器：环剑 ----------------
   // 模型很小（~20KB），跟着怪物一起在加载段拿；失败时 weapon.preload 内部会占位降级
-  const weapon = createWeaponSystem({ scene, stats, fx, enemies });
+  const weapon = createWeaponSystem({ scene, stats, wstats, fx, enemies });
   try {
     await weapon.preload();
   } catch (err) {
@@ -450,7 +498,7 @@ async function boot() {
       // 精确的「原值 → 选后值」：用 stats.preview 算，和真选下去的数字完全一致
       const delta = document.createElement('div');
       delta.className = 'up-delta';
-      for (const c of previewUpgrade(stats, up)) {
+      for (const c of previewUpgrade(stats, up, wstats)) {
         const row = document.createElement('span');
         row.className = 'up-chg';
         const label = document.createElement('i');
@@ -488,7 +536,7 @@ async function boot() {
 
     upSerial++;
     upgradesTaken++;
-    const res = applyUpgrade(stats, up, upSerial);
+    const res = applyUpgrade(stats, up, upSerial, wstats);
     takenUpgrades.push(up);
 
     upPanel.classList.remove('on');
@@ -741,10 +789,14 @@ async function boot() {
       return;
     }
     // mods：永久加成（伏笔回报）用独立 src，回合清场不会撤销
+    // scope:'weapon' 的改武器表（剑转速这类），其余改主角表
     if (effects.mods && effects.mods.length) {
       const src = permanentMods ? `pledge:${roundNo}` : `event:${roundNo}`;
       if (!permanentMods) roundBuffSrc = src;
-      for (const m of effects.mods) stats.addMod({ ...m, src });
+      for (const m of effects.mods) {
+        const target = m.scope === 'weapon' ? wstats : stats;
+        target.addMod({ stat: m.stat, flat: m.flat || 0, pct: m.pct || 0, src });
+      }
     }
     if (effects.gold) addCoins(effects.gold);
     if (effects.hp > 0) stats.heal(effects.hp);
@@ -765,6 +817,7 @@ async function boot() {
   function clearRoundBuffs() {
     if (roundBuffSrc) {
       stats.removeBySource(roundBuffSrc);
+      wstats.removeBySource(roundBuffSrc);   // 事件也可能挂在武器表上（剑转速）
       roundBuffSrc = null;
     }
     roundDrain = 0;
@@ -987,11 +1040,13 @@ async function boot() {
     else if (item.type === 'healFull') stats.heal(1e9);
     else if (item.type === 'stat') {
       shopSerial++;
-      stats.addMod({
+      // scope:'weapon' 的商品（剑油 / 磨剑石）改武器表，其余改主角表
+      const target = item.scope === 'weapon' ? wstats : stats;
+      target.addMod({
         stat: item.stat, flat: item.flat || 0, pct: item.pct || 0,
         src: `shop:${item.id}:${shopSerial}`,
       });
-      if (item.stat === 'maxHp') stats.syncHp(item.heal || 0);
+      if (item.stat === 'maxHp') target.syncHp(item.heal || 0);
       showToast(item.name, '永久生效 · ' + item.desc);
     } else if (item.type === 'sword') {
       const r = weapon.addSword(item.kind);
@@ -1102,7 +1157,7 @@ async function boot() {
   // 调试钩子：只有 ?debug=1 才挂到 window，方便自动化测试读内部状态（正常游玩不暴露）
   if (new URLSearchParams(location.search).has('debug')) {
     window.__game = {
-      stats, pos, vel, input, enemies, level, fx, playerRing, frog, camera, weapon, scene,
+      stats, wstats, pos, vel, input, enemies, level, fx, playerRing, frog, camera, weapon, scene,
       fireSwords: tryFireSwords,
       renderSkill,
       getYaw: () => yaw,
@@ -1110,7 +1165,8 @@ async function boot() {
       getKills: () => kills,
       getElapsed: () => elapsed,
       getShots: () => enemies.shotCount(),
-      setPanel: (open) => setPanel(open),
+      setPanel: (open, tab) => setPanel(open, tab),
+      getPanelTab: () => panelTab,
       isPanelOpen: () => panelOpen,
       // 开局 / 教程 / 武器卡（自动化测试用）
       beginGame: (opt) => beginGame(opt),

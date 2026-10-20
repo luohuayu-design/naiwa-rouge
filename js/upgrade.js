@@ -15,15 +15,33 @@
 //      三张卡仍然是三系各一张，所以每系的概率和为 100%。
 //
 // 对外：
-//   UPGRADES           全部升级项（tag: atk|def|mov）
+//   UPGRADES           全部升级项（tag: atk|def|mov；scope: player|weapon）
 //   weightOf(up,round) 某项在某回合的权重（线性）
 //   rollChoices(rng, {round, hasWeapon})  抽 3 张（三系各一，已洗牌）
 //   chanceTable(round) 各系内每一项被抽中的概率（文档/测试用）
 //   applyUpgrade()     应用并返回本次加成的来源标识
 //   previewUpgrade()   预演一张升级（不改状态）
 //   upgradeText()      一句话描述这次加成（面板 / 提示用）
+//
+// ⚠️ 第 6 块起属性分两块表：主角 stats 与武器 wstats 完全独立。
+//   标了 scope:'weapon' 的项改的是武器表（剑系 / 元素系），其余改主角表。
+//   两块表都要传进来，没传 wstats 时武器项会退化到主角表（只为兼容老调用）。
 // ============================================================
 import { STAT_DEFS } from './stats.js';
+import { WEAPON_STAT_DEFS } from './weaponStats.js';
+
+// 一张卡改的是哪块表
+function tableFor(scope, stats, wstats) {
+  return scope === 'weapon' ? (wstats || stats) : stats;
+}
+
+// 属性定义查两块表（面板/文案里要显示中文名）
+function defFor(key, scope) {
+  const main = scope === 'weapon' ? WEAPON_STAT_DEFS : STAT_DEFS;
+  return main.find((d) => d.key === key)
+    || STAT_DEFS.find((d) => d.key === key)
+    || WEAPON_STAT_DEFS.find((d) => d.key === key);
+}
 
 export const UPGRADES = [
   // ---------------- 进攻 ----------------
@@ -53,60 +71,74 @@ export const UPGRADES = [
   },
   {
     id: 'fang', tag: 'atk', glyph: '✧', name: '致命',
-    w0: 0.50, gw: +0.140,   // 权重 = w0 + gw × (回合-1)
+    w0: 0.50, gw: +0.250,   // 权重 = w0 + gw × (回合-1)
+    // 剑系 10 项把进攻池摊薄了，暴击这条线要抬得更陡才保持「后期更常见」
     title: '暴击伤害 +50% · 暴击率 +6%',
     desc: '暴击更疼；自带一点暴击率，单独拿到也有收益',
     stat: 'critDamage', pct: 0.50,
     extra: { stat: 'critRate', flat: 0.06 },
   },
-  // ---- 武器系（needsWeapon：第 5 回合拿到环剑后才会进抽取池） ----
+  // ---- 武器系（needsWeapon：第 5 回合拿到环剑后才会进抽取池）
+  //      scope:'weapon' = 改的是武器自己的属性表，与主角的攻击/暴击毫无关系 ----
   {
-    id: 'swordEdge', tag: 'atk', glyph: '🗡', name: '剑刃', needsWeapon: true,
+    id: 'swordEdge', tag: 'atk', glyph: '🗡', name: '剑刃', needsWeapon: true, scope: 'weapon',
     w0: 1.20, gw: +0.060,   // 权重 = w0 + gw × (回合-1)
-    title: '剑刃倍率 +30%', desc: '环剑转着圈就能砍人，倍率直接放大它的伤害',
-    stat: 'swordPower', pct: 0.30,
+    title: '剑伤害 +30%', desc: '直接放大环剑每一剑的伤害',
+    stat: 'swordDamage', pct: 0.30,
   },
   {
-    id: 'swordArray', tag: 'atk', glyph: '✹', name: '剑阵', needsWeapon: true,
+    id: 'swordCrit', tag: 'atk', glyph: '✦', name: '剑锋', needsWeapon: true, scope: 'weapon',
+    w0: 0.90, gw: +0.070,
+    title: '剑暴击率 +8%', desc: '环剑自己的暴击概率（基础 10%），不吃主角暴击率',
+    stat: 'swordCrit', flat: 0.08,
+  },
+  {
+    id: 'swordFang', tag: 'atk', glyph: '✧', name: '淬锋', needsWeapon: true, scope: 'weapon',
+    w0: 0.70, gw: +0.090,
+    title: '剑暴击伤害 +40%', desc: '剑暴击时更疼；和剑锋一起拿收益最大',
+    stat: 'swordCritMul', pct: 0.40,
+  },
+  {
+    id: 'swordArray', tag: 'atk', glyph: '✹', name: '剑阵', needsWeapon: true, scope: 'weapon',
     w0: 1.00, gw: +0.050,   // 权重 = w0 + gw × (回合-1)
     title: '剑数量上限 +1', desc: '多一把剑轮转，环上更密、散射覆盖更广',
     stat: 'swordMax', flat: 1,
   },
   {
-    id: 'swordSpin', tag: 'atk', glyph: ' ⟳', name: '疾轮', needsWeapon: true,
+    id: 'swordSpin', tag: 'atk', glyph: ' ⟳', name: '疾轮', needsWeapon: true, scope: 'weapon',
     w0: 1.00, gw: +0.020,   // 权重 = w0 + gw × (回合-1)
     title: '剑转速 +25%', desc: '剑转得更快，同样时间扫过更多怪',
     stat: 'swordOrbit', pct: 0.25,
   },
   {
-    id: 'swordForge', tag: 'atk', glyph: '⚒', name: '锻造', needsWeapon: true,
+    id: 'swordForge', tag: 'atk', glyph: '⚒', name: '锻造', needsWeapon: true, scope: 'weapon',
     w0: 0.90, gw: +0.010,   // 权重 = w0 + gw × (回合-1)
     title: '剑回复快 20%', desc: '被消耗的剑更快回到环上（3.0 → 2.4 秒/把）',
     stat: 'swordRegen', pct: -0.20,
   },
   // ---- 元素剑系（拿到对应剑才真正有意义，但只要有环剑就可抽；商店可买元素剑） ----
   {
-    id: 'venom', tag: 'atk', glyph: '☠', name: '淬毒', needsWeapon: true,
+    id: 'venom', tag: 'atk', glyph: '☠', name: '淬毒', needsWeapon: true, scope: 'weapon',
     w0: 0.80, gw: +0.030,
     title: '毒伤 +0.05/秒', desc: '毒剑的中毒更疼（0.10 → 0.15/秒），持续 5 秒不变',
     stat: 'poisonDps', flat: 0.05,
   },
   {
-    id: 'chill', tag: 'atk', glyph: '❆', name: '严寒', needsWeapon: true,
+    id: 'chill', tag: 'atk', glyph: '❆', name: '严寒', needsWeapon: true, scope: 'weapon',
     w0: 0.80, gw: +0.030,
     title: '冰缓 +8%', desc: '冰剑把怪冻得更狠（35% → 43% 减速），持续 2.5 秒',
     stat: 'frostSlow', flat: 0.08,
   },
   {
-    id: 'volt', tag: 'atk', glyph: '⚡', name: '导电', needsWeapon: true,
+    id: 'volt', tag: 'atk', glyph: '⚡', name: '导电', needsWeapon: true, scope: 'weapon',
     w0: 0.60, gw: +0.040,
     title: '雷链数 +1', desc: '雷剑多连锁一只怪，每道闪电 60% 伤害',
     stat: 'chainCount', flat: 1,
   },
   {
-    id: 'spring', tag: 'atk', glyph: '❥', name: '活血', needsWeapon: true,
+    id: 'spring', tag: 'atk', glyph: '❥', name: '活血', needsWeapon: true, scope: 'weapon',
     w0: 0.60, gw: +0.030,
-    title: '血剑回血 +5%', desc: '血剑按伤害回血的比例 15% → 20%，和吸血属性叠乘',
+    title: '血剑回血 +5%', desc: '血剑按伤害回血的比例 15% → 20%',
     stat: 'leechRate', flat: 0.05,
   },
   // ---- 经济 ----
@@ -213,24 +245,28 @@ export function rollChoices(rng = Math.random, opts = {}) {
 }
 
 // 应用一张升级。serial 只用来让每次加成的 src 唯一（便于 removeBySource 回滚）。
+// wstats = 武器属性表：scope:'weapon' 的条目改它，其余改主角 stats。
 // 返回 { src, changes }：changes 是精确的「选前 → 选后」（用于卡片/提示文案）。
-export function applyUpgrade(stats, up, serial = 0) {
+export function applyUpgrade(stats, up, serial = 0, wstats = null) {
   const list = [up, up.extra].filter(Boolean);
-  const before = list.map((m) => stats.get(m.stat));
+  const scopeOf = (m) => m.scope || up.scope || 'player';
+  const before = list.map((m) => tableFor(scopeOf(m), stats, wstats).get(m.stat));
   const src = `upg:${up.id}:${serial}`;
 
-  if (up.stat) stats.addMod({ stat: up.stat, flat: up.flat || 0, pct: up.pct || 0, src });
-  if (up.extra) stats.addMod({ stat: up.extra.stat, flat: up.extra.flat || 0, pct: up.extra.pct || 0, src });
-
-  // 上限变了要补血并夹紧当前血量
-  if (up.stat === 'maxHp' || up.extra?.stat === 'maxHp') stats.syncHp(up.heal || 0);
+  for (const m of list) {
+    const t = tableFor(scopeOf(m), stats, wstats);
+    t.addMod({ stat: m.stat, flat: m.flat || 0, pct: m.pct || 0, src });
+    // 上限变了要补血并夹紧当前血量
+    if (m.stat === 'maxHp') t.syncHp(m.heal || 0);
+  }
 
   const changes = list.map((m, i) => {
-    const def = STAT_DEFS.find((d) => d.key === m.stat);
+    const def = defFor(m.stat, scopeOf(m));
     const from = before[i];
-    const to = stats.get(m.stat);
+    const to = tableFor(scopeOf(m), stats, wstats).get(m.stat);
     return {
       key: m.stat,
+      scope: scopeOf(m),
       name: def ? def.name : m.stat,
       from, to,
       fromText: def ? def.fmt(from) : String(from),
@@ -243,14 +279,17 @@ export function applyUpgrade(stats, up, serial = 0) {
 
 // 预演一张升级：返回与 applyUpgrade 同结构的 changes，但不改任何状态。
 // 三选一卡片上的「1 → 2」就是用它算的，所以点下去之后数值一定与预览一致。
-export function previewUpgrade(stats, up) {
+export function previewUpgrade(stats, up, wstats = null) {
   const list = [up, up.extra].filter(Boolean);
+  const scopeOf = (m) => m.scope || up.scope || 'player';
   return list.map((m) => {
-    const def = STAT_DEFS.find((d) => d.key === m.stat);
-    const from = stats.get(m.stat);
-    const to = stats.preview(m.stat, { flat: m.flat || 0, pct: m.pct || 0 });
+    const def = defFor(m.stat, scopeOf(m));
+    const t = tableFor(scopeOf(m), stats, wstats);
+    const from = t.get(m.stat);
+    const to = t.preview(m.stat, { flat: m.flat || 0, pct: m.pct || 0 });
     return {
       key: m.stat,
+      scope: scopeOf(m),
       name: def ? def.name : m.stat,
       from, to,
       fromText: def ? def.fmt(from) : String(from),

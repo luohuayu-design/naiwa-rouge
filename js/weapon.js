@@ -13,8 +13,11 @@
 //   leech 血（回血）/ iron 铁（无附加）。
 //   商店可以买新剑（addSword）；swordMax 升上去的空位会自动补铁剑。
 //
-// 数值全部走 stats（swordPower / swordMax / swordOrbit / swordRegen +
-// poisonDps / frostSlow / chainCount / leechRate…），升级改属性立刻生效。
+// 数值全部走**武器自己的属性表** wstats（weaponStats.js）：
+//   swordDamage / swordCrit / swordCritMul / swordMax / swordOrbit / swordRegen
+//   + poisonDps / poisonTime / frostSlow / frostTime / chainCount / leechRate
+// ⚠️ 第 6 块起武器与主角彻底解耦：剑的伤害、暴击、吸血都不吃主角属性，
+//    stats 在武器系统里只剩一个用途 —— 给主角回血（血剑/吸血）。
 //
 // 模型：Kenney《Mini Dungeon》weapon-sword.glb（CC0），刃口朝 +Y，9KB。
 //       五种元素共用同一模型，克隆后改材质 color/emissive 染色区分；
@@ -23,6 +26,7 @@
 import * as THREE from '../lib/three.module.js';
 import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js';
 import { SWORD_KINDS, KIND_ORDER } from './swordKinds.js';
+import { rollSwordDamage } from './weaponStats.js';
 
 // 轨道半径（世界单位）：贴着主角攻击范围环内侧转，视觉上「护体剑气」
 const ORBIT_R = 1.7;
@@ -37,7 +41,7 @@ const HIT_Y = 0.8;             // 判定高度基准（怪都是贴地的，只�
 const CHAIN_DIST = 4.5;        // 雷剑连锁的最大距离
 const CHAIN_RATIO = 0.6;       // 连锁伤害比例
 
-export function createWeaponSystem({ scene, stats, fx, enemies }) {
+export function createWeaponSystem({ scene, stats, wstats, fx, enemies }) {
   let granted = false;         // 是否已获得（第 5 回合 grant）
   let owned = [];              // 拥有的剑（kind 字符串数组，按获得顺序）
   let regenT = 0;              // 恢复计时器（攒够 swordRegen 秒长一把）
@@ -162,8 +166,8 @@ export function createWeaponSystem({ scene, stats, fx, enemies }) {
     return { ok: true, onRing };
   }
 
-  // 剑数量上限（stats 驱动）
-  function maxCount() { return Math.round(stats.get('swordMax')); }
+  // 剑数量上限（武器自己的属性，不吃主角）
+  function maxCount() { return Math.round(wstats.get('swordMax')); }
   // 环上应有的剑数：拥有数与上限取小
   function targetCount() { return Math.min(owned.length, maxCount()); }
 
@@ -214,17 +218,17 @@ export function createWeaponSystem({ scene, stats, fx, enemies }) {
     return enemies.list.filter((e) => e.state !== 'dead' && e.state !== 'spawn');
   }
 
-  // 元素附加效果（毒 / 冰 / 雷 / 血；铁剑无）
+  // 元素附加效果（毒 / 冰 / 雷 / 血；铁剑无）—— 数值同样取武器表
   function applyKind(kind, e, dmg) {
     if (kind === 'poison') {
-      enemies.applyDot(e, { dps: stats.get('poisonDps'), time: stats.get('poisonTime') });
+      enemies.applyDot(e, { dps: wstats.get('poisonDps'), time: wstats.get('poisonTime') });
     } else if (kind === 'frost') {
-      enemies.applySlow(e, { factor: stats.get('frostSlow'), time: stats.get('frostTime') });
+      enemies.applySlow(e, { factor: wstats.get('frostSlow'), time: wstats.get('frostTime') });
     } else if (kind === 'leech') {
-      const r = stats.get('leechRate');
+      const r = wstats.get('leechRate');
       if (r > 0 && dmg > 0) stats.heal(dmg * r);
     } else if (kind === 'thunder') {
-      const targets = enemies.chainTargets(e, Math.round(stats.get('chainCount')), CHAIN_DIST);
+      const targets = enemies.chainTargets(e, Math.round(wstats.get('chainCount')), CHAIN_DIST);
       for (const tgt of targets) {
         const cd = dmg * CHAIN_RATIO;
         enemies.takeDamage(tgt, cd, false, { quiet: true });
@@ -233,13 +237,12 @@ export function createWeaponSystem({ scene, stats, fx, enemies }) {
     }
   }
 
+  // 剑命中：伤害与暴击全部来自剑自己（rollSwordDamage），
+  // 不再叠加主角攻击/暴击，也不再按主角吸血回血（用户：两者没有任何关系）
   function hitEnemy(e, at, kind) {
-    const roll = stats.rollDamage({ targetArmor: e.cfg.armor });
-    const dmg = roll.damage * stats.get('swordPower');
+    const roll = rollSwordDamage(wstats, { targetArmor: e.cfg.armor });
+    const dmg = roll.damage;
     enemies.takeDamage(e, dmg, roll.crit);
-    // 吸血与近战同规则（血剑的 leechRate 是额外的独立来源）
-    const ls = stats.get('lifesteal');
-    if (ls > 0 && dmg > 0) stats.heal(dmg * ls);
     applyKind(kind, e, dmg);
     if (fx) fx.hit(at, roll.crit ? 0xffe9a8 : 0xbff2ff);
     return dmg;
@@ -298,7 +301,7 @@ export function createWeaponSystem({ scene, stats, fx, enemies }) {
     //    上限升高的空位（owned 不够）自动补一把铁剑。
     if (orbiting.length < target) {
       regenT += dt;
-      const need = Math.max(0.2, stats.get('swordRegen'));
+      const need = Math.max(0.2, wstats.get('swordRegen'));
       while (orbiting.length < target && regenT >= need) {
         regenT -= need;
         let kind = missingKind();
@@ -311,7 +314,7 @@ export function createWeaponSystem({ scene, stats, fx, enemies }) {
     }
 
     // 2) 环上的剑：绕主角旋转 + 轻微上下浮动 + 碰怪即消耗
-    orbitAngle += Math.PI * 2 * Math.max(0.05, stats.get('swordOrbit')) * dt;
+    orbitAngle += Math.PI * 2 * Math.max(0.05, wstats.get('swordOrbit')) * dt;
     for (let i = orbiting.length - 1; i >= 0; i--) {
       const s = orbiting[i];
       const a = orbitAngle + (i * Math.PI * 2) / Math.max(1, orbiting.length);
@@ -391,6 +394,7 @@ export function createWeaponSystem({ scene, stats, fx, enemies }) {
 
   return {
     preload, grant, fire, update, reset, setVisible, addSword, kindCounts, applyKind,
+    wstats,                     // 武器属性表（测试/调试用）
     get granted() { return granted; },
     get count() { return orbiting.length; },
     get owned() { return owned.slice(); },
@@ -402,7 +406,7 @@ export function createWeaponSystem({ scene, stats, fx, enemies }) {
     // 技能栏恢复进度条：0（刚消耗）→ 1（下一把剑就绪）；满剑时恒为 0
     get regenProgress() {
       if (orbiting.length >= targetCount()) return 0;
-      const need = Math.max(0.2, stats.get('swordRegen'));
+      const need = Math.max(0.2, wstats.get('swordRegen'));
       return Math.max(0, Math.min(1, regenT / need));
     },
   };
