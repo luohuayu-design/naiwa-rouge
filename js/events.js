@@ -35,10 +35,14 @@
 //   drain  n                       下一回合每秒流失生命
 //   level  {countScale, speedScale} 下一回合怪物数量 / 移速倍率
 //   mods   [{stat, flat?, pct?, scope?}] 下一回合临时属性
+//   permanent [{stat, flat?, pct?}]      永久属性（跨回合记住，如幸运 / 金币掉落率）
+//   healFull true                  立刻回满生命
+//   discount 0.2                   下一次商店打 8 折（用掉即清，可与民心折扣叠）
 //   chain  { in, id }              在选项里写：in 回合后强制弹出 id 事件
 //   roll   [{p, effects}, ...]     选项内部的概率分支
 //
-// ctx: { round, hasWeapon, gold, rep, hp, maxHp }
+// ctx: { round, hasWeapon, gold, rep, hp, maxHp, luck }
+//   luck 用来写 cond（幸运够高才遇得到的吉兆事件，第 11 块）。
 // ============================================================
 import { STAT_DEFS } from './stats.js';
 import { WEAPON_STAT_DEFS } from './weaponStats.js';
@@ -1231,6 +1235,412 @@ export const EVENTS = [
       },
     ],
   },
+
+  // ============================================================
+  // 九、运气与口袋（第 11 块：幸运 / 财运 / 商店折扣）
+  // ============================================================
+  {
+    id: 'coinRain', icon: '🪙', title: '铜钱雨', who: '坡上的老槐树',
+    story: '一队骷髅从坡上过，走在最后那只背着的口袋破了，铜钱撒了一路。\n它们没发现，还在数着拍子往前走。',
+    choices: [
+      {
+        label: '悄悄跟在后面捡', hint: '金币 +9 · 下回合怪物数量 +12%',
+        effects: { gold: 9, level: { countScale: 1.12 } },
+        say: '你弯着腰捡了一路。直到那只骷髅停下，慢慢回过头——你数钱的手停在半空。',
+      },
+      {
+        label: '等它们走远再捡', hint: '金币 +5',
+        effects: { gold: 5 },
+        say: '你在草里蹲了很久。钱不多，但一枚都没少。',
+      },
+      {
+        label: '把这条路记下来，回去告诉村里', hint: '民心 +5 · 金币 +1 · 金币掉落率 +6%（永久）',
+        effects: { rep: 5, gold: 1, permanent: [{ stat: 'goldRate', flat: 0.06 }] },
+        say: '第二天村里人在那条路上捡了一上午。有人把捡到的头一枚塞给你，说以后这条路上掉的钱，都有你一份。',
+      },
+    ],
+  },
+  {
+    id: 'luckyCricket', icon: '🦗', title: '罐里的蟋蟀', who: '卖虫的老头 · 斗',
+    story: '一个老头蹲在坡口，膝上摆着七八只小陶罐，罐口盖着布。\n他掀开一只，里面传来短促的一声叫。',
+    talk: [
+      {
+        say: '「听见没？」他说，「这只赢过十七场。它不打架——它认路。」\n罐子在草里晃了晃。',
+        replies: [
+          {
+            label: '「多少钱？」', hint: '金币 -10 · 幸运 +1（永久）',
+            cost: { gold: 10 },
+            effects: { permanent: [{ stat: 'luck', flat: 1 }] },
+            say: '「多少钱？」',
+            close: '「十个。」他把罐子塞进你怀里，手指在罐口上敲了两下，「别打开。它不是看的，是听的。」',
+          },
+          {
+            label: '「一只虫子能认什么路？」', hint: '再问一句',
+            say: '「一只虫子能认什么路？」',
+            close: '他笑了：「路不好走的时候，它会叫得急。你听它的，别听自己的。」',
+            go: 1,
+          },
+          {
+            label: '摆摆手走开', hint: '无变化',
+            idle: true, effects: {},
+            say: '（你摇了摇头，绕过他的罐子。）',
+            close: '身后的虫叫了一阵，又停了。',
+          },
+        ],
+      },
+      {
+        say: '「这样吧，」他把罐子往前推了推，「八个。你今晚要是活着回来，再给我两个。」',
+        replies: [
+          {
+            label: '买下（先付八个）', hint: '金币 -8 · 幸运 +1（永久）',
+            cost: { gold: 8 },
+            effects: { permanent: [{ stat: 'luck', flat: 1 }] },
+            say: '「八个，先给你。回来再补。」',
+            close: '他把罐子递过来，又补了一句：「要是没回来，那俩我也不要了。」',
+          },
+          {
+            label: '「你自己留着吧。」', hint: '民心 +3',
+            effects: { rep: 3 },
+            say: '「你自己留着吧。它认的路，你比我更需要。」',
+            close: '老头愣了一下，把布重新盖好：「……你这人。」',
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'fortuneTeller', icon: '🔮', title: '算命的瞎子', who: '坡背的瞎子 · 三指',
+    story: '坡背坐着个瞎眼的老太婆，面前铺着一块洗得发白的布，布上摆着三枚磨圆的石子。\n她的手一直伸在半空，像是知道你会来。',
+    talk: [
+      {
+        say: '「手给我。」她说，「我不看命，我只看看你手里还剩什么。」',
+        replies: [
+          {
+            label: '把手伸过去', hint: '继续',
+            say: '（你把手放进她掌心。）',
+            close: '她的指头在你掌心按了三下，忽然停住：「你今晚要丢一样东西。」',
+            go: 1,
+          },
+          {
+            label: '「多少钱？」', hint: '继续',
+            say: '「先说价钱。」',
+            close: '「六个。」她说，「不准不要钱。」',
+            go: 1,
+          },
+          {
+            label: '走开', hint: '无变化',
+            idle: true, effects: {},
+            say: '（你把手收了回去。）',
+            close: '她也没留你，只是把三枚石子重新摆了一遍。',
+          },
+        ],
+      },
+      {
+        say: '「六枚金币，」她说，「我替你挑一样留下：钱、命、还是名声。」\n三枚石子在她手边排成一条线。',
+        replies: [
+          {
+            label: '「留命。」', hint: '金币 -6 · 生命回满',
+            cost: { gold: 6 },
+            effects: { healFull: true },
+            say: '「留命。」',
+            close: '她把最左边那颗石子按进你掌心：「那就少挨两下。别硬撑。」',
+          },
+          {
+            label: '「留钱。」', hint: '金币 -6 · 金币掉落率 +12%（永久）',
+            cost: { gold: 6 },
+            effects: { permanent: [{ stat: 'goldRate', flat: 0.12 }] },
+            say: '「留钱。」',
+            close: '她笑了：「钱不用留，钱会跟着你走。你只要比别人多弯几次腰。」',
+          },
+          {
+            label: '「留名声。」', hint: '金币 -6 · 民心 +10',
+            cost: { gold: 6 },
+            effects: { rep: 10 },
+            say: '「留名声。」',
+            close: '「名声最重，」她说，「压得人走不快。不过你走夜路，本来也不快。」',
+          },
+          {
+            label: '一枚也不给', hint: '无变化',
+            idle: true, effects: {},
+            say: '（你站起身。）',
+            close: '她在你身后说：「那你自己挑吧。挑的时候别眨眼。」',
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'gambler', icon: '🎲', title: '掷骰子的骷髅', who: '石头上的一只骷髅',
+    story: '一只骷髅蹲在石头上掷骰子，骰子是用指骨磨的，六个面刻着不同的刻痕。\n它掷一把，自己看一眼，然后抬头看你。',
+    talk: [
+      {
+        say: '「赌一把？」它把骰子推过来，「五个金币。赢了，这些归你。」\n它脚边堆着一小摞金币。',
+        replies: [
+          {
+            label: '赌一把', hint: '金币 -5 · 五成赢回 14，五成挨一下',
+            cost: { gold: 5 },
+            effects: { roll: [{ p: 0.5, effects: { gold: 14 } }, { p: 0.5, effects: { hp: -1 } }] },
+            say: '（你把五个金币放在石头上。）',
+            close: '骰子转了很久。停下来的时候，它盯着看了半天，然后把整摞钱推给你，一句话没说。',
+          },
+          {
+            label: '「赌什么？」', hint: '先问清楚',
+            say: '「赌什么？」',
+            close: '「赌今晚谁先躺下。」它用指骨敲了敲自己的脑壳，「我已经躺过了，所以算你赢一半。」',
+            go: 1,
+          },
+          {
+            label: '把骰子抢过来', hint: '金币 +4 · 民心 -5',
+            effects: { gold: 4, rep: -5 },
+            say: '（你一把抓过骰子，塞进兜里。）',
+            close: '它愣在那里，手还保持着掷骰的姿势。走了很远，你还能听见它在数数。',
+          },
+        ],
+      },
+      {
+        say: '「一半的意思是，」它伸出两根指骨，「你押命，我押钱。输了，你掉一层皮；赢了，这摞都归你。」',
+        replies: [
+          {
+            label: '押上（金币 -5 · 五成幸运 +1 / 五成生命 -1）',
+            hint: '金币 -5 · 五成幸运 +1，五成生命 -1',
+            cost: { gold: 5 },
+            effects: {
+              roll: [
+                { p: 0.5, effects: { permanent: [{ stat: 'luck', flat: 1 }] } },
+                { p: 0.5, effects: { hp: -1 } },
+              ],
+            },
+            say: '（你把五个金币推过去，把手放在骰子上。）',
+            close: '骰子停下时，它把自己的一节指骨掰下来递给你：「拿着。以后你掷的时候，它替你数。」',
+          },
+          {
+            label: '不赌', hint: '无变化',
+            idle: true, effects: {},
+            say: '「不赌。」',
+            close: '「聪明。」它把骰子收回袖子里，「可是聪明的人，今晚都活得不太久。」',
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'blindGirl', icon: '🎵', title: '唱歌的盲女', who: '坡下的女孩 · 芽',
+    story: '坡下有人唱歌，很轻，一句一句地停。唱歌的女孩背对着你，坐在倒下的树干上。\n听见脚步，她停了。',
+    talk: [
+      {
+        say: '「谁在那儿？」她没有回头，「你的脚步很沉。是守夜的那个吧。」',
+        replies: [
+          {
+            label: '坐下听她唱完', hint: '民心 +5 · 生命 +1',
+            effects: { rep: 5, hp: 1 },
+            say: '（你在她旁边坐下，没说话。）',
+            close: '她重新唱起来。唱完，她说：「这首歌是我娘教的。她说唱给走夜路的人听，他们就不怕了。」',
+          },
+          {
+            label: '「你怎么知道是我？」', hint: '问一句',
+            say: '「你怎么知道是我？」',
+            close: '「你身上有铁锈味，还有草汁味。」她说，「村里只有你一个人，两样都带着。」',
+            go: 1,
+          },
+          {
+            label: '不打扰，绕过去', hint: '民心 +2',
+            effects: { rep: 2 },
+            say: '（你放轻脚步，从她身后绕过去。）',
+            close: '歌声又起来了，比刚才更低一点。',
+          },
+        ],
+      },
+      {
+        say: '「往东有条干沟，」她忽然说，「沟底是硬的，骨头踩上去会响。所以我娘说，那是最吵的路。」\n「可它们不知道。」',
+        replies: [
+          {
+            label: '「谢谢。」', hint: '下回合怪物数量 -20% · 民心 +3',
+            effects: { rep: 3, level: { countScale: 0.8 } },
+            say: '「谢谢。我走那条。」',
+            close: '她点点头，又开始唱歌。这次唱的是另一首，你一句都没听懂。',
+          },
+          {
+            label: '给她一枚金币', hint: '金币 -3 · 民心 +8',
+            cost: { gold: 3 },
+            effects: { rep: 8 },
+            say: '（你把一枚金币放进她手里。）',
+            close: '她摸了摸金币上的纹路，笑了一下：「我不要钱。不过你要是非要给，我就替我娘收着。」',
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'starShower', icon: '🌠', title: '流星', who: '草原上空',
+    story: '天上掉下来三颗流星，一颗接一颗，拖着很短的白尾巴。\n村里的老人说，一颗流星许一个愿，但一晚上只能许一个。',
+    choices: [
+      {
+        label: '愿这一夜别再死人', hint: '生命回满',
+        effects: { healFull: true },
+        say: '你把手按在胸口。伤口处暖暖的，像有人在里面点了一盏灯。',
+      },
+      {
+        label: '愿它们找不到我', hint: '下回合怪物数量 -20% · 移速 +6%',
+        effects: { level: { countScale: 0.8 }, mods: [{ stat: 'moveSpeed', pct: 0.06 }] },
+        say: '风忽然换了方向。你顺着风走，草叶把你的脚印一层层盖住。',
+      },
+      {
+        label: '愿我运气好一点', hint: '幸运 +1（永久）',
+        effects: { permanent: [{ stat: 'luck', flat: 1 }] },
+        say: '你什么也没说出口，只是在心里念了一遍。第三颗流星落下的地方，草亮了一下。',
+      },
+    ],
+  },
+  {
+    id: 'oldMap', icon: '🗺', title: '半张地图', who: '路边摆摊的货郎',
+    story: '货郎把半张发黄的地图铺在石头上，手指点着一处打叉的地方：「以前那儿是个驿站。」\n「半张，卖你七个金币。」',
+    choices: [
+      {
+        label: '买下（赌一把）', hint: '金币 -7 · 可能挖到 18，也可能白挖一夜',
+        cost: { gold: 7 },
+        effects: { roll: [{ p: 0.55, effects: { gold: 18 } }, { p: 0.45, effects: { hp: -1 } }] },
+        say: '你按着图找到了那处打叉的地方，挖到天快亮。',
+      },
+      {
+        label: '「这地名写错了。」', hint: '民心 +4 · 金币 +2',
+        effects: { rep: 4, gold: 2 },
+        say: '「这不是驿站，是义庄。」你说，「我小时候在那儿躲过雨。」货郎愣了半天，把图收回去：「那……这钱你拿着，算我问路。」',
+      },
+      {
+        label: '抢过来看', hint: '金币 +3 · 民心 -6',
+        effects: { gold: 3, rep: -6 },
+        say: '你把图夺过来，随手撕下一角塞进袖子里。货郎没敢伸手，只是站在那儿看你走远。',
+      },
+    ],
+  },
+  {
+    id: 'boneField', icon: '🦴', title: '骨田', who: '坡背的一片白',
+    story: '坡背的草被压倒了一大片，露出底下的骨头——不是一整具，是很多具，乱七八糟堆在一起。\n有些骨头上还挂着布条。',
+    choices: [
+      {
+        label: '挑完整的捡去卖', hint: '金币 +9 · 民心 -5',
+        effects: { gold: 9, rep: -5 },
+        say: '收骨头的人不问来路。你把钱揣进怀里，回头看了一眼那片被翻乱的草。',
+      },
+      {
+        label: '全埋了，插一根木牌', hint: '民心 +7 · 金币掉落率 +6%（永久）· 下回合移速 -5%',
+        effects: { rep: 7, permanent: [{ stat: 'goldRate', flat: 0.06 }], mods: [{ stat: 'moveSpeed', pct: -0.05 }] },
+        say: '你埋到天快亮，手上全是泥。走的时候，草里有东西轻轻响了一下——是一枚旧钱，压在一块骨头下面。',
+      },
+      {
+        label: '只挑能用的骨刀', hint: '金币 +2 · 下回合攻击 +0.3',
+        effects: { gold: 2, mods: [{ stat: 'attack', flat: 0.3 }] },
+        say: '刀柄缠的布早烂了，你重新缠了一层。握上去，比自己的那把还稳。',
+      },
+    ],
+  },
+  {
+    id: 'bell', icon: '🔔', title: '坡上的破钟', who: '半截挂在树上的钟',
+    story: '一口破钟挂在老树上，钟舌还在，绳子早断了。\n村里说这钟是以前报火警用的，敲三下，整片草原都听得见。',
+    choices: [
+      {
+        label: '爬上去敲三下', hint: '下回合怪物数量 -25% · 民心 -5',
+        effects: { level: { countScale: 0.75 }, rep: -5 },
+        say: '钟声撞出去，草浪一层层推开。坡那边传来骚动——骷髅被惊走了，村里人也全都被吵醒了。',
+      },
+      {
+        label: '接一根新绳子', hint: '金币 -4 · 民心 +7',
+        cost: { gold: 4 },
+        effects: { rep: 7 },
+        say: '你从货郎那儿买了一截麻绳。天快亮时，钟绳垂在那里，谁路过都能拉。',
+      },
+      {
+        label: '不碰它', hint: '无变化',
+        idle: true, effects: {},
+        say: '你在树下站了一会儿。风穿过钟口，发出很低的嗡声，像有人在很远的地方叹气。',
+      },
+    ],
+  },
+  {
+    id: 'lantern', icon: '🏮', title: '还亮着的灯笼', who: '路边的一根竹竿',
+    story: '路边插着一根竹竿，竿头挂着一只纸灯笼，火苗小得可怜，但还亮着。\n不知道是谁点的，也不知道点了多久。',
+    choices: [
+      {
+        label: '提着它走夜路', hint: '下回合移速 +8% · 怪物数量 -10%',
+        effects: { mods: [{ stat: 'moveSpeed', pct: 0.08 }], level: { countScale: 0.9 } },
+        say: '灯照出三尺远。骨头在光外面走动，你看得见它们的影子，它们看不见你。',
+      },
+      {
+        label: '摘下来带走', hint: '金币 +5 · 民心 -3',
+        effects: { gold: 5, rep: -3 },
+        say: '灯笼的纸一捏就破。你只留下了里面的铜盘，卖给了收破烂的。',
+      },
+      {
+        label: '把火拨旺，挂回去', hint: '民心 +4 · 生命 +1',
+        effects: { rep: 4, hp: 1 },
+        say: '火苗窜起来，照亮了竹竿下面一小片草。你在那儿坐了一会儿，身上暖和过来。',
+      },
+    ],
+  },
+  {
+    id: 'frogPond', icon: '🐸', title: '蛙鸣的池塘', who: '坡下的水洼',
+    story: '坡下有一小片水，几十只青蛙在叫，叫得整片草原都在响。\n它们看见你，停了一瞬，然后又叫起来。',
+    choices: [
+      {
+        label: '蹲下来跟着叫', hint: '生命 +2 · 民心 -2',
+        effects: { hp: 2, rep: -2 },
+        say: '你叫得很难听。青蛙们停了一下，然后集体叫得更大声，像在笑你。你笑着站起来，觉得胸口松了。',
+      },
+      {
+        label: '用泥水洗伤口', hint: '生命 +1 · 下回合防御 +8',
+        effects: { hp: 1, mods: [{ stat: 'armor', flat: 8 }] },
+        say: '泥水凉得刺骨。伤口洗过之后，反而不那么疼了。',
+      },
+      {
+        label: '抓几只，烤了吃', hint: '生命 +2 · 民心 -3',
+        effects: { hp: 2, rep: -3 },
+        say: '你抓了六只。烤的时候，水洼那边安静得像什么都没发生过。',
+      },
+    ],
+  },
+  {
+    id: 'cart', icon: '🛒', title: '翻倒的货车', who: '商人 · 矮脚的阿昌',
+    story: '一辆货车翻在沟里，轮子还在转。商人蹲在旁边，一边骂一边把货往岸上拖。\n他看见你，先护住了最上面那只箱子。',
+    choices: [
+      {
+        label: '帮他把车抬上来', hint: '民心 +8 · 生命 -1 · 下次商店 8 折',
+        effects: { rep: 8, hp: -1, discount: 0.2 },
+        say: '车辕压得你肩膀发麻。阿昌连声道谢，塞给你一块木牌：「下次见着我的摊子，拿这个来，给你便宜两成。」',
+      },
+      {
+        label: '趁乱拿走一匹布', hint: '金币 +7 · 民心 -8',
+        effects: { gold: 7, rep: -8 },
+        say: '布很沉，你走了很远才敢回头。阿昌还蹲在沟里，没发现少了什么。',
+      },
+      {
+        label: '先谈价钱再帮', hint: '金币 +4 · 民心 -3',
+        effects: { gold: 4, rep: -3 },
+        say: '「四个金币。」你说。他咬了半天牙，最后掏了钱。车抬上来了，他一句谢也没说。',
+      },
+    ],
+  },
+  {
+    id: 'luckyFind', icon: '✨', title: '脚下有东西', who: '草里的反光',
+    story: '你走夜路的时候，草里有个东西一直在反光。\n最近你总觉得，脚下的路在替你挑方向。',
+    cond: (ctx) => (ctx.luck ?? 0) >= 2,
+    choices: [
+      {
+        label: '挖出来', hint: '金币 +11',
+        effects: { gold: 11 },
+        say: '是一只锈了的小铁盒，里面躺着十几枚旧钱，还有一颗磨得很亮的石子。',
+      },
+      {
+        label: '不挖，做个记号', hint: '下回合暴击 +12%',
+        effects: { mods: [{ stat: 'critRate', flat: 0.12 }] },
+        say: '你插了根草标。转身的时候，忽然觉得今晚下手会特别准。',
+      },
+      {
+        label: '挖出来，分给坡下的孩子', hint: '民心 +6 · 幸运 +1（永久）',
+        effects: { rep: 6, permanent: [{ stat: 'luck', flat: 1 }] },
+        say: '孩子们举着旧钱跑了一圈。最小的那个把石子还给你，说：「这个亮，你留着走夜路。」',
+      },
+    ],
+  },
 ];
 
 // ============================================================
@@ -1439,8 +1849,18 @@ export function effectLines(effects = {}) {
   for (const m of effects.mods || []) lines.push(modLine(m));
   for (const m of effects.permanent || []) {
     const def = STAT_DEFS.find((d) => d.key === m.stat) || WEAPON_STAT_DEFS.find((d) => d.key === m.stat);
-    lines.push(`${def ? def.name : m.stat} +${(m.flat ?? 0).toFixed(1)}（永久）`);
+    const name = def ? def.name : m.stat;
+    if (m.pct != null) {
+      lines.push(`${name} ${m.pct >= 0 ? '+' : ''}${(m.pct * 100).toFixed(1)}%（永久）`);
+    } else {
+      // 用属性表自己的格式：金币掉落率写成「+6.0%」，幸运写成「+1.0」，攻击力写成「+1.0」
+      const v = m.flat ?? 0;
+      const text = def && typeof def.fmt === 'function' ? def.fmt(v) : v.toFixed(1);
+      lines.push(`${name} ${v >= 0 ? '+' : ''}${text}（永久）`);
+    }
   }
+  if (effects.healFull) lines.push('生命回满');
+  if (effects.discount) lines.push(`下次商店 ${Math.round((1 - effects.discount) * 10)} 折`);
   if (effects.rep > 0) lines.push(`民心 +${effects.rep}`);
   if (effects.rep < 0) lines.push(`民心 ${effects.rep}`);
   if (effects.gold > 0) lines.push(`金币 +${effects.gold}`);

@@ -15,11 +15,12 @@ import { createFx } from './fx.js';
 import { createEnemySystem } from './enemy.js';
 import { createLevel1, LEVEL_1 } from './wave.js';
 import { createRangeRing } from './rangeRing.js';
-import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES } from './upgrade.js';
+import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js';
 import { createWeaponSystem } from './weapon.js';
 import { SWORD_KINDS } from './swordKinds.js';
 import { createGoldSystem } from './gold.js';
 import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW } from './shop.js';
+import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js';
 import audio from './audio.js';
 import { SKILLS, visibleSkills, skillForKey } from './skills.js';
 import {
@@ -188,6 +189,7 @@ async function boot() {
   const upList = document.getElementById('upList');
   const upTitle = document.getElementById('upTitle');
   const upSub = document.getElementById('upSub');
+  const upFoot = document.getElementById('upFoot');
   // 开始界面 / 新手教程 / 武器获得卡
   const titleScr = document.getElementById('titleScr');
   const btnStart = document.getElementById('btnStart');
@@ -380,6 +382,10 @@ async function boot() {
   const gold = createGoldSystem({ scene, fx, stats, onGold: addCoins });
   renderGold();
 
+  // 事件给的「下次商店折扣」（第 11 块）：一次性，进店结账用掉就清。
+  // 和民心折扣相乘，所以高民心 + 折扣牌能把价格压到六折左右。
+  let nextShopDiscount = 0;
+
   // ---------------- 民心（第 7 块） ----------------
   // 跨回合记住你做过什么：救人、守信 → 涨；抢掠、背信 → 跌。
   // 影响两件事：① 商店价格（0.75~1.25 倍）② 金币掉落率（±8%）。
@@ -393,7 +399,8 @@ async function boot() {
     return Math.max(0.75, Math.min(1.25, 1 - (reputation - 50) / 200));
   }
   function priceOf(item) {
-    return Math.max(1, Math.round(item.price * repPriceMul()));
+    // 民心 × 事件折扣，两个都是乘数；最低 1 金币，别出现 0 元购
+    return Math.max(1, Math.round(item.price * repPriceMul() * (1 - nextShopDiscount)));
   }
   function repTier() {
     if (reputation >= 80) return 2;   // 敬重
@@ -551,20 +558,28 @@ async function boot() {
     pendingRound = roundNo;
     // 权重按回合变化：round 决定每项的 w0 + gw×(回合-1)
     // 拿到环剑之后，武器系升级才进池子（没武器时抽到等于废牌）
-    const picks = rollChoices(undefined, { round: roundNo, hasWeapon: weapon.granted });
+    // 幸运只放宽高品质那一头（第 11 块）：史诗/传说的权重 ×(1 + 幸运 × 该档系数)
+    const luck = stats.get('luck');
+    const picks = rollChoices(undefined, { round: roundNo, hasWeapon: weapon.granted, luck });
 
     upTitle.textContent = `第 ${roundNo} 回合结束 · 三选一`;
     upSub.textContent = upgradesTaken > 0
       ? `已获得 ${upgradesTaken} 次强化 · 选一个带进下一回合`
       : '选一个带进下一回合';
+    // 页脚把「幸运到底值多少」写成数字，玩家才知道这属性有用
+    const odds = rarityOdds(roundNo, { hasWeapon: weapon.granted, luck });
+    upFoot.textContent = `幸运 ${luck.toFixed(1)} · 精良及以上 ${(highTierOdds(odds) * 100).toFixed(0)}%`
+      + ' · 点一张卡立即生效';
     upList.textContent = '';
 
     for (const up of picks) {
+      const rar = rarityInfo(up);
       const btn = document.createElement('button');
       btn.className = 'up-item';
       btn.type = 'button';
       btn.dataset.tag = up.tag;
       btn.dataset.id = up.id;
+      btn.dataset.rarity = rar.id;
 
       const glyph = document.createElement('span');
       glyph.className = 'up-glyph';
@@ -573,6 +588,11 @@ async function boot() {
       const name = document.createElement('span');
       name.className = 'up-name';
       name.textContent = up.name;
+      // 品质角标：普通也标，玩家才能一眼看出「这张比旁边那张贵」
+      const rank = document.createElement('span');
+      rank.className = 'up-rank';
+      rank.textContent = rar.name;
+      name.appendChild(rank);
 
       const effect = document.createElement('b');
       effect.className = 'up-effect';
@@ -623,11 +643,16 @@ async function boot() {
     upgradesTaken++;
     const res = applyUpgrade(stats, up, upSerial, wstats, weapon);
     takenUpgrades.push(up);
+    // 抽到金/红卡时额外一声：不是数值上的奖励，是「今晚运气站在我这边」的那一下
+    const rIdx = up.rarity ?? 0;
+    if (rIdx >= 3) audio.sfx('coin');
 
     upPanel.classList.remove('on');
     upPanel.setAttribute('aria-hidden', 'true');
     renderHud();
-    showToast(`获得 · ${up.name}`, upgradeText(res));
+    // 标题固定「获得 · 名字」；精良以上的品质写在副标题里，不抢主文案
+    showToast(`获得 · ${up.name}`,
+      upgradeText(res) + (rIdx >= 2 ? ` · ${rarityInfo(up).name}` : ''));
 
     // 第 15 回合是最后一格：选完就结算，不用再等 2.6 秒的回合间隔
     if (pendingRound >= level.totals.rounds) {
@@ -973,11 +998,13 @@ async function boot() {
         target.addMod({ stat: m.stat, flat: m.flat || 0, pct: m.pct || 0, src });
       }
     }
-    // permanent：永久加成（报恩的骨刀等），用独立 src，回合清场不会撤销
+    // permanent：永久加成（报恩的骨刀 / 幸运 / 金币掉落率），
+    // 用独立 src，回合清场不会撤销。也支持挂到武器表上（scope:'weapon'）。
     if (effects.permanent && effects.permanent.length) {
       const src = `pledge:${nextRound}`;
       for (const m of effects.permanent) {
-        stats.addMod({ stat: m.stat, flat: m.flat || 0, pct: m.pct || 0, src });
+        const target = m.scope === 'weapon' ? wstats : stats;
+        target.addMod({ stat: m.stat, flat: m.flat || 0, pct: m.pct || 0, src });
         if (m.stat === 'maxHp') stats.syncHp(m.flat || 0);
       }
     }
@@ -985,6 +1012,11 @@ async function boot() {
     if (effects.gold) addCoins(effects.gold);
     if (effects.hp > 0) stats.heal(effects.hp);
     if (effects.hp < 0) stats.hp.cur = Math.max(0.5, stats.hp.cur + effects.hp);   // 咬一口但不会一口咬死
+    if (effects.healFull) { stats.heal(1e9); renderHud(); }
+    // 一次性商店折扣（第 11 块）：取更强的那一个，进店结账后清零
+    if (effects.discount > 0) {
+      nextShopDiscount = Math.max(nextShopDiscount, Math.min(0.5, effects.discount));
+    }
     if (effects.drain > 0) roundDrain = effects.drain;
     if (effects.level) level.applyRoundMod(effects.level);
   }
@@ -1254,6 +1286,7 @@ async function boot() {
     shopStock = rollShopItems(Math.random, {
       hasWeapon: weapon.granted,
       hpFull: stats.hp.cur >= stats.get('maxHp') - 1e-9,
+      luck: stats.get('luck'),          // 幸运：更容易摆出金/红货（第 11 块）
     });
     gameState = 'shop';
     input.joystick.release();
@@ -1271,6 +1304,7 @@ async function boot() {
     shopEl.classList.remove('on');
     shopEl.setAttribute('aria-hidden', 'true');
     gameState = 'playing';
+    nextShopDiscount = 0;      // 折扣是一次性的，离店即失效
     const next = shopAfterCb;
     shopAfterCb = null;
     if (next) next();
@@ -1284,9 +1318,11 @@ async function boot() {
     const mul = repPriceMul();
     const tag = mul < 0.995 ? ` · 民心 ${Math.round(reputation)}，市价 ${Math.round(mul * 100)}%`
       : mul > 1.005 ? ` · 民心 ${Math.round(reputation)}，市价 ${Math.round(mul * 100)}%` : '';
-    shSub.textContent = `第 ${level.roundNo} 回合清空 · 本店只摆 ${shopStock.length} 件${tag}`;
+    const deal = nextShopDiscount > 0 ? ` · 摊位折扣 ${Math.round(nextShopDiscount * 100)}%（仅本次）` : '';
+    shSub.textContent = `第 ${level.roundNo} 回合清空 · 本店只摆 ${shopStock.length} 件${tag}${deal}`;
     shList.textContent = '';
     for (const item of shopStock) {
+      const rar = rarityInfo(item);
       const price = priceOf(item);
       const locked = itemLocked(item, {
         hasWeapon: weapon.granted,
@@ -1297,6 +1333,7 @@ async function boot() {
       btn.className = 'sh-item';
       btn.type = 'button';
       btn.disabled = !!locked || !afford;
+      btn.dataset.rarity = rar.id;
 
       const icon = document.createElement('span');
       icon.className = 'sh-icon';
@@ -1313,6 +1350,11 @@ async function boot() {
       const name = document.createElement('div');
       name.className = 'sh-name';
       name.textContent = item.name;
+      // 品质角标：让「这件是金货」在挑之前就看得见
+      const rank = document.createElement('span');
+      rank.className = 'up-rank';
+      rank.textContent = rar.name;
+      name.appendChild(rank);
 
       const desc = document.createElement('div');
       desc.className = 'sh-desc';
@@ -1399,7 +1441,10 @@ async function boot() {
       }
       // 2) 抽一个随机事件
       const ev = pickEvent(
-        { round: roundNo + 1, hasWeapon: weapon.granted, gold: coins, rep: reputation, hp: stats.hp.cur },
+        {
+          round: roundNo + 1, hasWeapon: weapon.granted, gold: coins,
+          rep: reputation, hp: stats.hp.cur, luck: stats.get('luck'),
+        },
         seenEvents
       );
       if (!ev) { runUpgrade(); return; }
@@ -1573,9 +1618,19 @@ async function boot() {
       upgrade: {
         show: (roundNo = level.roundNo, after = null) => showUpgrade(roundNo, after),
         choose: (up) => chooseUpgrade(up),
-        roll: () => rollChoices(),
+        roll: (luck) => rollChoices(undefined, { luck: luck ?? stats.get('luck'), hasWeapon: weapon.granted }),
+        odds: (roundNo = level.roundNo, luck) => rarityOdds(roundNo, {
+          luck: luck ?? stats.get('luck'), hasWeapon: weapon.granted,
+        }),
         list: UPGRADES,
         get taken() { return takenUpgrades.map((u) => u.id); },
+        // 面板上实际渲染出来的三张卡（含品质，测试直接读 DOM）
+        get cards() {
+          return [...upList.querySelectorAll('.up-item')].map((b) => ({
+            id: b.dataset.id, tag: b.dataset.tag, rarity: b.dataset.rarity,
+            rank: b.querySelector('.up-rank') ? b.querySelector('.up-rank').textContent : '',
+          }));
+        },
         isOpen: () => upgradeOpen,
       },
       // 金币 / 商店 / 随机事件（自动化测试用）
@@ -1591,9 +1646,31 @@ async function boot() {
         isOpen: () => shopOpen,
         items: SHOP_ITEMS,
         get stock() { return shopStock.slice(); },
-        roll: (rng) => rollShopItems(rng, { hasWeapon: weapon.granted, hpFull: stats.hp.cur >= stats.get('maxHp') - 1e-9 }),
+        // 店里实际渲染出来的货（含品质角标）
+        get cards() {
+          return [...shList.querySelectorAll('.sh-item')].map((b) => ({
+            name: b.querySelector('.sh-name') ? b.querySelector('.sh-name').textContent : '',
+            rarity: b.dataset.rarity || '',
+            price: b.querySelector('.sh-buy b') ? b.querySelector('.sh-buy b').textContent : '',
+            disabled: b.disabled,
+          }));
+        },
+        odds: (luck) => oddsOf(
+          SHOP_ITEMS.filter((it) => !(it.needWeapon && !weapon.granted)),
+          { luck: luck ?? stats.get('luck') }
+        ).map((o) => o.p),
+        get discount() { return nextShopDiscount; },
+        roll: (rng, luck) => rollShopItems(rng, {
+          hasWeapon: weapon.granted,
+          hpFull: stats.hp.cur >= stats.get('maxHp') - 1e-9,
+          luck: luck ?? stats.get('luck'),
+        }),
         render: () => renderShop(),
       },
+      // 运气与折扣（第 11 块）
+      get luck() { return stats.get('luck'); },
+      rarity: RARITIES,
+      get shopDiscount() { return nextShopDiscount; },
       event: {
         // 传事件 id 手动触发（绕过抽取，便于确定性测试）。
         // 注意：新结构的效果在每个选项里，触发后要用 choose(idx) 选一项才会结算。

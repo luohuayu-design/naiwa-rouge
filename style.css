@@ -266,6 +266,41 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
 .up-item[data-tag="mov"] .up-effect{color:#b6ddff}
 .up-item[data-tag="mov"] .up-chg{border-color:rgba(150,205,255,.2);background:rgba(120,180,255,.08)}
 .up-item[data-tag="mov"] .up-chg b{color:#c3e4ff}
+
+/* ---------------- 品质（第 11 块）----------------
+   普通灰 / 稀有绿 / 精良蓝 / 史诗金 / 传说红。
+   品质只占「左边一条竖色条 + 名字后面的角标 + 一圈内发光」，
+   系别（进攻暖金 / 生存青绿 / 机动蓝）继续用背景和图标色 —— 两套信息不打架。 */
+.up-item{position:relative}
+.up-item[data-rarity="common"]{--rc:#9aaba4;--rc-soft:rgba(154,171,164,.15)}
+.up-item[data-rarity="rare"]  {--rc:#4fd07a;--rc-soft:rgba(79,208,122,.15)}
+.up-item[data-rarity="fine"]  {--rc:#4aa8ff;--rc-soft:rgba(74,168,255,.15)}
+.up-item[data-rarity="epic"]  {--rc:#f0b93c;--rc-soft:rgba(240,185,60,.17)}
+.up-item[data-rarity="legend"]{--rc:#f0554e;--rc-soft:rgba(240,85,78,.17)}
+.up-item[data-rarity]{border-left:3px solid var(--rc);
+  box-shadow:inset 0 0 24px -14px var(--rc)}
+.up-item[data-rarity]:hover{box-shadow:0 6px 20px rgba(0,0,0,.28),inset 0 0 26px -12px var(--rc)}
+.up-item[data-rarity="epic"]{box-shadow:inset 0 0 30px -12px var(--rc),0 0 14px -9px var(--rc)}
+.up-item[data-rarity="legend"]{box-shadow:inset 0 0 34px -12px var(--rc),0 0 18px -7px var(--rc);
+  animation:legendPulse 2.6s ease-in-out infinite}
+@keyframes legendPulse{
+  0%,100%{box-shadow:inset 0 0 34px -12px #f0554e,0 0 16px -9px #f0554e}
+  50%    {box-shadow:inset 0 0 34px -8px  #f0554e,0 0 24px -5px #f0554e}
+}
+/* 品质角标：三选一卡片和商店货共用 */
+.up-rank{display:inline-block;margin-left:7px;padding:1px 6px;border-radius:6px;vertical-align:2px;
+  font-size:9px;font-weight:700;letter-spacing:.08em;line-height:1.6;
+  color:var(--rc,#9aaba4);background:var(--rc-soft,rgba(154,171,164,.14));
+  border:1px solid var(--rc,rgba(154,171,164,.4))}
+.sh-name .up-rank{margin-left:6px}
+/* 商店货同样按品质描边（金色摊位上也要看得出哪件是红货） */
+.sh-item[data-rarity]{--rc:#9aaba4;--rc-soft:rgba(154,171,164,.15)}
+.sh-item[data-rarity="rare"]  {--rc:#4fd07a;--rc-soft:rgba(79,208,122,.15)}
+.sh-item[data-rarity="fine"]  {--rc:#4aa8ff;--rc-soft:rgba(74,168,255,.15)}
+.sh-item[data-rarity="epic"]  {--rc:#f0b93c;--rc-soft:rgba(240,185,60,.17)}
+.sh-item[data-rarity="legend"]{--rc:#f0554e;--rc-soft:rgba(240,85,78,.17)}
+.sh-item[data-rarity]{border-left:3px solid var(--rc)}
+.sh-item[data-rarity="legend"]{box-shadow:0 0 18px -9px var(--rc)}
 @media (min-width:620px){
   .up-list{flex-direction:row}
   .up-item{flex:1 1 0;grid-template-columns:1fr;text-align:center;justify-items:center;gap:6px}

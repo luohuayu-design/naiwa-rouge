@@ -36,6 +36,9 @@ export const STAT_DEFS = [
   { key: 'moveSpeed',   name: '移动速度', base: 4.4,  fmt: (v) => v.toFixed(2),           group: '机动', desc: '每秒移动的世界单位' },
   // ---- 经济 ----
   { key: 'goldRate',    name: '金币掉落率', base: 0.45, fmt: pct,  group: '经济', desc: '每只怪死亡时掉出金币的概率（改造后上限 100%）' },
+  // 第 11 块：幸运。不直接加伤害，只改「你能挑到什么东西」——
+  // 三选一的高稀有卡权重、商店摆出来的好货比例，都由它放大（见 rarity.js）。
+  { key: 'luck',        name: '幸运',     base: 0,    fmt: num1, group: '经济', desc: '每点幸运让三选一更容易出高稀有卡、商店更容易摆出好货' },
 ];
 
 // 面板分组顺序（按 defs 里 group 首次出现的顺序排，这里只是兜底默认值）
