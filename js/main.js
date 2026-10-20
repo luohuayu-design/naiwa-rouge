@@ -20,6 +20,8 @@ import { createWeaponSystem } from './weapon.js';
 import { SWORD_KINDS } from './swordKinds.js';
 import { createGoldSystem } from './gold.js';
 import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW } from './shop.js';
+import { createTurretSystem, TURRET } from './turret.js';
+import { createRelicSystem, RELIC_DEFS } from './relics.js';
 import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js';
 import audio from './audio.js';
 import { SKILLS, visibleSkills, skillForKey } from './skills.js';
@@ -382,6 +384,12 @@ async function boot() {
   const gold = createGoldSystem({ scene, fx, stats, onGold: addCoins });
   renderGold();
 
+  // ---------------- 自动炮台 / 随身法器（第 13 块） ----------------
+  // 炮台：商店买下即立在主角身边，本局永久，自己索敌射弩箭；
+  // 法器：地刺 / 霜环跟着主角走，买下即常驻，再买升级。
+  const turrets = createTurretSystem({ scene, fx, enemies });
+  const relics = createRelicSystem({ scene, fx, enemies });
+
   // 事件给的「下次商店折扣」（第 11 块）：一次性，进店结账用掉就清。
   // 和民心折扣相乘，所以高民心 + 折扣牌能把价格压到六折左右。
   let nextShopDiscount = 0;
@@ -469,6 +477,158 @@ async function boot() {
   let pendingRound = 0;        // 这次面板是打完第几回合弹的
   const takenUpgrades = [];    // 结算里展示这一局都选了什么
 
+  // ============================================================
+  // 金钟罩（第 13 块）：每 15 秒护体 3 秒的周期无敌。
+  //   拥有 aegis ≥ 1 后启动；多拿一层周期缩短 1.5 秒（最快 10 秒）。
+  //   生效期间 hurtPlayer 全部无效（弩箭、红圈落箭、自爆全挡），
+  //   视觉 = 主角身上一层金色薄罩 + 激活瞬间一圈金环。
+  // ============================================================
+  const AEGIS = { PERIOD: 15, DURATION: 3, STEP: 1.5, MIN_PERIOD: 10 };
+  let aegisCycle = 0;          // 距离下一次护体还有多久（含护体那 3 秒）
+  let aegisActive = false;
+  const aegisShield = new THREE.Mesh(
+    new THREE.SphereGeometry(1.05, 20, 14),
+    new THREE.MeshBasicMaterial({
+      color: 0xffd66e, transparent: true, opacity: 0.16,
+      depthWrite: false, blending: THREE.AdditiveBlending,
+    })
+  );
+  aegisShield.position.y = 0.75;
+  aegisShield.visible = false;
+  scene.add(aegisShield);
+
+  function aegisPeriod() {
+    const lv = Math.ceil(stats.get('aegis'));
+    if (lv < 1) return AEGIS.PERIOD;
+    return Math.max(AEGIS.MIN_PERIOD, AEGIS.PERIOD - (lv - 1) * AEGIS.STEP);
+  }
+  function aegisReset() {
+    aegisCycle = aegisPeriod();
+    aegisActive = true;        // 拿到的那一瞬间先罩 3 秒（奖励感）
+    aegisShield.visible = true;
+  }
+
+  function aegisUpdate(dt) {
+    const lv = stats.get('aegis');
+    if (lv < 1) { aegisActive = false; aegisShield.visible = false; return; }
+    if (aegisCycle <= 0) aegisCycle = aegisPeriod();
+    aegisCycle -= dt;
+    const active = aegisCycle <= AEGIS.DURATION;
+    if (active && !aegisActive) {
+      aegisActive = true;
+      aegisShield.visible = true;
+      audio.sfx('uiSwitch');
+      fx.ring(pos, { from: 0.5, to: 1.6, color: 0xffd66e, life: 0.5, opacity: 0.8, y: 0.1 });
+    } else if (!active && aegisActive) {
+      aegisActive = false;
+      aegisShield.visible = false;
+    }
+    if (aegisActive) {
+      aegisShield.position.set(pos.x, 0.75 + Math.sin(elapsed * 4) * 0.05, pos.z);
+      aegisShield.rotation.y = elapsed * 1.2;
+    }
+  }
+
+  // ============================================================
+  // 背包（第 13 块）：作战中随时打开的面板，放药水这类「攒着用」的东西。
+  //   商店买的药水不再立刻喝，而是进背包；背包里点一下才喝。
+  //   结构预留：ITEMS 里加一种东西，商店与背包就都认识它。
+  // ============================================================
+  const BAG_ITEMS = {
+    potion: { name: '生命药水', glyph: '⚗', heal: 3, desc: '回复 3.0 生命' },
+    bigPotion: { name: '大生命药水', glyph: '🧪', healFull: true, desc: '生命直接回满' },
+  };
+  const bag = { potion: 0, bigPotion: 0 };
+  let bagOpen = false;
+
+  const bagBtn = document.getElementById('bagBtn');
+  const bagNum = document.getElementById('bagNum');
+  const bagPanel = document.getElementById('bagPanel');
+  const bagList = document.getElementById('bagList');
+  const bagSub = document.getElementById('bagSub');
+
+  function bagCount() { return bag.potion + bag.bigPotion; }
+  function renderBagBtn() {
+    const n = bagCount();
+    bagBtn.classList.toggle('on', n > 0);
+    bagNum.textContent = String(n);
+  }
+  function renderBag() {
+    bagSub.textContent = `生命 ${fmtHp(stats.hp.cur)} / ${stats.get('maxHp').toFixed(1)} · 打开面板时世界暂停`;
+    bagList.textContent = '';
+    let any = false;
+    for (const [id, def] of Object.entries(BAG_ITEMS)) {
+      const n = bag[id] || 0;
+      if (n <= 0) continue;
+      any = true;
+      const row = document.createElement('button');
+      row.className = 'bg-item';
+      row.type = 'button';
+      const glyph = document.createElement('span');
+      glyph.className = 'bg-glyph';
+      glyph.textContent = def.glyph;
+      const mid = document.createElement('span');
+      mid.className = 'bg-mid';
+      const name = document.createElement('b');
+      name.textContent = `${def.name} ×${n}`;
+      const desc = document.createElement('i');
+      desc.textContent = def.desc;
+      mid.append(name, desc);
+      const use = document.createElement('span');
+      use.className = 'bg-use';
+      use.textContent = '使用';
+      row.append(glyph, mid, use);
+      row.addEventListener('click', () => useBagItem(id));
+      bagList.appendChild(row);
+    }
+    if (!any) {
+      const empty = document.createElement('div');
+      empty.className = 'bg-empty';
+      empty.textContent = '背包是空的 —— 商店里买的药水会存进这里';
+      bagList.appendChild(empty);
+    }
+  }
+  function setBag(open) {
+    bagOpen = open;
+    if (open) {
+      renderBag();
+      bagPanel.classList.add('on');
+      bagPanel.setAttribute('aria-hidden', 'false');
+      input.joystick.release();
+      vel.set(0, 0, 0);
+      audio.sfx('uiSwitch');
+    } else {
+      bagPanel.classList.remove('on');
+      bagPanel.setAttribute('aria-hidden', 'true');
+    }
+  }
+  function useBagItem(id) {
+    const def = BAG_ITEMS[id];
+    if (!def || (bag[id] || 0) <= 0) return;
+    // 满血时喝药是浪费：拦一下，按钮照常可点但给个提示
+    const maxHp = stats.get('maxHp');
+    if (stats.hp.cur >= maxHp - 1e-9) {
+      showToast('现在喝是浪费', '生命是满的，留着救命再喝');
+      return;
+    }
+    bag[id]--;
+    if (def.healFull) stats.heal(1e9);
+    else if (def.heal) stats.heal(def.heal);
+    audio.sfx('heal');
+    renderHud();
+    renderBag();
+    renderBagBtn();
+  }
+  function bagAdd(id, n = 1) {
+    if (!(id in BAG_ITEMS)) return;
+    bag[id] = (bag[id] || 0) + n;
+    renderBagBtn();
+  }
+  bagBtn.addEventListener('click', () => setBag(!bagOpen));
+  document.getElementById('bagClose').addEventListener('click', () => setBag(false));
+  bagPanel.addEventListener('click', (e) => { if (e.target === bagPanel) setBag(false); });
+  renderBagBtn();
+
   // 新手教程
   let tutStep = 0;
   let tutMoved = 0;
@@ -492,9 +652,15 @@ async function boot() {
   let debugNoWaves = false;    // 冻结波次推进（不再刷怪）
   let debugNoEnemies = false;  // 冻结怪物 AI（已生成的怪原地不动）
 
-  // 受击：先过无敌帧，再按防御减伤扣血；血量归零即结束
+  // 受击：先看金钟罩（第 13 块，护体期间完全免疫），
+  // 再过无敌帧，最后按防御减伤扣血；血量归零即结束
   function hurtPlayer(amount) {
     if (gameState !== 'playing' || iframe > 0) return;
+    if (aegisActive) {
+      // 罩子挡下这一下：金环提示，不掉血、不触发无敌帧（罩子本来就免伤）
+      fx.ring(pos, { from: 0.7, to: 1.3, color: 0xffd66e, life: 0.28, opacity: 0.7, y: 0.35 });
+      return;
+    }
     stats.damage(amount);
     iframe = IFRAME;
     shake = 0.55;
@@ -926,6 +1092,10 @@ async function boot() {
     // 数字键 = 技能快捷键（1 对应第一格，往后类推）
     const sk = skillForKey(e.key);
     if (sk && gameState === 'playing') pressSkill(sk);
+    // B = 背包（第 13 块）：作战中随时开/关
+    if (e.key === 'b' || e.key === 'B') {
+      if (gameState === 'playing') setBag(!bagOpen);
+    }
   }, { once: false });
 
   document.getElementById('tutYes').addEventListener('click', () => beginGame({ tutorial: true }));
@@ -1286,6 +1456,7 @@ async function boot() {
   let shopOpen = false;
   let shopAfterCb = null;      // 商店关掉后要不要继续（链式：事件→升级→商店→开打）
   let shopSerial = 0;          // 商店属性加成的 src 序号
+  let shopRound = 1;           // 本次商店对应的回合号（购买解锁判定用它，测试可指定）
 
   // 本次商店摆的货：每进一次店重新抽 4 件（第 9 块），关掉重开不变
   let shopStock = SHOP_ITEMS.slice(0, SHOP_SHOW);
@@ -1293,10 +1464,14 @@ async function boot() {
   function openShop(roundNo, after) {
     shopAfterCb = after || null;
     shopOpen = true;
-    // 抽签前先按「现在买有没有用」过滤：没环剑时的剑类、满血时的药水都不占格子
+    shopRound = roundNo;
+    // 抽签前先按「现在买有没有用」过滤：没环剑时的剑类、没到解锁回合的法器、
+    // 放满时的炮台都不占格子（药水进背包，满血也能囤 —— 第 13 块）
     shopStock = rollShopItems(Math.random, {
       hasWeapon: weapon.granted,
-      hpFull: stats.hp.cur >= stats.get('maxHp') - 1e-9,
+      round: roundNo,
+      turretCount: turrets.count(),
+      relicLevels: relics.levels(),
       luck: stats.get('luck'),          // 幸运：更容易摆出金/红货（第 11 块）
     });
     gameState = 'shop';
@@ -1330,15 +1505,18 @@ async function boot() {
     const tag = mul < 0.995 ? ` · 民心 ${Math.round(reputation)}，市价 ${Math.round(mul * 100)}%`
       : mul > 1.005 ? ` · 民心 ${Math.round(reputation)}，市价 ${Math.round(mul * 100)}%` : '';
     const deal = nextShopDiscount > 0 ? ` · 摊位折扣 ${Math.round(nextShopDiscount * 100)}%（仅本次）` : '';
-    shSub.textContent = `第 ${level.roundNo} 回合清空 · 本店只摆 ${shopStock.length} 件${tag}${deal}`;
+    shSub.textContent = `第 ${shopRound} 回合清空 · 本店只摆 ${shopStock.length} 件${tag}${deal}`;
     shList.textContent = '';
+    const shopCtx = {
+      hasWeapon: weapon.granted,
+      round: shopRound,
+      turretCount: turrets.count(),
+      relicLevels: relics.levels(),
+    };
     for (const item of shopStock) {
       const rar = rarityInfo(item);
       const price = priceOf(item);
-      const locked = itemLocked(item, {
-        hasWeapon: weapon.granted,
-        hpFull: stats.hp.cur >= stats.get('maxHp') - 1e-9,
-      });
+      const locked = itemLocked(item, shopCtx);
       const afford = coins >= price;
       const btn = document.createElement('button');
       btn.className = 'sh-item';
@@ -1392,15 +1570,21 @@ async function boot() {
     if (coins < price) return;
     const locked = itemLocked(item, {
       hasWeapon: weapon.granted,
-      hpFull: stats.hp.cur >= stats.get('maxHp') - 1e-9,
+      round: shopRound,
+      turretCount: turrets.count(),
+      relicLevels: relics.levels(),
     });
     if (locked) return;
     coins -= price;
     renderGold();
 
-    if (item.type === 'heal') stats.heal(item.amount);
-    else if (item.type === 'healFull') stats.heal(1e9);
-    else if (item.type === 'stat') {
+    if (item.type === 'heal' || item.type === 'healFull') {
+      // 药水不再立刻喝（第 13 块）：进背包，作战中随时打开喝
+      const id = item.type === 'healFull' ? 'bigPotion' : 'potion';
+      bagAdd(id);
+      audio.sfx('buy');
+      showToast(item.name, `收进背包（背包里现有 ${bagCount()} 件）`);
+    } else if (item.type === 'stat') {
       shopSerial++;
       // scope:'weapon' 的商品（剑油 / 磨剑石）改武器表，其余改主角表
       const target = item.scope === 'weapon' ? wstats : stats;
@@ -1409,11 +1593,19 @@ async function boot() {
         src: `shop:${item.id}:${shopSerial}`,
       });
       if (item.stat === 'maxHp') target.syncHp(item.heal || 0);
+      if (item.stat === 'aegis' && !aegisActive && aegisCycle <= 0) aegisReset();
       showToast(item.name, '永久生效 · ' + item.desc);
     } else if (item.type === 'sword') {
       weapon.addSword(item.kind);
       showToast(`${SWORD_KINDS[item.kind].name} 入列`, `环上现在有 ${weapon.count} 把剑在转`);
       renderSkill();
+    } else if (item.type === 'turret') {
+      const t = turrets.spawn(pos);
+      showToast(item.name, t ? `已立起（场上 ${turrets.count()}/${TURRET.MAX_COUNT} 台）· 本局一直在` : '放不下了');
+    } else if (item.type === 'relic') {
+      const lv = relics.buy(item.relic);
+      const def = RELIC_DEFS[item.relic];
+      showToast(`${def.name} ${lv} 级`, def.desc[lv - 1] + (lv < def.maxLevel ? ' · 再买可升级' : ' · 已满级'));
     }
     renderHud();
     renderShop();   // 刷新金币与按钮可用态（面板保持打开，可以连买）
@@ -1496,6 +1688,7 @@ async function boot() {
     deadT = 0;
     input.joystick.release();
     vel.set(0, 0, 0);
+    setBag(false);                  // 背包开着就收掉
     playerRing.setVisible(false);   // 倒下/通关后不再提示攻击范围
     weapon.setVisible(false);       // 环剑也一并收起
     gold.setVisible(false);         // 地上的金币也收掉
@@ -1673,7 +1866,9 @@ async function boot() {
         get discount() { return nextShopDiscount; },
         roll: (rng, luck) => rollShopItems(rng, {
           hasWeapon: weapon.granted,
-          hpFull: stats.hp.cur >= stats.get('maxHp') - 1e-9,
+          round: level.roundNo,
+          turretCount: turrets.count(),
+          relicLevels: relics.levels(),
           luck: luck ?? stats.get('luck'),
         }),
         render: () => renderShop(),
@@ -1745,6 +1940,40 @@ async function boot() {
       addSword: (kind) => weapon.addSword(kind),
       get swordKinds() { return weapon.kindCounts(); },
       swordKindsAll: SWORD_KINDS,
+      // 炮台 / 法器 / 金钟罩 / 背包（第 13 块，测试用）
+      turrets: {
+        spawn: () => turrets.spawn(pos),
+        reset: () => turrets.reset(),
+        count: () => turrets.count(),
+        boltCount: () => turrets.boltCount(),
+        list: () => turrets.list(),
+        TURRET,
+      },
+      relics: {
+        buy: (kind) => relics.buy(kind),
+        levels: () => relics.levels(),
+        DEF: RELIC_DEFS,
+      },
+      aegis: {
+        get level() { return stats.get('aegis'); },
+        get active() { return aegisActive; },
+        get cycle() { return aegisCycle; },
+        get period() { return aegisPeriod(); },
+        reset: () => aegisReset(),
+        add: () => { stats.addMod({ stat: 'aegis', flat: 1, src: 'dbg:aegis' }); aegisReset(); },
+      },
+      bag: {
+        get counts() { return { ...bag }; },
+        get total() { return bagCount(); },
+        add: (id, n) => bagAdd(id, n),
+        use: (id) => useBagItem(id),
+        open: () => setBag(true),
+        close: () => setBag(false),
+        isOpen: () => bagOpen,
+        render: () => renderBag(),
+        clear: () => { bag.potion = 0; bag.bigPotion = 0; renderBagBtn(); },
+      },
+      setAegisCycle: (t) => { aegisCycle = t; },
     };
   }
 
@@ -1778,7 +2007,8 @@ async function boot() {
     const prevX = pos.x, prevZ = pos.z;
 
     // 教程也算「在游戏里」：能移动、能打怪，只是不推进回合波次
-    const inGame = (gameState === 'playing' || gameState === 'tutorial') && !panelOpen;
+    // 背包打开时同样冻结（第 13 块：随时能开，开就是暂停）
+    const inGame = (gameState === 'playing' || gameState === 'tutorial') && !panelOpen && !bagOpen;
     if (inGame) {
       elapsed += dt;
 
@@ -1821,10 +2051,13 @@ async function boot() {
       if (attackCd > 0) attackCd -= dt;
       if (attackCd <= 0) playerAttack();
 
-      // 5) 怪物 AI → 波次推进 → 环剑 → 金币 → 生命回复 / 无敌帧
+      // 5) 怪物 AI → 波次推进 → 环剑 → 炮台/法器 → 金币 → 生命回复 / 无敌帧
       if (!debugNoEnemies) enemies.update(dt, combatCtx);
       if (!debugNoWaves && gameState === 'playing') level.update(dt);
       weapon.update(dt, { playerPos: pos });
+      turrets.update(dt, { playerPos: pos });
+      relics.update(dt, { playerPos: pos });
+      aegisUpdate(dt);
       gold.update(dt);
       renderSkill();
       if (stats.hp.cur < stats.get('maxHp')) stats.heal(stats.get('hpRegen') * dt);

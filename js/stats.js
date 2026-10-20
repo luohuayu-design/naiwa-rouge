@@ -25,6 +25,9 @@ export const STAT_DEFS = [
   { key: 'maxHp',       name: '生命上限', base: 6,    fmt: num1, group: '生存', desc: '归零即本局失败；伤害按小数扣除' },
   { key: 'hpRegen',     name: '生命回复', base: 0,    fmt: (v) => v.toFixed(1) + '/秒',   group: '生存', desc: '每秒自动恢复的生命' },
   { key: 'armor',       name: '防御',     base: 0,    fmt: num1, group: '生存', desc: '减伤率 = 防御 /(100 + 防御)' },
+  // 第 13 块：金钟罩。base 0 用 flat 获得；多拿一层周期缩短（见 main.js 的 AEGIS）。
+  { key: 'aegis',       name: '金钟罩',   base: 0,    fmt: (v) => v >= 1 ? `每 ${Math.max(10, 15 - (Math.ceil(v) - 1) * 1.5).toFixed(1)}s 护体 3s` : '—',
+    group: '生存', desc: '拥有后进入周期无敌：每 15 秒护体 3 秒、完全不受伤害；多拿一层周期缩短 1.5 秒（最快 10 秒）' },
   // ---- 近战（只作用于主角自己的自动普攻，不影响环剑）----
   { key: 'attack',      name: '攻击力',   base: 1,    fmt: num1, group: '近战', desc: '主角近战命中的基础伤害（环剑不吃这一项）' },
   { key: 'attackRange', name: '攻击范围', base: 2.1,  fmt: (v) => v.toFixed(2),           group: '近战', desc: '近战能打到的最远距离（世界单位）' },

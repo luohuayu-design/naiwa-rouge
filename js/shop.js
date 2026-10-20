@@ -2,39 +2,44 @@
 // shop.js —— 流浪商人商店
 //
 // 规则（用户定案）：
-//   · 每 3 回合触发一次（第 3/6/9/12 回合清空后，先三选一再商店；
-//     第 15 回合是最后一关，清完直接结算不弹商店）；
-//   · 用金币购买三类东西：生命药水 / 属性加成 / 武器（元素剑）；
+//   · 每 3 回合触发一次（第 3/6/9/12/15/18 回合清空后，先三选一再商店；
+//     第 20 回合是最后一关，清完直接结算不弹商店）；
+//   · 用金币购买：生命药水（进背包）/ 属性加成 / 武器（元素剑）/
+//     自动炮台 / 随身法器（第 13 块）；
 //   · 一个商店可以连买多件（金币够就行），关掉继续打。
 //   · **每次进店只随机摆 4 件**（第 9 块）：同一批货在本次商店里保持不变，
 //     关掉再进来（下一回合）才重新抽 —— 所以每次逛店看到的东西都不一样。
-//     抽签会先剔掉「现在买了也没用」的（没环剑时的剑类、满血时的药水），
-//     池子不够 4 件才把它们放回来兜底。
+//     抽签会先剔掉「现在买了也没用」的（没环剑时的剑类、没到解锁回合的
+//     法器、放满的炮台），池子不够 4 件才把它们放回来兜底。
+//     药水**不再因为满血被剔**（第 13 块）：药水买进背包，满血也能囤。
 //
 // type 说明：
-//   heal      立刻回复 amount 生命
-//   healFull  立刻回满生命
+//   heal      药水进背包（第 13 块起不再立刻喝，作战中随时打开背包用）
 //   stat      永久属性加成（flat/pct，走 stats.addMod）
 //   sword     获得一把 kind 元素剑（needWeapon：没环剑时买不了）
+//   turret    立一台自动炮台（本局永久，上限见 turret.js）
+//   relic     随身法器（needRound：没到解锁回合不摆；最多 maxLevel 级）
 //
 // 第 11 块：每件货都带 rarity（0 普通 ~ 4 传说），店里按品质加权抽取 ——
 // 幸运越高，摆出来的货越往金/红那一头走（见 rarity.js）。
 // ============================================================
 import { rarityWeight } from './rarity.js';
+import { TURRET } from './turret.js';
+import { RELIC_DEFS } from './relics.js';
 
 export const SHOP_ITEMS = [
-  // ---------------- 生命药水 ----------------
+  // ---------------- 生命药水（第 13 块起：买进背包，作战中随时用） ----------------
   {
     id: 'potion', type: 'heal', amount: 3, price: 8,
     rarity: 0,
     glyph: '⚗', name: '生命药水',
-    desc: '立刻回复 3.0 生命（不超上限）。可以多囤，战斗里买不到。',
+    desc: '回复 3.0 生命（不超上限）。买进背包，作战中随时打开喝。',
   },
   {
     id: 'bigPotion', type: 'healFull', price: 18,
     rarity: 1,
     glyph: '🧪', name: '大生命药水',
-    desc: '生命直接回满。贵，但关键时刻能续命。',
+    desc: '喝下直接回满。买进背包，关键时刻续命。',
   },
   // ---------------- 属性加成（永久） ----------------
   {
@@ -112,12 +117,49 @@ export const SHOP_ITEMS = [
     glyph: '🧿', name: '压胜钱',
     desc: '幸运 +1.0（永久）。三选一更容易出高稀有卡，之后每次进店也更容易碰到好货。',
   },
+  // ---------------- 金钟罩（第 13 块） ----------------
+  {
+    id: 'aegisCharm', type: 'stat', stat: 'aegis', flat: 1, price: 36,
+    rarity: 4,
+    glyph: '🔔', name: '金钟罩符',
+    desc: '每 15 秒护体 3 秒、完全无敌；多买一层周期缩短 1.5 秒（最快 10 秒）。',
+  },
+  // ---------------- 自动炮台（第 13 块）：买下就立起来，本局永久 ----------------
+  {
+    id: 'turret', type: 'turret', price: 32,
+    rarity: 3,
+    glyph: '🏹', name: '弩炮台',
+    desc: `在身边立一台自动弩炮（最多 ${TURRET.MAX_COUNT} 台）：自己索敌射弩箭，弹道直、飞得快基本必中，本局一直都在。`,
+  },
+  // ---------------- 随身法器（第 13 块）：特定回合解锁，最多 3 级 ----------------
+  {
+    id: 'buySpikes', type: 'relic', relic: 'spikes', price: 28, needRound: 8,
+    rarity: 3,
+    glyph: '🔻', name: '地刺图样',
+    desc: '主角周围周期性刺出石刺，对所有怪造成物理伤害。再买可升级（最多 3 级）。',
+  },
+  {
+    id: 'buyFrostRing', type: 'relic', relic: 'frost', price: 30, needRound: 11,
+    rarity: 3,
+    glyph: '❄', name: '霜环图样',
+    desc: '主角周围结一圈冰环：环内怪持续掉血并被减速。再买可升级（最多 3 级）。',
+  },
 ];
 
 // 商店里买不到 / 已卖光时给出原因（渲染禁用态用）
+// ctx: hasWeapon / round（当前回合）/ turretCount（场上炮台数）/ relicLevels（{spikes, frost}）
 export function itemLocked(item, ctx = {}) {
   if (item.needWeapon && !ctx.hasWeapon) return '第 5 回合获得环剑后解锁';
-  if (item.type === 'heal' && ctx.hpFull) return '生命已满';
+  if (item.needRound != null && (ctx.round ?? 99) < item.needRound) {
+    return `第 ${item.needRound} 回合后解锁`;
+  }
+  if (item.type === 'turret' && (ctx.turretCount ?? 0) >= TURRET.MAX_COUNT) {
+    return `最多放 ${TURRET.MAX_COUNT} 台`;
+  }
+  if (item.type === 'relic') {
+    const lv = (ctx.relicLevels || {})[item.relic] || 0;
+    if (lv >= RELIC_DEFS[item.relic].maxLevel) return '已到满级';
+  }
   return null;
 }
 
@@ -126,17 +168,20 @@ export const SHOP_SHOW = 4;
 
 // 抽本次商店的货物：返回一个**不含重复**的物品数组（默认 4 件）。
 // hasWeapon = 已拿到环剑（没有时剑类买了也用不了，先不进池）
-// hpFull    = 满血（药水先不进池，否则白发一格；池子不够再兜底）
+// round     = 当前回合（没到解锁回合的法器不进池；缺省 99 = 全部可摆）
 // luck      = 幸运：按品质加权（第 11 块），幸运高更容易摆出金/红货
 // rng 可注入，测试里能固定结果。
 export function rollShopItems(rng = Math.random, {
-  hasWeapon = false, hpFull = false, count = SHOP_SHOW, luck = 0,
+  hasWeapon = false, round = 99, turretCount = 0, relicLevels = null, count = SHOP_SHOW, luck = 0,
 } = {}) {
-  const usable = SHOP_ITEMS.filter((it) => !(it.needWeapon && !hasWeapon));
-  const useful = hpFull
-    ? usable.filter((it) => it.type !== 'heal' && it.type !== 'healFull')
-    : usable;
-  const rest = (useful.length >= count ? useful : usable).slice();
+  const usable = SHOP_ITEMS.filter((it) => {
+    if (it.needWeapon && !hasWeapon) return false;
+    if (it.needRound != null && round < it.needRound) return false;
+    if (it.type === 'turret' && turretCount >= TURRET.MAX_COUNT) return false;
+    if (it.type === 'relic' && (relicLevels?.[it.relic] || 0) >= RELIC_DEFS[it.relic].maxLevel) return false;
+    return true;
+  });
+  const rest = usable.slice();
   // 按「品质系数 × 幸运」加权，不放回地抽 count 件。
   // ⚠️ want 必须先算：rest 会越抽越短，边抽边算会提前收工（少摆几件）。
   const want = Math.min(count, rest.length);
