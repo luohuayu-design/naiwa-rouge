@@ -461,7 +461,7 @@ async function boot() {
   // 调试钩子：只有 ?debug=1 才挂到 window，方便自动化测试读内部状态（正常游玩不暴露）
   if (new URLSearchParams(location.search).has('debug')) {
     window.__game = {
-      stats, pos, vel, input, enemies, level, fx, playerRing, frog,
+      stats, pos, vel, input, enemies, level, fx, playerRing, frog, camera,
       getYaw: () => yaw,
       getState: () => gameState,
       getKills: () => kills,

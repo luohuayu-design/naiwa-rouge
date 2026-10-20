@@ -131,12 +131,12 @@ function createBar(cfg) {
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.minFilter = THREE.LinearFilter;
 
-  const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false });
+  const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, depthTest: false });
   const spr = new THREE.Sprite(mat);
   // 头顶常驻血条：宽随身高、高固定。
   // ⚠️ 必须抬到头顶上方约 0.6 —— 相机是俯视 45°，贴得太近会被怪自己的头挡住。
   spr.scale.set(cfg.height * 1.0, 0.26, 1);
-  spr.position.y = cfg.height + 0.62;
+  spr.position.y = cfg.height + 0.95;
   spr.visible = true;
   spr.renderOrder = 5;
 
