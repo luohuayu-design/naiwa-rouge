@@ -141,6 +141,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
 .sk img{width:36px;height:36px;opacity:.42;transition:opacity .15s ease,filter .15s ease;
   filter:drop-shadow(0 0 6px rgba(0,0,0,.6));pointer-events:none}
 .sk.empty{border-style:dashed;border-color:rgba(126,235,196,.12);background:rgba(6,18,16,.34)}
+.sk{touch-action:none}
 .sk.ready{border-color:rgba(126,235,196,.65);cursor:pointer;
   box-shadow:0 4px 14px rgba(0,0,0,.4),0 0 18px rgba(110,240,220,.28)}
 .sk.ready img{opacity:.95;filter:drop-shadow(0 0 7px rgba(140,245,220,.55))}
@@ -288,3 +289,126 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
 /* 加载失败时的提示 */
 .ld-err{margin-top:14px;font-size:12px;line-height:1.7;color:#ffb3a7;display:none}
 .ld-err.on{display:block}
+
+/* ============================================================
+   开始界面 / 新手教程 / 武器获得卡
+   ============================================================ */
+
+/* ---------------- 标题页 ---------------- */
+.title-scr{position:fixed;inset:0;z-index:19;display:flex;align-items:center;justify-content:center;
+  padding:24px;overflow:hidden;
+  background:
+    radial-gradient(circle at 50% 18%,rgba(56,120,102,.42),rgba(6,14,12,0) 46%),
+    radial-gradient(circle at 50% 40%,rgba(13,34,30,.98),rgba(4,10,9,1) 68%);
+  transition:opacity .34s ease}
+.title-scr.off{opacity:0;pointer-events:none}
+/* 月光光晕 + 星点 */
+.tt-glow{position:absolute;top:-16%;left:50%;width:min(120vw,760px);height:min(120vw,760px);
+  transform:translateX(-50%);pointer-events:none;
+  background:radial-gradient(circle,rgba(150,245,215,.16),rgba(120,220,200,.05) 40%,rgba(0,0,0,0) 66%)}
+.tt-body{position:relative;text-align:center;max-width:560px}
+.tt-kicker{font-size:10px;letter-spacing:.42em;color:rgba(150,225,200,.62);
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.tt-name{margin:14px 0 0;font-size:clamp(44px,13vw,78px);line-height:1.05;
+  letter-spacing:.14em;font-weight:800;color:#e6fff5;
+  text-shadow:0 0 26px rgba(120,240,205,.42),0 6px 26px rgba(0,0,0,.6)}
+.tt-name::after{content:'';display:block;margin:14px auto 0;width:64px;height:2px;border-radius:2px;
+  background:linear-gradient(90deg,rgba(126,235,196,0),#7ef0c4,rgba(126,235,196,0))}
+.tt-sub{margin:16px 0 0;font-size:13px;line-height:1.9;color:rgba(178,220,204,.66)}
+.tt-start{margin-top:30px;padding:15px 52px;border-radius:999px;font:inherit;
+  font-size:15px;font-weight:700;letter-spacing:.22em;color:#04201a;cursor:pointer;
+  border:1px solid rgba(190,255,232,.7);
+  background:linear-gradient(180deg,#a9f7d6,#5fd8ab);
+  box-shadow:0 10px 30px rgba(70,220,180,.32),inset 0 1px 0 rgba(255,255,255,.5);
+  transition:transform .12s ease,box-shadow .18s ease,filter .18s ease;
+  -webkit-tap-highlight-color:transparent}
+.tt-start:hover{filter:brightness(1.06);box-shadow:0 12px 36px rgba(70,220,180,.44)}
+.tt-start:active{transform:scale(.97)}
+.tt-tip{margin-top:26px;font-size:11px;letter-spacing:.08em;color:rgba(140,190,172,.45)}
+
+/* ---------------- 通用模态（是否进入教程） ---------------- */
+.modal{position:fixed;inset:0;z-index:19;display:flex;align-items:center;justify-content:center;
+  padding:24px;background:rgba(3,9,8,.76);
+  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+  opacity:0;pointer-events:none;transition:opacity .2s ease}
+.modal.on{opacity:1;pointer-events:auto}
+.md-card{width:min(92vw,380px);padding:22px 20px 18px;border-radius:18px;text-align:center;
+  border:1px solid rgba(126,235,196,.26);
+  background:linear-gradient(180deg,rgba(19,42,36,.99),rgba(7,18,16,1));
+  box-shadow:0 26px 60px rgba(0,0,0,.66),inset 0 1px 0 rgba(180,255,228,.08);
+  transform:translateY(10px) scale(.99);transition:transform .22s ease}
+.modal.on .md-card{transform:none}
+.md-title{font-size:16px;font-weight:700;letter-spacing:.1em;color:#e2fff4}
+.md-sub{margin-top:10px;font-size:12px;line-height:1.8;color:rgba(160,204,188,.68)}
+.md-btns{margin-top:20px;display:flex;gap:10px}
+.md-btn{flex:1;padding:12px 0;border-radius:12px;font:inherit;font-size:13px;font-weight:700;
+  letter-spacing:.1em;cursor:pointer;color:#cfeee2;
+  border:1px solid rgba(126,235,196,.22);background:rgba(11,28,24,.9);
+  -webkit-tap-highlight-color:transparent;transition:transform .1s,border-color .15s,background .15s}
+.md-btn:hover{border-color:rgba(126,235,196,.5);background:rgba(126,235,196,.1)}
+.md-btn:active{transform:scale(.98)}
+.md-btn.primary{color:#04201a;border-color:rgba(190,255,232,.6);
+  background:linear-gradient(180deg,#a9f7d6,#5fd8ab);
+  box-shadow:0 8px 22px rgba(70,220,180,.28)}
+
+/* ---------------- 新手教程浮层 ---------------- */
+.tut-card{position:fixed;left:50%;bottom:calc(86px + env(safe-area-inset-bottom));z-index:12;
+  width:min(92vw,520px);padding:12px 15px 11px;border-radius:16px;
+  transform:translateX(-50%) translateY(12px);opacity:0;pointer-events:none;
+  background:linear-gradient(180deg,rgba(17,40,34,.97),rgba(6,16,14,.98));
+  border:1px solid rgba(126,235,196,.3);
+  box-shadow:0 18px 44px rgba(0,0,0,.6),inset 0 1px 0 rgba(180,255,228,.08);
+  transition:opacity .22s ease,transform .22s ease}
+.tut-card.on{opacity:1;transform:translateX(-50%)}
+.tc-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.tc-step{font-size:10px;letter-spacing:.16em;color:rgba(150,205,188,.7);
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.tc-skip{padding:5px 10px;border-radius:999px;font:inherit;font-size:10.5px;letter-spacing:.08em;
+  color:rgba(180,222,206,.72);cursor:pointer;pointer-events:auto;
+  border:1px solid rgba(126,235,196,.2);background:rgba(126,235,196,.06);
+  -webkit-tap-highlight-color:transparent}
+.tc-title{margin-top:6px;font-size:14px;font-weight:700;letter-spacing:.08em;color:#e6fff5}
+.tc-text{margin-top:5px;font-size:11.5px;line-height:1.72;color:rgba(170,212,196,.72)}
+.tc-bar{margin-top:9px;height:3px;border-radius:3px;background:rgba(126,235,196,.14);overflow:hidden}
+.tc-bar i{display:block;height:100%;width:0%;border-radius:3px;
+  background:linear-gradient(90deg,#4fd6a8,#9cf5cf);box-shadow:0 0 10px rgba(110,240,200,.55);
+  transition:width .25s ease}
+
+/* ---------------- 武器获得卡 ---------------- */
+.wcard{position:fixed;inset:0;z-index:17;display:flex;align-items:center;justify-content:center;
+  padding:24px;background:rgba(3,9,8,.7);
+  backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);
+  opacity:0;pointer-events:none;transition:opacity .22s ease}
+.wcard.on{opacity:1;pointer-events:auto}
+.wc-card{width:min(90vw,360px);padding:20px 20px 16px;border-radius:20px;text-align:center;
+  border:1px solid rgba(150,235,255,.32);
+  background:
+    radial-gradient(circle at 50% 0%,rgba(80,190,210,.16),rgba(0,0,0,0) 58%),
+    linear-gradient(180deg,rgba(16,36,40,.99),rgba(6,15,18,1));
+  box-shadow:0 26px 64px rgba(0,0,0,.7),inset 0 1px 0 rgba(190,245,255,.1);
+  transform:translateY(12px) scale(.985);transition:transform .24s ease}
+.wcard.on .wc-card{transform:none}
+.wc-tag{font-size:10px;letter-spacing:.2em;color:rgba(160,225,235,.7);
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.wc-icon{margin:14px auto 0;width:76px;height:76px;border-radius:22px;
+  display:flex;align-items:center;justify-content:center;
+  border:1px solid rgba(150,235,255,.34);background:rgba(120,220,240,.08);
+  box-shadow:0 0 26px rgba(120,220,240,.22),inset 0 0 18px rgba(120,220,240,.12)}
+.wc-icon img{width:50px;height:50px;filter:drop-shadow(0 0 8px rgba(150,240,255,.6))}
+.wc-name{margin-top:12px;font-size:22px;font-weight:800;letter-spacing:.24em;color:#e8fbff;
+  text-shadow:0 0 20px rgba(140,235,255,.45)}
+.wc-desc{margin-top:9px;font-size:11.5px;line-height:1.8;color:rgba(170,215,222,.72)}
+.wc-rows{margin-top:14px;display:flex;flex-direction:column;gap:6px}
+.wc-rows span{display:flex;align-items:baseline;justify-content:space-between;gap:12px;
+  padding:7px 11px;border-radius:10px;font-size:11px;color:rgba(196,240,246,.86);
+  border:1px solid rgba(150,235,255,.14);background:rgba(120,220,240,.06)}
+.wc-rows i{font-style:normal;font-size:10.5px;color:rgba(160,205,214,.62)}
+.wc-btn{margin-top:16px;width:100%;padding:13px 0;border-radius:13px;font:inherit;
+  font-size:13px;font-weight:700;letter-spacing:.14em;color:#04201f;cursor:pointer;
+  border:1px solid rgba(200,250,255,.65);
+  background:linear-gradient(180deg,#a9eef7,#5fd0dc);
+  box-shadow:0 10px 26px rgba(90,210,225,.3);-webkit-tap-highlight-color:transparent;
+  transition:transform .1s ease,filter .15s ease}
+.wc-btn:hover{filter:brightness(1.06)}
+.wc-btn:active{transform:scale(.985)}
+.wc-foot{margin-top:10px;font-size:10px;letter-spacing:.06em;color:rgba(140,190,180,.42)}

@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#080f14">
 <link rel="icon" href="data:,">
 <title>蛙步 · 夜行</title>
-<link rel="stylesheet" href="style.css?v=7">
+<link rel="stylesheet" href="style.css?v=8">
 </head>
 <body>
 
@@ -85,7 +85,7 @@
   </div>
 </div>
 
-<!-- 回合结束：三选一升级（第 1/3/5/8/10 回合） -->
+<!-- 回合结束：三选一升级（第 1/2/3/5/8/10 回合） -->
 <div id="upgrade" class="upgrade" aria-hidden="true">
   <div class="up-card">
     <div class="up-head">
@@ -94,6 +94,57 @@
     </div>
     <div class="up-list" id="upList"></div>
     <div class="up-foot">点一张卡片立即生效 · 同一项可以重复叠加</div>
+  </div>
+</div>
+
+<!-- 第 5 回合结束：获得第一件武器 -->
+<div id="weaponCard" class="wcard" aria-hidden="true">
+  <div class="wc-card">
+    <div class="wc-tag">第 5 回合结束 · 获得武器</div>
+    <div class="wc-icon"><img src="assets/weapons/icon-sword.png" alt="" draggable="false"></div>
+    <div class="wc-name">环 剑</div>
+    <div class="wc-desc">三把剑绕着你转，碰到怪就砍一刀然后消失；<br>被消耗的剑每 3 秒补回一把（上限 3 把）。</div>
+    <div class="wc-rows">
+      <span>剑伤害<i>攻击伤害 × 剑刃倍率</i></span>
+      <span>万剑齐发<i>右下角剑形按钮 · 把现有的剑全射出去</i></span>
+    </div>
+    <button class="wc-btn" id="wcOk" type="button">装备并继续</button>
+    <div class="wc-foot">之后的三选一会开始出现剑系强化</div>
+  </div>
+</div>
+
+<!-- 新手教程浮层（底部，pointer-events 只留给跳过按钮，不挡摇杆） -->
+<div id="tutCard" class="tut-card" aria-hidden="true">
+  <div class="tc-head">
+    <span class="tc-step" id="tcStep">新手教程 1 / 3</span>
+    <button class="tc-skip" id="tcSkip" type="button">跳过教程</button>
+  </div>
+  <div class="tc-title" id="tcTitle">先动起来</div>
+  <div class="tc-text" id="tcText">—</div>
+  <div class="tc-bar"><i id="tcBar"></i></div>
+</div>
+
+<!-- 开始界面 -->
+<div id="titleScr" class="title-scr">
+  <div class="tt-glow"></div>
+  <div class="tt-body">
+    <div class="tt-kicker">ROGUELIKE · 荒草地</div>
+    <h1 class="tt-name">奶蛙夜行</h1>
+    <p class="tt-sub">夜色里的草地不太平，骷髅从四面钻出来。<br>撑过 10 个回合。</p>
+    <button class="tt-start" id="btnStart" type="button">开始游戏</button>
+    <div class="tt-tip">按住左半屏拖动移动 · 走到怪身边自动攻击</div>
+  </div>
+</div>
+
+<!-- 是否进入新手教程 -->
+<div id="tutAsk" class="modal" aria-hidden="true">
+  <div class="md-card">
+    <div class="md-title">先来一遍新手教程？</div>
+    <div class="md-sub">三步、半分钟：怎么移动、怎么打、怎么看属性。<br>跳过也可以直接开打。</div>
+    <div class="md-btns">
+      <button class="md-btn primary" id="tutYes" type="button">开始教程</button>
+      <button class="md-btn" id="tutNo" type="button">跳过</button>
+    </div>
   </div>
 </div>
 
@@ -123,7 +174,7 @@
 <!-- 不用 importmap：老手机浏览器（iOS 16.4 以下、旧版微信/安卓 WebView）
      不支持 import maps，会让整个模块解析失败、加载页永远停在 0%。
      项目内所有 import 都写成相对路径，直接靠原生 ES Module 解析。 -->
-<script type="module" src="js/main.js?v=7"></script>
+<script type="module" src="js/main.js?v=8"></script>
 
 <!-- 兜底自检：模块没跑起来时把原因写出来，别让用户对着 0% 干等 -->
 <script>

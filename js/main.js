@@ -29,6 +29,11 @@ window.__naiwaBooted = true;
 async function boot() {
 
   // ---------------- 可调参数 ----------------
+  // ?debug=1            挂调试钩子（自动化测试用），并自动跳过标题页与教程
+  // ?debug=1&title=1    挂调试钩子，但保留标题页（用来测开局流程）
+  const params = new URLSearchParams(location.search);
+  const DEBUG = params.has('debug');
+  const AUTO_START = DEBUG && !params.has('title');
   const ARENA_R = 15;          // 可走半径（石头圈在 15.55）
   const BODY_R = 0.65;         // 角色自身半径（贴边留一点余量）
   const ACCEL = 14;            // 速度趋近系数，越大越「跟手」
@@ -161,6 +166,16 @@ async function boot() {
   const upList = document.getElementById('upList');
   const upTitle = document.getElementById('upTitle');
   const upSub = document.getElementById('upSub');
+  // 开始界面 / 新手教程 / 武器获得卡
+  const titleScr = document.getElementById('titleScr');
+  const btnStart = document.getElementById('btnStart');
+  const tutAsk = document.getElementById('tutAsk');
+  const tutCard = document.getElementById('tutCard');
+  const tcStep = document.getElementById('tcStep');
+  const tcTitle = document.getElementById('tcTitle');
+  const tcText = document.getElementById('tcText');
+  const tcBar = document.getElementById('tcBar');
+  const wcard = document.getElementById('weaponCard');
   let hintDone = false;
 
   // 关键属性（生命走血条，这里放三个最常看的）
@@ -216,9 +231,11 @@ async function boot() {
   }
 
   let panelOpen = false;
+  let panelOpenedOnce = false;
   function setPanel(open) {
     panelOpen = open;
     if (open) {
+      panelOpenedOnce = true;
       input.joystick.release();   // 面板盖住屏幕，别让摇杆一直输出
       vel.set(0, 0, 0);           // 暂停时不留残余速度，关掉面板不会突然窜出去
       renderPanel();
@@ -276,7 +293,8 @@ async function boot() {
   setProgress(1);
 
   // ---------------- 战斗状态 ----------------
-  let gameState = 'playing';   // playing | upgrade（三选一面板）| over
+  // title（标题页）| tutorial（新手教程）| playing | upgrade（三选一）| weapon（武器卡）| over
+  let gameState = 'title';
   let elapsed = 0;             // 本局时长（秒）
   let iframe = 0;              // 无敌帧剩余
   let shake = 0;               // 相机震动强度
@@ -288,6 +306,25 @@ async function boot() {
   let upgradeOpen = false;
   let pendingRound = 0;        // 这次面板是打完第几回合弹的
   const takenUpgrades = [];    // 结算里展示这一局都选了什么
+
+  // 新手教程
+  let tutStep = 0;
+  let tutMoved = 0;
+  let tutDummy = null;
+  const TUT_STEPS = [
+    {
+      title: '先动起来',
+      text: '按住屏幕左半边任意位置拖动，奶蛙就会朝那个方向跑（电脑上也可以按 WASD）。跑起来这一步就过了。',
+    },
+    {
+      title: '攻击是自动的',
+      text: '脚下这个青绿色的圈是你的攻击范围：怪一走进来就会自动拍它，不用点攻击键。先拍死面前这只小兵。',
+    },
+    {
+      title: '随时查看属性',
+      text: '点左上角的血条可以暂停游戏、查看全部属性。打开再关掉，教程就结束了。',
+    },
+  ];
 
   // 受击红闪用的战场冻结开关：只有 ?debug=1 的调试钩子会置 true（自动化测试用）
   let debugNoWaves = false;    // 冻结波次推进（不再刷怪）
@@ -351,8 +388,9 @@ async function boot() {
   // 打开面板时整局进入 upgrade 状态：怪物/波次/无敌帧全部冻结，只留渲染与待机动画。
   function showUpgrade(roundNo) {
     pendingRound = roundNo;
+    // 权重按回合变化：round 决定每项的 w0 + gw×(回合-1)
     // 拿到环剑之后，武器系升级才进池子（没武器时抽到等于废牌）
-    const picks = rollChoices(undefined, { hasWeapon: weapon.granted });
+    const picks = rollChoices(undefined, { round: roundNo, hasWeapon: weapon.granted });
 
     upTitle.textContent = `第 ${roundNo} 回合结束 · 三选一`;
     upSub.textContent = upgradesTaken > 0
@@ -455,9 +493,179 @@ async function boot() {
     weapon.fire(() => pos);
     renderSkill();
   }
-  sk0.addEventListener('click', tryFireSwords);
+
+  // 技能键用 pointerdown 而不是 click：
+  // 手机上一根手指正在推摇杆时，第二根手指点按钮，iOS Safari 不会派发 click，
+  // 表现就是「移动中技能点不动」。pointerdown 每根手指都会立刻触发。
+  let lastSkillPress = 0;
+  function onSkillPress(e) {
+    if (e && e.cancelable) e.preventDefault();
+    const now = performance.now();
+    if (now - lastSkillPress < 120) return;   // 防止 pointerdown + click 双触发
+    lastSkillPress = now;
+    tryFireSwords();
+  }
+  sk0.addEventListener('pointerdown', onSkillPress);
+  // 极老的浏览器没有 Pointer Events，退回 click
+  if (!window.PointerEvent) sk0.addEventListener('click', onSkillPress);
+
+  // ---------------- 开始界面 / 新手教程 / 武器获得卡 ----------------
+  function showTitle() {
+    gameState = 'title';
+    titleScr.style.display = '';
+    requestAnimationFrame(() => titleScr.classList.remove('off'));
+    titleScr.setAttribute('aria-hidden', 'false');
+  }
+
+  function beginGame({ tutorial = false } = {}) {
+    tutAsk.classList.remove('on');
+    tutAsk.setAttribute('aria-hidden', 'true');
+    titleScr.classList.add('off');
+    titleScr.setAttribute('aria-hidden', 'true');
+    setTimeout(() => { titleScr.style.display = 'none'; }, 340);
+    if (tutorial) startTutorial();
+    else startPlay();
+  }
+
+  function startPlay() {
+    tutCard.classList.remove('on');
+    tutCard.setAttribute('aria-hidden', 'true');
+    gameState = 'playing';
+    hintDone = false;
+    hintEl.classList.remove('off');
+    level.start();
+  }
+
+  function startTutorial() {
+    // 怪物模型没加载出来时，教程第 2 步无从演示 —— 直接进正式流程
+    if (!enemyLoadOk) {
+      startPlay();
+      return;
+    }
+    gameState = 'tutorial';
+    tutStep = 0;
+    tutMoved = 0;
+    tutDummy = null;
+    hintEl.classList.add('off');
+    tutCard.classList.add('on');
+    tutCard.setAttribute('aria-hidden', 'false');
+    whWave.textContent = '教程';
+    whFill.style.width = '0%';
+    whSub.textContent = '先熟悉一下';
+    renderTutStep();
+  }
+
+  function renderTutStep() {
+    const s = TUT_STEPS[tutStep];
+    if (!s) return;
+    tcStep.textContent = `新手教程 ${tutStep + 1} / ${TUT_STEPS.length}`;
+    tcTitle.textContent = s.title;
+    tcText.textContent = s.text;
+    tcBar.style.width = ((tutStep / TUT_STEPS.length) * 100).toFixed(1) + '%';
+    if (tutStep === 1) spawnTutDummy();
+  }
+
+  // 教程用的靶子：站在主角前方 3 个单位、0 伤害、1 血 —— 走过来正好进入攻击范围
+  function spawnTutDummy() {
+    if (tutDummy) return;
+    tutDummy = enemies.spawn('minion', { x: pos.x + 3.0, z: pos.z + 0.8 }, {
+      hpScale: 1, damageScale: 0, speedScale: 0.55,
+    });
+    if (tutDummy) {
+      tutDummy.state = 'chase';
+      tutDummy.hp = 1;
+      tutDummy.maxHp = 1;
+      tutDummy.damage = 0;   // 教程怪不还手（就算跳过教程留在场上也无害）
+      tutDummy.bar.draw(1, 1, 1);
+    } else {
+      // 靶子没生成（模型缺失等）就跳过这一步，别把玩家卡在教程里
+      setTimeout(() => tutNext(), 300);
+    }
+  }
+
+  function tutNext() {
+    tutStep++;
+    if (tutStep >= TUT_STEPS.length) {
+      endTutorial();
+      return;
+    }
+    renderTutStep();
+  }
+
+  function endTutorial() {
+    tutCard.classList.remove('on');
+    tutCard.setAttribute('aria-hidden', 'true');
+    // 没打完的靶子留给正式第 1 回合，0 伤害不会造成威胁
+    showToast('教程结束', '第 1 回合开始，祝你好运');
+    startPlay();
+  }
+
+  // 教程每帧推进：移动距离 / 靶子是否被拍死 / 属性面板是否开过又关掉
+  function tutorialTick(moved) {
+    if (tutStep === 0) {
+      tutMoved += moved;
+      tcBar.style.width = (Math.min(1, tutMoved / 2.5) / TUT_STEPS.length * 100).toFixed(1) + '%';
+      if (tutMoved >= 2.5) tutNext();
+    } else if (tutStep === 1) {
+      if (tutDummy && tutDummy.state === 'dead') tutNext();
+    } else if (tutStep === 2) {
+      if (panelOpenedOnce && !panelOpen) tutNext();
+    }
+  }
+
+  btnStart.addEventListener('click', () => {
+    tutAsk.classList.add('on');
+    tutAsk.setAttribute('aria-hidden', 'false');
+  });
+  document.getElementById('tutYes').addEventListener('click', () => beginGame({ tutorial: true }));
+  document.getElementById('tutNo').addEventListener('click', () => beginGame({ tutorial: false }));
+  document.getElementById('tcSkip').addEventListener('click', endTutorial);
+
+  // ---------------- 武器获得卡 ----------------
+  let weaponCardOpen = false;
+  let weaponCardNext = null;
+
+  function showWeaponCard(next) {
+    weaponCardOpen = true;
+    weaponCardNext = next || null;
+    gameState = 'weapon';
+    input.joystick.release();
+    vel.set(0, 0, 0);
+    wcard.classList.add('on');
+    wcard.setAttribute('aria-hidden', 'false');
+  }
+
+  function closeWeaponCard() {
+    if (!weaponCardOpen) return;
+    weaponCardOpen = false;
+    wcard.classList.remove('on');
+    wcard.setAttribute('aria-hidden', 'true');
+    gameState = 'playing';
+    renderSkill();
+    const next = weaponCardNext;
+    weaponCardNext = null;
+    if (next) next();
+  }
+  document.getElementById('wcOk').addEventListener('click', closeWeaponCard);
+
 
   // ---------------- 第一关 ----------------
+  // 回合清空后的编排（也挂到 __game 上，方便自动化测试直接跳到第 5 回合验证武器卡）
+  function handleRoundClear(roundNo) {
+    // 第 5 回合打完送武器「环剑」：先弹获得卡，关掉卡再进三选一
+    // （先授予再进三选一，武器系升级才进得去池子）
+    if (roundNo >= LEVEL_1.weaponAt && !weapon.granted) {
+      weapon.grant();
+      renderSkill();
+      showWeaponCard(() => {
+        if (level.shouldUpgrade(roundNo)) showUpgrade(roundNo);
+      });
+      return;
+    }
+    // 第 1/2/3/5/8/10 回合打完弹三选一；其余回合直接走 2.6 秒间隔进下一回合
+    if (level.shouldUpgrade(roundNo)) showUpgrade(roundNo);
+  }
+
   const level = createLevel1({
     enemies, fx,
     getPlayerPos: () => pos,
@@ -465,16 +673,7 @@ async function boot() {
       setRoundLabel(cur, total);
       showToast(`第 ${cur} 回合`, tip);
     },
-    onRoundClear: (roundNo) => {
-      // 第 5 回合打完送武器「环剑」：先授予再弹三选一，武器系升级才进得去池子
-      if (roundNo >= 5 && !weapon.granted) {
-        weapon.grant();
-        renderSkill();
-        showToast('获得武器 · 环剑', '三把剑绕你旋转，碰到怪造成伤害；右下角技能把它们全部射出');
-      }
-      // 第 1/3/5/8/10 回合打完弹三选一；其余回合直接走 2.6 秒间隔进下一回合
-      if (level.shouldUpgrade(roundNo)) showUpgrade(roundNo);
-    },
+    onRoundClear: handleRoundClear,
     onVictory: () => endGame(true),
   });
 
@@ -533,6 +732,20 @@ async function boot() {
       getElapsed: () => elapsed,
       setPanel: (open) => setPanel(open),
       isPanelOpen: () => panelOpen,
+      // 开局 / 教程 / 武器卡（自动化测试用）
+      beginGame: (opt) => beginGame(opt),
+      closeWeaponCard: () => closeWeaponCard(),
+      isWeaponCardOpen: () => weaponCardOpen,
+      handleRoundClear: (n) => handleRoundClear(n),
+      tutorial: {
+        get step() { return tutStep; },
+        get total() { return TUT_STEPS.length; },
+        get moved() { return tutMoved; },
+        get dummy() { return tutDummy; },
+        next: () => tutNext(),
+        skip: () => endTutorial(),
+        start: () => startTutorial(),
+      },
       hurt: (n) => hurtPlayer(n),
       win: () => endGame(true),
       setPaused(p) { debugNoWaves = debugNoEnemies = !!p; },
@@ -577,8 +790,11 @@ async function boot() {
 
     let speed = 0;
     let speed01 = 0;
+    const prevX = pos.x, prevZ = pos.z;
 
-    if (gameState === 'playing' && !panelOpen) {
+    // 教程也算「在游戏里」：能移动、能打怪，只是不推进回合波次
+    const inGame = (gameState === 'playing' || gameState === 'tutorial') && !panelOpen;
+    if (inGame) {
       elapsed += dt;
 
       // 1) 输入 → 目标速度（屏幕 y 向下 = 世界 +Z，相机在 +Z 方向看向场景）
@@ -622,16 +838,13 @@ async function boot() {
 
       // 5) 怪物 AI → 波次推进 → 环剑 → 生命回复 / 无敌帧
       if (!debugNoEnemies) enemies.update(dt, combatCtx);
-      if (!debugNoWaves) level.update(dt);
+      if (!debugNoWaves && gameState === 'playing') level.update(dt);
       weapon.update(dt, { playerPos: pos });
       renderSkill();
       if (stats.hp.cur < stats.get('maxHp')) stats.heal(stats.get('hpRegen') * dt);
       if (iframe > 0) iframe -= dt;
-    } else if (gameState === 'upgrade' || (panelOpen && gameState === 'playing')) {
-      // 三选一面板 / 属性面板打开：怪物、波次、计时、环剑全冻结，
-      // 只留奶蛙的待机呼吸，不然整个世界像被按了暂停键一样僵住。
-      frog.update(dt, 0);
-    } else {
+      if (gameState === 'tutorial') tutorialTick(Math.hypot(pos.x - prevX, pos.z - prevZ));
+    } else if (gameState === 'over') {
       // 结算后：失败就慢慢侧倒，胜利保持站姿待机
       deadT += dt;
       const k = Math.min(1, deadT / 0.6);
@@ -640,12 +853,15 @@ async function boot() {
         frog.root.position.y = pos.y - 0.12 * k;
       }
       frog.update(dt, 0);
+    } else {
+      // 标题页 / 三选一 / 武器卡 / 属性面板：世界全冻结，只留待机呼吸
+      frog.update(dt, 0);
     }
 
     frog.root.position.x = pos.x;
     frog.root.position.z = pos.z;
     frog.yaw.rotation.y = yaw + MODEL_YAW;
-    if (gameState === 'playing') frog.update(dt, speed01);
+    if (inGame) frog.update(dt, speed01);
 
     // 脚下的攻击范围环：位置跟人走，半径跟属性走
     playerRing.setRadius(stats.get('attackRange'));
@@ -705,15 +921,16 @@ async function boot() {
     }
   }
 
-  // 加载完成 → 淡出遮罩 → 开跑（降级时多停一会儿，让警告能被看到）
+  // 加载完成 → 淡出遮罩 → 显示标题页（或调试模式直接开打）
   setProgress(1);
   clock.start();
   tick();
+  showTitle();
   setTimeout(() => {
     loadingEl.classList.add('off');
     setTimeout(() => { loadingEl.style.display = 'none'; }, 500);
-    // 遮罩淡出后再开波，避免第一波在看不见的时候刷出来
-    if (enemyLoadOk) setTimeout(() => level.start(), 450);
+    // 调试模式默认跳过标题页与教程，自动化测试直接进第 1 回合
+    if (AUTO_START) setTimeout(() => beginGame({ tutorial: false }), 300);
   }, loadFailed ? 2200 : 60);
 
   // 5 秒后不管有没有动，提示都淡掉，避免挡视线
