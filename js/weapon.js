@@ -27,6 +27,7 @@ import * as THREE from '../lib/three.module.js';
 import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js';
 import { SWORD_KINDS, KIND_ORDER } from './swordKinds.js';
 import { rollSwordDamage } from './weaponStats.js';
+import audio from './audio.js';
 
 // 轨道半径（世界单位）：贴着主角攻击范围环内侧转，视觉上「护体剑气」
 const ORBIT_R = 1.7;
@@ -222,13 +223,19 @@ export function createWeaponSystem({ scene, stats, wstats, fx, enemies }) {
   function applyKind(kind, e, dmg) {
     if (kind === 'poison') {
       enemies.applyDot(e, { dps: wstats.get('poisonDps'), time: wstats.get('poisonTime') });
+      audio.sfx('poison');
     } else if (kind === 'frost') {
       enemies.applySlow(e, { factor: wstats.get('frostSlow'), time: wstats.get('frostTime') });
+      audio.sfx('ice');
     } else if (kind === 'leech') {
       const r = wstats.get('leechRate');
-      if (r > 0 && dmg > 0) stats.heal(dmg * r);
+      if (r > 0 && dmg > 0) {
+        stats.heal(dmg * r);
+        audio.sfx('heal');
+      }
     } else if (kind === 'thunder') {
       const targets = enemies.chainTargets(e, Math.round(wstats.get('chainCount')), CHAIN_DIST);
+      if (targets.length) audio.sfx('thunder');
       for (const tgt of targets) {
         const cd = dmg * CHAIN_RATIO;
         enemies.takeDamage(tgt, cd, false, { quiet: true });
@@ -243,6 +250,7 @@ export function createWeaponSystem({ scene, stats, wstats, fx, enemies }) {
     const roll = rollSwordDamage(wstats, { targetArmor: e.cfg.armor });
     const dmg = roll.damage;
     enemies.takeDamage(e, dmg, roll.crit);
+    audio.sfx('swordHit');
     applyKind(kind, e, dmg);
     if (fx) fx.hit(at, roll.crit ? 0xffe9a8 : 0xbff2ff);
     return dmg;

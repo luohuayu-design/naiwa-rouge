@@ -20,6 +20,7 @@ import { createWeaponSystem } from './weapon.js';
 import { SWORD_KINDS, KIND_ORDER } from './swordKinds.js';
 import { createGoldSystem } from './gold.js';
 import { SHOP_ITEMS, itemLocked } from './shop.js';
+import audio from './audio.js';
 import {
   EVENTS, ALL_EVENTS, getEventById, pickEvent, effectLines,
   choiceHint, canAfford, costShort, REP_MIN, REP_MAX, REP_START,
@@ -53,6 +54,10 @@ async function boot() {
   const CAM_LERP = 7;
   const IFRAME = 0.55;         // 受击后的无敌时间（防止被多只小兵同帧秒杀）
   // 移动速度不在这里调了 —— 见 stats.js 的 STAT_DEFS 里 moveSpeed（属性面板实时生效）
+
+  // 音频：这里只建对象（0 请求、0 声音）。真正的解锁在第一次点击/按键
+  // （浏览器与微信都禁止无手势自动播放），见下面的全局 pointerdown。
+  audio.init();
 
   // ---------------- 渲染器 ----------------
   const app = document.getElementById('app');
@@ -327,6 +332,8 @@ async function boot() {
     scene, fx, arenaRadius: ARENA_R,
     onDeath: (e) => {
       kills++;
+      // 小兵是自爆 → 爆炸声；其他怪是被打死 → 骨头散架声
+      audio.sfx(e.cfg.selfDestruct ? 'explode' : 'die');
       // 金币掉落：按 goldRate 掷骰（概率属性，财运升级可提升）
       gold.maybeDrop(e.pos);
     },
@@ -364,6 +371,7 @@ async function boot() {
     goldNumEl.textContent = String(coins);
   }
   function addCoins(n) {
+    if (n > 0) audio.sfx('coin');
     coins = Math.max(0, coins + n);
     renderGold();
   }
@@ -481,6 +489,7 @@ async function boot() {
     stats.damage(amount);
     iframe = IFRAME;
     shake = 0.55;
+    audio.sfx('hurt');
     hurtFx.classList.add('on');
     setTimeout(() => hurtFx.classList.remove('on'), 90);
     renderHud();
@@ -502,12 +511,14 @@ async function boot() {
 
     const roll = stats.rollDamage({ targetArmor: e.cfg.armor });
     enemies.takeDamage(e, roll.damage, roll.crit);
+    audio.sfx(roll.crit ? 'crit' : 'hit');
     // 吸血：按实际造成的伤害回血（属性为 0 时不触发）
     const lifesteal = stats.get('lifesteal');
     if (lifesteal > 0 && roll.damage > 0) {
       stats.heal(roll.damage * lifesteal);
       renderHud();
     }
+    audio.sfx('swing');                // 每一次出手都有破空声（跟着攻击频率走）
     frog.playAttack();                 // 抬手 → 拍下，和冲击环同一瞬间起手
     fx.swing(pos, stats.get('attackRange'));
     attackCd = 1 / Math.max(0.2, stats.get('attackSpeed'));
@@ -592,6 +603,7 @@ async function boot() {
       upList.appendChild(btn);
     }
 
+    audio.sfx('card');
     upgradeOpen = true;
     gameState = 'upgrade';
     input.joystick.release();
@@ -602,6 +614,7 @@ async function boot() {
 
   function chooseUpgrade(up) {
     if (!upgradeOpen) return;
+    audio.sfx('upgrade');
     upgradeOpen = false;
 
     upSerial++;
@@ -670,6 +683,7 @@ async function boot() {
 
   function tryFireSwords() {
     if (gameState !== 'playing' || !weapon.granted || weapon.count === 0) return;
+    audio.sfx('swordFire');
     weapon.fire(() => pos);
     renderSkill();
   }
@@ -692,12 +706,15 @@ async function boot() {
   // ---------------- 开始界面 / 新手教程 / 武器获得卡 ----------------
   function showTitle() {
     gameState = 'title';
+    audio.playBgm('night');
     titleScr.style.display = '';
     requestAnimationFrame(() => titleScr.classList.remove('off'));
     titleScr.setAttribute('aria-hidden', 'false');
   }
 
   function beginGame({ tutorial = false } = {}) {
+    audio.unlock();               // 这一下点击就是浏览器要的「用户手势」
+    audio.playBgm('battle');
     tutAsk.classList.remove('on');
     tutAsk.setAttribute('aria-hidden', 'true');
     titleScr.classList.add('off');
@@ -797,6 +814,62 @@ async function boot() {
     tutAsk.classList.add('on');
     tutAsk.setAttribute('aria-hidden', 'false');
   });
+  // 静音开关：记在 localStorage 里，下次进来还是关着的
+  const muteBtn = document.getElementById('muteBtn');
+  const muteIcon = document.getElementById('muteIcon');
+  function renderMute() {
+    const m = audio.isMuted();
+    if (muteIcon) muteIcon.textContent = m ? '🔇' : '🔊';
+    if (muteBtn) {
+      muteBtn.classList.toggle('off', m);
+      muteBtn.setAttribute('aria-pressed', m ? 'true' : 'false');
+      muteBtn.setAttribute('aria-label', m ? '打开声音' : '关闭声音');
+    }
+  }
+  if (muteBtn) {
+    muteBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      audio.unlock();
+      audio.toggleMute();
+      renderMute();
+    });
+  }
+  renderMute();
+
+  // BGM 跟着场景走：标题夜曲 → 战斗 → 叙事面板换轻快曲；属性面板内暂停只压低不换曲。
+  // 每帧只比一次状态，不反复设音量 / 不反复触发加载。
+  let audioMode = null;
+  function syncAudio() {
+    let mode;
+    if (gameState === 'title') mode = 'title';
+    else if (gameState === 'upgrade' || gameState === 'shop'
+      || gameState === 'event' || gameState === 'weapon') mode = 'panel';
+    else if (gameState === 'over') mode = 'over';
+    else if (panelOpen) mode = 'paused';
+    else mode = 'battle';
+    if (mode === audioMode) return;
+    audioMode = mode;
+    if (mode === 'title') audio.playBgm('night');
+    else if (mode === 'panel') audio.playBgm('shop');
+    else if (mode === 'battle') { audio.duck(false); audio.playBgm('battle'); }
+    else if (mode === 'paused') audio.duck(true);
+    else if (mode === 'over') audio.duck(false);
+  }
+
+  // 第一次交互就把音频解锁；所有按钮统一点击声（捕获阶段 → 早于按钮自身的 click 处理）
+  document.addEventListener('pointerdown', (e) => {
+    audio.unlock();
+    const btn = e.target && e.target.closest ? e.target.closest('button') : null;
+    if (btn && !btn.disabled) audio.sfx('uiClick');
+  }, true);
+  window.addEventListener('keydown', (e) => {
+    audio.unlock();
+    if (e.key === 'm' || e.key === 'M') {          // M 也能静音 / 恢复
+      audio.toggleMute();
+      renderMute();
+    }
+  }, { once: false });
+
   document.getElementById('tutYes').addEventListener('click', () => beginGame({ tutorial: true }));
   document.getElementById('tutNo').addEventListener('click', () => beginGame({ tutorial: false }));
   document.getElementById('tcSkip').addEventListener('click', endTutorial);
@@ -975,6 +1048,7 @@ async function boot() {
     currentEventRound = endedRound;
     eventNextCb = next || null;
     renderEventUI(ev);
+    audio.sfx('event');            // 木门吱呀一声，故事开始
     evCard.classList.add('on');
     evCard.setAttribute('aria-hidden', 'false');
     eventOpen = true;
@@ -1024,6 +1098,9 @@ async function boot() {
 
   // 回合开始：事件已经挪到上一回合结束，这里只报一句本回合提示
   function onRoundStart(roundNo, tip) {
+    // 号角只用三次：开局、最后一回合、其余回合留白（免得每回合都吵）
+    if (roundNo === 1) audio.sfx('roundStart');
+    else if (roundNo >= level.totals.rounds) audio.sfx('boss');
     showToast(`第 ${roundNo} 回合`, tip);
   }
 
@@ -1045,6 +1122,7 @@ async function boot() {
     input.joystick.release();
     vel.set(0, 0, 0);
     shSub.textContent = `第 ${roundNo} 回合清空 · 打完这一波，来点补给？`;
+    audio.sfx('card');
     renderShop();
     shopEl.classList.add('on');
     shopEl.setAttribute('aria-hidden', 'false');
@@ -1231,6 +1309,8 @@ async function boot() {
     gold.setVisible(false);         // 地上的金币也收掉
     renderSkill();
 
+    audio.stopBgm({ fade: 1.0 });
+    audio.sfx(isWin ? 'victory' : 'defeat', { vol: 1 });
     rsTag.textContent = LEVEL_1.name;
     rsTitle.textContent = isWin ? '通 关' : '倒 下';
     rsTitle.classList.toggle('fail', !isWin);
@@ -1351,6 +1431,10 @@ async function boot() {
       get roundBuffSrc() { return roundBuffSrc; },
       clearRoundBuffs: () => clearRoundBuffs(),
       get roundDrain() { return roundDrain; },
+      // 音频（第 8 块）
+      audio,
+      audioStats: () => audio.stats(),
+      toggleMute: () => { audio.toggleMute(); renderMute(); return audio.isMuted(); },
       // 民心（第 7 块）
       get rep() { return reputation; },
       addRep: (n) => addRep(n),
@@ -1386,6 +1470,7 @@ async function boot() {
     requestAnimationFrame(tick);
 
     const dt = Math.min(0.05, clock.getDelta());
+    syncAudio();
 
     let speed = 0;
     let speed01 = 0;

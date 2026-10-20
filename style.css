@@ -464,6 +464,18 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
 .rep-chip.low b{color:#ffa495}
 .rep-chip.low .rc-heart{background:radial-gradient(circle at 34% 30%,#ffe0d8,#e86d6d 62%,#96322b)}
 
+/* 声音开关：和金币/民心角标同高的一颗圆钮（#hud 整体 pointer-events:none，这里要单独打开） */
+.mute-btn{display:inline-flex;align-items:center;justify-content:center;
+  width:30px;height:30px;margin-top:10px;margin-left:6px;padding:0;
+  border-radius:999px;border:1px solid rgba(160,220,255,.26);
+  background:rgba(10,24,30,.55);color:#cfe9ff;font-size:14px;line-height:1;
+  cursor:pointer;pointer-events:auto;-webkit-tap-highlight-color:transparent;
+  transition:border-color .18s,background .18s,transform .12s,opacity .18s}
+.mute-btn:hover{border-color:rgba(160,220,255,.5);background:rgba(14,32,40,.7)}
+.mute-btn:active{transform:scale(.92)}
+.mute-btn.off{opacity:.62;border-color:rgba(255,140,120,.32)}
+.mute-btn:focus-visible{outline:2px solid rgba(126,235,196,.6);outline-offset:2px}
+
 /* ---------------- 技能栏 · 元素剑槽（只展示，不可点） ---------------- */
 .sk.sword{border-style:solid;border-color:rgba(126,235,196,.16);background:rgba(6,18,16,.5)}
 .sk.sword.off{border-style:dashed;border-color:rgba(126,235,196,.1);
