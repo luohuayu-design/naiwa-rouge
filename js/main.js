@@ -1081,22 +1081,6 @@ async function boot() {
 
 
   // ---------------- 第一关 ----------------
-  // 回合清空后的编排（也挂到 __game 上，方便自动化测试直接跳到第 5 回合验证武器卡）
-  function handleRoundClear(roundNo) {
-    // 第 5 回合打完送武器「环剑」：先弹获得卡，关掉卡再进三选一
-    // （先授予再进三选一，武器系升级才进得去池子）
-    if (roundNo >= LEVEL_1.weaponAt && !weapon.granted) {
-      weapon.grant();
-      renderSkill();
-      showWeaponCard(() => {
-        if (level.shouldUpgrade(roundNo)) showUpgrade(roundNo);
-      });
-      return;
-    }
-    // 第 1/2/3/5/8/10 回合打完弹三选一；其余回合直接走 2.6 秒间隔进下一回合
-    if (level.shouldUpgrade(roundNo)) showUpgrade(roundNo);
-  }
-
   const level = createLevel1({
     enemies, fx,
     getPlayerPos: () => pos,
