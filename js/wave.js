@@ -16,8 +16,16 @@
 //
 // 第三种怪：骷髅投手（远程）第 11 回合登场，见 enemy.js 的 archer 配置。
 //
-// 升级：第 1/2/3/5/8/10/12/15 回合清空后弹三选一（见 upgrade.js），
+// 升级：第 1/2/3/4/5/8/10/12/15 回合清空后弹三选一（见 upgrade.js），
 //       第 5 回合清空时先弹「获得环剑」卡片，再进三选一。
+// 商店：第 3/6/9/12 回合清空后弹（三选一之后），见 shop.js；
+//       第 15 回合是最后一关，清完直接结算不弹商店。
+//
+// 回合修正（随机事件写入，见 applyRoundMod / events.js）：
+//   countScale  本回合怪物数量倍率（骷髅喝多了 → 0.7）
+//   speedScale  本回合怪物移速倍率（鼓手 → 1.15）
+//   注意 onRound 回调先于刷怪表展开（spawns 延迟到 update 才 build），
+//   所以事件卡里选完才应用修正也来得及。
 //
 // 刷怪位置规则（用户要求的「生成位置」）：
 //   1. 只从场地边缘的圆环上出现（半径 13.2 ± 0.5），不会凭空出现在脚下
@@ -33,7 +41,8 @@ export const LEVEL_1 = {
   minPlayerDistance: 7.0,  // 离主角至少这么远
   minSpawnGap: 2.0,        // 两次刷怪的最小间距
   gap: 2.6,                // 清场后到下一回合的间隔（秒）
-  upgradeAfter: [1, 2, 3, 5, 8, 10, 12, 15],   // 打完这些回合弹三选一
+  upgradeAfter: [1, 2, 3, 4, 5, 8, 10, 12, 15],  // 打完这些回合弹三选一
+  shopAfter: [3, 6, 9, 12],                      // 打完这些回合弹商店（在三选一之后）
   weaponAt: 5,                       // 打完这回合获得第一件武器「环剑」
   // 属性随回合成长：1 + k × (回合 - 1)
   scale: { hp: 0.16, damage: 0.10, speed: 0.035 },
@@ -80,21 +89,24 @@ export function levelStats(level = LEVEL_1) {
 // 把「n 只小兵 + m 只战士 + k 只投手」展开成带延迟的生成列表：
 // 小兵先到，战士晚半拍出场（给玩家先清小兵的窗口），
 // 投手最后登场（先把近身的处理完，再面对远处的冷箭）。
-function buildSpawns(roundNo) {
+// mod：本回合修正（随机事件写入），数量按 mod.countScale 缩放。
+function buildSpawns(roundNo, mod = {}) {
   const cfg = LEVEL_1.rounds[roundNo - 1];
+  const cs = mod.countScale != null ? Math.max(0, mod.countScale) : 1;
+  const n = (v) => Math.max(0, Math.round((v || 0) * cs));
   const out = [];
   let t = 0.75;
-  for (let i = 0; i < (cfg.minion || 0); i++) {
+  for (let i = 0; i < n(cfg.minion); i++) {
     out.push({ type: 'minion', delay: t });
     t += cfg.gap;
   }
   t += 0.35;
-  for (let i = 0; i < (cfg.warrior || 0); i++) {
+  for (let i = 0; i < n(cfg.warrior); i++) {
     out.push({ type: 'warrior', delay: t });
     t += cfg.gap * 1.6;
   }
   t += 0.35;
-  for (let i = 0; i < (cfg.archer || 0); i++) {
+  for (let i = 0; i < n(cfg.archer); i++) {
     out.push({ type: 'archer', delay: t });
     t += cfg.gap * 2.0;
   }
@@ -107,10 +119,11 @@ export function createLevel1({ enemies, fx, getPlayerPos, onRound, onRoundClear,
   let roundIndex = -1;      // 0 基：0 = 第 1 回合
   let phase = 'idle';       // idle | spawning | gap | done
   let t = 0;
-  let spawns = [];
+  let spawns = null;        // 延迟展开：onRound（事件卡）跑完、update 第一次跑到才 build
   let spawnIdx = 0;
   let gapT = 0;
   let spawned = 0;
+  let roundMod = {};        // 本回合修正（事件写入：countScale / speedScale）
 
   function pickSpawn() {
     const p = getPlayerPos();
@@ -165,12 +178,18 @@ export function createLevel1({ enemies, fx, getPlayerPos, onRound, onRoundClear,
     t = 0;
     spawnIdx = 0;
     gapT = 0;
-    spawns = buildSpawns(roundNo);
+    roundMod = {};          // 新回合从干净状态开始（事件回调里可以再写入）
+    spawns = null;          // 延迟到 update 才展开：事件选完再应用数量修正也来得及
     onRound?.(roundNo, level.rounds.length, cfg.tip);
+  }
+
+  function applyRoundMod(mod) {
+    if (mod && typeof mod === 'object') roundMod = { ...roundMod, ...mod };
   }
 
   function update(dt) {
     if (phase === 'spawning') {
+      if (spawns == null) spawns = buildSpawns(roundIndex + 1, roundMod);
       t += dt;
       while (spawnIdx < spawns.length && t >= spawns[spawnIdx].delay) {
         const sp = spawns[spawnIdx++];
@@ -198,21 +217,25 @@ export function createLevel1({ enemies, fx, getPlayerPos, onRound, onRoundClear,
     roundIndex = -1;
     phase = 'idle';
     t = 0; spawnIdx = 0; gapT = 0; spawned = 0;
-    spawns = [];
+    spawns = null;
+    roundMod = {};
     recentSpawns.length = 0;
   }
 
   return {
     start, update, reset,
     level,
+    applyRoundMod,
     // waveIndex 是 0 基的历史名字，按「第几回合」用时读 roundNo
     get waveIndex() { return roundIndex; },
     get roundIndex() { return roundIndex; },
     get roundNo() { return roundIndex + 1; },
     get phase() { return phase; },
     get spawned() { return spawned; },
+    get roundMod() { return roundMod; },
     totals: levelStats(level),
     shouldUpgrade(roundNo) { return level.upgradeAfter.includes(roundNo); },
+    shouldShop(roundNo) { return level.shopAfter.includes(roundNo); },
     onKill,
   };
 }

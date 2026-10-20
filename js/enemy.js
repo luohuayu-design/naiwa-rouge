@@ -180,8 +180,9 @@ function createBar(cfg) {
     g.strokeRect(1, 1, W - 2, H - 2);
 
     if (hp != null && maxHp != null) {
-      const txt = `${Math.max(0, Math.ceil(hp))}/${Math.ceil(maxHp)}`;
-      g.font = '700 24px ui-monospace,Menlo,Consolas,monospace';
+      // 血量数值保留 1 位小数（伤害小数化后，取整会让玩家看不出来）
+      const txt = `${Math.max(0, hp).toFixed(1)}/${maxHp.toFixed(1)}`;
+      g.font = '700 23px ui-monospace,Menlo,Consolas,monospace';
       g.textAlign = 'center';
       g.textBaseline = 'middle';
       g.lineWidth = 4;
@@ -319,6 +320,9 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
       hitDone: false,
       flashT: 0,
       deathT: 0,
+      dot: null,       // 中毒：{ dps, t, tick }
+      slowT: 0,        // 冰缓剩余时间
+      slowFactor: 0,   // 冰缓减速比例
       mats,
       bar,
       ring,
@@ -337,18 +341,28 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
   }
 
   // ---------------- 受伤 / 死亡 ----------------
-  function takeDamage(e, amount, crit = false) {
+  // opts:
+  //   dot   中毒跳伤 —— 不闪白、绿色小字（每 0.5 秒一次，别和普攻特效混在一起）
+  //   quiet 只扣血不播命中碎屑（连锁闪电等批量伤害用）
+  function takeDamage(e, amount, crit = false, opts = {}) {
     if (e.state === 'dead' || e.state === 'spawn') return false;
     e.hp -= amount;
-    e.flashT = 0.1;
+    if (!opts.dot) e.flashT = 0.1;
     e.bar.spr.visible = true;
     e.bar.draw(e.hp / e.maxHp, e.hp, e.maxHp);
     if (fx) {
-      fx.hit(new THREE.Vector3(e.pos.x, 0.7, e.pos.z), crit ? 0xffe9a8 : e.cfg.color);
-      fx.text({ x: e.pos.x, z: e.pos.z }, String(Math.max(1, Math.round(amount))), {
-        color: crit ? '#ffe066' : '#eafff4',
-        crit, y: e.cfg.height * 0.95, size: crit ? 0.85 : 0.62,
-      });
+      if (!opts.quiet && !opts.dot) {
+        fx.hit(new THREE.Vector3(e.pos.x, 0.7, e.pos.z), crit ? 0xffe9a8 : e.cfg.color);
+      }
+      // 伤害统一保留 1 位小数（用户要求：所有数值都保留小数）
+      if (!opts.noText) {
+        fx.text({ x: e.pos.x, z: e.pos.z }, Math.max(0.1, amount).toFixed(1), {
+          color: opts.dot ? '#9dff6a' : crit ? '#ffe066' : '#eafff4',
+          crit: crit && !opts.dot,
+          y: e.cfg.height * 0.95,
+          size: opts.dot ? 0.40 : crit ? 0.85 : 0.62,
+        });
+      }
     }
     if (e.hp <= 0) {
       die(e);
@@ -460,6 +474,22 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
   function updateOne(e, dt, ctx) {
     e.mixer.update(dt);
     e.t += dt;
+
+    // ---- 冰缓：减速倒计时（移速在 moveToward 里按 slowT 折算） ----
+    if (e.slowT > 0) e.slowT -= dt;
+
+    // ---- 中毒：每 0.5 秒跳一次毒伤（绿色小字，不闪白）----
+    // 钻地 / 死亡的怪不结算毒伤；毒死也走正常 die()（照样掉金币）
+    if (e.dot && e.state !== 'dead' && e.state !== 'spawn') {
+      e.dot.t -= dt;
+      e.dot.tick -= dt;
+      if (e.dot.tick <= 0) {
+        e.dot.tick += 0.5;
+        takeDamage(e, e.dot.dps * 0.5, false, { dot: true });
+        if (e.state === 'dead') return;
+      }
+      if (e.dot.t <= 0) e.dot = null;
+    }
 
     // 脚下范围环：小兵 = 主角半径 + 接触距离（它自爆能够到的圈），
     // 战士 = 自己的近战范围。半径每帧同步，改了配置立刻生效。
@@ -638,7 +668,9 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
 
   function moveToward(e, dx, dz, dist, dt, ctx) {
     if (dist < 0.0001) return;
-    const step = e.speed * dt;
+    // 冰缓：被冰剑命中后移速打折（slowFactor = 减速比例）
+    const sp = e.speed * (e.slowT > 0 ? (1 - Math.min(0.9, e.slowFactor || 0)) : 1);
+    const step = sp * dt;
     e.pos.x += (dx / dist) * step;
     e.pos.z += (dz / dist) * step;
 
@@ -693,6 +725,35 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
     }
   }
 
+  // ---------------- 中毒 / 冰缓（元素剑命中时调用，见 weapon.js） ----------------
+  // 中毒：叠时间也叠 dps（后命中的一层覆盖 dps 取较大值），最多持续到 time
+  function applyDot(e, { dps, time }) {
+    if (!e.dot) e.dot = { dps: 0, t: 0, tick: 0.25 };   // 首跳 0.25s 后到（手感更快）
+    e.dot.dps = Math.max(e.dot.dps, dps);
+    e.dot.t = Math.max(e.dot.t, time);
+  }
+
+  // 冰缓：刷新持续时间、取更强的减速
+  function applySlow(e, { factor, time }) {
+    if (e.state === 'dead' || e.state === 'spawn') return;
+    e.slowT = Math.max(e.slowT, time);
+    e.slowFactor = Math.max(e.slowFactor, factor);
+    // 冰缓指示：脚下淡蓝圈提示「这只怪被冻着」
+    if (fx) fx.ring(e.pos, { from: 0.2, to: 0.95, color: 0x6fd2ff, life: 0.35, opacity: 0.5, y: 0.05 });
+  }
+
+  // 连锁闪电的目标：e 之外最近的 count 只活怪（距离 ≤ maxDist）
+  function chainTargets(e, count, maxDist = 4.5) {
+    const out = [];
+    for (const o of list) {
+      if (o === e || o.state === 'dead' || o.state === 'spawn') continue;
+      const d = Math.hypot(o.pos.x - e.pos.x, o.pos.z - e.pos.z);
+      if (d <= maxDist) out.push({ e: o, d });
+    }
+    out.sort((a, b) => a.d - b.d);
+    return out.slice(0, Math.max(0, Math.round(count))).map((x) => x.e);
+  }
+
   function aliveCount() {
     let n = 0;
     for (const e of list) if (e.state !== 'dead') n++;
@@ -725,6 +786,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
     list,
     aliveCount,
     takeDamage,
+    applyDot, applySlow, chainTargets,
     shotCount: () => shots.length,
     get: (type) => ENEMY_TYPES[type],
     // 调试/测试用

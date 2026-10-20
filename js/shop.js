@@ -1,0 +1,83 @@
+// ============================================================
+// shop.js —— 流浪商人商店
+//
+// 规则（用户定案）：
+//   · 每 3 回合触发一次（第 3/6/9/12 回合清空后，先三选一再商店；
+//     第 15 回合是最后一关，清完直接结算不弹商店）；
+//   · 用金币购买三类东西：生命药水 / 属性加成 / 武器（元素剑）；
+//   · 一个商店可以连买多件（金币够就行），关掉继续打。
+//
+// type 说明：
+//   heal      立刻回复 amount 生命
+//   healFull  立刻回满生命
+//   stat      永久属性加成（flat/pct，走 stats.addMod）
+//   sword     获得一把 kind 元素剑（needWeapon：没环剑时买不了）
+// ============================================================
+
+export const SHOP_ITEMS = [
+  // ---------------- 生命药水 ----------------
+  {
+    id: 'potion', type: 'heal', amount: 3, price: 8,
+    glyph: '⚗', name: '生命药水',
+    desc: '立刻回复 3.0 生命（不超上限）。可以多囤，战斗里买不到。',
+  },
+  {
+    id: 'bigPotion', type: 'healFull', price: 18,
+    glyph: '🧪', name: '大生命药水',
+    desc: '生命直接回满。贵，但关键时刻能续命。',
+  },
+  // ---------------- 属性加成（永久） ----------------
+  {
+    id: 'whetstone', type: 'stat', stat: 'attack', flat: 1, price: 15,
+    glyph: '🪨', name: '磨刀石',
+    desc: '攻击力 +1.0（永久）。前期最扎实的投资。',
+  },
+  {
+    id: 'shell', type: 'stat', stat: 'maxHp', flat: 2, heal: 2, price: 14,
+    glyph: '🛡', name: '硬壳',
+    desc: '生命上限 +2.0（永久），并把多出来的血补满。',
+  },
+  {
+    id: 'feather', type: 'stat', stat: 'moveSpeed', pct: 0.08, price: 12,
+    glyph: '🪶', name: '轻羽',
+    desc: '移动速度 +8%（永久）。跑得快就少挨打。',
+  },
+  {
+    id: 'oilstone', type: 'stat', stat: 'attackSpeed', pct: 0.10, price: 16,
+    glyph: '🫗', name: '滑石粉',
+    desc: '攻击速度 +10%（永久）。出手更密。',
+  },
+  // ---------------- 武器（元素剑，永久 +1 把） ----------------
+  {
+    id: 'buyIron', type: 'sword', kind: 'iron', price: 20, needWeapon: true,
+    icon: 'assets/weapons/icon-iron.svg', name: '铁剑',
+    desc: '环剑阵里永久 +1 把铁剑。剑多转得密，命中更稳。',
+  },
+  {
+    id: 'buyPoison', type: 'sword', kind: 'poison', price: 26, needWeapon: true,
+    icon: 'assets/weapons/icon-poison.svg', name: '毒剑',
+    desc: '命中后中毒：每秒 0.1 持续 5 秒（属性可升级）。适合磨血。',
+  },
+  {
+    id: 'buyFrost', type: 'sword', kind: 'frost', price: 26, needWeapon: true,
+    icon: 'assets/weapons/icon-frost.svg', name: '冰剑',
+    desc: '命中后减速 35% 持续 2.5 秒（属性可升级）。放投手风筝的好搭档。',
+  },
+  {
+    id: 'buyThunder', type: 'sword', kind: 'thunder', price: 34, needWeapon: true,
+    icon: 'assets/weapons/icon-thunder.svg', name: '雷剑',
+    desc: '命中时对附近 1 只怪连锁一道闪电（60% 伤害，可升级链数）。',
+  },
+  {
+    id: 'buyLeech', type: 'sword', kind: 'leech', price: 38, needWeapon: true,
+    icon: 'assets/weapons/icon-leech.svg', name: '血剑',
+    desc: '命中按伤害 15% 回血（属性可升级）。站撸的底气。',
+  },
+];
+
+// 商店里买不到 / 已卖光时给出原因（渲染禁用态用）
+export function itemLocked(item, ctx = {}) {
+  if (item.needWeapon && !ctx.hasWeapon) return '第 5 回合获得环剑后解锁';
+  if (item.type === 'heal' && ctx.hpFull) return '生命已满';
+  return null;
+}

@@ -84,6 +84,38 @@ export const UPGRADES = [
     title: '剑回复快 20%', desc: '被消耗的剑更快回到环上（3.0 → 2.4 秒/把）',
     stat: 'swordRegen', pct: -0.20,
   },
+  // ---- 元素剑系（拿到对应剑才真正有意义，但只要有环剑就可抽；商店可买元素剑） ----
+  {
+    id: 'venom', tag: 'atk', glyph: '☠', name: '淬毒', needsWeapon: true,
+    w0: 0.80, gw: +0.030,
+    title: '毒伤 +0.05/秒', desc: '毒剑的中毒更疼（0.10 → 0.15/秒），持续 5 秒不变',
+    stat: 'poisonDps', flat: 0.05,
+  },
+  {
+    id: 'chill', tag: 'atk', glyph: '❆', name: '严寒', needsWeapon: true,
+    w0: 0.80, gw: +0.030,
+    title: '冰缓 +8%', desc: '冰剑把怪冻得更狠（35% → 43% 减速），持续 2.5 秒',
+    stat: 'frostSlow', flat: 0.08,
+  },
+  {
+    id: 'volt', tag: 'atk', glyph: '⚡', name: '导电', needsWeapon: true,
+    w0: 0.60, gw: +0.040,
+    title: '雷链数 +1', desc: '雷剑多连锁一只怪，每道闪电 60% 伤害',
+    stat: 'chainCount', flat: 1,
+  },
+  {
+    id: 'spring', tag: 'atk', glyph: '❥', name: '活血', needsWeapon: true,
+    w0: 0.60, gw: +0.030,
+    title: '血剑回血 +5%', desc: '血剑按伤害回血的比例 15% → 20%，和吸血属性叠乘',
+    stat: 'leechRate', flat: 0.05,
+  },
+  // ---- 经济 ----
+  {
+    id: 'fortune', tag: 'atk', glyph: '🪙', name: '财运',
+    w0: 0.70, gw: +0.020,
+    title: '金币掉落率 +10%', desc: '怪死掉时更容易掉金币，商店里多几件可选',
+    stat: 'goldRate', flat: 0.10,
+  },
 
   // ---------------- 生存 ----------------
   {

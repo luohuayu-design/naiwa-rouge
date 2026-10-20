@@ -10,25 +10,37 @@
 // 第 2 块直接调 rollDamage() 即可，不用再改属性逻辑。
 // ============================================================
 
-const pct = (v) => (v * 100).toFixed(0) + '%';
+// 百分比统一保留 1 位小数（用户要求「所有数值都保留小数」）
+const pct = (v) => (v * 100).toFixed(1) + '%';
+// 数值统一 1 位小数：生命 / 攻击力 / 防御 / 金币这类都可能带小数
+const num1 = (v) => v.toFixed(1);
 
 // 属性定义：name 显示名、base 初始值、fmt 显示格式、desc 面板里的一句话说明
 export const STAT_DEFS = [
-  { key: 'maxHp',       name: '生命上限', base: 6,    fmt: (v) => String(Math.round(v)),  desc: '归零即本局失败；受到伤害按整数扣' },
+  { key: 'maxHp',       name: '生命上限', base: 6,    fmt: num1,               desc: '归零即本局失败；伤害按小数扣除' },
   { key: 'hpRegen',     name: '生命回复', base: 0,    fmt: (v) => v.toFixed(1) + '/秒',   desc: '每秒自动恢复的生命' },
   { key: 'moveSpeed',   name: '移动速度', base: 4.4,  fmt: (v) => v.toFixed(2),           desc: '每秒移动的世界单位' },
-  { key: 'armor',       name: '防御',     base: 0,    fmt: (v) => String(Math.round(v)),  desc: '减伤率 = 防御 /(100 + 防御)' },
-  { key: 'attack',      name: '攻击力',   base: 1,    fmt: (v) => String(Math.round(v)),  desc: '每次近战命中的基础伤害' },
+  { key: 'armor',       name: '防御',     base: 0,    fmt: num1,               desc: '减伤率 = 防御 /(100 + 防御)' },
+  { key: 'attack',      name: '攻击力',   base: 1,    fmt: num1,               desc: '每次近战命中的基础伤害' },
   { key: 'attackRange', name: '攻击范围', base: 2.1,  fmt: (v) => v.toFixed(2),           desc: '近战能打到的最远距离（世界单位）' },
   { key: 'attackSpeed', name: '攻击速度', base: 1.20, fmt: (v) => v.toFixed(2) + ' 次/秒', desc: '每秒自动攻击的次数' },
   { key: 'critRate',    name: '暴击率',   base: 0.00, fmt: pct,                            desc: '命中时触发暴击的概率' },
-  { key: 'critDamage',  name: '暴击伤害', base: 1.50, fmt: (v) => (v * 100).toFixed(0) + '%', desc: '暴击时的伤害倍率' },
+  { key: 'critDamage',  name: '暴击伤害', base: 1.50, fmt: pct,                            desc: '暴击时的伤害倍率' },
   { key: 'lifesteal',   name: '吸血',     base: 0.00, fmt: pct,                            desc: '造成伤害按此比例回血' },
+  // ---- 经济 ----
+  { key: 'goldRate',    name: '金币掉落率', base: 0.45, fmt: pct,                          desc: '每只怪死亡时掉出金币的概率（改造后上限 100%）' },
   // ---- 武器（第 5 回合获得「环剑」后生效；获得前面板也能看到，标注了生效条件） ----
   { key: 'swordPower',  name: '剑刃倍率', base: 1.00, fmt: (v) => '×' + v.toFixed(2),      desc: '环剑伤害 = 攻击伤害 × 倍率（可暴击、吃防御减伤）' },
-  { key: 'swordMax',    name: '剑数量上限', base: 3,  fmt: (v) => String(Math.round(v)),   desc: '环剑最多同时存在几把（第 5 回合获得武器后生效）' },
+  { key: 'swordMax',    name: '剑数量上限', base: 3,  fmt: num1,               desc: '环剑最多同时存在几把（第 5 回合获得武器后生效）' },
   { key: 'swordOrbit',  name: '剑转速',   base: 0.55, fmt: (v) => v.toFixed(2) + ' 圈/秒', desc: '环剑绕主角旋转的速度（第 5 回合获得武器后生效）' },
   { key: 'swordRegen',  name: '剑回复',   base: 3.0,  fmt: (v) => v.toFixed(1) + ' 秒/把', desc: '被消耗后恢复一把剑所需的时间，越小越快（越小越好）' },
+  // ---- 元素剑的附加效果（毒 / 冰 / 雷 / 血，见 swordKinds.js） ----
+  { key: 'poisonDps',   name: '毒伤',     base: 0.10, fmt: (v) => v.toFixed(2) + '/秒',   desc: '毒剑命中后每秒扣的血，默认持续 5 秒' },
+  { key: 'poisonTime',  name: '毒持续',   base: 5.0,  fmt: (v) => v.toFixed(1) + ' 秒',    desc: '中毒状态的持续时间' },
+  { key: 'frostSlow',   name: '冰缓',     base: 0.35, fmt: pct,                            desc: '冰剑命中后降低的移动速度比例' },
+  { key: 'frostTime',   name: '冰缓持续', base: 2.5,  fmt: (v) => v.toFixed(1) + ' 秒',    desc: '减速状态的持续时间' },
+  { key: 'chainCount',  name: '雷链数',   base: 1,    fmt: num1,               desc: '雷剑命中时额外连锁的目标数' },
+  { key: 'leechRate',   name: '血剑回血', base: 0.15, fmt: pct,                            desc: '血剑命中时按造成伤害的比例回血' },
 ];
 
 // ------------------------------------------------------------

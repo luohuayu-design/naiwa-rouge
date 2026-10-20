@@ -1,22 +1,28 @@
 // ============================================================
-// weapon.js —— 武器系统（第 1 件：环剑「三连剑阵」）
+// weapon.js —— 武器系统（环剑 · 多元素）
 //
 // 玩法（用户定案）：
-//   · 第 5 回合打完自动获得。三把剑环绕主角旋转，各有自己的判定。
+//   · 第 5 回合打完自动获得 3 把铁剑环绕主角旋转，各有自己的判定。
 //   · 剑碰到怪物 → 造成伤害并消失（少一把）；
 //   · 被消耗的剑每 swordRegen 秒恢复一把，上限 swordMax（初始 3）。
-//   · 技能「万剑齐发」：把环上所有剑沿各自朝向四周射出，
-//     命中怪物造成伤害后消失；没有冷却，有剑就能放。
+//   · 技能「万剑齐发」：把环上所有剑沿各自朝向四周射出，并在每两把
+//     之间插入一把（一次 2n 把）；没有冷却，有剑就能放。
 //
-// 数值全部走 stats（swordPower / swordMax / swordOrbit / swordRegen），
-// 升级改属性立刻生效；伤害 = 主角 rollDamage × swordPower（可暴击、吃防御减伤）。
+// 元素剑（见 swordKinds.js）：每把剑有一种元素，命中触发附加效果——
+//   poison 毒（DoT）/ frost 冰缓（减速）/ thunder 雷（连锁闪电）/
+//   leech 血（回血）/ iron 铁（无附加）。
+//   商店可以买新剑（addSword）；swordMax 升上去的空位会自动补铁剑。
 //
-// 模型：Kenney《Mini Dungeon》weapon-sword.glb（CC0），刃口朝 +Y，
-//       9KB；贴图 Textures/colormap.png 与 glb 的相对引用保持原目录结构。
-//       加载失败时用双盒拼一把占位剑，玩法不受影响。
+// 数值全部走 stats（swordPower / swordMax / swordOrbit / swordRegen +
+// poisonDps / frostSlow / chainCount / leechRate…），升级改属性立刻生效。
+//
+// 模型：Kenney《Mini Dungeon》weapon-sword.glb（CC0），刃口朝 +Y，9KB。
+//       五种元素共用同一模型，克隆后改材质 color/emissive 染色区分；
+//       图标用 assets/weapons/icon-*.svg。加载失败时用双盒拼占位剑。
 // ============================================================
 import * as THREE from '../lib/three.module.js';
 import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js';
+import { SWORD_KINDS, KIND_ORDER } from './swordKinds.js';
 
 // 轨道半径（世界单位）：贴着主角攻击范围环内侧转，视觉上「护体剑气」
 const ORBIT_R = 1.7;
@@ -28,18 +34,22 @@ const FLY_SPEED = 15;          // 射出的飞行速度
 const FLY_MAX_DIST = 30;       // 飞行最大距离（出场地就散掉）
 const FLY_Y = 0.85;            // 飞行/环绕高度
 const HIT_Y = 0.8;             // 判定高度基准（怪都是贴地的，只算水平面）
+const CHAIN_DIST = 4.5;        // 雷剑连锁的最大距离
+const CHAIN_RATIO = 0.6;       // 连锁伤害比例
 
 export function createWeaponSystem({ scene, stats, fx, enemies }) {
   let granted = false;         // 是否已获得（第 5 回合 grant）
-  let count = 0;               // 环上的剑数
+  let owned = [];              // 拥有的剑（kind 字符串数组，按获得顺序）
   let regenT = 0;              // 恢复计时器（攒够 swordRegen 秒长一把）
   let orbitAngle = Math.random() * Math.PI * 2;
   let t = 0;                   // 总时间（浮动动画用）
 
-  const pool = [];             // 空闲剑（holder Group，含模型）
-  const orbiting = [];         // 环上的剑：{ holder, spawnT }
-  const flyers = [];           // 射出去的剑：{ holder, a, dist, spin }
-  let template = null;         // 克隆源（THREE.Group）
+  const orbiting = [];         // 环上的剑：{ kind, holder, spawnT }
+  const flyers = [];           // 射出去的剑：{ kind, holder, a, ox, oz, dist, spin }
+  const bolts = [];            // 雷剑连锁的闪电：{ line, geo, mat, t, life }
+  let template = null;         // 克隆源（未染色的原始模型）
+  const protos = new Map();    // kind → 染色后的原型 Group
+  const pools = new Map();     // kind → 空闲 holder 数组
   const disposables = [];      // 兜底几何/材质，reset 时释放
 
   // ---------------- 兜底剑（加载失败时） ----------------
@@ -63,13 +73,10 @@ export function createWeaponSystem({ scene, stats, fx, enemies }) {
     try {
       const gltf = await new GLTFLoader().loadAsync('assets/weapons/weapon-sword.glb');
       template = gltf.scene;
-      // 统一材质：加一点自发光，深夜场景里剑刃能看清
       template.traverse((o) => {
         if (!o.isMesh) return;
         o.castShadow = false;
         o.frustumCulled = false;
-        const m = o.material;
-        if (m && 'emissive' in m) { m.emissive = new THREE.Color(0x6fe8d0); m.emissiveIntensity = 0.85; }
       });
     } catch (err) {
       console.warn('[武器] 剑模型加载失败，用几何体占位：', err);
@@ -83,18 +90,40 @@ export function createWeaponSystem({ scene, stats, fx, enemies }) {
     template.position.y = -box.min.y * s;   // 握把底端贴着 holder 原点
   }
 
-  function acquire() {
-    if (pool.length) {
+  // 某元素的染色原型：克隆模板 → 每个网格独立材质 → 按 SWORD_KINDS 调色
+  function protoFor(kind) {
+    let p = protos.get(kind);
+    if (p) return p;
+    const kc = SWORD_KINDS[kind] || SWORD_KINDS.iron;
+    p = template.clone(true);
+    p.traverse((o) => {
+      if (!o.isMesh) return;
+      o.material = o.material.clone();
+      if ('color' in o.material) o.material.color = new THREE.Color(kc.color).multiplyScalar(0.85);
+      if ('emissive' in o.material) {
+        o.material.emissive = new THREE.Color(kc.emissive);
+        o.material.emissiveIntensity = 2.2;   // 深夜 + ACES 色调映射会吃掉饱和度，给足自发光才看得出元素
+      }
+    });
+    protos.set(kind, p);
+    return p;
+  }
+
+  function acquire(kind) {
+    const k = SWORD_KINDS[kind] ? kind : 'iron';
+    const pool = pools.get(k);
+    if (pool && pool.length) {
       const h = pool.pop();
       h.visible = true;
       return h;
     }
     const holder = new THREE.Group();
-    const model = template.clone(true);
+    const model = protoFor(k).clone(true);
     model.scale.multiplyScalar(SWORD_SCALE);   // 剑身放大 1.4 倍（与判定半径同步）
     // 刃口 +Y → 转到 +X 再上翘 SWORD_TILT（顶视角下平躺的剑只有一条线）
     model.rotation.z = -Math.PI / 2 + SWORD_TILT;
     holder.add(model);
+    holder.userData.kind = k;
     scene.add(holder);
     return holder;
   }
@@ -102,43 +131,74 @@ export function createWeaponSystem({ scene, stats, fx, enemies }) {
   function release(holder) {
     holder.visible = false;
     holder.scale.setScalar(1);
-    pool.push(holder);
+    const k = holder.userData.kind || 'iron';
+    if (!pools.has(k)) pools.set(k, []);
+    pools.get(k).push(holder);
   }
 
-  // ---------------- 获得（第 5 回合） ----------------
+  // ---------------- 获得（第 5 回合：3 把铁剑） ----------------
   function grant() {
     if (granted) return;
     granted = true;
-    count = Math.min(Math.round(stats.get('swordMax')), 3);
+    owned = ['iron', 'iron', 'iron'];
     regenT = 0;
-    for (let i = 0; i < count; i++) orbiting.push({ holder: acquire(), spawnT: t });
+    for (let i = 0; i < owned.length; i++) {
+      orbiting.push({ kind: owned[i], holder: acquire(owned[i]), spawnT: t });
+    }
     if (fx) fx.ring({ x: 0, z: 0 }, { from: 0.4, to: ORBIT_R + 0.6, color: 0x9fe8ff, life: 0.6, opacity: 0.8, y: 0.06 });
+  }
+
+  // 商店买新剑：加入 owned；环上还有空位就立刻长出来
+  function addSword(kind) {
+    const k = SWORD_KINDS[kind] ? kind : 'iron';
+    if (!granted) return { ok: false, onRing: false };
+    owned.push(k);
+    let onRing = false;
+    if (orbiting.length < maxCount()) {
+      orbiting.push({ kind: k, holder: acquire(k), spawnT: t });
+      onRing = true;
+    }
+    if (fx) fx.ring({ x: 0, z: 0 }, { from: 0.3, to: ORBIT_R, color: SWORD_KINDS[k].emissive, life: 0.5, opacity: 0.8, y: 0.06 });
+    return { ok: true, onRing };
+  }
+
+  // 剑数量上限（stats 驱动）
+  function maxCount() { return Math.round(stats.get('swordMax')); }
+  // 环上应有的剑数：拥有数与上限取小
+  function targetCount() { return Math.min(owned.length, maxCount()); }
+
+  // 环上还缺哪种剑：owned 里有、环上没有的（多把取第一把）
+  function missingKind() {
+    const have = new Map();
+    for (const o of orbiting) have.set(o.kind, (have.get(o.kind) || 0) + 1);
+    for (const k of owned) {
+      const c = have.get(k) || 0;
+      if (c > 0) { have.set(k, c - 1); continue; }
+      return k;
+    }
+    return null;
   }
 
   // ---------------- 技能：万剑齐发 ----------------
   // 按一下：环上现有 n 把剑全部射出，同时在每两把之间「插入」一把，
-  // 合计射出 2n 把（角度间隔减半，覆盖面翻倍）—— 用户定案的命中手感修正。
-  // 插入的剑是从对象池里临时取的，飞完/命中就回池，不影响环上的计数。
-  // 没有冷却：有剑就能放，放完 count = 0 等恢复。
+  // 合计射出 2n 把（插入的剑沿用前一把的元素）。插入的剑从对象池取，
+  // 飞完/命中就回池，不影响环上的计数。没有冷却：有剑就能放。
   function fire(getPlayerPos) {
-    if (!granted || count === 0) return false;
+    if (!granted || orbiting.length === 0) return false;
     const p = getPlayerPos();
     const n = orbiting.length;
-    if (n === 0) return false;
     const step = (Math.PI * 2) / n;
     // 原点记发射瞬间的位置，之后与主角移动无关。
-    // 1) 原有的 n 把：沿各自朝向
     for (let i = 0; i < n; i++) {
       const a = orbitAngle + i * step;
-      flyers.push({ holder: orbiting[i].holder, a, ox: p.x, oz: p.z, dist: 0, spin: -a });
+      flyers.push({ kind: orbiting[i].kind, holder: orbiting[i].holder, a, ox: p.x, oz: p.z, dist: 0, spin: -a });
     }
-    // 2) 插入的 n 把：角度落在原来两把的正中间
     for (let i = 0; i < n; i++) {
       const a = orbitAngle + i * step + step / 2;
-      flyers.push({ holder: acquire(), a, ox: p.x, oz: p.z, dist: 0, spin: -a });
+      const kind = orbiting[i].kind;   // 插在它后面的空隙里，元素跟随
+      flyers.push({ kind, holder: acquire(kind), a, ox: p.x, oz: p.z, dist: 0, spin: -a });
     }
     orbiting.length = 0;
-    count = 0;
     regenT = 0;
     if (fx) {
       fx.ring(p, { from: 0.3, to: ORBIT_R + 1.2, color: 0x9fe8ff, life: 0.4, opacity: 0.9, y: 0.07 });
@@ -154,13 +214,33 @@ export function createWeaponSystem({ scene, stats, fx, enemies }) {
     return enemies.list.filter((e) => e.state !== 'dead' && e.state !== 'spawn');
   }
 
-  function hitEnemy(e, at) {
+  // 元素附加效果（毒 / 冰 / 雷 / 血；铁剑无）
+  function applyKind(kind, e, dmg) {
+    if (kind === 'poison') {
+      enemies.applyDot(e, { dps: stats.get('poisonDps'), time: stats.get('poisonTime') });
+    } else if (kind === 'frost') {
+      enemies.applySlow(e, { factor: stats.get('frostSlow'), time: stats.get('frostTime') });
+    } else if (kind === 'leech') {
+      const r = stats.get('leechRate');
+      if (r > 0 && dmg > 0) stats.heal(dmg * r);
+    } else if (kind === 'thunder') {
+      const targets = enemies.chainTargets(e, Math.round(stats.get('chainCount')), CHAIN_DIST);
+      for (const tgt of targets) {
+        const cd = dmg * CHAIN_RATIO;
+        enemies.takeDamage(tgt, cd, false, { quiet: true });
+        bolt(e.pos, tgt.pos);
+      }
+    }
+  }
+
+  function hitEnemy(e, at, kind) {
     const roll = stats.rollDamage({ targetArmor: e.cfg.armor });
     const dmg = roll.damage * stats.get('swordPower');
     enemies.takeDamage(e, dmg, roll.crit);
-    // 吸血与近战同规则
+    // 吸血与近战同规则（血剑的 leechRate 是额外的独立来源）
     const ls = stats.get('lifesteal');
     if (ls > 0 && dmg > 0) stats.heal(dmg * ls);
+    applyKind(kind, e, dmg);
     if (fx) fx.hit(at, roll.crit ? 0xffe9a8 : 0xbff2ff);
     return dmg;
   }
@@ -175,26 +255,58 @@ export function createWeaponSystem({ scene, stats, fx, enemies }) {
     return null;
   }
 
+  // ---------------- 雷剑连锁的闪电（一条淡紫直线，0.22 秒淡出） ----------------
+  function bolt(from, to) {
+    const geo = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(from.x, 1.0, from.z),
+      new THREE.Vector3(to.x, 1.0, to.z),
+    ]);
+    const mat = new THREE.LineBasicMaterial({
+      color: 0xb08cff, transparent: true, opacity: 0.95,
+      blending: THREE.AdditiveBlending, depthWrite: false,
+    });
+    const line = new THREE.Line(geo, mat);
+    line.frustumCulled = false;
+    scene.add(line);
+    bolts.push({ line, geo, mat, t: 0, life: 0.22 });
+  }
+
   // ---------------- 每帧 ----------------
   function update(dt, { playerPos, onHudChange } = {}) {
     if (!granted) return;
     t += dt;
 
-    const max = Math.round(stats.get('swordMax'));
+    const target = targetCount();
     const list = aliveEnemies();
     const p = playerPos || { x: 0, z: 0 };
 
-    // 1) 恢复：每 swordRegen 秒长一把（一次只长一把，攒着的从下一轮继续）
-    if (count < max) {
+    // 0) 雷剑闪电淡出
+    for (let i = bolts.length - 1; i >= 0; i--) {
+      const b = bolts[i];
+      b.t += dt;
+      if (b.t >= b.life) {
+        scene.remove(b.line);
+        b.geo.dispose();
+        b.mat.dispose();
+        bolts.splice(i, 1);
+      } else {
+        b.mat.opacity = 0.95 * (1 - b.t / b.life);
+      }
+    }
+
+    // 1) 恢复：环上不满且还有「拥有但不在环上」的剑时，每 swordRegen 秒补一把；
+    //    上限升高的空位（owned 不够）自动补一把铁剑。
+    if (orbiting.length < target) {
       regenT += dt;
       const need = Math.max(0.2, stats.get('swordRegen'));
-      while (regenT >= need && count < max) {
+      while (orbiting.length < target && regenT >= need) {
         regenT -= need;
-        count++;
-        orbiting.push({ holder: acquire(), spawnT: t });
-        if (fx) fx.ring({ x: p.x, z: p.z }, { from: ORBIT_R * 0.4, to: ORBIT_R, color: 0x9fe8ff, life: 0.45, opacity: 0.7, y: 0.06 });
+        let kind = missingKind();
+        if (!kind) { kind = 'iron'; owned.push('iron'); }   // 上限空位 → 自动锻造铁剑
+        orbiting.push({ kind, holder: acquire(kind), spawnT: t });
+        if (fx) fx.ring({ x: p.x, z: p.z }, { from: ORBIT_R * 0.4, to: ORBIT_R, color: SWORD_KINDS[kind].emissive, life: 0.45, opacity: 0.7, y: 0.06 });
       }
-      if (count >= max) regenT = 0;
+      if (orbiting.length >= target) regenT = 0;
       onHudChange?.();
     }
 
@@ -214,10 +326,9 @@ export function createWeaponSystem({ scene, stats, fx, enemies }) {
 
       const hit = findHit(x, z, list);
       if (hit) {
-        hitEnemy(hit, _tmp.set(x, HIT_Y, z));
+        hitEnemy(hit, _tmp.set(x, HIT_Y, z), s.kind);
         release(h);
         orbiting.splice(i, 1);
-        count = Math.max(0, count - 1);
         regenT = 0;                 // 被消耗后重新计时
         onHudChange?.();
       }
@@ -238,7 +349,7 @@ export function createWeaponSystem({ scene, stats, fx, enemies }) {
       const out = f.dist > FLY_MAX_DIST
         || Math.hypot(x, z) > 17.5;   // 场地半径 15 + 石圈，出界就没
       if (hit) {
-        hitEnemy(hit, _tmp.set(x, HIT_Y, z));
+        hitEnemy(hit, _tmp.set(x, HIT_Y, z), f.kind);
         release(f.holder);
         flyers.splice(i, 1);
       } else if (out) {
@@ -260,22 +371,37 @@ export function createWeaponSystem({ scene, stats, fx, enemies }) {
     for (const f of flyers) release(f.holder);
     orbiting.length = 0;
     flyers.length = 0;
-    count = 0;
+    for (const b of bolts) {
+      scene.remove(b.line);
+      b.geo.dispose();
+      b.mat.dispose();
+    }
+    bolts.length = 0;
+    owned = [];
     regenT = 0;
     granted = false;
   }
 
+  // 技能栏 / 结算用的「每种剑各有几把」（只列拥有的，顺序按 KIND_ORDER）
+  function kindCounts() {
+    const m = new Map();
+    for (const k of owned) m.set(k, (m.get(k) || 0) + 1);
+    return KIND_ORDER.filter((k) => m.has(k)).map((k) => ({ kind: k, n: m.get(k) }));
+  }
+
   return {
-    preload, grant, fire, update, reset, setVisible,
+    preload, grant, fire, update, reset, setVisible, addSword, kindCounts, applyKind,
     get granted() { return granted; },
-    get count() { return count; },
-    get max() { return Math.round(stats.get('swordMax')); },
+    get count() { return orbiting.length; },
+    get owned() { return owned.slice(); },
+    get max() { return maxCount(); },
+    get target() { return targetCount(); },
     get orbitingCount() { return orbiting.length; },
     get flyingCount() { return flyers.length; },
     get orbitAngle() { return orbitAngle; },   // 调试/测试用
     // 技能栏恢复进度条：0（刚消耗）→ 1（下一把剑就绪）；满剑时恒为 0
     get regenProgress() {
-      if (count >= Math.round(stats.get('swordMax'))) return 0;
+      if (orbiting.length >= targetCount()) return 0;
       const need = Math.max(0.2, stats.get('swordRegen'));
       return Math.max(0, Math.min(1, regenT / need));
     },
