@@ -1,20 +1,22 @@
 // ============================================================
-// wave.js —— 第一关：10 个回合的编排与刷怪位置
+// wave.js —— 第一关：15 个回合的编排与刷怪位置
 //
 // 关卡设计（数值都在这一个文件里，改这里就能调节奏）：
-//   第一关 · 荒草地：10 回合，61 只小兵 + 18 只战士，合计 79 只
+//   第一关 · 荒草地：15 回合，小兵 + 战士 + 投手（远程），合计 159 只
 //   清空一回合后停 2.6 秒进下一回合；**必须清完**才推进（不设超时跳过，
 //   否则会带着上一回合的怪滚雪球，也没法在回合结束时弹升级）
 //
 // 回合成长（用户要求「怪物不止数目变多，属性也适当提高」）：
-//   数量：3 → 13 只/回合（见 rounds）
-//   生命：每回合 +16%（第 10 回合 ×2.44，战士 3 → 7 血）
-//   伤害：每回合 +10%（第 10 回合 ×1.90，1 → 2 点）
-//   速度：每回合 +3.5%（第 10 回合 ×1.32，小兵 2.15 → 2.84，主角 4.4 仍能拉开）
+//   数量：3 → 18 只/回合（见 rounds）
+//   生命：每回合 +16%（第 15 回合 ×3.24，战士 3 → 10 血）
+//   伤害：每回合 +10%（第 15 回合 ×2.40，1 → 2~5 点）
+//   速度：每回合 +3.5%（第 15 回合 ×1.49，小兵 2.15 → 3.20，主角 4.4 仍能拉开）
 //   小兵基础 1 血，四舍五入后第 5 回合起变 2 血（R1~R4 仍是一刀一只）；
-//   战士 3 血，第 5 回合 5 血、第 10 回合 7 血。
+//   战士 3 血，第 5 回合 5 血、第 10 回合 7 血、第 15 回合 10 血。
 //
-// 升级：第 1/2/3/5/8/10 回合清空后弹三选一（见 upgrade.js），
+// 第三种怪：骷髅投手（远程）第 11 回合登场，见 enemy.js 的 archer 配置。
+//
+// 升级：第 1/2/3/5/8/10/12/15 回合清空后弹三选一（见 upgrade.js），
 //       第 5 回合清空时先弹「获得环剑」卡片，再进三选一。
 //
 // 刷怪位置规则（用户要求的「生成位置」）：
@@ -31,21 +33,26 @@ export const LEVEL_1 = {
   minPlayerDistance: 7.0,  // 离主角至少这么远
   minSpawnGap: 2.0,        // 两次刷怪的最小间距
   gap: 2.6,                // 清场后到下一回合的间隔（秒）
-  upgradeAfter: [1, 2, 3, 5, 8, 10],   // 打完这些回合弹三选一
+  upgradeAfter: [1, 2, 3, 5, 8, 10, 12, 15],   // 打完这些回合弹三选一
   weaponAt: 5,                       // 打完这回合获得第一件武器「环剑」
   // 属性随回合成长：1 + k × (回合 - 1)
   scale: { hp: 0.16, damage: 0.10, speed: 0.035 },
   rounds: [
-    { minion: 3, warrior: 0, gap: 0.90, tip: '小兵从草里钻出来了' },
-    { minion: 4, warrior: 0, gap: 0.80, tip: '数量多起来了，边走边拍' },
-    { minion: 5, warrior: 1, gap: 0.80, tip: '战士会抬手，看到红圈就躲' },
-    { minion: 5, warrior: 1, gap: 0.75, tip: '它们变硬了一点，别硬顶' },
-    { minion: 6, warrior: 2, gap: 0.70, tip: '两个战士，先点掉它们' },
-    { minion: 6, warrior: 2, gap: 0.65, tip: '小兵开始要两下了，稳住节奏' },
-    { minion: 7, warrior: 2, gap: 0.60, tip: '别贪刀，血留着' },
-    { minion: 8, warrior: 3, gap: 0.55, tip: '这一波很凶，绕圈拉扯' },
-    { minion: 8, warrior: 3, gap: 0.50, tip: '撑住，马上就到最后了' },
-    { minion: 9, warrior: 4, gap: 0.50, tip: '最后一回合，全部拍碎' },
+    { minion: 3,  warrior: 0, archer: 0, gap: 0.90, tip: '小兵从草里钻出来了' },
+    { minion: 4,  warrior: 0, archer: 0, gap: 0.80, tip: '数量多起来了，边走边拍' },
+    { minion: 5,  warrior: 1, archer: 0, gap: 0.80, tip: '战士会抬手，看到红圈就躲' },
+    { minion: 5,  warrior: 1, archer: 0, gap: 0.75, tip: '它们变硬了一点，别硬顶' },
+    { minion: 6,  warrior: 2, archer: 0, gap: 0.70, tip: '两个战士，先点掉它们' },
+    { minion: 6,  warrior: 2, archer: 0, gap: 0.65, tip: '小兵开始要两下了，稳住节奏' },
+    { minion: 7,  warrior: 2, archer: 0, gap: 0.60, tip: '别贪刀，血留着' },
+    { minion: 8,  warrior: 3, archer: 0, gap: 0.55, tip: '这一波很凶，绕圈拉扯' },
+    { minion: 8,  warrior: 3, archer: 0, gap: 0.50, tip: '撑住，马上就到最后了' },
+    { minion: 9,  warrior: 4, archer: 0, gap: 0.50, tip: '最后一回合，全部拍碎' },
+    { minion: 9,  warrior: 4, archer: 1, gap: 0.55, tip: '远处有人拉弓了，别站着不动' },
+    { minion: 9,  warrior: 4, archer: 2, gap: 0.55, tip: '骨刀是直的，横着走就能躲' },
+    { minion: 10, warrior: 4, archer: 2, gap: 0.50, tip: '先冲投手，别被风筝' },
+    { minion: 10, warrior: 5, archer: 2, gap: 0.48, tip: '混编队，别被前后夹住' },
+    { minion: 10, warrior: 5, archer: 3, gap: 0.45, tip: '最后五只，清完收工' },
   ],
 };
 
@@ -61,28 +68,35 @@ export function roundScale(roundNo) {
 }
 
 export function levelStats(level = LEVEL_1) {
-  let minion = 0, warrior = 0;
+  const sum = { total: 0, rounds: level.rounds.length };
   for (const r of level.rounds) {
-    minion += r.minion || 0;
-    warrior += r.warrior || 0;
+    for (const k of ['minion', 'warrior', 'archer']) sum[k] = (sum[k] || 0) + (r[k] || 0);
   }
-  return { minion, warrior, total: minion + warrior, rounds: level.rounds.length };
+  for (const k of ['minion', 'warrior', 'archer']) sum[k] = sum[k] || 0;
+  sum.total = sum.minion + sum.warrior + sum.archer;
+  return sum;
 }
 
-// 把「n 只小兵 + m 只战士」展开成带延迟的生成列表：
-// 小兵先到，战士晚半拍出场（给玩家先清小兵的窗口）
+// 把「n 只小兵 + m 只战士 + k 只投手」展开成带延迟的生成列表：
+// 小兵先到，战士晚半拍出场（给玩家先清小兵的窗口），
+// 投手最后登场（先把近身的处理完，再面对远处的冷箭）。
 function buildSpawns(roundNo) {
   const cfg = LEVEL_1.rounds[roundNo - 1];
   const out = [];
   let t = 0.75;
-  for (let i = 0; i < cfg.minion; i++) {
+  for (let i = 0; i < (cfg.minion || 0); i++) {
     out.push({ type: 'minion', delay: t });
     t += cfg.gap;
   }
   t += 0.35;
-  for (let i = 0; i < cfg.warrior; i++) {
+  for (let i = 0; i < (cfg.warrior || 0); i++) {
     out.push({ type: 'warrior', delay: t });
     t += cfg.gap * 1.6;
+  }
+  t += 0.35;
+  for (let i = 0; i < (cfg.archer || 0); i++) {
+    out.push({ type: 'archer', delay: t });
+    t += cfg.gap * 2.0;
   }
   return out;
 }

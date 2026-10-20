@@ -4,12 +4,13 @@
 // 模型来自 KayKit《Skeletons》（CC0），已裁剪成 7 段动画。
 // 每只怪 = SkeletonUtils 克隆的蒙皮模型 + 独立 AnimationMixer。
 //
-// 第一关只启用两种：
-//   minion  小兵 —— 直线冲脸，碰到主角自毁并造成 1 伤害
-//   warrior 战士 —— 追到近战距离后停下挥拳，攻击不扣自己的血
+// 第一关现在启用三种：
+//   minion  小兵   —— 直线冲脸，碰到主角自毁并造成 1 伤害
+//   warrior 战士   —— 追到近战距离后停下挥拳，攻击不扣自己的血
+//   archer  投手   —— 远程：进射程拉弓 0.55 秒后掷出骨刀（有弹道，能靠横移躲开），
+//                     主角贴太近会后退风筝（第 11 回合起登场）
 //
-// 另外两种（archer / mage）只写好了配置，第一关不生成，
-// 等第二关接投射物与光环逻辑。字段含义见各自的注释。
+// 第四种（mage）只写好了配置，暂不生成。
 // ============================================================
 import * as THREE from '../lib/three.module.js';
 import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js';
@@ -83,21 +84,45 @@ export const ENEMY_TYPES = {
     },
   },
 
-  // ---------------- 第二关预案（第一关不生成） ----------------
-  // 远程小怪：站在射程边缘投掷骨刀，有弹道飞行时间，可以靠横移躲开。
+  // ---------------- 第三种：远程投手（第 11 回合起登场） ----------------
+  // 行为：远远地绕着主角跑，进射程（7.0）就拉弓，前摇 0.55 秒后掷骨刀。
+  // 骨刀是**实体弹道**（速度 8.5，飞 2.4 秒或出界消失）—— 主角移速 4.4，
+  // 横向走两步就能躲开，所以伤害给到 2 也不算离谱。
+  // 主角贴到 4.2 以内它会后退（风筝），但移速只有 1.55，跑不掉，追上去能秒。
   archer: {
-    name: '骷髅投手', planned: true,
+    name: '骷髅投手',
     file: 'assets/monsters/skeleton-rogue.glb',
-    sourceHeight: 1.10,    // 未标定（估算），启用前必须按原点诊断法重测
-    height: 1.24, radius: 0.42, hp: 2, armor: 0, speed: 1.5,
-    attackRange: 6.5,      // 射程属性
-    keepDistance: 4.2,     // 太近会后退，保持风筝距离
-    damage: 1, attackInterval: 2.0, windup: 0.5,
-    projectile: { speed: 9, radius: 0.16, color: 0x9fe8ff },
-    spawnTime: 0.9, deathTime: 1.4, selfDestruct: false,
-    color: 0x9fe8ff,
-    anim: { walk: ANIM.walk, idle: ANIM.idle, death: ANIM.death, spawn: ANIM.spawn },
+    sourceHeight: 1.10,    // 实测：蒙皮顶点法 + 三怪并排截图（投手比小兵高约 6%、比战士瘦，见 README「怪物身高标定」）
+    height: 1.28,
+    radius: 0.42,
+    hp: 2,
+    armor: 0,
+    speed: 1.55,
+    attackRange: 7.0,      // 射程：进了这个圈才开始拉弓
+    keepDistance: 4.2,     // 比这个近就后退（不会站着被贴脸）
+    damage: 2,             // 骨刀命中伤害（第 1 回合基准，之后按回合倍率成长）
+    attackInterval: 2.6,   // 两次掷刀的间隔
+    windup: 0.55,          // 前摇：拉弓到出手
+    attackDuration: 0.85,  // 整段投掷动画时长（前摇 + 收势）
+    projectile: {
+      speed: 8.5,          // 骨刀飞行速度（世界单位/秒）
+      radius: 0.30,        // 弹体判定半径
+      life: 2.4,           // 最长存活时间（超时自散）
+      y: 0.85,             // 飞行高度
+      color: 0xffc46a,
+    },
+    spawnTime: 0.95,
+    deathTime: 1.4,
+    selfDestruct: false,
+    color: 0xffd08a,
+    // 不画脚下圈：射程 7 的圈太大，会盖住半个战场（远程靠弹道和拉弓提示区分）
+    anim: {
+      walk: ANIM.walk, idle: ANIM.idle, attack: ANIM.punch,
+      death: ANIM.death, spawn: ANIM.spawn,
+    },
   },
+
+  // ---------------- 预案：巫师（暂不生成） ----------------
   // 魔法小怪：读条后放范围法术；光环给周围小怪加攻速/减伤，给主角上减速 debuff。
   mage: {
     name: '骷髅巫师', planned: true,
@@ -353,6 +378,85 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
   // ---------------- 单只更新 ----------------
   const _ctxTmp = new THREE.Vector3();
 
+  // ============================================================
+  // 远程弹道（骨刀）
+  // 共享几何/材质：一次只造一份，弹体只是「同一个几何的多个 Mesh」，
+  // 用完 scene.remove 即可（不能 dispose 共享资源）。
+  // 判定在水平面上做（和近战、环剑一致），Y 轴只决定视觉高度。
+  // ============================================================
+  const shots = [];
+  let shotGeo = null, shotMat = null;
+
+  function shotAssets() {
+    if (shotGeo) return;
+    // 一根沿 Z 轴躺着的骨刀：胶囊默认沿 Y，转 90° 到 Z；朝向用 mesh.rotation.y
+    shotGeo = new THREE.CapsuleGeometry(0.085, 0.62, 4, 8);
+    shotGeo.rotateX(Math.PI / 2);
+    shotMat = new THREE.MeshStandardMaterial({
+      color: 0xfff0d6, emissive: 0xffa94d, emissiveIntensity: 0.95,
+      roughness: 0.45, metalness: 0.05,
+    });
+  }
+
+  // 从投手身前朝「主角当前所在位置」掷出（不预判，所以玩家一直动就打不中）
+  function throwBone(e, ctx) {
+    const cfg = e.cfg.projectile;
+    const dx = ctx.playerPos.x - e.pos.x;
+    const dz = ctx.playerPos.z - e.pos.z;
+    const d = Math.hypot(dx, dz) || 1;
+    const nx = dx / d, nz = dz / d;
+    const y = cfg.y ?? 0.85;
+
+    shotAssets();
+    const mesh = new THREE.Mesh(shotGeo, shotMat);
+    mesh.frustumCulled = false;
+    const x = e.pos.x + nx * (e.cfg.radius + 0.25);
+    const z = e.pos.z + nz * (e.cfg.radius + 0.25);
+    mesh.position.set(x, y, z);
+    mesh.rotation.y = Math.atan2(nx, nz);
+    scene.add(mesh);
+
+    shots.push({
+      mesh, x, z,
+      vx: nx * cfg.speed, vz: nz * cfg.speed,
+      life: cfg.life ?? 2.4,
+      dmg: e.damage,
+      r: cfg.radius ?? 0.28,
+      color: cfg.color ?? 0xffc46a,
+      y, spin: 0,
+    });
+    if (fx) fx.burst({ x, z }, { color: cfg.color ?? 0xffc46a, count: 6, speed: 1.4, life: 0.28, size: 0.1, y, up: 0.7, gravity: 3 });
+  }
+
+  function updateShots(dt, ctx) {
+    for (let i = shots.length - 1; i >= 0; i--) {
+      const s = shots[i];
+      s.life -= dt;
+      s.x += s.vx * dt;
+      s.z += s.vz * dt;
+      s.spin += dt * 16;
+      s.mesh.position.x = s.x;
+      s.mesh.position.z = s.z;
+      s.mesh.rotation.y = Math.atan2(s.vx, s.vz) + s.spin;
+
+      const dx = ctx.playerPos.x - s.x;
+      const dz = ctx.playerPos.z - s.z;
+      const hit = Math.hypot(dx, dz) <= s.r + ctx.playerRadius;
+      const gone = s.life <= 0 || Math.hypot(s.x, s.z) > ctx.arenaRadius + 1.5;
+
+      if (hit) {
+        ctx.hurtPlayer(s.dmg, null);
+        if (fx) fx.burst({ x: s.x, z: s.z }, { color: s.color, count: 12, speed: 2.6, life: 0.4, size: 0.13, y: s.y, up: 1.6 });
+      } else if (gone && fx) {
+        fx.burst({ x: s.x, z: s.z }, { color: s.color, count: 4, speed: 1.2, life: 0.24, size: 0.08, y: s.y, up: 0.5, gravity: 5 });
+      }
+      if (hit || gone) {
+        scene.remove(s.mesh);
+        shots.splice(i, 1);
+      }
+    }
+  }
+
   function updateOne(e, dt, ctx) {
     e.mixer.update(dt);
     e.t += dt;
@@ -410,6 +514,65 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
     // 朝向玩家（平滑转身，避免瞬间打转）
     if (dist > 0.001) {
       e.root.rotation.y = lerpAngle(e.root.rotation.y, Math.atan2(dx, dz), 1 - Math.exp(-9 * dt));
+    }
+
+    // ---- 投手：拉弓 → 掷骨刀 → 收势 ----
+    if (e.cfg.projectile) {
+      if (e.state === 'attack') {
+        if (!e.hitDone && e.t >= e.cfg.windup) {
+          e.hitDone = true;
+          throwBone(e, ctx);
+        }
+        if (e.t >= e.cfg.attackDuration) {
+          e.state = 'chase';
+          e.t = 0;
+          e.attackCd = Math.max(0.2, e.cfg.attackInterval - e.cfg.attackDuration);
+          e.currentAnim = e.cfg.anim.walk;
+          e.play(e.cfg.anim.walk, { fade: 0.18 });
+        }
+        return;
+      }
+
+      e.attackCd -= dt;
+      const keep = e.cfg.keepDistance;
+      const reach = e.cfg.attackRange;
+
+      // 贴太近就一边后退一边重新拉开距离（移速 1.55 跑不掉，玩家追两步就能拍）
+      if (dist < keep) {
+        moveToward(e, -dx, -dz, dist, dt, ctx);
+        if (e.currentAnim !== e.cfg.anim.walk) {
+          e.currentAnim = e.cfg.anim.walk;
+          e.play(e.cfg.anim.walk, { fade: 0.2 });
+        }
+        return;
+      }
+
+      // 射程外 → 走近点
+      if (dist > reach) {
+        moveToward(e, dx, dz, dist, dt, ctx);
+        if (e.currentAnim !== e.cfg.anim.walk) {
+          e.currentAnim = e.cfg.anim.walk;
+          e.play(e.cfg.anim.walk, { fade: 0.2 });
+        }
+        return;
+      }
+
+      // 射程内、距离够 → 站定拉弓
+      if (e.attackCd <= 0) {
+        e.state = 'attack';
+        e.t = 0;
+        e.hitDone = false;
+        e.currentAnim = e.cfg.anim.attack;
+        e.play(e.cfg.anim.attack, { once: true, fade: 0.1, duration: e.cfg.attackDuration });
+        // 前摇提示：脚下一圈橙色脉冲蓄力，看到就开始走位
+        if (fx) fx.ring(e.pos, { from: 0.3, to: 1.7, color: 0xffb46a, life: e.cfg.windup, opacity: 0.5, y: 0.055 });
+        return;
+      }
+      if (e.currentAnim !== e.cfg.anim.idle) {
+        e.currentAnim = e.cfg.anim.idle;
+        e.play(e.cfg.anim.idle, { fade: 0.2 });
+      }
+      return;
     }
 
     // ---- 战士：近战攻击循环 ----
@@ -491,6 +654,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
   // ---------------- 群体更新 ----------------
   function update(dt, ctx) {
     for (const e of list) updateOne(e, dt, ctx);
+    updateShots(dt, ctx);
 
     // 分离：避免怪物叠成一个点（O(n²)，同屏最多十几只，开销可忽略）
     for (let i = 0; i < list.length; i++) {
@@ -546,11 +710,14 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
       e.mixer.uncacheRoot(e.model);
     }
     list.length = 0;
+    for (const s of shots) scene.remove(s.mesh);
+    shots.length = 0;
   }
 
-  // 战士的攻击时长：固定 0.9 秒（动画按比例加速/减速），前摇 0.45 秒
+  // 战士/投手的攻击时长：没单独写就默认 0.9 秒（动画按比例加速/减速），
+  // 写了就以配置为准（投手 0.85）—— 前摇 windup 必须小于它。
   for (const t of Object.values(ENEMY_TYPES)) {
-    if (t.attackRange != null && t.windup != null) t.attackDuration = 0.9;
+    if (t.attackRange != null && t.windup != null && t.attackDuration == null) t.attackDuration = 0.9;
   }
 
   return {
@@ -558,6 +725,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
     list,
     aliveCount,
     takeDamage,
+    shotCount: () => shots.length,
     get: (type) => ENEMY_TYPES[type],
     // 调试/测试用
     all: () => list,

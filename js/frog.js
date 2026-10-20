@@ -33,16 +33,17 @@ export const MODEL_YAW = 0;
 
 // 攻击动作参数：一次「单臂拍击」= 抬手 → 拍下 → 回收。
 // dur 要小于攻击间隔（攻速 1.2 次/秒 = 0.83 秒），否则连击时会互相打断。
+// 用户反馈「动作幅度小、持续时间短」→ 时长 0.34 → 0.52，各段幅度整体加约 30~90%。
 const ATK = {
-  dur: 0.34,
-  windup: 0.28,        // 抬手在整段动作里的占比
-  strike: 0.22,        // 拍下占比（占比小 = 出手快）
-  armUp: -1.65,        // 抬手角度（负 = 往后抬）
-  armSwing: 2.15,      // 拍下时手臂最前角度
-  lean: 0.14,          // 抬手时后仰
-  leanDown: -0.34,     // 拍下时前倾
-  twist: 0.55,         // 躯干扭转幅度
-  lunge: 0.16,         // 出手时往前顶的距离
+  dur: 0.52,
+  windup: 0.34,        // 抬手在整段动作里的占比（0.52 × 0.34 ≈ 0.18 秒蓄力）
+  strike: 0.20,        // 拍下占比（占比小 = 出手快，约 0.10 秒甩出去）
+  armUp: -2.00,        // 抬手角度（负 = 往后抬）
+  armSwing: 2.75,      // 拍下时手臂最前角度
+  lean: 0.20,          // 抬手时后仰
+  leanDown: -0.48,     // 拍下时前倾
+  twist: 0.85,         // 躯干扭转幅度
+  lunge: 0.30,         // 出手时往前顶的距离
 };
 
 // k: 0→1 的动作进度，返回这一帧的叠加姿态
@@ -363,10 +364,11 @@ function makeFrogObject(parts) {
       legL.rotation.x = swing * 0.62 * b;
       legR.rotation.x = -swing * 0.62 * b;
       // 手臂反向摆 + 待机时微微张开
-      armL.rotation.x = -swing * 0.42 * b;
-      armR.rotation.x = swing * 0.42 * b;
-      armL.rotation.z = -0.06 - 0.03 * idle + Math.sin(st.t * 1.1) * 0.02 * idle;
-      armR.rotation.z = 0.06 + 0.03 * idle - Math.sin(st.t * 1.1) * 0.02 * idle;
+      // 摆臂幅度 0.42 → 0.86：顶视角下原本几乎看不出来，加大才「看得出在跑」
+      armL.rotation.x = -swing * 0.86 * b;
+      armR.rotation.x = swing * 0.86 * b;
+      armL.rotation.z = -0.06 - 0.03 * idle + Math.sin(st.t * 1.1) * 0.02 * idle - Math.abs(swing) * 0.10 * b;
+      armR.rotation.z = 0.06 + 0.03 * idle - Math.sin(st.t * 1.1) * 0.02 * idle + Math.abs(swing) * 0.10 * b;
 
       // 身体：上下起伏（每步一次）+ 左右轻摆 + 前倾
       tilt.position.y = Math.abs(swing2) * 0.055 * b + Math.sin(st.t * 1.6) * 0.015 * idle;
@@ -375,7 +377,8 @@ function makeFrogObject(parts) {
 
       // 脊柱/头：抵消一部分起伏，保持视线水平
       spine.rotation.x = 0.04 * b;
-      spine.rotation.y = Math.sin(st.t * 0.55) * 0.05 * idle;
+      // 躯干跟着摆臂反向扭一点：手臂 + 躯干一起动，跑起来才「有劲」
+      spine.rotation.y = Math.sin(st.t * 0.55) * 0.05 * idle - swing * 0.09 * b;
       head.rotation.x = -0.03 * b + Math.sin(st.t * 1.3) * 0.02 * idle;
       head.rotation.y = Math.sin(st.t * 0.8) * 0.07 * idle;
       head.rotation.z = -swing * 0.05 * b;
@@ -385,8 +388,8 @@ function makeFrogObject(parts) {
         atkT = Math.max(0, atkT - dt);
         const p = attackPose(1 - atkT / ATK.dur);
         armR.rotation.x += p.arm;
-        armL.rotation.x += p.arm * 0.28;          // 另一只手跟着甩一点，别太僵
-        armR.rotation.z += Math.sin((1 - atkT / ATK.dur) * Math.PI) * 0.16;
+        armL.rotation.x += p.arm * 0.40;          // 另一只手跟着甩一点，别太僵
+        armR.rotation.z += Math.sin((1 - atkT / ATK.dur) * Math.PI) * 0.26;
         tilt.rotation.x += p.lean;
         tilt.position.z = p.lunge;
         spine.rotation.y += p.twist;
@@ -452,8 +455,8 @@ export function buildFallbackFrog() {
       if (atkT > 0) {
         atkT = Math.max(0, atkT - dt);
         const push = Math.sin((1 - atkT / ATK.dur) * Math.PI);
-        tilt.position.z = push * 0.22;
-        tilt.rotation.x -= push * 0.3;
+        tilt.position.z = push * 0.34;
+        tilt.rotation.x -= push * 0.46;
       } else {
         tilt.position.z = 0;
       }

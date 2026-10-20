@@ -22,7 +22,8 @@ import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js';
 const ORBIT_R = 1.7;
 const SWORD_LEN = 1.25;        // 剑的世界长度（模型原始 ~0.45）
 const SWORD_TILT = 0.62;       // 剑刃上翘角（弧度，≈35°）：顶视角下平躺的剑只剩一条线，翘起来才看得见
-const SWORD_HIT_R = 0.55;      // 剑刃判定半径（再加怪的碰撞半径）
+const SWORD_SCALE = 1.4;       // 剑身整体放大倍率（用户：命中太困难，体积放大 1.4 倍）
+const SWORD_HIT_R = 0.55 * SWORD_SCALE;  // 剑刃判定半径（0.77；再加怪的碰撞半径）
 const FLY_SPEED = 15;          // 射出的飞行速度
 const FLY_MAX_DIST = 30;       // 飞行最大距离（出场地就散掉）
 const FLY_Y = 0.85;            // 飞行/环绕高度
@@ -90,6 +91,7 @@ export function createWeaponSystem({ scene, stats, fx, enemies }) {
     }
     const holder = new THREE.Group();
     const model = template.clone(true);
+    model.scale.multiplyScalar(SWORD_SCALE);   // 剑身放大 1.4 倍（与判定半径同步）
     // 刃口 +Y → 转到 +X 再上翘 SWORD_TILT（顶视角下平躺的剑只有一条线）
     model.rotation.z = -Math.PI / 2 + SWORD_TILT;
     holder.add(model);
@@ -114,24 +116,33 @@ export function createWeaponSystem({ scene, stats, fx, enemies }) {
   }
 
   // ---------------- 技能：万剑齐发 ----------------
-  // 剑沿各自当前的外侧方向射出（环上均匀分布 → 天然散开一圈）。
+  // 按一下：环上现有 n 把剑全部射出，同时在每两把之间「插入」一把，
+  // 合计射出 2n 把（角度间隔减半，覆盖面翻倍）—— 用户定案的命中手感修正。
+  // 插入的剑是从对象池里临时取的，飞完/命中就回池，不影响环上的计数。
   // 没有冷却：有剑就能放，放完 count = 0 等恢复。
   function fire(getPlayerPos) {
     if (!granted || count === 0) return false;
     const p = getPlayerPos();
-    // 剑沿各自当前的外侧方向射出：环上均匀分布 → 天然散开一圈。
-    // 原点记发射瞬间的位置，之后与主角移动无关。
     const n = orbiting.length;
+    if (n === 0) return false;
+    const step = (Math.PI * 2) / n;
+    // 原点记发射瞬间的位置，之后与主角移动无关。
+    // 1) 原有的 n 把：沿各自朝向
     for (let i = 0; i < n; i++) {
-      const a = orbitAngle + (i * Math.PI * 2) / Math.max(1, n);
+      const a = orbitAngle + i * step;
       flyers.push({ holder: orbiting[i].holder, a, ox: p.x, oz: p.z, dist: 0, spin: -a });
+    }
+    // 2) 插入的 n 把：角度落在原来两把的正中间
+    for (let i = 0; i < n; i++) {
+      const a = orbitAngle + i * step + step / 2;
+      flyers.push({ holder: acquire(), a, ox: p.x, oz: p.z, dist: 0, spin: -a });
     }
     orbiting.length = 0;
     count = 0;
     regenT = 0;
     if (fx) {
       fx.ring(p, { from: 0.3, to: ORBIT_R + 1.2, color: 0x9fe8ff, life: 0.4, opacity: 0.9, y: 0.07 });
-      fx.burst(p, { color: 0xbff2ff, count: 18, speed: 5.5, life: 0.5, size: 0.14, y: FLY_Y, up: 1.2, gravity: 3 });
+      fx.burst(p, { color: 0xbff2ff, count: 24, speed: 6.5, life: 0.5, size: 0.14, y: FLY_Y, up: 1.2, gravity: 3 });
     }
     return true;
   }

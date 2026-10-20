@@ -272,7 +272,8 @@ async function boot() {
 
   let enemyLoadOk = true;
   try {
-    await enemies.preload(['minion', 'warrior'], (p) => setProgress(0.55 + p * 0.42));
+    // 三种怪都要预载：投手（远程）第 11 回合登场，模型 655KB
+    await enemies.preload(['minion', 'warrior', 'archer'], (p) => setProgress(0.55 + p * 0.42));
   } catch (err) {
     enemyLoadOk = false;
     console.warn('[怪物] 模型加载失败：', err);
@@ -730,6 +731,7 @@ async function boot() {
       getState: () => gameState,
       getKills: () => kills,
       getElapsed: () => elapsed,
+      getShots: () => enemies.shotCount(),
       setPanel: (open) => setPanel(open),
       isPanelOpen: () => panelOpen,
       // 开局 / 教程 / 武器卡（自动化测试用）
