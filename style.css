@@ -141,15 +141,15 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
 #waveToast span{font-size:11.5px;letter-spacing:.1em;color:rgba(196,238,220,.75)}
 
 /* ---------------- 受击红闪 ---------------- */
-/* ---------------- 技能栏（右下角 3 行 2 列） ----------------
-   默认隐藏，获得第一件武器后 .on 淡入；
-   .sk.ready = 有剑可放（亮起可点），.sk.spent = 剑全被消耗（灰着等恢复），
-   .sk-cd 是底部的恢复进度条（下一把剑攒了多少）。 */
+/* ---------------- 技能栏（右下角，一栏纯技能键） ----------------
+   默认隐藏，有技能可用后 .on 淡入；一格一个技能，从下往上排
+   （第一格贴着拇指）。.sk.ready = 现在能放，.sk.spent = 不能放（灰着），
+   .sk-cd 是底部的冷却/恢复进度条。 */
 #skillBar{position:fixed;right:calc(14px + env(safe-area-inset-right));
   bottom:calc(16px + env(safe-area-inset-bottom));z-index:7;
-  display:none;grid-template-columns:repeat(2,58px);gap:10px;
+  display:none;flex-direction:column-reverse;gap:10px;
   pointer-events:none}
-#skillBar.on{display:grid;pointer-events:auto}
+#skillBar.on{display:flex;pointer-events:auto}
 .sk{position:relative;width:58px;height:58px;border-radius:14px;overflow:hidden;
   border:1px solid rgba(126,235,196,.22);background:rgba(6,18,16,.62);
   display:flex;align-items:center;justify-content:center;padding:0;
@@ -157,7 +157,6 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
   transition:border-color .15s ease,box-shadow .15s ease,transform .08s ease}
 .sk img{width:36px;height:36px;opacity:.42;transition:opacity .15s ease,filter .15s ease;
   filter:drop-shadow(0 0 6px rgba(0,0,0,.6));pointer-events:none}
-.sk.empty{border-style:dashed;border-color:rgba(126,235,196,.12);background:rgba(6,18,16,.34)}
 .sk{touch-action:none}
 .sk.ready{border-color:rgba(126,235,196,.65);cursor:pointer;
   box-shadow:0 4px 14px rgba(0,0,0,.4),0 0 18px rgba(110,240,220,.28)}
@@ -476,22 +475,14 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
 .mute-btn.off{opacity:.62;border-color:rgba(255,140,120,.32)}
 .mute-btn:focus-visible{outline:2px solid rgba(126,235,196,.6);outline-offset:2px}
 
-/* ---------------- 技能栏 · 元素剑槽（只展示，不可点） ---------------- */
-.sk.sword{border-style:solid;border-color:rgba(126,235,196,.16);background:rgba(6,18,16,.5)}
-.sk.sword.off{border-style:dashed;border-color:rgba(126,235,196,.1);
-  background:rgba(6,18,16,.3);opacity:.55}
-.sk.sword img{opacity:.85;filter:drop-shadow(0 0 5px rgba(0,0,0,.6))}
-.sk .sk-n{position:absolute;right:4px;bottom:2px;font-size:10px;font-weight:700;
-  color:#e8fff6;font-family:ui-monospace,Menlo,Consolas,monospace;
-  text-shadow:0 1px 3px rgba(0,0,0,.9);pointer-events:none}
-
 /* ---------------- 随机事件卡 ---------------- */
 .event-card{position:fixed;inset:0;z-index:17;display:flex;align-items:center;justify-content:center;
   padding:24px;background:rgba(2,7,6,.7);
   backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);
   opacity:0;pointer-events:none;transition:opacity .22s ease}
 .event-card.on{opacity:1;pointer-events:auto}
-.ev-box{width:min(92vw,430px);padding:20px 20px 15px;border-radius:20px;text-align:center;
+.ev-box{width:min(92vw,430px);max-height:calc(100dvh - 36px);overflow-y:auto;
+  padding:20px 20px 15px;border-radius:20px;text-align:center;
   border:1px solid rgba(214,188,120,.34);
   background:
     radial-gradient(circle at 50% 0%,rgba(214,178,102,.14),rgba(0,0,0,0) 56%),
@@ -504,7 +495,27 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
   text-shadow:0 0 18px rgba(255,214,130,.32)}
 .ev-story{margin-top:10px;font-size:12.5px;line-height:1.9;color:rgba(224,212,180,.8);
   text-align:left;white-space:pre-line}
+.ev-story:empty{display:none}
 .ev-who{margin-top:5px;font-size:10.5px;letter-spacing:.1em;color:rgba(214,188,120,.62)}
+
+/* 对话记录（第 10 块）：左边是对方，右边是你，通栏一行是旁白；
+   新一句从下方淡入，自己往下滚（最多占 40vh，不把选项挤出屏幕） */
+.ev-talk{display:none;margin-top:11px;flex-direction:column;gap:7px;
+  max-height:min(40vh,290px);overflow-y:auto;overscroll-behavior:contain;
+  text-align:left;padding-right:3px;scrollbar-width:thin;
+  -webkit-overflow-scrolling:touch}
+.ev-talk.on{display:flex}
+.tl{max-width:90%;font-size:12.5px;line-height:1.75;border-radius:11px;padding:7px 10px;
+  animation:tlIn .18s ease both}
+.tl b{display:block;margin-bottom:2px;font-size:9.5px;letter-spacing:.14em;
+  font-weight:700;opacity:.62}
+.tl.npc{align-self:flex-start;border:1px solid rgba(214,188,120,.26);
+  background:rgba(48,42,25,.62);color:#f2e4c4;border-bottom-left-radius:4px}
+.tl.me{align-self:flex-end;border:1px solid rgba(126,235,196,.28);
+  background:rgba(14,42,35,.72);color:#d8ffef;border-bottom-right-radius:4px}
+.tl.nar{align-self:stretch;max-width:100%;font-size:11.5px;line-height:1.8;
+  color:rgba(202,190,158,.66);background:none;border:none;padding:0 2px}
+@keyframes tlIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
 .ev-effect{margin-top:11px;display:flex;flex-wrap:wrap;gap:5px;justify-content:center}
 .ev-effect:empty{display:none}
 .ev-effect span{padding:3px 9px;border-radius:8px;font-size:11px;

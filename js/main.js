@@ -17,13 +17,15 @@ import { createLevel1, LEVEL_1 } from './wave.js';
 import { createRangeRing } from './rangeRing.js';
 import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES } from './upgrade.js';
 import { createWeaponSystem } from './weapon.js';
-import { SWORD_KINDS, KIND_ORDER } from './swordKinds.js';
+import { SWORD_KINDS } from './swordKinds.js';
 import { createGoldSystem } from './gold.js';
 import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW } from './shop.js';
 import audio from './audio.js';
+import { SKILLS, visibleSkills, skillForKey } from './skills.js';
 import {
   EVENTS, ALL_EVENTS, getEventById, pickEvent, effectLines,
   choiceHint, canAfford, costShort, REP_MIN, REP_MAX, REP_START,
+  isTalk, eventChoices, resolveRoll, mergeEffects,
 } from './events.js';
 
 // 标记模块已经跑起来了：index.html 的兜底自检靠它判断
@@ -638,70 +640,86 @@ async function boot() {
     if (next) next();
   }
 
-  // ---------------- 技能栏（右下角 6 格） ----------------
-  // 第 1 格「万剑齐发」可点；第 2~6 格展示拥有的元素剑（按获得顺序，只展示不可点）。
+  // ---------------- 技能栏（右下角，一栏纯技能键） ----------------
+  // 第 10 块：不再摆元素剑数量（属性面板里能看到），只保留「能放什么」。
+  // 每个技能 = 一个按钮，按 skills.js 的注册顺序从下往上排；
+  // 加技能只改 skills.js，这里一行都不用动。
   const skillBar = document.getElementById('skillBar');
-  const sk0 = document.getElementById('sk0');
-  const skCdEl = sk0.querySelector('.sk-cd');
-  const skSlots = [1, 2, 3, 4, 5].map((i) => document.getElementById('sk' + i));
-  let lastKindsKey = '';   // 剑槽 DOM 重建的缓存键（renderSkill 每帧跑，别每帧动 DOM）
+  const skillBtns = new Map();     // id → { btn, cd }
+
+  function buildSkillButtons() {
+    skillBar.textContent = '';
+    skillBtns.clear();
+    for (const sk of SKILLS) {
+      const btn = document.createElement('button');
+      btn.className = 'sk';
+      btn.type = 'button';
+      btn.dataset.skill = sk.id;
+      btn.setAttribute('aria-label', sk.name);
+      btn.title = sk.name + (sk.key ? `（键盘 ${sk.key}）` : '') + '\n' + (sk.hint || '');
+
+      const img = document.createElement('img');
+      img.src = sk.icon;
+      img.alt = '';
+      img.draggable = false;
+      const cd = document.createElement('i');
+      cd.className = 'sk-cd';
+      btn.append(img, cd);
+
+      // 技能键用 pointerdown 而不是 click：
+      // 手机上一根手指正在推摇杆时，第二根手指点按钮，iOS Safari 不会派发 click。
+      let lastPress = 0;
+      const onPress = (e) => {
+        if (e && e.cancelable) e.preventDefault();
+        const now = performance.now();
+        if (now - lastPress < 120) return;      // pointerdown + click 双触发
+        lastPress = now;
+        pressSkill(sk);
+      };
+      btn.addEventListener('pointerdown', onPress);
+      if (!window.PointerEvent) btn.addEventListener('click', onPress);
+
+      skillBar.appendChild(btn);
+      skillBtns.set(sk.id, { btn, cd, sk });
+    }
+    renderSkill();      // 先把该藏起来的藏起来（没环剑时第一格也不该露头）
+  }
+
+  // 传给技能的条件/上下文（每帧现拼，技能自己决定看不看）
+  function skillCtx() {
+    return { playing: gameState === 'playing', weapon, playerPos: pos, stats, coins };
+  }
 
   function renderSkill() {
-    skillBar.classList.toggle('on', weapon.granted);
-    const ready = weapon.granted && weapon.count > 0 && gameState === 'playing';
-    sk0.classList.toggle('ready', ready);
-    sk0.classList.toggle('spent', weapon.granted && weapon.count === 0);
-    // 底部恢复进度条：下一把剑攒了多少
-    skCdEl.style.height = (weapon.regenProgress * 100).toFixed(1) + '%';
-
-    // 元素剑槽：显示每种剑的图标与数量，按获得顺序排位（5 种刚好排满）
-    const kinds = weapon.kindCounts();
-    const key = kinds.map((k) => k.kind + k.n).join(',');
-    if (key === lastKindsKey) return;
-    lastKindsKey = key;
-    for (let i = 0; i < skSlots.length; i++) {
-      const slot = skSlots[i];
-      const entry = kinds[i];
-      if (!entry) {
-        slot.classList.add('off');
-        slot.textContent = '';
-        continue;
-      }
-      slot.classList.remove('off');
-      slot.textContent = '';
-      const img = document.createElement('img');
-      img.src = SWORD_KINDS[entry.kind].icon;
-      img.alt = SWORD_KINDS[entry.kind].name;
-      img.draggable = false;
-      const n = document.createElement('span');
-      n.className = 'sk-n';
-      n.textContent = '×' + entry.n;
-      slot.title = SWORD_KINDS[entry.kind].name + ' · ' + SWORD_KINDS[entry.kind].tagline;
-      slot.append(img, n);
+    const ctx = skillCtx();
+    const list = visibleSkills(ctx);
+    skillBar.classList.toggle('on', list.length > 0);
+    for (const { btn, cd, sk } of skillBtns.values()) {
+      const shown = list.includes(sk);
+      btn.style.display = shown ? '' : 'none';
+      if (!shown) continue;
+      const ready = !!sk.ready(ctx);
+      btn.classList.toggle('ready', ready);
+      btn.classList.toggle('spent', !ready);
+      const p = sk.progress ? Math.max(0, Math.min(1, sk.progress(ctx) || 0)) : 0;
+      cd.style.height = (p * 100).toFixed(1) + '%';
     }
   }
 
-  function tryFireSwords() {
-    if (gameState !== 'playing' || !weapon.granted || weapon.count === 0) return;
-    audio.sfx('swordFire');
-    weapon.fire(() => pos);
+  function pressSkill(sk) {
+    const ctx = skillCtx();
+    if (!sk.ready(ctx)) return false;
+    const okPressed = sk.press(ctx);
     renderSkill();
+    return !!okPressed;
   }
 
-  // 技能键用 pointerdown 而不是 click：
-  // 手机上一根手指正在推摇杆时，第二根手指点按钮，iOS Safari 不会派发 click，
-  // 表现就是「移动中技能点不动」。pointerdown 每根手指都会立刻触发。
-  let lastSkillPress = 0;
-  function onSkillPress(e) {
-    if (e && e.cancelable) e.preventDefault();
-    const now = performance.now();
-    if (now - lastSkillPress < 120) return;   // 防止 pointerdown + click 双触发
-    lastSkillPress = now;
-    tryFireSwords();
+  function pressSkillById(id) {
+    const sk = SKILLS.find((s) => s.id === id);
+    return sk ? pressSkill(sk) : false;
   }
-  sk0.addEventListener('pointerdown', onSkillPress);
-  // 极老的浏览器没有 Pointer Events，退回 click
-  if (!window.PointerEvent) sk0.addEventListener('click', onSkillPress);
+
+  buildSkillButtons();
 
   // ---------------- 开始界面 / 新手教程 / 武器获得卡 ----------------
   function showTitle() {
@@ -867,7 +885,11 @@ async function boot() {
     if (e.key === 'm' || e.key === 'M') {          // M 也能静音 / 恢复
       audio.toggleMute();
       renderMute();
+      return;
     }
+    // 数字键 = 技能快捷键（1 对应第一格，往后类推）
+    const sk = skillForKey(e.key);
+    if (sk && gameState === 'playing') pressSkill(sk);
   }, { once: false });
 
   document.getElementById('tutYes').addEventListener('click', () => beginGame({ tutorial: true }));
@@ -918,6 +940,7 @@ async function boot() {
   const evResult = document.getElementById('evResult');
   const evSay = document.getElementById('evSay');
   const evResultLines = document.getElementById('evResultLines');
+  const evTalk = document.getElementById('evTalk');       // 对话记录（第 10 块）
   const evNext = document.getElementById('evNext');
 
   let eventOpen = false;
@@ -993,38 +1016,53 @@ async function boot() {
     }
   }
 
+  // 一个选项按钮（一次抉择 / 对话回话共用）：label + hint，付不起就灰着
+  function makeChoiceBtn(choice, onClick) {
+    const btn = document.createElement('button');
+    btn.className = 'ev-btn';
+    btn.type = 'button';
+    btn.dataset.id = choice.label;
+
+    const b = document.createElement('b');
+    b.textContent = choice.label;
+    btn.appendChild(b);
+
+    const hint = document.createElement('i');
+    hint.className = 'ev-hint';
+    const affordable = canAfford(choice, { gold: coins, hp: stats.hp.cur });
+    hint.textContent = affordable ? choiceHint(choice) : `需要 ${costShort(choice)}（不够）`;
+    if (!affordable) {
+      btn.disabled = true;
+      btn.classList.add('locked');
+    }
+    btn.appendChild(hint);
+
+    btn.addEventListener('click', () => onClick(choice));
+    return btn;
+  }
+
   function renderEventUI(ev) {
     evIcon.textContent = ev.icon || '❔';
     evTitle.textContent = ev.title || '夜行奇遇';
     if (evWho) evWho.textContent = ev.who ? '—— ' + ev.who : '';
-    evStory.textContent = ev.story || '';
     evEffect.textContent = '';
     evResult.classList.remove('on');
     evChoices.textContent = '';
+    evSay.style.display = '';
+
+    // 对话式事件：故事先当旁白说一句，然后开始一拍一拍地聊
+    if (isTalk(ev)) {
+      evStory.textContent = '';
+      startTalk(ev);
+      return;
+    }
+    evStory.textContent = ev.story || '';
+    evTalk.textContent = '';
+    evTalk.classList.remove('on');
 
     if (ev.choices && ev.choices.length) {
       for (const c of ev.choices) {
-        const btn = document.createElement('button');
-        btn.className = 'ev-btn';
-        btn.type = 'button';
-        btn.dataset.id = c.label;
-
-        const b = document.createElement('b');
-        b.textContent = c.label;
-        btn.appendChild(b);
-
-        const hint = document.createElement('i');
-        hint.className = 'ev-hint';
-        const affordable = canAfford(c, { gold: coins, hp: stats.hp.cur });
-        hint.textContent = affordable ? choiceHint(c) : `需要 ${costShort(c)}（不够）`;
-        if (!affordable) {
-          btn.disabled = true;
-          btn.classList.add('locked');
-        }
-        btn.appendChild(hint);
-
-        btn.addEventListener('click', () => chooseEventOption(ev, c));
-        evChoices.appendChild(btn);
+        evChoices.appendChild(makeChoiceBtn(c, (x) => chooseEventOption(ev, x)));
       }
     } else {
       // 兼容无选项的旧事件：直接给一条效果说明 + 继续
@@ -1040,7 +1078,93 @@ async function boot() {
     }
   }
 
-  // 打开事件卡：世界冻结，等玩家看完 / 选完
+  // ---------------- 对话式事件（第 10 块） ----------------
+  // 记录是逐句往下长的：旁白 / 对方 / 你，像真的在跟人说话。
+  // 每一拍选的效果先累积（mergeEffects），全部聊完一次性结算成一张账单；
+  // 金币、生命这种「当场就掏」的代价，选了就扣。
+  let talk = null;     // { ev, beat, acc, paid[], chains[] }
+
+  function talkLine(cls, who, text) {
+    if (!text) return;
+    const row = document.createElement('div');
+    row.className = 'tl ' + cls;
+    if (who) {
+      const b = document.createElement('b');
+      b.textContent = who;
+      row.appendChild(b);
+    }
+    const sp = document.createElement('span');
+    sp.textContent = text;
+    row.appendChild(sp);
+    evTalk.appendChild(row);
+    evTalk.scrollTop = evTalk.scrollHeight;
+  }
+
+  function startTalk(ev) {
+    talk = { ev, beat: 0, acc: {}, paid: [], chains: [] };
+    evChoices.textContent = '';
+    evResult.classList.remove('on');
+    evTalk.textContent = '';
+    evTalk.classList.add('on');
+    if (ev.story) talkLine('nar', '', ev.story);
+    renderTalkBeat();
+  }
+
+  function renderTalkBeat() {
+    const beat = talk.ev.talk[talk.beat];
+    if (!beat) { finishTalk(); return; }
+    // 上一句「对方的反应」如果还有话要说，就并进这一拍，别刷出两条连着的同人气泡
+    const say = (talk.pendingClose ? talk.pendingClose + '\n' : '') + (beat.say || '');
+    talk.pendingClose = '';
+    talkLine('npc', beat.who || talk.ev.who || '', say);
+    evChoices.textContent = '';
+    for (const r of beat.replies || []) {
+      evChoices.appendChild(makeChoiceBtn(r, (x) => chooseTalkReply(x)));
+    }
+    evTalk.scrollTop = evTalk.scrollHeight;
+  }
+
+  function chooseTalkReply(reply) {
+    if (!eventOpen || !talk) return;
+    if (!canAfford(reply, { gold: coins, hp: stats.hp.cur })) return;
+
+    const cost = reply.cost || {};
+    if (cost.gold) { addCoins(-cost.gold); talk.paid.push(`金币 -${cost.gold}（已付）`); }
+    if (cost.hp) {
+      stats.hp.cur = Math.max(0.5, stats.hp.cur - cost.hp);
+      talk.paid.push(`生命 -${cost.hp.toFixed(1)}（已付）`);
+    }
+
+    if (reply.say) talkLine('me', '你', reply.say);
+    mergeEffects(talk.acc, resolveRoll(reply.effects));
+    if (reply.chain) talk.chains.push(reply.chain);
+
+    if (reply.go != null) {           // 还有下一拍：把「反应」并到下一句里
+      if (reply.close) talk.pendingClose = reply.close;
+      talk.beat = reply.go;
+      renderTalkBeat();
+      return;
+    }
+    if (reply.close) talkLine('npc', talk.ev.who || '', reply.close);
+    finishTalk();
+  }
+
+  function finishTalk() {
+    const nextRound = currentEventRound + 1;
+    applyEffects(talk.acc, nextRound);
+    for (const ch of talk.chains) {
+      laterQueue.push({ due: currentEventRound + ch.in, kind: 'event', id: ch.id });
+    }
+    evChoices.textContent = '';
+    evSay.textContent = '';
+    evSay.style.display = 'none';     // 话都在记录里说完了，别留一条空竖线
+    const lines = talk.paid.concat(effectLines(talk.acc));
+    fillLines(evResultLines, lines.length ? lines : ['这一夜，什么也没发生']);
+    evResult.classList.add('on');
+    evTalk.scrollTop = evTalk.scrollHeight;
+  }
+
+  // 打开事件卡：世界冻结，等玩家看完 / 选完 / 聊完
   function openEvent(ev, endedRound, next) {
     gameState = 'event';
     input.joystick.release();
@@ -1074,6 +1198,7 @@ async function boot() {
 
     // 结果页：角色说一句 + 这一选到底改了什么
     evChoices.textContent = '';
+    evSay.style.display = '';
     evSay.textContent = choice.say || '';
     const lines = effectLines(choice.effects || {});
     if (cost.gold) lines.unshift(`金币 -${cost.gold}（已付）`);
@@ -1090,6 +1215,10 @@ async function boot() {
     evCard.classList.remove('on');
     evCard.setAttribute('aria-hidden', 'true');
     evResult.classList.remove('on');
+    evTalk.classList.remove('on');
+    evTalk.textContent = '';
+    evSay.style.display = '';
+    talk = null;
     if (gameState === 'event') gameState = 'playing';
     const next = eventNextCb;
     eventNextCb = null;
@@ -1399,8 +1528,19 @@ async function boot() {
         };
         requestAnimationFrame(step);
       }),
-      fireSwords: tryFireSwords,
+      fireSwords: () => pressSkillById('swordRain'),
       renderSkill,
+      // 技能栏（第 10 块）：注册表 + 当前每一格的状态
+      skillList: () => SKILLS.map((sk) => ({ id: sk.id, name: sk.name, key: sk.key || '' })),
+      visibleSkills: () => visibleSkills(skillCtx()).map((sk) => sk.id),
+      pressSkill: (id) => pressSkillById(id),
+      skillState: () => [...skillBar.querySelectorAll('.sk')].map((b) => ({
+        id: b.dataset.skill,
+        shown: b.style.display !== 'none',
+        ready: b.classList.contains('ready'),
+        spent: b.classList.contains('spent'),
+        cd: b.querySelector('.sk-cd') ? b.querySelector('.sk-cd').style.height : '',
+      })),
       getYaw: () => yaw,
       getState: () => gameState,
       getKills: () => kills,
@@ -1480,6 +1620,25 @@ async function boot() {
         all: ALL_EVENTS,
         get queue() { return laterQueue.map((q) => ({ due: q.due, id: q.id })); },
         get currentRound() { return currentEventRound; },
+        // 对话式事件（第 10 块）：现在拍到第几拍、说过哪些话、这一拍能回什么
+        get isTalk() { return !!(talk && talk.ev); },
+        get beat() { return talk ? talk.beat : -1; },
+        get talkEvent() { return talk ? talk.ev.id : null; },
+        get replies() {
+          return [...evChoices.querySelectorAll('.ev-btn b')].map((b) => b.textContent);
+        },
+        get transcript() {
+          return [...evTalk.querySelectorAll('.tl')].map((r) => {
+            const b = r.querySelector('b');
+            const sp = r.querySelector('span');
+            return {
+              cls: (r.className || '').replace('tl ', ''),
+              who: b ? b.textContent : '',
+              text: sp ? sp.textContent : '',
+            };
+          });
+        },
+        get acc() { return talk ? JSON.parse(JSON.stringify(talk.acc)) : null; },
       },
       // 回合临时效果的生命周期（测试用：看它挂在第几回合、能手动撤）
       get roundBuffSrc() { return roundBuffSrc; },
