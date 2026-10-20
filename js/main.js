@@ -14,7 +14,7 @@ import { createFx } from './fx.js';
 import { createEnemySystem } from './enemy.js';
 import { createLevel1, LEVEL_1 } from './wave.js';
 import { createRangeRing } from './rangeRing.js';
-import { rollChoices, applyUpgrade, upgradeText, UPGRADES } from './upgrade.js';
+import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES } from './upgrade.js';
 import { createWeaponSystem } from './weapon.js';
 
 // 标记模块已经跑起来了：index.html 的兜底自检靠它判断
@@ -166,12 +166,15 @@ async function boot() {
   // 关键属性（生命走血条，这里放三个最常看的）
   const KEY_STATS = ['attack', 'attackRange', 'moveSpeed'];
 
+  // 生命保留一位小数：再生/吸血是小数回复，取整会让玩家看不出在回血
+  const fmtHp = (v) => Math.max(0, v).toFixed(1);
+
   function renderHud() {
     const maxHp = stats.get('maxHp');
     const cur = stats.hp.cur;
     const ratio = maxHp > 0 ? Math.max(0, Math.min(1, cur / maxHp)) : 0;
 
-    hpCurEl.textContent = Math.ceil(cur);
+    hpCurEl.textContent = fmtHp(cur);
     hpMaxEl.textContent = Math.round(maxHp);
     hpFillEl.style.width = (ratio * 100).toFixed(1) + '%';
     hpBarEl.classList.toggle('low', ratio <= 0.25);
@@ -193,7 +196,7 @@ async function boot() {
 
   // 属性面板：每次打开时重建，数值永远是最新的
   function renderPanel() {
-    apSub.textContent = `生命 ${Math.ceil(stats.hp.cur)} / ${Math.round(stats.get('maxHp'))} · 共 ${STAT_DEFS.length} 项`;
+    apSub.textContent = `生命 ${fmtHp(stats.hp.cur)} / ${Math.round(stats.get('maxHp'))} · 共 ${STAT_DEFS.length} 项 · 已暂停`;
     apList.textContent = '';
     for (const def of STAT_DEFS) {
       const row = document.createElement('div');
@@ -217,6 +220,7 @@ async function boot() {
     panelOpen = open;
     if (open) {
       input.joystick.release();   // 面板盖住屏幕，别让摇杆一直输出
+      vel.set(0, 0, 0);           // 暂停时不留残余速度，关掉面板不会突然窜出去
       renderPanel();
       apPanel.classList.add('on');
       apPanel.setAttribute('aria-hidden', 'false');
@@ -375,11 +379,29 @@ async function boot() {
       effect.className = 'up-effect';
       effect.textContent = up.title;
 
+      // 精确的「原值 → 选后值」：用 stats.preview 算，和真选下去的数字完全一致
+      const delta = document.createElement('div');
+      delta.className = 'up-delta';
+      for (const c of previewUpgrade(stats, up)) {
+        const row = document.createElement('span');
+        row.className = 'up-chg';
+        const label = document.createElement('i');
+        label.textContent = c.name;
+        const from = document.createElement('s');
+        from.textContent = c.fromText;
+        const arrow = document.createElement('em');
+        arrow.textContent = '→';
+        const to = document.createElement('b');
+        to.textContent = c.toText;
+        row.append(label, from, arrow, to);
+        delta.appendChild(row);
+      }
+
       const desc = document.createElement('span');
       desc.className = 'up-desc';
       desc.textContent = up.desc;
 
-      btn.append(glyph, name, effect, desc);
+      btn.append(glyph, name, effect, delta, desc);
       btn.addEventListener('click', () => chooseUpgrade(up));
       upList.appendChild(btn);
     }
@@ -482,7 +504,7 @@ async function boot() {
       ['击杀', kills + ' 只'],
       ['回合', `${roundShown} / ${level.totals.rounds}`],
       ['升级', `${upgradesTaken} 次`],
-      ['剩余生命', `${Math.max(0, Math.ceil(stats.hp.cur))} / ${Math.round(stats.get('maxHp'))}`],
+      ['剩余生命', `${fmtHp(stats.hp.cur)} / ${Math.round(stats.get('maxHp'))}`],
       ['攻击力', String(Math.round(stats.get('attack')))],
     ];
     for (const [k, v] of cells) {
@@ -509,6 +531,8 @@ async function boot() {
       getState: () => gameState,
       getKills: () => kills,
       getElapsed: () => elapsed,
+      setPanel: (open) => setPanel(open),
+      isPanelOpen: () => panelOpen,
       hurt: (n) => hurtPlayer(n),
       win: () => endGame(true),
       setPaused(p) { debugNoWaves = debugNoEnemies = !!p; },
@@ -554,7 +578,7 @@ async function boot() {
     let speed = 0;
     let speed01 = 0;
 
-    if (gameState === 'playing') {
+    if (gameState === 'playing' && !panelOpen) {
       elapsed += dt;
 
       // 1) 输入 → 目标速度（屏幕 y 向下 = 世界 +Z，相机在 +Z 方向看向场景）
@@ -603,9 +627,9 @@ async function boot() {
       renderSkill();
       if (stats.hp.cur < stats.get('maxHp')) stats.heal(stats.get('hpRegen') * dt);
       if (iframe > 0) iframe -= dt;
-    } else if (gameState === 'upgrade') {
-      // 三选一面板打开：怪物/波次/计时全冻结，只留奶蛙的待机呼吸，
-      // 不然整个世界像被按了暂停键一样僵住。
+    } else if (gameState === 'upgrade' || (panelOpen && gameState === 'playing')) {
+      // 三选一面板 / 属性面板打开：怪物、波次、计时、环剑全冻结，
+      // 只留奶蛙的待机呼吸，不然整个世界像被按了暂停键一样僵住。
       frog.update(dt, 0);
     } else {
       // 结算后：失败就慢慢侧倒，胜利保持站姿待机

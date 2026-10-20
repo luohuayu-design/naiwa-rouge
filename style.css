@@ -217,12 +217,22 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
 .up-item:hover{border-color:rgba(126,235,196,.42);background:rgba(126,235,196,.1);
   box-shadow:0 6px 20px rgba(0,0,0,.28)}
 .up-item:active{transform:scale(.985)}
-.up-glyph{grid-row:1/3;width:38px;height:38px;display:flex;align-items:center;justify-content:center;
+.up-glyph{grid-row:1/5;width:38px;height:38px;display:flex;align-items:center;justify-content:center;
   border-radius:11px;font-size:17px;line-height:1;
   border:1px solid rgba(126,235,196,.28);background:rgba(126,235,196,.08);color:#9df3cd}
 .up-name{font-size:13px;font-weight:700;letter-spacing:.1em;color:#e2fff4}
 .up-effect{grid-column:2;font-size:12px;letter-spacing:.02em;color:#9df3cd;
   font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+/* 精确的「原值 → 选后值」：旧值划掉、新值高亮 */
+.up-delta{grid-column:2;display:flex;flex-wrap:wrap;gap:3px 8px;margin-top:1px}
+.up-chg{display:inline-flex;align-items:baseline;gap:4px;padding:2px 7px;border-radius:7px;
+  font-size:11px;line-height:1.5;background:rgba(126,235,196,.07);
+  border:1px solid rgba(126,235,196,.13);
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.up-chg i{font-style:normal;color:rgba(178,214,200,.72);letter-spacing:.02em}
+.up-chg s{text-decoration:line-through;color:rgba(150,190,176,.55)}
+.up-chg em{font-style:normal;color:rgba(150,196,180,.6);font-size:10px}
+.up-chg b{color:#a8ffdb;font-weight:700}
 .up-desc{grid-column:2;font-size:10.5px;line-height:1.45;color:rgba(152,198,182,.52)}
 .up-foot{padding:4px 18px 15px;text-align:center;font-size:10px;
   letter-spacing:.06em;color:rgba(140,190,172,.4)}
@@ -231,15 +241,20 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
 .up-item[data-tag="atk"]:hover{border-color:rgba(255,206,120,.5);background:rgba(255,190,90,.11)}
 .up-item[data-tag="atk"] .up-glyph{color:#ffd166;border-color:rgba(255,206,120,.38);background:rgba(255,190,90,.1)}
 .up-item[data-tag="atk"] .up-effect{color:#ffd98a}
+.up-item[data-tag="atk"] .up-chg{border-color:rgba(255,206,120,.2);background:rgba(255,190,90,.08)}
+.up-item[data-tag="atk"] .up-chg b{color:#ffdf9a}
 .up-item[data-tag="mov"]{border-color:rgba(150,205,255,.22);background:rgba(120,180,255,.05)}
 .up-item[data-tag="mov"]:hover{border-color:rgba(150,205,255,.46);background:rgba(120,180,255,.1)}
 .up-item[data-tag="mov"] .up-glyph{color:#a6d7ff;border-color:rgba(150,205,255,.36);background:rgba(120,180,255,.09)}
 .up-item[data-tag="mov"] .up-effect{color:#b6ddff}
+.up-item[data-tag="mov"] .up-chg{border-color:rgba(150,205,255,.2);background:rgba(120,180,255,.08)}
+.up-item[data-tag="mov"] .up-chg b{color:#c3e4ff}
 @media (min-width:620px){
   .up-list{flex-direction:row}
   .up-item{flex:1 1 0;grid-template-columns:1fr;text-align:center;justify-items:center;gap:6px}
   .up-glyph{grid-row:auto;width:44px;height:44px;font-size:20px}
-  .up-effect,.up-desc{grid-column:auto}
+  .up-effect,.up-delta,.up-desc{grid-column:auto}
+  .up-delta{justify-content:center}
   .up-desc{min-height:30px}
 }
 @media (max-height:560px){

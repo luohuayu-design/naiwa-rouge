@@ -150,10 +150,31 @@ export function applyUpgrade(stats, up, serial = 0) {
       key: m.stat,
       name: def ? def.name : m.stat,
       from, to,
+      fromText: def ? def.fmt(from) : String(from),
+      toText: def ? def.fmt(to) : String(to),
       text: def ? `${def.fmt(from)} → ${def.fmt(to)}` : '',
     };
   });
   return { src, changes };
+}
+
+// 预演一张升级：返回与 applyUpgrade 同结构的 changes，但不改任何状态。
+// 三选一卡片上的「1 → 2」就是用它算的，所以点下去之后数值一定与预览一致。
+export function previewUpgrade(stats, up) {
+  const list = [up, up.extra].filter(Boolean);
+  return list.map((m) => {
+    const def = STAT_DEFS.find((d) => d.key === m.stat);
+    const from = stats.get(m.stat);
+    const to = stats.preview(m.stat, { flat: m.flat || 0, pct: m.pct || 0 });
+    return {
+      key: m.stat,
+      name: def ? def.name : m.stat,
+      from, to,
+      fromText: def ? def.fmt(from) : String(from),
+      toText: def ? def.fmt(to) : String(to),
+      text: def ? `${def.fmt(from)} → ${def.fmt(to)}` : '',
+    };
+  }).filter((c) => c.text);
 }
 
 // 一句话文案，例如「攻击力 1 → 2」

@@ -43,7 +43,7 @@ export const ENEMY_TYPES = {
     name: '骷髅小兵',
     file: 'assets/monsters/skeleton-minion.glb',
     sourceHeight: 1.05,    // 实测：头顶 ≈1.05
-    height: 1.42,          // 归一化后的身高（世界单位）
+    height: 1.14,          // 归一化后的身高（世界单位）
     radius: 0.38,          // 碰撞半径
     hp: 1,
     armor: 0,
@@ -63,7 +63,7 @@ export const ENEMY_TYPES = {
     name: '骷髅战士',
     file: 'assets/monsters/skeleton-warrior.glb',
     sourceHeight: 1.15,    // 实测：头顶（含盔缨）≈1.15
-    height: 1.72,
+    height: 1.38,
     radius: 0.50,
     hp: 3,
     armor: 0,
@@ -89,7 +89,7 @@ export const ENEMY_TYPES = {
     name: '骷髅投手', planned: true,
     file: 'assets/monsters/skeleton-rogue.glb',
     sourceHeight: 1.10,    // 未标定（估算），启用前必须按原点诊断法重测
-    height: 1.55, radius: 0.42, hp: 2, armor: 0, speed: 1.5,
+    height: 1.24, radius: 0.42, hp: 2, armor: 0, speed: 1.5,
     attackRange: 6.5,      // 射程属性
     keepDistance: 4.2,     // 太近会后退，保持风筝距离
     damage: 1, attackInterval: 2.0, windup: 0.5,
@@ -103,7 +103,7 @@ export const ENEMY_TYPES = {
     name: '骷髅巫师', planned: true,
     file: 'assets/monsters/skeleton-mage.glb',
     sourceHeight: 1.20,    // 未标定（估算），启用前必须按原点诊断法重测
-    height: 1.62, radius: 0.45, hp: 4, armor: 0, speed: 1.1,
+    height: 1.30, radius: 0.45, hp: 4, armor: 0, speed: 1.1,
     attackRange: 7.5, castTime: 1.6, damage: 1, attackInterval: 3.2,
     aura: { radius: 4.5, haste: 0.3 },        // 给范围内小怪 +30% 攻速
     debuff: { key: 'slow', factor: 0.55, duration: 3 },  // 主角移速 ×0.55
@@ -124,8 +124,9 @@ function lerpAngle(a, b, t) {
 // 怪物血条：一张 96×12 的 canvas 贴图 + Sprite，受伤才显示
 // ------------------------------------------------------------
 function createBar(cfg) {
+  const W = 168, H = 42;
   const cv = document.createElement('canvas');
-  cv.width = 128; cv.height = 16;
+  cv.width = W; cv.height = H;
   const g = cv.getContext('2d');
   const tex = new THREE.CanvasTexture(cv);
   tex.colorSpace = THREE.SRGBColorSpace;
@@ -134,22 +135,36 @@ function createBar(cfg) {
   const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, depthTest: false });
   const spr = new THREE.Sprite(mat);
   // 头顶常驻血条：宽随身高、高固定。
-  // ⚠️ 必须抬到头顶上方约 0.6 —— 相机是俯视 45°，贴得太近会被怪自己的头挡住。
-  spr.scale.set(cfg.height * 1.0, 0.26, 1);
+  // ⚠️ 必须抬到头顶上方约 0.95 —— 相机是俯视 45°，贴得太近会被怪自己的头挡住。
+  const w = cfg.height * 1.18;
+  spr.scale.set(w, w * (H / W), 1);
   spr.position.y = cfg.height + 0.95;
   spr.visible = true;
   spr.renderOrder = 5;
 
-  function draw(ratio) {
+  // ratio：血量比例；hp/maxHp：条中间的数值（不传就只画条）
+  function draw(ratio, hp, maxHp) {
     const r = Math.max(0, Math.min(1, ratio));
-    g.clearRect(0, 0, 128, 16);
-    g.fillStyle = 'rgba(2,10,8,0.82)';
-    g.fillRect(0, 0, 128, 16);
-    g.strokeStyle = 'rgba(180,255,225,0.4)';
-    g.lineWidth = 1.5;
-    g.strokeRect(0.75, 0.75, 126.5, 14.5);
+    g.clearRect(0, 0, W, H);
+    g.fillStyle = 'rgba(2,10,8,0.86)';
+    g.fillRect(0, 0, W, H);
     g.fillStyle = r > 0.5 ? '#8ef7c8' : r > 0.25 ? '#ffd166' : '#ff7a66';
-    g.fillRect(3, 3, 122 * r, 10);
+    g.fillRect(3, 3, (W - 6) * r, H - 6);
+    g.strokeStyle = 'rgba(190,255,230,0.55)';
+    g.lineWidth = 2;
+    g.strokeRect(1, 1, W - 2, H - 2);
+
+    if (hp != null && maxHp != null) {
+      const txt = `${Math.max(0, Math.ceil(hp))}/${Math.ceil(maxHp)}`;
+      g.font = '700 24px ui-monospace,Menlo,Consolas,monospace';
+      g.textAlign = 'center';
+      g.textBaseline = 'middle';
+      g.lineWidth = 4;
+      g.strokeStyle = 'rgba(2,12,10,0.85)';
+      g.strokeText(txt, W / 2, H / 2 + 1);
+      g.fillStyle = r > 0.25 ? '#06231c' : '#2a0b06';
+      g.fillText(txt, W / 2, H / 2 + 1);
+    }
     tex.needsUpdate = true;
   }
   draw(1);
@@ -287,6 +302,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
     };
 
     // 出生：先播从地里钻出来的动画
+    bar.draw(1, maxHp, maxHp);
     e.currentAnim = cfg.anim.spawn;
     play(cfg.anim.spawn, { once: true, fade: 0.05, duration: cfg.spawnTime });
     if (fx) fx.spawnRing(e.pos, cfg.color);
@@ -301,7 +317,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
     e.hp -= amount;
     e.flashT = 0.1;
     e.bar.spr.visible = true;
-    e.bar.draw(e.hp / e.maxHp);
+    e.bar.draw(e.hp / e.maxHp, e.hp, e.maxHp);
     if (fx) {
       fx.hit(new THREE.Vector3(e.pos.x, 0.7, e.pos.z), crit ? 0xffe9a8 : e.cfg.color);
       fx.text({ x: e.pos.x, z: e.pos.z }, String(Math.max(1, Math.round(amount))), {

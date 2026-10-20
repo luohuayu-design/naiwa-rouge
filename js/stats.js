@@ -85,6 +85,19 @@ export function createStats() {
     mods.get(stat).push({ flat, pct: p, src });
   }
 
+  // 预演一个加成「如果加上去会变成多少」，不改任何状态。
+  // 公式与 get() 完全一致，所以三选一面板上显示的数字就是选完的真实数字。
+  function preview(key, { flat = 0, pct: p = 0 } = {}) {
+    const b = base[key] ?? 0;
+    let f = 0, pp = 0;
+    for (const m of mods.get(key) || []) {
+      f += m.flat || 0;
+      pp += m.pct || 0;
+    }
+    const v = (b + f + flat) * (1 + pp + p);
+    return v < 0 ? 0 : v;
+  }
+
   // 撤销某个来源的全部加成（升级重选、buff 到期用）
   function removeBySource(src) {
     for (const list of mods.values()) {
@@ -144,7 +157,7 @@ export function createStats() {
   }
 
   return {
-    base, get, addMod, removeBySource,
+    base, get, addMod, removeBySource, preview,
     hp, heal, damage, syncHp, clampHp,
     mitigate, rollDamage, snapshot,
     defs: STAT_DEFS,
