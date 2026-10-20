@@ -20,7 +20,10 @@ import { createWeaponSystem } from './weapon.js';
 import { SWORD_KINDS, KIND_ORDER } from './swordKinds.js';
 import { createGoldSystem } from './gold.js';
 import { SHOP_ITEMS, itemLocked } from './shop.js';
-import { pickEvent, effectLines, EVENTS } from './events.js';
+import {
+  EVENTS, ALL_EVENTS, getEventById, pickEvent, effectLines,
+  choiceHint, canAfford, costShort, REP_MIN, REP_MAX, REP_START,
+} from './events.js';
 
 // 标记模块已经跑起来了：index.html 的兜底自检靠它判断
 // 「模块根本没执行」还是「执行了但加载慢」。
@@ -366,6 +369,73 @@ async function boot() {
   }
   const gold = createGoldSystem({ scene, fx, stats, onGold: addCoins });
   renderGold();
+
+  // ---------------- 民心（第 7 块） ----------------
+  // 跨回合记住你做过什么：救人、守信 → 涨；抢掠、背信 → 跌。
+  // 影响两件事：① 商店价格（0.75~1.25 倍）② 金币掉落率（±8%）。
+  let reputation = REP_START;
+  const repNumEl = document.getElementById('repNum');
+  const repChipEl = document.getElementById('repChip');
+  let lastRepTier = 0;          // 民心档位（用于提示"村民对你改观了"）
+
+  function repPriceMul() {
+    // 50 → 1.00，100 → 0.75，0 → 1.25
+    return Math.max(0.75, Math.min(1.25, 1 - (reputation - 50) / 200));
+  }
+  function priceOf(item) {
+    return Math.max(1, Math.round(item.price * repPriceMul()));
+  }
+  function repTier() {
+    if (reputation >= 80) return 2;   // 敬重
+    if (reputation >= 60) return 1;   // 好感
+    if (reputation <= 20) return -2;  // 敌视
+    if (reputation <= 40) return -1;  // 冷淡
+    return 0;
+  }
+  function renderRep() {
+    if (!repNumEl) return;
+    repNumEl.textContent = String(Math.round(reputation));
+    if (repChipEl) {
+      repChipEl.classList.toggle('high', reputation >= 60);
+      repChipEl.classList.toggle('low', reputation <= 40);
+    }
+  }
+  // 民心对金币掉落的影响（独立 src，改完可整体撤销）
+  function syncRepBonus() {
+    stats.removeBySource('rep');
+    if (reputation >= 70) stats.addMod({ stat: 'goldRate', flat: 0.08, src: 'rep' });
+    else if (reputation <= 30) stats.addMod({ stat: 'goldRate', flat: -0.08, src: 'rep' });
+  }
+  function addRep(n) {
+    if (!n) return;
+    const before = reputation;
+    reputation = Math.max(REP_MIN, Math.min(REP_MAX, reputation + n));
+    if (reputation === before) return;
+    syncRepBonus();
+    renderRep();
+    // 跨过档位时给一句提示（不打断事件卡，走 toast）
+    const t0 = repTierAt(before), t1 = repTier();
+    if (t1 !== t0) {
+      const msg = {
+        2: '草原上开始有人喊你「守夜的先生」了',
+        1: '村里人见了你会点头了',
+        0: '',
+        '-1': '有人在你背后低声说话',
+        '-2': '路过的人开始绕着你走',
+      }[String(t1)];
+      if (msg) showToast('民心变化', msg);
+    }
+    lastRepTier = t1;
+  }
+  function repTierAt(v) {
+    if (v >= 80) return 2;
+    if (v >= 60) return 1;
+    if (v <= 20) return -2;
+    if (v <= 40) return -1;
+    return 0;
+  }
+  renderRep();
+  syncRepBonus();
 
   // ---------------- 战斗状态 ----------------
   // title（标题页）| tutorial（新手教程）| playing | upgrade（三选一）| weapon（武器卡）| over
@@ -759,61 +829,71 @@ async function boot() {
   document.getElementById('wcOk').addEventListener('click', closeWeaponCard);
 
   // ============================================================
-  // 随机事件（夜行奇遇）：每回合开始前弹卡，效果只持续一回合
+  // 夜行奇遇（第 7 块）：**回合结束**弹卡，选择作用于**下一回合**
+  //
+  // 排序：清除上一回合的临时效果 → 武器卡 → 事件 → 三选一 → 商店 → 下一回合
+  // 效果落点：mods 写 event:<下一回合>，下一回合结束时整批撤销；
+  //           民心 / 金币 / 生命 / 永久属性是跨回合的，不受撤销影响。
   // ============================================================
   const evCard = document.getElementById('eventCard');
   const evIcon = document.getElementById('evIcon');
   const evTitle = document.getElementById('evTitle');
+  const evWho = document.getElementById('evWho');
   const evStory = document.getElementById('evStory');
   const evEffect = document.getElementById('evEffect');
   const evChoices = document.getElementById('evChoices');
+  const evResult = document.getElementById('evResult');
+  const evSay = document.getElementById('evSay');
+  const evResultLines = document.getElementById('evResultLines');
+  const evNext = document.getElementById('evNext');
 
   let eventOpen = false;
-  let roundBuffSrc = null;     // 本回合临时加成的 src（回合结束撤销用）
-  let roundDrain = 0;          // 本回合每秒流失的生命（乞丐吐痰等）
+  let eventNextCb = null;      // 事件关掉后继续（→ 三选一 → 商店）
+  let roundBuffSrc = null;     // 当前生效的回合加成 src（event:<回合>）
+  let roundDrain = 0;          // 当前回合每秒流失的生命
+  let currentEventRound = 0;   // 刚结束的回合号（效果作用于 +1）
   const seenEvents = [];       // 最近出过的事件（3 回合内不重复）
-  const pledges = [];          // 伏笔：{ due, icon, title, story, ok, effects }
+  const laterQueue = [];       // 待兑现：{ due, kind:'event'|'effects', id? / effects? }
 
-  // 结算一条 effects：mods 挂回合 buff（可撤销）、金币/生命立刻结算、
-  // level 修正写给 wave、pledge 存进伏笔队列、roll 按概率分支
-  function applyEffects(effects, roundNo, { permanentMods = false } = {}) {
+  // 结算一条 effects。nextRound = 效果生效的回合号
+  function applyEffects(effects, nextRound, { permanent = false } = {}) {
     if (!effects) return;
     // roll：概率分支（两瓶药水 / 老井），只走一条
     if (effects.roll) {
       let r = Math.random();
       for (const branch of effects.roll) {
         r -= branch.p;
-        if (r < 0) { applyEffects(branch.effects, roundNo, { permanentMods }); return; }
+        if (r < 0) { applyEffects(branch.effects, nextRound, { permanent }); return; }
       }
-      applyEffects(effects.roll[effects.roll.length - 1].effects, roundNo, { permanentMods });
+      applyEffects(effects.roll[effects.roll.length - 1].effects, nextRound, { permanent });
       return;
     }
-    // mods：永久加成（伏笔回报）用独立 src，回合清场不会撤销
-    // scope:'weapon' 的改武器表（剑转速这类），其余改主角表
+    // mods：下一回合的临时加成（回合结束整批撤销）
     if (effects.mods && effects.mods.length) {
-      const src = permanentMods ? `pledge:${roundNo}` : `event:${roundNo}`;
-      if (!permanentMods) roundBuffSrc = src;
+      const src = `event:${nextRound}`;
+      roundBuffSrc = src;
       for (const m of effects.mods) {
         const target = m.scope === 'weapon' ? wstats : stats;
         target.addMod({ stat: m.stat, flat: m.flat || 0, pct: m.pct || 0, src });
       }
     }
+    // permanent：永久加成（报恩的骨刀等），用独立 src，回合清场不会撤销
+    if (effects.permanent && effects.permanent.length) {
+      const src = `pledge:${nextRound}`;
+      for (const m of effects.permanent) {
+        stats.addMod({ stat: m.stat, flat: m.flat || 0, pct: m.pct || 0, src });
+        if (m.stat === 'maxHp') stats.syncHp(m.flat || 0);
+      }
+    }
+    if (effects.rep) addRep(effects.rep);
     if (effects.gold) addCoins(effects.gold);
     if (effects.hp > 0) stats.heal(effects.hp);
     if (effects.hp < 0) stats.hp.cur = Math.max(0.5, stats.hp.cur + effects.hp);   // 咬一口但不会一口咬死
     if (effects.drain > 0) roundDrain = effects.drain;
     if (effects.level) level.applyRoundMod(effects.level);
-    if (effects.pledge) {
-      pledges.push({
-        due: roundNo + effects.pledge.delay,
-        icon: effects.pledge.icon, title: effects.pledge.title,
-        story: effects.pledge.story, ok: effects.pledge.ok,
-        effects: effects.pledge.effects,
-      });
-    }
   }
 
-  // 回合结束清掉本回合的临时效果（下一回合的事件再挂新的）
+  // 回合结束清掉上一回合的临时效果（事件写的是 event:<刚结束的回合>）
   function clearRoundBuffs() {
     if (roundBuffSrc) {
       stats.removeBySource(roundBuffSrc);
@@ -830,36 +910,52 @@ async function boot() {
     return '';
   }
 
-  function renderEventUI(ev, { withChoices = true } = {}) {
-    evIcon.textContent = ev.icon || '❔';
-    evTitle.textContent = ev.title || '夜行奇遇';
-    evStory.textContent = ev.story || '';
-    evEffect.textContent = '';
-    const lines = effectLines(ev.effects);
+  function fillLines(box, lines) {
+    box.textContent = '';
     for (const line of lines) {
       const s = document.createElement('span');
       s.className = effectLineClass(line);
       s.textContent = line;
-      evEffect.appendChild(s);
+      box.appendChild(s);
     }
+  }
+
+  function renderEventUI(ev) {
+    evIcon.textContent = ev.icon || '❔';
+    evTitle.textContent = ev.title || '夜行奇遇';
+    if (evWho) evWho.textContent = ev.who ? '—— ' + ev.who : '';
+    evStory.textContent = ev.story || '';
+    evEffect.textContent = '';
+    evResult.classList.remove('on');
     evChoices.textContent = '';
-    if (withChoices && ev.choices) {
+
+    if (ev.choices && ev.choices.length) {
       for (const c of ev.choices) {
         const btn = document.createElement('button');
         btn.className = 'ev-btn';
         btn.type = 'button';
+        btn.dataset.id = c.label;
+
         const b = document.createElement('b');
         b.textContent = c.label;
         btn.appendChild(b);
-        if (c.desc) {
-          const i = document.createElement('i');
-          i.textContent = c.desc;
-          btn.appendChild(i);
+
+        const hint = document.createElement('i');
+        hint.className = 'ev-hint';
+        const affordable = canAfford(c, { gold: coins, hp: stats.hp.cur });
+        hint.textContent = affordable ? choiceHint(c) : `需要 ${costShort(c)}（不够）`;
+        if (!affordable) {
+          btn.disabled = true;
+          btn.classList.add('locked');
         }
+        btn.appendChild(hint);
+
         btn.addEventListener('click', () => chooseEventOption(ev, c));
         evChoices.appendChild(btn);
       }
     } else {
+      // 兼容无选项的旧事件：直接给一条效果说明 + 继续
+      fillLines(evEffect, effectLines(ev.effects));
       const btn = document.createElement('button');
       btn.className = 'ev-btn';
       btn.type = 'button';
@@ -869,76 +965,66 @@ async function boot() {
       btn.addEventListener('click', closeEvent);
       evChoices.appendChild(btn);
     }
+  }
+
+  // 打开事件卡：世界冻结，等玩家看完 / 选完
+  function openEvent(ev, endedRound, next) {
+    gameState = 'event';
+    input.joystick.release();
+    vel.set(0, 0, 0);
+    currentEventRound = endedRound;
+    eventNextCb = next || null;
+    renderEventUI(ev);
     evCard.classList.add('on');
     evCard.setAttribute('aria-hidden', 'false');
     eventOpen = true;
   }
 
-  // 打开事件卡：世界冻结，等玩家看完 / 选完
-  function openEvent(ev, roundNo) {
-    gameState = 'event';
-    input.joystick.release();
-    vel.set(0, 0, 0);
-    currentEventRound = roundNo;
-    renderEventUI(ev);
-  }
-
-  let currentEventRound = 0;
+  // 选完一个选项：扣代价 → 结算 → 排连锁 → 切到「角色的回应」结果页
   function chooseEventOption(ev, choice) {
     if (!eventOpen) return;
-    applyEffects(choice.effects, currentEventRound);
-    eventOpen = false;
-    evCard.classList.remove('on');
-    evCard.setAttribute('aria-hidden', 'true');
-    if (gameState === 'event') gameState = 'playing';
-    const lines = effectLines(choice.effects);
-    if (lines.length) {
-      showToast(ev.title, lines.join(' · '));   // 选项结果比回合提示更重要，覆盖之
-      pendingRoundTip = null;
-    } else if (pendingRoundTip) {
-      showToast(pendingRoundTip.title, pendingRoundTip.sub);
-      pendingRoundTip = null;
+    const cost = choice.cost || {};
+    if (!canAfford(choice, { gold: coins, hp: stats.hp.cur })) return;
+    if (cost.gold) addCoins(-cost.gold);
+    if (cost.hp) stats.hp.cur = Math.max(0.5, stats.hp.cur - cost.hp);
+
+    const nextRound = currentEventRound + 1;
+    applyEffects(choice.effects, nextRound);
+    if (choice.chain) {
+      laterQueue.push({
+        due: currentEventRound + choice.chain.in,
+        kind: 'event',
+        id: choice.chain.id,
+      });
     }
+
+    // 结果页：角色说一句 + 这一选到底改了什么
+    evChoices.textContent = '';
+    evSay.textContent = choice.say || '';
+    const lines = effectLines(choice.effects || {});
+    if (cost.gold) lines.unshift(`金币 -${cost.gold}（已付）`);
+    if (cost.hp) lines.unshift(`生命 -${cost.hp.toFixed(1)}（已付）`);
+    fillLines(evResultLines, lines.length ? lines : ['这一夜，什么也没发生']);
+    evResult.classList.add('on');
   }
+
+  evNext.addEventListener('click', closeEvent);
 
   function closeEvent() {
     if (!eventOpen) return;
     eventOpen = false;
     evCard.classList.remove('on');
     evCard.setAttribute('aria-hidden', 'true');
+    evResult.classList.remove('on');
     if (gameState === 'event') gameState = 'playing';
-    // 无选项事件看完：把被事件卡挡住的回合开始提示补上
-    if (pendingRoundTip) {
-      showToast(pendingRoundTip.title, pendingRoundTip.sub);
-      pendingRoundTip = null;
-    }
+    const next = eventNextCb;
+    eventNextCb = null;
+    if (next) next();
   }
 
-  let pendingRoundTip = null;   // 事件卡挡住了回合开始的 toast，看完再补
-
-  // 回合开始：清上一回合 buff → 处理到期伏笔 → 抽新事件（调试模式跳过叙事）
+  // 回合开始：事件已经挪到上一回合结束，这里只报一句本回合提示
   function onRoundStart(roundNo, tip) {
-    clearRoundBuffs();
-    const due = pledges.findIndex((p) => p.due <= roundNo);
-    if (due >= 0) {
-      const p = pledges.splice(due, 1)[0];
-      pendingRoundTip = { title: `第 ${roundNo} 回合`, sub: tip };
-      openEvent(p, roundNo);
-      applyEffects(p.effects, roundNo, { permanentMods: true });
-      return;
-    }
-    const ev = DEBUG_SKIP_NARRATIVE ? null : pickEvent(
-      { round: roundNo, hasWeapon: weapon.granted, gold: coins },
-      seenEvents
-    );
-    if (!ev) {
-      showToast(`第 ${roundNo} 回合`, tip);
-      return;
-    }
-    seenEvents.push(ev.id);
-    pendingRoundTip = { title: `第 ${roundNo} 回合`, sub: tip };
-    openEvent(ev, roundNo);
-    applyEffects(ev.effects, roundNo);
+    showToast(`第 ${roundNo} 回合`, tip);
   }
 
   // ============================================================
@@ -979,13 +1065,19 @@ async function boot() {
 
   function renderShop() {
     shGold.textContent = String(coins);
+    // 民心影响市价：70 以上打八折~七五折，30 以下涨到一万一二
+    const mul = repPriceMul();
+    const tag = mul < 0.995 ? ` · 民心 ${Math.round(reputation)}，市价 ${Math.round(mul * 100)}%`
+      : mul > 1.005 ? ` · 民心 ${Math.round(reputation)}，市价 ${Math.round(mul * 100)}%` : '';
+    shSub.textContent = `第 ${level.roundNo} 回合清空 · 打完这一波，来点补给？${tag}`;
     shList.textContent = '';
     for (const item of SHOP_ITEMS) {
+      const price = priceOf(item);
       const locked = itemLocked(item, {
         hasWeapon: weapon.granted,
         hpFull: stats.hp.cur >= stats.get('maxHp') - 1e-9,
       });
-      const afford = coins >= item.price;
+      const afford = coins >= price;
       const btn = document.createElement('button');
       btn.className = 'sh-item';
       btn.type = 'button';
@@ -1016,9 +1108,10 @@ async function boot() {
       const coin = document.createElement('span');
       coin.className = 'gc-coin';
       buy.appendChild(coin);
-      const price = document.createElement('b');
-      price.textContent = String(item.price);
-      buy.appendChild(price);
+      const priceEl = document.createElement('b');
+      priceEl.textContent = String(price);
+      if (price !== item.price) priceEl.classList.add('deal');
+      buy.appendChild(priceEl);
 
       btn.append(icon, name, desc, buy);
       btn.addEventListener('click', () => buyItem(item));
@@ -1027,13 +1120,14 @@ async function boot() {
   }
 
   function buyItem(item) {
-    if (coins < item.price) return;
+    const price = priceOf(item);      // 民心影响售价
+    if (coins < price) return;
     const locked = itemLocked(item, {
       hasWeapon: weapon.granted,
       hpFull: stats.hp.cur >= stats.get('maxHp') - 1e-9,
     });
     if (locked) return;
-    coins -= item.price;
+    coins -= price;
     renderGold();
 
     if (item.type === 'heal') stats.heal(item.amount);
@@ -1061,22 +1155,53 @@ async function boot() {
   // 回合清空后的编排：
   //   第 5 回合（weaponAt）打完 → 武器卡 → 三选一（若有）→ 商店（若有）
   //   其余回合   → 三选一（若有）→ 商店（若有）→ 2.6 秒后下一回合
+  // 回合清空后的编排（第 7 块：全部挪到「回合结束」这一侧）：
+  //   清上回合临时效果 → 武器卡（第 5 回合）→ 夜行奇遇 → 三选一 → 商店 → 下一回合
+  //   第 15 回合是最后一关：不弹事件、不弹商店，选完升级直接结算。
   function handleRoundClear(roundNo) {
+    clearRoundBuffs();
+    const isLast = roundNo >= level.totals.rounds;
+
+    const runUpgrade = () => {
+      const runShop = () => {
+        if (!isLast && level.shouldShop(roundNo) && !DEBUG_SKIP_NARRATIVE) openShop(roundNo, null);
+      };
+      if (level.shouldUpgrade(roundNo)) showUpgrade(roundNo, runShop);
+      else runShop();
+    };
+
+    const runEvent = () => {
+      if (isLast || DEBUG_SKIP_NARRATIVE) { runUpgrade(); return; }
+      // 1) 到期的连锁优先兑现（剧情不能爽约）
+      const dueIdx = laterQueue.findIndex((q) => q.due <= roundNo);
+      if (dueIdx >= 0) {
+        const q = laterQueue.splice(dueIdx, 1)[0];
+        if (q.kind === 'event') {
+          const chev = getEventById(q.id);
+          if (chev) { openEvent(chev, roundNo, runUpgrade); return; }
+        } else if (q.effects) {
+          applyEffects(q.effects, roundNo + 1, { permanent: true });
+        }
+      }
+      // 2) 抽一个随机事件
+      const ev = pickEvent(
+        { round: roundNo + 1, hasWeapon: weapon.granted, gold: coins, rep: reputation, hp: stats.hp.cur },
+        seenEvents
+      );
+      if (!ev) { runUpgrade(); return; }
+      seenEvents.push(ev.id);
+      if (seenEvents.length > 8) seenEvents.shift();
+      openEvent(ev, roundNo, runUpgrade);
+    };
+
+    // 武器卡排在最前：拿到环剑之后抽到的事件才可能出现「夜风顺了」
     if (roundNo >= LEVEL_1.weaponAt && !weapon.granted) {
       weapon.grant();
       renderSkill();
-      showWeaponCard(() => afterWeaponCard(roundNo));
+      showWeaponCard(runEvent);
       return;
     }
-    afterWeaponCard(roundNo);
-  }
-
-  function afterWeaponCard(roundNo) {
-    // 调试模式（?debug=1）不自动弹商店：自动化测试需要确定性的回合推进。
-    // openShop 仍可手动调用（测试用它验证购买流程）。
-    const runShop = () => { if (level.shouldShop(roundNo) && !DEBUG_SKIP_NARRATIVE) openShop(roundNo, null); };
-    if (level.shouldUpgrade(roundNo)) showUpgrade(roundNo, runShop);
-    else runShop();
+    runEvent();
   }
 
 
@@ -1086,7 +1211,7 @@ async function boot() {
     getPlayerPos: () => pos,
     onRound: (cur, total, tip) => {
       setRoundLabel(cur, total);
-      // 回合开始：先清上一回合的事件效果，再抽新事件（可能弹卡挡住 toast）
+      // 回合开始只报一句提示：事件已经改到上一回合结束时弹
       onRoundStart(cur, tip);
     },
     onRoundClear: handleRoundClear,
@@ -1196,30 +1321,45 @@ async function boot() {
         render: () => renderShop(),
       },
       event: {
-        // 传事件 id 手动触发（绕过抽取，便于确定性测试）
-        trigger: (id) => {
-          const ev = EVENTS.find((e) => e.id === id);
+        // 传事件 id 手动触发（绕过抽取，便于确定性测试）。
+        // 注意：新结构的效果在每个选项里，触发后要用 choose(idx) 选一项才会结算。
+        trigger: (id, endedRound = level.roundNo) => {
+          const ev = getEventById(id);
           if (!ev) return null;
           seenEvents.push(id);
-          pendingRoundTip = null;
-          openEvent(ev, level.roundNo);
-          applyEffects(ev.effects, level.roundNo);
+          openEvent(ev, endedRound, null);
           return ev;
         },
         choose: (idx) => {
           const btns = evChoices.querySelectorAll('.ev-btn');
-          if (btns[idx]) btns[idx].click();
+          if (btns[idx] && !btns[idx].disabled) { btns[idx].click(); return true; }
+          return false;
         },
+        next: () => { evNext.click(); },
         close: () => closeEvent(),
         isOpen: () => eventOpen,
+        isResultOpen: () => evResult.classList.contains('on'),
+        get resultLines() {
+          return [...evResultLines.querySelectorAll('span')].map((s) => s.textContent);
+        },
         list: EVENTS,
-        get pendingPledges() { return pledges.map((p) => p.due); },
+        all: ALL_EVENTS,
+        get queue() { return laterQueue.map((q) => ({ due: q.due, id: q.id })); },
+        get currentRound() { return currentEventRound; },
       },
+      // 回合临时效果的生命周期（测试用：看它挂在第几回合、能手动撤）
+      get roundBuffSrc() { return roundBuffSrc; },
+      clearRoundBuffs: () => clearRoundBuffs(),
+      get roundDrain() { return roundDrain; },
+      // 民心（第 7 块）
+      get rep() { return reputation; },
+      addRep: (n) => addRep(n),
+      get repMul() { return repPriceMul(); },
+      priceOf: (id) => { const it = SHOP_ITEMS.find((x) => x.id === id); return it ? priceOf(it) : null; },
       // 元素剑：直接加一把（绕过商店扣费，测试用）
       addSword: (kind) => weapon.addSword(kind),
       get swordKinds() { return weapon.kindCounts(); },
       swordKindsAll: SWORD_KINDS,
-      get roundDrain() { return roundDrain; },
     };
   }
 

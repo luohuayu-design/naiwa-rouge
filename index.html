@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#080f14">
 <link rel="icon" href="data:,">
 <title>蛙步 · 夜行</title>
-<link rel="stylesheet" href="style.css?v=10">
+<link rel="stylesheet" href="style.css?v=11">
 </head>
 <body>
 
@@ -39,6 +39,10 @@
   <!-- 金币：打怪随机掉落，0.5 秒自动入账；商店里花 -->
   <div class="gold-chip" id="goldChip" aria-label="金币">
     <span class="gc-coin"></span><b id="goldNum">0</b>
+  </div>
+  <!-- 民心：跨回合记住你做过什么；高=商店便宜、村民帮你，低=涨价、遭贼 -->
+  <div class="rep-chip" id="repChip" aria-label="民心">
+    <span class="rc-heart"></span><b id="repNum">50</b>
   </div>
 </div>
 
@@ -127,10 +131,17 @@
   <div class="ev-box">
     <div class="ev-icon" id="evIcon">❄</div>
     <div class="ev-title" id="evTitle">—</div>
+    <div class="ev-who" id="evWho"></div>
     <div class="ev-story" id="evStory">—</div>
     <div class="ev-effect" id="evEffect"></div>
     <div class="ev-choices" id="evChoices"></div>
-    <div class="ev-foot">效果只持续本回合 · 下一回合开始前自动消退</div>
+    <!-- 选完之后：角色的回应 + 这一选到底改了什么 -->
+    <div class="ev-result" id="evResult">
+      <div class="ev-say" id="evSay"></div>
+      <div class="ev-lines" id="evResultLines"></div>
+      <button class="ev-btn primary" id="evNext" type="button"><b>继续</b></button>
+    </div>
+    <div class="ev-foot">抉择之后，效果落在下一回合 · 只有民心会跟着你走完这一夜</div>
   </div>
 </div>
 
@@ -211,7 +222,7 @@
 <!-- 不用 importmap：老手机浏览器（iOS 16.4 以下、旧版微信/安卓 WebView）
      不支持 import maps，会让整个模块解析失败、加载页永远停在 0%。
      项目内所有 import 都写成相对路径，直接靠原生 ES Module 解析。 -->
-<script type="module" src="js/main.js?v=10"></script>
+<script type="module" src="js/main.js?v=11"></script>
 
 <!-- 兜底自检：模块没跑起来时把原因写出来，别让用户对着 0% 干等 -->
 <script>

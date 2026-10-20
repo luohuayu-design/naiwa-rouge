@@ -178,8 +178,10 @@ export function createLevel1({ enemies, fx, getPlayerPos, onRound, onRoundClear,
     t = 0;
     spawnIdx = 0;
     gapT = 0;
-    roundMod = {};          // 新回合从干净状态开始（事件回调里可以再写入）
-    spawns = null;          // 延迟到 update 才展开：事件选完再应用数量修正也来得及
+    // 第 7 块：事件改到「回合结束」触发，写的是**下一回合**的修正，
+    // 所以这里不能再无条件清空 —— 只有第 1 回合（还没有任何事件）才从空开始。
+    if (roundIndex === 0) roundMod = {};
+    spawns = null;          // 延迟到 update 才展开：修正改变后仍来得及生效
     onRound?.(roundNo, level.rounds.length, cfg.tip);
   }
 
@@ -205,6 +207,9 @@ export function createLevel1({ enemies, fx, getPlayerPos, onRound, onRoundClear,
       if (spawnIdx >= spawns.length && enemies.aliveCount() === 0) {
         phase = 'gap';
         gapT = 0;
+        // 本回合（由上一回合结束的事件写入）的修正到此为止，
+        // 紧接着 onRoundClear 里会为下一回合写新的
+        roundMod = {};
         onRoundClear?.(roundIndex + 1, level.rounds.length);
       }
     } else if (phase === 'gap') {

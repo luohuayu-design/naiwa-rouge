@@ -445,6 +445,25 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
   background:radial-gradient(circle at 36% 30%,#ffe9a8,#ffc63e 58%,#b8860b);
   box-shadow:0 0 7px rgba(255,198,62,.55),inset 0 0 2px rgba(120,80,0,.7)}
 
+/* ---------------- HUD · 民心 ---------------- */
+.rep-chip{display:inline-flex;align-items:center;gap:6px;margin-top:10px;margin-left:6px;
+  padding:5px 11px 5px 7px;border-radius:999px;
+  border:1px solid rgba(160,220,255,.26);background:rgba(10,24,30,.55);
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;pointer-events:none;
+  transition:border-color .2s,background .2s}
+.rep-chip b{font-size:13px;font-weight:700;color:#a9dcff;letter-spacing:.02em}
+/* 民心小图标：一滴心形的灯油，只用 CSS */
+.rc-heart{width:12px;height:12px;display:inline-block;position:relative;
+  background:radial-gradient(circle at 34% 30%,#d6f3ff,#6db8e8 62%,#2b6f96);
+  clip-path:path('M6 11.4C2.3 8.7.4 6.7.4 4.4.4 2.4 1.9.9 3.8.9 4.9.9 5.7 1.4 6 2c.3-.6 1.1-1.1 2.2-1.1 1.9 0 3.4 1.5 3.4 3.5 0 2.3-1.9 4.3-5.6 7z');
+  filter:drop-shadow(0 0 5px rgba(130,205,255,.55))}
+.rep-chip.high{border-color:rgba(150,255,200,.4);background:rgba(8,30,22,.6)}
+.rep-chip.high b{color:#9df2c4}
+.rep-chip.high .rc-heart{background:radial-gradient(circle at 34% 30%,#e6fff2,#6de8a8 62%,#2b9663)}
+.rep-chip.low{border-color:rgba(255,130,110,.4);background:rgba(32,10,8,.6)}
+.rep-chip.low b{color:#ffa495}
+.rep-chip.low .rc-heart{background:radial-gradient(circle at 34% 30%,#ffe0d8,#e86d6d 62%,#96322b)}
+
 /* ---------------- 技能栏 · 元素剑槽（只展示，不可点） ---------------- */
 .sk.sword{border-style:solid;border-color:rgba(126,235,196,.16);background:rgba(6,18,16,.5)}
 .sk.sword.off{border-style:dashed;border-color:rgba(126,235,196,.1);
@@ -472,7 +491,8 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
 .ev-title{margin-top:10px;font-size:19px;font-weight:800;letter-spacing:.16em;color:#ffedc2;
   text-shadow:0 0 18px rgba(255,214,130,.32)}
 .ev-story{margin-top:10px;font-size:12.5px;line-height:1.9;color:rgba(224,212,180,.8);
-  text-align:left}
+  text-align:left;white-space:pre-line}
+.ev-who{margin-top:5px;font-size:10.5px;letter-spacing:.1em;color:rgba(214,188,120,.62)}
 .ev-effect{margin-top:11px;display:flex;flex-wrap:wrap;gap:5px;justify-content:center}
 .ev-effect:empty{display:none}
 .ev-effect span{padding:3px 9px;border-radius:8px;font-size:11px;
@@ -489,6 +509,24 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
 .ev-btn b{display:block;font-size:13px;letter-spacing:.06em}
 .ev-btn i{display:block;margin-top:3px;font-style:normal;font-size:10.5px;
   line-height:1.5;color:rgba(210,195,160,.66)}
+/* 代价付不起：灰掉但看得见（告诉玩家"我需要什么"） */
+.ev-btn:disabled{cursor:not-allowed;opacity:.42;border-color:rgba(255,120,100,.24);
+  background:rgba(255,110,90,.05);transform:none}
+.ev-btn:disabled i{color:rgba(255,150,130,.7)}
+/* 结果页：角色回应 + 实际结算，读完再继续 */
+.ev-result{display:none;margin-top:14px}
+.ev-result.on{display:block}
+.ev-say{font-size:12.5px;line-height:1.9;text-align:left;color:rgba(236,224,196,.92);
+  border-left:2px solid rgba(255,214,130,.45);padding-left:10px;white-space:pre-line}
+.ev-lines{margin-top:10px;display:flex;flex-wrap:wrap;gap:5px}
+.ev-lines span{padding:3px 9px;border-radius:8px;font-size:11px;
+  font-family:ui-monospace,Menlo,Consolas,monospace;
+  border:1px solid rgba(255,214,130,.26);background:rgba(255,214,130,.08);color:#ffe3a1}
+.ev-lines span.bad{border-color:rgba(255,120,100,.3);background:rgba(255,110,90,.09);color:#ffa992}
+.ev-lines span.good{border-color:rgba(140,240,190,.3);background:rgba(120,240,180,.09);color:#a5f2cd}
+.ev-result .ev-btn{margin-top:12px;text-align:center}
+.ev-btn.primary{border-color:rgba(150,255,200,.45);background:rgba(120,240,180,.12);color:#d8ffec}
+.ev-btn.primary:hover{background:rgba(120,240,180,.2)}
 .ev-foot{margin-top:12px;font-size:10px;letter-spacing:.06em;color:rgba(190,175,140,.42)}
 
 /* ---------------- 商店 ---------------- */
@@ -541,6 +579,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
 .sh-buy:disabled{background:rgba(255,209,102,.14);color:rgba(240,220,170,.5);
   border-color:rgba(255,209,102,.2)}
 .sh-buy .gc-coin{width:11px;height:11px}
+.sh-buy b.deal{color:#9df2c4}
 .sh-foot{padding:4px 16px 13px;text-align:center;font-size:10px;
   letter-spacing:.06em;color:rgba(190,175,140,.42)}
 @media (max-height:600px){
