@@ -1,16 +1,18 @@
 // ============================================================
 // enemy.js —— 怪物系统（模型加载 / 克隆 / AI / 血条 / 死亡）
 //
-// 模型来自 KayKit《Skeletons》（CC0），已裁剪成 7 段动画。
+// 模型来自 KayKit《Skeletons》（CC0），已裁剪成 7~9 段动画。
 // 每只怪 = SkeletonUtils 克隆的蒙皮模型 + 独立 AnimationMixer。
 //
-// 第一关现在启用三种：
+// 第一关现在启用四种：
 //   minion  小兵   —— 直线冲脸，碰到主角自毁并造成 1 伤害
 //   warrior 战士   —— 追到近战距离后停下挥拳，攻击不扣自己的血
-//   archer  投手   —— 远程：进射程拉弓 0.55 秒后掷出骨刀（有弹道，能靠横移躲开），
+//   archer  投手   —— 远程：进射程拉弓 0.72 秒后掷出骨刀（有弹道，能靠横移躲开），
 //                     主角贴太近会后退风筝（第 11 回合起登场）
+//   bowman  弓手   —— 远程（第 12 块）：站在远处拉弓，把**红圈钉在你脚下**，
+//                     1.15 秒后箭从天而降，圈里挨打、圈外没事（第 12 回合起登场）
 //
-// 第四种（mage）只写好了配置，暂不生成。
+// 第五种（mage）只写好了配置，暂不生成。
 // ============================================================
 import * as THREE from '../lib/three.module.js';
 import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js';
@@ -21,7 +23,7 @@ import { createRangeRing } from './rangeRing.js';
 // KayKit 模型正面朝 +Z；如果哪天换模型发现怪倒着走，把这里改成 Math.PI
 export const ENEMY_MODEL_YAW = 0;
 
-// 动画名（裁剪时保留的 7 段，与 .tmp-shrink-glb.py 的 keep 列表一致）
+// 动画名（裁剪时保留的几段，与 .tmp-shrink-glb.py / .tmp-shrink-bow.py 的 keep 列表一致）
 const ANIM = {
   idle: 'Idle',
   walk: 'Walking_A',
@@ -30,6 +32,8 @@ const ANIM = {
   death: 'Death_A',
   spawn: 'Spawn_Ground',
   punch: 'Unarmed_Melee_Attack_Punch_A',
+  aim: '1H_Ranged_Aiming',      // 举弓瞄准（裁剪时特意多留的两段弓类动画）
+  shoot: '1H_Ranged_Shoot',     // 放箭
 };
 
 export const ENEMY_TYPES = {
@@ -123,6 +127,46 @@ export const ENEMY_TYPES = {
     },
   },
 
+  // ---------------- 第四种：骷髅弓手（第 12 块，第 12 回合起登场） ----------------
+  // 行为：不掷弹道，而是**把红圈钉在你当下的位置**（圈不会再跟人走），
+  // 1.15 秒后箭从天上落进圈里 —— 圈里挨一发、圈外完全没事。
+  // 所以它惩罚的是「站着不动」和「被围住跑不掉」，跟投手的「直线弹道」互补：
+  //   · 投手：横着走两步就躲开
+  //   · 弓手：看到脚下红圈必须挪出去，站着输出就会被钉
+  // 数值取向：血比投手厚一点（3）、射速更慢（4.6 秒一轮）、离得更远（射程 8、keep 5）。
+  bowman: {
+    name: '骷髅弓手',
+    file: 'assets/monsters/skeleton-mage.glb',   // 长袍骷髅，和投手（皮甲游荡者）一眼能分开
+    sourceHeight: 1.20,    // 估算值，启用后按原点参照物截图重标（README「怪物身高标定」）
+    height: 1.44,
+    radius: 0.45,
+    hp: 3,
+    armor: 0,
+    speed: 1.25,           // 比战士快一点、比投手慢：追不上你，但会把你赶进圈里
+    attackRange: 8.0,      // 进这个距离就站定拉弓
+    keepDistance: 5.0,     // 比这个近就后退（红圈是远程手段，不跟你贴脸）
+    damage: 1,
+    attackInterval: 4.6,   // 一轮齐射的间隔（前摇 1.15 已经很长了，别太密）
+    windup: 1.15,          // 红圈出现 → 箭落地的时间（这就是你的走位窗口）
+    attackDuration: 1.85,  // 整段动画（瞄准 + 放箭 + 收势）
+    volley: {
+      radius: 1.9,         // 红圈半径（世界单位）—— 站在圈边也来得及走出去
+      fall: 0.30,          // 箭从天上落到地面的时间（视觉）
+      arrows: 7,           // 一次落几支（纯视觉，伤害只结算一次）
+      color: 0xff5c46,     // 红圈 / 箭羽的颜色
+      y: 6.2,              // 箭从多高落下
+    },
+    spawnTime: 1.05,
+    deathTime: 1.5,
+    selfDestruct: false,
+    color: 0xc9f0a6,
+    ringColor: 0xff5c46,   // 红圈是它的招牌，脚下不画常驻环（远程不画，见 hasRing）
+    anim: {
+      walk: ANIM.walk, idle: ANIM.idle, aim: ANIM.aim, attack: ANIM.shoot,
+      death: ANIM.death, spawn: ANIM.spawn,
+    },
+  },
+
   // ---------------- 预案：巫师（暂不生成） ----------------
   // 魔法小怪：读条后放范围法术；光环给周围小怪加攻速/减伤，给主角上减速 debuff。
   mage: {
@@ -138,6 +182,62 @@ export const ENEMY_TYPES = {
     anim: { walk: ANIM.walk, idle: ANIM.idle, death: ANIM.death, spawn: ANIM.spawn },
   },
 };
+
+// ------------------------------------------------------------
+// 弓手手里的弓（程序化，不需要额外贴图/模型文件）
+// 弧形用 TorusGeometry 取一段圆弧，弦用一条 Line。
+// 挂到骨骼 handslot.r / hand.r 上 —— **朝向用「骨骼世界四元数 → 模型世界四元数」
+// 反解**，这样不管 KayKit 的骨骼轴怎么摆，弓的 +X 永远对着角色正面。
+// 想微调就改 BOW_TWEAK / BOW_POS（局部四元数与位置），不用碰别的。
+// ------------------------------------------------------------
+let bowGeoCache = null;
+const BOW_TWEAK = new THREE.Quaternion();   // 需要转 90° 就 setFromAxisAngle(Y, ±PI/2)
+const BOW_POS = new THREE.Vector3(0, 0, 0);
+
+function makeBow() {
+  if (!bowGeoCache) {
+    const R = 0.40, tube = 0.02;
+    const arc = new THREE.TorusGeometry(R, tube, 4, 18, Math.PI * 1.15);
+    arc.rotateZ(-Math.PI * 0.575);              // 弧口朝 -X，两端在上/下
+    const tipX = R * Math.cos(Math.PI * 0.575);
+    const tipY = R * Math.sin(Math.PI * 0.575);
+    const str = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(tipX, tipY, 0),
+      new THREE.Vector3(tipX, -tipY, 0),
+    ]);
+    bowGeoCache = { arc, str };
+  }
+  const g = new THREE.Group();
+  const wood = new THREE.MeshStandardMaterial({ color: 0x6b4a2e, roughness: 0.78, metalness: 0.06 });
+  const arcMesh = new THREE.Mesh(bowGeoCache.arc, wood);
+  arcMesh.castShadow = true;
+  arcMesh.frustumCulled = false;
+  const line = new THREE.Line(bowGeoCache.str, new THREE.LineBasicMaterial({ color: 0xe8dcc2 }));
+  line.frustumCulled = false;
+  g.add(arcMesh, line);
+  g.userData.mats = [wood];
+  return g;
+}
+
+// 把弓塞进右手：先求「骨骼世界朝向」与「模型世界朝向」的差，再补一个微调四元数
+// ⚠️ GLTFLoader 会把骨骼名里的 '.' 洗掉（handslot.r → handslotr），所以要两个名字都试
+function attachBow(root, model) {
+  const slot = model.getObjectByName('handslot.r')
+    || model.getObjectByName('handslotr')
+    || model.getObjectByName('hand.r')
+    || model.getObjectByName('handr');
+  if (!slot) return null;
+  const bow = makeBow();
+  model.updateMatrixWorld(true);
+  const qb = new THREE.Quaternion();
+  const qr = new THREE.Quaternion();
+  slot.getWorldQuaternion(qb);
+  root.getWorldQuaternion(qr);
+  bow.quaternion.copy(qb.invert().multiply(qr).multiply(BOW_TWEAK));
+  bow.position.copy(BOW_POS);
+  slot.add(bow);
+  return bow;
+}
 
 function lerpAngle(a, b, t) {
   let d = (b - a) % (Math.PI * 2);
@@ -341,6 +441,19 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
       currentAnim: '',
     };
 
+    // 弓手：往右手塞一把弓（受击闪白要连弓一起，所以材质也进 mats）。
+    // 顺手摘掉模型自带的法师帽 —— 弓手不戴帽子，和第二关的巫师共用一套模也能一眼分开。
+    if (cfg.volley) {
+      const hat = model.getObjectByName('Skeleton_Mage_Hat');
+      if (hat) hat.visible = false;
+      const bow = attachBow(root, model);
+      if (bow) {
+        e.bow = bow;
+        e.mats.push(...bow.userData.mats);
+        e.baseEmissive.push(...bow.userData.mats.map((m) => (m.emissive ? m.emissive.clone() : null)));
+      }
+    }
+
     // 出生：先播从地里钻出来的动画
     bar.draw(1, maxHp, maxHp);
     e.currentAnim = cfg.anim.spawn;
@@ -482,6 +595,161 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
     }
   }
 
+  // ============================================================
+  // 弓手：固定红圈 → 箭雨落地（第 12 块）
+  //
+  // 和骨刀弹道完全不同的思路：
+  //   · 骨刀是「从怪身上飞出来的一条线」—— 横移就躲
+  //   · 红圈是「钉在某个地面点的一片区域」—— 必须离开那片地
+  // 圈的圆心在**放箭那一刻**就定死（不追人），所以玩家的应对很明确：
+  // 看到脚下红圈 → 往外走；站在圈里硬打 → 吃伤害。
+  //
+  // 三件视觉一起上，都是共享几何/材质（一次只造一份）：
+  //   disc  红雾填充（贴地）
+  //   rim   圈边亮环（呼吸）
+  //   tick  里面的细环从大缩到小 —— 缩到底就是箭落地
+  // ============================================================
+  const zones = [];      // 正在倒计时的红圈
+  const arrows = [];     // 正在下落的箭（纯视觉；伤害在落地那一刻结算）
+  let zoneGeo = null, zoneRimGeo = null, zoneTickGeo = null, zoneMats = null;
+  let arrowGeo = null, arrowMat = null;
+
+  function zoneAssets() {
+    if (zoneGeo) return;
+    zoneGeo = new THREE.CircleGeometry(1, 48).rotateX(-Math.PI / 2);
+    zoneRimGeo = new THREE.RingGeometry(0.93, 1, 56).rotateX(-Math.PI / 2);
+    zoneTickGeo = new THREE.RingGeometry(0.9, 1, 48).rotateX(-Math.PI / 2);
+    zoneMats = {
+      disc: new THREE.MeshBasicMaterial({
+        color: 0xff3a28, transparent: true, opacity: 0.17,
+        depthWrite: false, side: THREE.DoubleSide,
+      }),
+      rim: new THREE.MeshBasicMaterial({
+        color: 0xff5c46, transparent: true, opacity: 0.85,
+        depthWrite: false, side: THREE.DoubleSide,
+      }),
+      tick: new THREE.MeshBasicMaterial({
+        color: 0xffb0a0, transparent: true, opacity: 0.8,
+        depthWrite: false, side: THREE.DoubleSide,
+      }),
+    };
+    // 箭：一根细杆 + 箭头，躺着朝下，落地时插在地上
+    arrowGeo = new THREE.CylinderGeometry(0.022, 0.022, 0.62, 5);
+    arrowGeo.translate(0, -0.31, 0);           // 原点在箭尾，往下长
+    arrowMat = new THREE.MeshStandardMaterial({
+      color: 0xf2e6cf, emissive: 0xff7a55, emissiveIntensity: 0.5,
+      roughness: 0.6, metalness: 0.05,
+    });
+  }
+
+  // 在主角当前位置钉一个红圈
+  function spawnVolley(e, ctx) {
+    zoneAssets();
+    const cfg = e.cfg.volley;
+    const x = ctx.playerPos.x;
+    const z = ctx.playerPos.z;
+    const r = cfg.radius;
+
+    const disc = new THREE.Mesh(zoneGeo, zoneMats.disc);
+    disc.position.set(x, 0.052, z);
+    disc.scale.setScalar(r);
+    disc.frustumCulled = false;
+    const rim = new THREE.Mesh(zoneRimGeo, zoneMats.rim);
+    rim.position.set(x, 0.058, z);
+    rim.scale.setScalar(r);
+    rim.frustumCulled = false;
+    const tick = new THREE.Mesh(zoneTickGeo, zoneMats.tick);
+    tick.position.set(x, 0.064, z);
+    tick.scale.setScalar(r);
+    tick.frustumCulled = false;
+    scene.add(disc, rim, tick);
+
+    zones.push({
+      x, z, r,
+      dmg: e.damage,
+      t: e.cfg.windup,       // 还剩多少秒落地
+      total: e.cfg.windup,
+      disc, rim, tick,
+      color: cfg.color,
+      arrows: cfg.arrows ?? 7,
+      fall: cfg.fall ?? 0.3,
+      y0: cfg.y ?? 6.2,
+    });
+
+    // 起手一声闷响式的提示：圈边缘往外扫一圈白光（不依赖音效也能注意到）
+    if (fx) fx.ring({ x, z }, { from: r * 0.55, to: r, color: cfg.color, life: 0.3, opacity: 0.7, y: 0.06 });
+  }
+
+  function updateZones(dt) {
+    for (let i = zones.length - 1; i >= 0; i--) {
+      const v = zones[i];
+      v.t -= dt;
+      const k = Math.max(0, Math.min(1, 1 - v.t / v.total));
+      // 呼吸 + 收紧：越接近落地，圈边越亮、里面的收缩环越小
+      const pulse = 0.72 + 0.28 * Math.sin((v.total - v.t) * 12);
+      zoneMats.rim.opacity = 0.55 + 0.4 * pulse;
+      v.tick.scale.setScalar(Math.max(0.12, v.r * (1 - k * 0.82)));
+      zoneMats.tick.opacity = 0.5 + 0.45 * k;
+
+      if (v.t <= 0) {
+        scene.remove(v.disc, v.rim, v.tick);
+        zones.splice(i, 1);
+        dropArrows(v);
+      }
+    }
+  }
+
+  // 箭落地：视觉上一批箭从天而降，落地那一刻结算一次伤害
+  const pendingHits = [];   // 等待结算的落点（箭落地时才扣血）
+  function dropArrows(v) {
+    zoneAssets();
+    const n = v.arrows ?? 7;
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const d = Math.sqrt(Math.random()) * v.r * 0.92;
+      const x = v.x + Math.cos(a) * d;
+      const z = v.z + Math.sin(a) * d;
+      const mesh = new THREE.Mesh(arrowGeo, arrowMat);
+      mesh.frustumCulled = false;
+      mesh.position.set(x, v.y0, z);
+      mesh.rotation.set(0, Math.random() * Math.PI * 2, (Math.random() - 0.5) * 0.22);
+      scene.add(mesh);
+      arrows.push({ mesh, x, z, y: v.y0, t: v.fall, max: v.fall, landed: false });
+    }
+    pendingHits.push({ x: v.x, z: v.z, r: v.r, dmg: v.dmg, landAt: v.fall });
+  }
+
+  function updateArrows(dt, ctx) {
+    for (let i = arrows.length - 1; i >= 0; i--) {
+      const a = arrows[i];
+      a.t -= dt;
+      a.mesh.position.y = Math.max(0, a.y * (a.t / a.max));
+      if (a.t <= 0) {
+        if (!a.landed) {
+          a.landed = true;
+          if (fx) fx.burst({ x: a.x, z: a.z }, { color: 0xff9a78, count: 5, speed: 1.4, life: 0.25, size: 0.08, y: 0.1, up: 0.7, gravity: 6 });
+        }
+        // 插在地上留 0.5 秒再消失
+        if (a.t < -0.5) {
+          scene.remove(a.mesh);
+          arrows.splice(i, 1);
+        }
+      }
+    }
+
+    for (let i = pendingHits.length - 1; i >= 0; i--) {
+      const v = pendingHits[i];
+      v.landAt -= dt;
+      if (v.landAt > 0) continue;
+      pendingHits.splice(i, 1);
+      const d = Math.hypot(ctx.playerPos.x - v.x, ctx.playerPos.z - v.z);
+      if (d <= v.r) {
+        ctx.hurtPlayer(v.dmg, null);
+        if (fx) fx.ring({ x: v.x, z: v.z }, { from: 0.2, to: v.r, color: 0xff6a52, life: 0.26, opacity: 0.6, y: 0.07 });
+      }
+    }
+  }
+
   function updateOne(e, dt, ctx) {
     e.mixer.update(dt);
     e.t += dt;
@@ -578,6 +846,64 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
         e.play(e.cfg.anim.idle, { fade: 0.2 });
         return;
       }
+    }
+
+    // ---- 弓手：把红圈钉在你脚下 → 1.15 秒后箭雨落地 ----
+    // 和投手一样有「保持距离 / 靠近 / 站定出手」三个动作，
+    // 但出手不是弹道，而是 spawnVolley() 在地面钉一个固定圈。
+    if (e.cfg.volley) {
+      if (e.state === 'attack') {
+        // 瞄准动画播完（= windup 结束）就放箭：红圈在起手那一刻已经钉好了
+        if (!e.hitDone && e.t >= e.cfg.windup) {
+          e.hitDone = true;
+          e.currentAnim = e.cfg.anim.attack;
+          e.play(e.cfg.anim.attack, { once: true, fade: 0.08, duration: Math.max(0.35, e.cfg.attackDuration - e.cfg.windup) });
+        }
+        if (e.t >= e.cfg.attackDuration) {
+          e.state = 'chase';
+          e.t = 0;
+          e.attackCd = Math.max(0.3, e.cfg.attackInterval - e.cfg.attackDuration);
+          e.currentAnim = e.cfg.anim.walk;
+          e.play(e.cfg.anim.walk, { fade: 0.18 });
+        }
+        return;
+      }
+
+      e.attackCd -= dt;
+      const keep = e.cfg.keepDistance;
+      const reach = e.cfg.attackRange;
+
+      if (dist < keep) {
+        moveToward(e, -dx, -dz, dist, dt, ctx);
+        if (e.currentAnim !== e.cfg.anim.walk) {
+          e.currentAnim = e.cfg.anim.walk;
+          e.play(e.cfg.anim.walk, { fade: 0.2 });
+        }
+        return;
+      }
+      if (dist > reach) {
+        moveToward(e, dx, dz, dist, dt, ctx);
+        if (e.currentAnim !== e.cfg.anim.walk) {
+          e.currentAnim = e.cfg.anim.walk;
+          e.play(e.cfg.anim.walk, { fade: 0.2 });
+        }
+        return;
+      }
+
+      if (e.attackCd <= 0) {
+        e.state = 'attack';
+        e.t = 0;
+        e.hitDone = false;
+        e.currentAnim = e.cfg.anim.aim;
+        e.play(e.cfg.anim.aim, { once: true, fade: 0.12, duration: e.cfg.windup });
+        spawnVolley(e, ctx);
+        return;
+      }
+      if (e.currentAnim !== e.cfg.anim.idle) {
+        e.currentAnim = e.cfg.anim.idle;
+        e.play(e.cfg.anim.idle, { fade: 0.2 });
+      }
+      return;
     }
 
     // ---- 投手：拉弓 → 掷骨刀 → 收势 ----
@@ -730,6 +1056,8 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
   function update(dt, ctx) {
     for (const e of list) updateOne(e, dt, ctx);
     updateShots(dt, ctx);
+    updateZones(dt);
+    updateArrows(dt, ctx);
 
     // 分离：避免怪物叠成一个点（O(n²)，同屏最多十几只，开销可忽略）
     for (let i = 0; i < list.length; i++) {
@@ -816,6 +1144,11 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
     list.length = 0;
     for (const s of shots) scene.remove(s.mesh);
     shots.length = 0;
+    for (const v of zones) scene.remove(v.disc, v.rim, v.tick);
+    zones.length = 0;
+    for (const a of arrows) scene.remove(a.mesh);
+    arrows.length = 0;
+    pendingHits.length = 0;
   }
 
   // 战士/投手的攻击时长：没单独写就默认 0.9 秒（动画按比例加速/减速），
@@ -831,6 +1164,9 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
     takeDamage,
     applyDot, applySlow, chainTargets,
     shotCount: () => shots.length,
+    zoneCount: () => zones.length,      // 场上正在倒计时的红圈
+    arrowCount: () => arrows.length,    // 正在下落/插在地上的箭
+    pendingCount: () => pendingHits.length,
     get: (type) => ENEMY_TYPES[type],
     // 调试/测试用
     all: () => list,

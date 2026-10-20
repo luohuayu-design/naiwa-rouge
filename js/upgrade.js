@@ -88,6 +88,17 @@ export const UPGRADES = [
     stat: 'critDamage', pct: 0.50,
     extra: { stat: 'critRate', flat: 0.06 },
   },
+  {
+    // 第 12 块：一次出手同时打两只不同的怪。
+    // 注意它不是「伤害 ×2」，而是「多挑一个目标」——单挑时毫无收益，
+    // 被围住时才是质变，所以做成史诗档、低权重、不随回合升温。
+    id: 'doublePalm', tag: 'atk', glyph: '🖐', name: '双拍',
+    rarity: 3,
+    w0: 0.34, gw: +0.020,
+    title: '同时命中 +1 只',
+    desc: '一次出手同时拍中两只不同的怪：最近的那只先挨打，第二只顺延到次近的',
+    stat: 'multiHit', flat: 1,
+  },
   // ---- 武器系（needsWeapon：第 5 回合拿到环剑后才会进抽取池）
   //      scope:'weapon' = 改的是武器自己的属性表，与主角的攻击/暴击毫无关系 ----
   {

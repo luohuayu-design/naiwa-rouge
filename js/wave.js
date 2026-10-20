@@ -2,7 +2,7 @@
 // wave.js —— 第一关：15 个回合的编排与刷怪位置
 //
 // 关卡设计（数值都在这一个文件里，改这里就能调节奏）：
-//   第一关 · 荒草地：15 回合，小兵 + 战士 + 投手（远程），合计 159 只
+//   第一关 · 荒草地：15 回合，小兵 + 战士 + 投手 + 弓手（两种远程），合计 164 只
 //   清空一回合后停 2.6 秒进下一回合；**必须清完**才推进（不设超时跳过，
 //   否则会带着上一回合的怪滚雪球，也没法在回合结束时弹升级）
 //
@@ -14,7 +14,8 @@
 //   小兵基础 1 血，四舍五入后第 5 回合起变 2 血（R1~R4 仍是一刀一只）；
 //   战士 3 血，第 5 回合 5 血、第 10 回合 7 血、第 15 回合 10 血。
 //
-// 第三种怪：骷髅投手（远程）第 11 回合登场，见 enemy.js 的 archer 配置。
+// 第三种怪：骷髅投手（远程弹道）第 11 回合登场，见 enemy.js 的 archer 配置。
+// 第四种怪：骷髅弓手（红圈落箭）第 12 回合登场，见 enemy.js 的 bowman 配置。
 //
 // 升级：第 1/2/3/4/5/8/10/12/15 回合清空后弹三选一（见 upgrade.js），
 //       第 5 回合清空时先弹「获得环剑」卡片，再进三选一。
@@ -58,10 +59,10 @@ export const LEVEL_1 = {
     { minion: 8,  warrior: 3, archer: 0, gap: 0.50, tip: '撑住，马上就到最后了' },
     { minion: 9,  warrior: 4, archer: 0, gap: 0.50, tip: '最后一回合，全部拍碎' },
     { minion: 9,  warrior: 4, archer: 1, gap: 0.55, tip: '远处有人拉弓了，别站着不动' },
-    { minion: 9,  warrior: 4, archer: 2, gap: 0.55, tip: '骨刀是直的，横着走就能躲' },
-    { minion: 10, warrior: 4, archer: 2, gap: 0.50, tip: '先冲投手，别被风筝' },
-    { minion: 10, warrior: 5, archer: 2, gap: 0.48, tip: '混编队，别被前后夹住' },
-    { minion: 10, warrior: 5, archer: 3, gap: 0.45, tip: '最后五只，清完收工' },
+    { minion: 9,  warrior: 4, archer: 2, bowman: 1, gap: 0.55, tip: '骨刀是直的，横着走能躲；脚下的红圈必须挪出去' },
+    { minion: 10, warrior: 4, archer: 2, bowman: 1, gap: 0.50, tip: '脚下出红圈就往外走 —— 那是箭' },
+    { minion: 10, warrior: 5, archer: 2, bowman: 1, gap: 0.48, tip: '混编队：躲圈、躲刀、还要防贴脸' },
+    { minion: 10, warrior: 5, archer: 3, bowman: 2, gap: 0.45, tip: '两个弓手了，别站在圈里硬打' },
   ],
 };
 
@@ -77,12 +78,13 @@ export function roundScale(roundNo) {
 }
 
 export function levelStats(level = LEVEL_1) {
+  const KEYS = ['minion', 'warrior', 'archer', 'bowman'];
   const sum = { total: 0, rounds: level.rounds.length };
+  for (const k of KEYS) sum[k] = 0;
   for (const r of level.rounds) {
-    for (const k of ['minion', 'warrior', 'archer']) sum[k] = (sum[k] || 0) + (r[k] || 0);
+    for (const k of KEYS) sum[k] += r[k] || 0;
   }
-  for (const k of ['minion', 'warrior', 'archer']) sum[k] = sum[k] || 0;
-  sum.total = sum.minion + sum.warrior + sum.archer;
+  sum.total = KEYS.reduce((a, k) => a + sum[k], 0);
   return sum;
 }
 
@@ -109,6 +111,12 @@ function buildSpawns(roundNo, mod = {}) {
   for (let i = 0; i < n(cfg.archer); i++) {
     out.push({ type: 'archer', delay: t });
     t += cfg.gap * 2.0;
+  }
+  // 弓手最后登场：先把近身和弹道处理完，再面对地上的红圈
+  t += 0.35;
+  for (let i = 0; i < n(cfg.bowman); i++) {
+    out.push({ type: 'bowman', delay: t });
+    t += cfg.gap * 2.2;
   }
   return out;
 }

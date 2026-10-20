@@ -3,7 +3,8 @@
 //
 // 规则（用户定案）：
 //   · 打死怪物**有一定概率**掉金币（不是必然），概率是属性 goldRate；
-//   · **不需要拾取**：金币在地上弹一下，0.5 秒后自动消失并计入数据；
+//   · **不需要拾取**：金币在地上弹一下，**停 3 秒**（第 12 块按用户要求从 0.5 秒加长）
+//     后自动消失并计入数据 —— 留得久是为了让「打怪掉钱」看得见，不用急着捡；
 //   · 金币是本局货币，商店（见 shop.js）里花。
 //
 // 视觉：一枚金色小圆片从怪死掉的位置弹起 → 自转 → 落地缩没；
@@ -11,7 +12,7 @@
 // ============================================================
 import * as THREE from '../lib/three.module.js';
 
-const LIFE = 0.5;            // 金币从掉落到计入数据的时长（用户定案 0.5 秒）
+const LIFE = 3.0;            // 金币从掉落到计入数据的时长（第 12 块：0.5 → 3 秒）
 const POP_V = 2.6;           // 弹起的初速度
 const GRAVITY = 9.8;
 
@@ -61,13 +62,15 @@ export function createGoldSystem({ scene, fx, stats, onGold }) {
         }
         continue;
       }
-      // 弹跳：初速向上 + 重力，落地贴地滑行
+      // 弹跳：初速向上 + 重力，落地之后原地轻轻浮动（3 秒太长，静止会让人以为卡住）
       const y = 0.35 + POP_V * c.t - 0.5 * GRAVITY * c.t * c.t;
-      c.mesh.position.y = Math.max(0.08, y);
-      c.mesh.rotation.y += dt * 7;
-      // 最后 0.15 秒缩小消失
+      c.mesh.position.y = y > 0.09 ? y : 0.09 + Math.sin(c.t * 5.5) * 0.045;
+      c.mesh.rotation.y += dt * (y > 0.09 ? 7 : 3.4);
+      // 最后 0.25 秒缩小消失
       const k = c.t / LIFE;
-      if (k > 0.7) c.mesh.scale.setScalar(Math.max(0.05, 1 - (k - 0.7) / 0.3));
+      if (k > (LIFE - 0.25) / LIFE) {
+        c.mesh.scale.setScalar(Math.max(0.05, (LIFE - c.t) / 0.25));
+      }
     }
   }
 

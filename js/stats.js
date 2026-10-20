@@ -32,6 +32,9 @@ export const STAT_DEFS = [
   { key: 'critRate',    name: '暴击率',   base: 0.00, fmt: pct,   group: '近战', desc: '近战命中时触发暴击的概率（环剑有自己的暴击）' },
   { key: 'critDamage',  name: '暴击伤害', base: 1.50, fmt: pct,   group: '近战', desc: '近战暴击时的伤害倍率' },
   { key: 'lifesteal',   name: '近战吸血', base: 0.00, fmt: pct,   group: '近战', desc: '近战伤害按此比例回血（环剑不吃这一项）' },
+  // 第 12 块：一次出手同时拍几只（0 = 只打最近的一只，1 = 打两只不同的怪）。
+  // 走 flat 加成（base 0，pct 对 0 无效），卡片「双拍」+1。
+  { key: 'multiHit',    name: '同时命中', base: 0,    fmt: (v) => `${Math.round(1 + v)} 只`, group: '近战', desc: '一次出手同时拍中几只不同的怪（最近的先挨打）' },
   // ---- 机动 ----
   { key: 'moveSpeed',   name: '移动速度', base: 4.4,  fmt: (v) => v.toFixed(2),           group: '机动', desc: '每秒移动的世界单位' },
   // ---- 经济 ----
@@ -69,6 +72,19 @@ export function nearestInRange(from, list, range, isAlive = () => true) {
     if (d <= range && d < bestD) { bestD = d; best = it; }
   }
   return best ? { target: best, distance: bestD } : null;
+}
+
+// 射程内最近的 count 个（按距离升序）—— 第 12 块「双拍」用它一次挑两只不同的怪。
+// 距离相同也无所谓：排序稳定，谁先谁后只影响「先挨打」的顺序，不影响总量。
+export function nearestNInRange(from, list, range, count = 1, isAlive = () => true) {
+  const out = [];
+  for (const it of list) {
+    if (!isAlive(it)) continue;
+    const d = distance2D(from, it.pos);
+    if (d <= range) out.push({ target: it, distance: d });
+  }
+  out.sort((a, b) => a.distance - b.distance);
+  return out.slice(0, Math.max(1, Math.round(count)));
 }
 
 // 防御减伤：100 防御 = 50% 减伤，永远打不到 0，也不会为负
@@ -196,5 +212,9 @@ export function createStats(defs = STAT_DEFS) {
     distanceTo: distance2D,
     inAttackRange(from, to) { return inRange2D(from, to, get('attackRange')); },
     findTarget(from, list, isAlive) { return nearestInRange(from, list, get('attackRange'), isAlive); },
+    // 一次出手的全部目标（最近的在最前）；count 一般传 1 + multiHit
+    findTargets(from, list, count, isAlive) {
+      return nearestNInRange(from, list, get('attackRange'), count, isAlive);
+    },
   };
 }

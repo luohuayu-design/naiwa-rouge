@@ -346,7 +346,7 @@ async function boot() {
   let enemyLoadOk = true;
   try {
     // 三种怪都要预载：投手（远程）第 11 回合登场，模型 655KB
-    await enemies.preload(['minion', 'warrior', 'archer'], (p) => setProgress(0.55 + p * 0.42));
+    await enemies.preload(['minion', 'warrior', 'archer', 'bowman'], (p) => setProgress(0.55 + p * 0.42));
   } catch (err) {
     enemyLoadOk = false;
     console.warn('[怪物] 模型加载失败：', err);
@@ -507,26 +507,37 @@ async function boot() {
 
   // 主角近战：找攻击范围内最近的怪打一下（没有目标时不空挥）
   function playerAttack() {
-    const found = stats.findTarget(
-      pos, enemies.list,
+    // 一次出手打几只：1 + multiHit（「双拍」= 2）。只挑**不同**的怪，按距离由近到远。
+    // 射程内不足这么多只时就有几只打几只（不会空挥）。
+    const want = 1 + Math.max(0, Math.round(stats.get('multiHit')));
+    const hits = stats.findTargets(
+      pos, enemies.list, want,
       (e) => e.state !== 'dead' && e.state !== 'spawn'
     );
-    if (!found) return false;
+    if (!hits.length) return false;
 
-    const e = found.target;
-    // 出手瞬间转向目标，避免背对着怪拍地
-    const ty = Math.atan2(e.pos.x - pos.x, e.pos.z - pos.z);
+    // 出手瞬间转向最近的目标，避免背对着怪拍地
+    const first = hits[0].target;
+    const ty = Math.atan2(first.pos.x - pos.x, first.pos.z - pos.z);
     yaw += ((ty - yaw + Math.PI * 3) % (Math.PI * 2) - Math.PI) * 0.85;
 
-    const roll = stats.rollDamage({ targetArmor: e.cfg.armor });
-    enemies.takeDamage(e, roll.damage, roll.crit);
-    audio.sfx(roll.crit ? 'crit' : 'hit');
-    // 吸血：按实际造成的伤害回血（属性为 0 时不触发）
     const lifesteal = stats.get('lifesteal');
-    if (lifesteal > 0 && roll.damage > 0) {
-      stats.heal(roll.damage * lifesteal);
+    let healed = 0;
+    let anyCrit = false;
+    for (const h of hits) {
+      const e = h.target;
+      const roll = stats.rollDamage({ targetArmor: e.cfg && e.cfg.armor });
+      enemies.takeDamage(e, roll.damage, roll.crit);
+      if (roll.crit) anyCrit = true;
+      // 吸血：按实际造成的伤害回血（每一只分别结算，属性为 0 时不触发）
+      if (lifesteal > 0 && roll.damage > 0) healed += roll.damage * lifesteal;
+    }
+    if (healed > 0) {
+      stats.heal(healed);
       renderHud();
     }
+
+    audio.sfx(anyCrit ? 'crit' : 'hit');
     audio.sfx('swing');                // 每一次出手都有破空声（跟着攻击频率走）
     frog.playAttack();                 // 抬手 → 拍下，和冲击环同一瞬间起手
     fx.swing(pos, stats.get('attackRange'));
