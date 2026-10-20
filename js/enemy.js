@@ -306,7 +306,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
       fx.hit(new THREE.Vector3(e.pos.x, 0.7, e.pos.z), crit ? 0xffe9a8 : e.cfg.color);
       fx.text({ x: e.pos.x, z: e.pos.z }, String(Math.max(1, Math.round(amount))), {
         color: crit ? '#ffe066' : '#eafff4',
-        crit, y: e.cfg.height * 0.75, size: crit ? 0.62 : 0.46,
+        crit, y: e.cfg.height * 0.95, size: crit ? 0.85 : 0.62,
       });
     }
     if (e.hp <= 0) {

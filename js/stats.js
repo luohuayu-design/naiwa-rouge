@@ -24,6 +24,11 @@ export const STAT_DEFS = [
   { key: 'critRate',    name: '暴击率',   base: 0.00, fmt: pct,                            desc: '命中时触发暴击的概率' },
   { key: 'critDamage',  name: '暴击伤害', base: 1.50, fmt: (v) => (v * 100).toFixed(0) + '%', desc: '暴击时的伤害倍率' },
   { key: 'lifesteal',   name: '吸血',     base: 0.00, fmt: pct,                            desc: '造成伤害按此比例回血' },
+  // ---- 武器（第 5 回合获得「环剑」后生效；获得前面板也能看到，标注了生效条件） ----
+  { key: 'swordPower',  name: '剑刃倍率', base: 1.00, fmt: (v) => '×' + v.toFixed(2),      desc: '环剑伤害 = 攻击伤害 × 倍率（可暴击、吃防御减伤）' },
+  { key: 'swordMax',    name: '剑数量上限', base: 3,  fmt: (v) => String(Math.round(v)),   desc: '环剑最多同时存在几把（第 5 回合获得武器后生效）' },
+  { key: 'swordOrbit',  name: '剑转速',   base: 0.55, fmt: (v) => v.toFixed(2) + ' 圈/秒', desc: '环剑绕主角旋转的速度（第 5 回合获得武器后生效）' },
+  { key: 'swordRegen',  name: '剑回复',   base: 3.0,  fmt: (v) => v.toFixed(1) + ' 秒/把', desc: '被消耗后恢复一把剑所需的时间，越小越快（越小越好）' },
 ];
 
 // ------------------------------------------------------------

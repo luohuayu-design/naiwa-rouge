@@ -124,6 +124,33 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
 #waveToast span{font-size:11.5px;letter-spacing:.1em;color:rgba(196,238,220,.75)}
 
 /* ---------------- 受击红闪 ---------------- */
+/* ---------------- 技能栏（右下角 3 行 2 列） ----------------
+   默认隐藏，获得第一件武器后 .on 淡入；
+   .sk.ready = 有剑可放（亮起可点），.sk.spent = 剑全被消耗（灰着等恢复），
+   .sk-cd 是底部的恢复进度条（下一把剑攒了多少）。 */
+#skillBar{position:fixed;right:calc(14px + env(safe-area-inset-right));
+  bottom:calc(16px + env(safe-area-inset-bottom));z-index:7;
+  display:none;grid-template-columns:repeat(2,58px);gap:10px;
+  pointer-events:none}
+#skillBar.on{display:grid;pointer-events:auto}
+.sk{position:relative;width:58px;height:58px;border-radius:14px;overflow:hidden;
+  border:1px solid rgba(126,235,196,.22);background:rgba(6,18,16,.62);
+  display:flex;align-items:center;justify-content:center;padding:0;
+  box-shadow:0 4px 14px rgba(0,0,0,.4);cursor:default;
+  transition:border-color .15s ease,box-shadow .15s ease,transform .08s ease}
+.sk img{width:36px;height:36px;opacity:.42;transition:opacity .15s ease,filter .15s ease;
+  filter:drop-shadow(0 0 6px rgba(0,0,0,.6));pointer-events:none}
+.sk.empty{border-style:dashed;border-color:rgba(126,235,196,.12);background:rgba(6,18,16,.34)}
+.sk.ready{border-color:rgba(126,235,196,.65);cursor:pointer;
+  box-shadow:0 4px 14px rgba(0,0,0,.4),0 0 18px rgba(110,240,220,.28)}
+.sk.ready img{opacity:.95;filter:drop-shadow(0 0 7px rgba(140,245,220,.55))}
+.sk.ready:active{transform:scale(.92)}
+.sk.spent img{opacity:.2}
+.sk-cd{position:absolute;left:0;right:0;bottom:0;height:0;
+  background:linear-gradient(0deg,rgba(110,240,210,.30),rgba(110,240,210,.06));
+  pointer-events:none;transition:height .1s linear}
+
+/* ---------------- 受击红闪 ---------------- */
 #hurtFx{position:fixed;inset:0;z-index:9;pointer-events:none;opacity:0;
   background:radial-gradient(circle at 50% 50%,rgba(255,40,20,0) 40%,rgba(255,28,8,.58) 100%);
   transition:opacity .36s ease}

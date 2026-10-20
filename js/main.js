@@ -12,9 +12,10 @@ import { createInput } from './input.js';
 import { createStats, STAT_DEFS } from './stats.js';
 import { createFx } from './fx.js';
 import { createEnemySystem } from './enemy.js';
-  import { createLevel1, LEVEL_1 } from './wave.js';
-  import { createRangeRing } from './rangeRing.js';
-  import { rollChoices, applyUpgrade, upgradeText, UPGRADES } from './upgrade.js';
+import { createLevel1, LEVEL_1 } from './wave.js';
+import { createRangeRing } from './rangeRing.js';
+import { rollChoices, applyUpgrade, upgradeText, UPGRADES } from './upgrade.js';
+import { createWeaponSystem } from './weapon.js';
 
 // 标记模块已经跑起来了：index.html 的兜底自检靠它判断
 // 「模块根本没执行」还是「执行了但加载慢」。
@@ -250,7 +251,7 @@ async function boot() {
 
   let enemyLoadOk = true;
   try {
-    await enemies.preload(['minion', 'warrior'], (p) => setProgress(0.55 + p * 0.45));
+    await enemies.preload(['minion', 'warrior'], (p) => setProgress(0.55 + p * 0.42));
   } catch (err) {
     enemyLoadOk = false;
     console.warn('[怪物] 模型加载失败：', err);
@@ -259,6 +260,16 @@ async function boot() {
     warn.textContent = '怪物模型加载失败（检查 assets/monsters/ 是否可访问）';
     loadingEl.querySelector('.ld-box').appendChild(warn);
   }
+
+  // ---------------- 武器：环剑 ----------------
+  // 模型很小（~20KB），跟着怪物一起在加载段拿；失败时 weapon.preload 内部会占位降级
+  const weapon = createWeaponSystem({ scene, stats, fx, enemies });
+  try {
+    await weapon.preload();
+  } catch (err) {
+    console.warn('[武器] 预加载异常（已降级）：', err);
+  }
+  setProgress(1);
 
   // ---------------- 战斗状态 ----------------
   let gameState = 'playing';   // playing | upgrade（三选一面板）| over
@@ -336,7 +347,8 @@ async function boot() {
   // 打开面板时整局进入 upgrade 状态：怪物/波次/无敌帧全部冻结，只留渲染与待机动画。
   function showUpgrade(roundNo) {
     pendingRound = roundNo;
-    const picks = rollChoices();
+    // 拿到环剑之后，武器系升级才进池子（没武器时抽到等于废牌）
+    const picks = rollChoices(undefined, { hasWeapon: weapon.granted });
 
     upTitle.textContent = `第 ${roundNo} 回合结束 · 三选一`;
     upSub.textContent = upgradesTaken > 0
@@ -402,6 +414,27 @@ async function boot() {
     gameState = 'playing';
   }
 
+  // ---------------- 技能栏（右下角 6 格，暂开放第 1 格「万剑齐发」） ----------------
+  const skillBar = document.getElementById('skillBar');
+  const sk0 = document.getElementById('sk0');
+  const skCdEl = sk0.querySelector('.sk-cd');
+
+  function renderSkill() {
+    skillBar.classList.toggle('on', weapon.granted);
+    const ready = weapon.granted && weapon.count > 0 && gameState === 'playing';
+    sk0.classList.toggle('ready', ready);
+    sk0.classList.toggle('spent', weapon.granted && weapon.count === 0);
+    // 底部恢复进度条：下一把剑攒了多少
+    skCdEl.style.height = (weapon.regenProgress * 100).toFixed(1) + '%';
+  }
+
+  function tryFireSwords() {
+    if (gameState !== 'playing' || !weapon.granted || weapon.count === 0) return;
+    weapon.fire(() => pos);
+    renderSkill();
+  }
+  sk0.addEventListener('click', tryFireSwords);
+
   // ---------------- 第一关 ----------------
   const level = createLevel1({
     enemies, fx,
@@ -411,6 +444,12 @@ async function boot() {
       showToast(`第 ${cur} 回合`, tip);
     },
     onRoundClear: (roundNo) => {
+      // 第 5 回合打完送武器「环剑」：先授予再弹三选一，武器系升级才进得去池子
+      if (roundNo >= 5 && !weapon.granted) {
+        weapon.grant();
+        renderSkill();
+        showToast('获得武器 · 环剑', '三把剑绕你旋转，碰到怪造成伤害；右下角技能把它们全部射出');
+      }
       // 第 1/3/5/8/10 回合打完弹三选一；其余回合直接走 2.6 秒间隔进下一回合
       if (level.shouldUpgrade(roundNo)) showUpgrade(roundNo);
     },
@@ -426,6 +465,8 @@ async function boot() {
     input.joystick.release();
     vel.set(0, 0, 0);
     playerRing.setVisible(false);   // 倒下/通关后不再提示攻击范围
+    weapon.setVisible(false);       // 环剑也一并收起
+    renderSkill();
 
     rsTag.textContent = LEVEL_1.name;
     rsTitle.textContent = isWin ? '通 关' : '倒 下';
@@ -461,7 +502,9 @@ async function boot() {
   // 调试钩子：只有 ?debug=1 才挂到 window，方便自动化测试读内部状态（正常游玩不暴露）
   if (new URLSearchParams(location.search).has('debug')) {
     window.__game = {
-      stats, pos, vel, input, enemies, level, fx, playerRing, frog, camera,
+      stats, pos, vel, input, enemies, level, fx, playerRing, frog, camera, weapon, scene,
+      fireSwords: tryFireSwords,
+      renderSkill,
       getYaw: () => yaw,
       getState: () => gameState,
       getKills: () => kills,
@@ -553,9 +596,11 @@ async function boot() {
       if (attackCd > 0) attackCd -= dt;
       if (attackCd <= 0) playerAttack();
 
-      // 5) 怪物 AI → 波次推进 → 生命回复 / 无敌帧
+      // 5) 怪物 AI → 波次推进 → 环剑 → 生命回复 / 无敌帧
       if (!debugNoEnemies) enemies.update(dt, combatCtx);
       if (!debugNoWaves) level.update(dt);
+      weapon.update(dt, { playerPos: pos });
+      renderSkill();
       if (stats.hp.cur < stats.get('maxHp')) stats.heal(stats.get('hpRegen') * dt);
       if (iframe > 0) iframe -= dt;
     } else if (gameState === 'upgrade') {

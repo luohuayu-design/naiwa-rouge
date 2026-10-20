@@ -7,7 +7,7 @@
 //      不会出现三张都是废牌（比如暴击率 0 时抽到暴伤）的尴尬。
 //   2. 数值都按「一次选择 ≈ 一次可感知的提升」定：
 //      攻击力 +1（前期最直观）、攻速 +18%、范围 +0.40、
-//      生命 +2、防御 +15、回复 +0.6/秒；越界的数值由 stats 的统一公式兜住。
+//      生命 +2、防御 +15、回复 +0.2/秒；越界的数值由 stats 的统一公式兜住。
 //   3. 同一项可以重复抽到、重复叠加（src 里带序号，便于测试与回滚）。
 //
 // 对外：
@@ -47,6 +47,27 @@ export const UPGRADES = [
     stat: 'critDamage', pct: 0.50,
     extra: { stat: 'critRate', flat: 0.06 },
   },
+  // ---- 武器系（needsWeapon：第 5 回合拿到环剑后才会进抽取池） ----
+  {
+    id: 'swordEdge', tag: 'atk', glyph: '🗡', name: '剑刃', needsWeapon: true,
+    title: '剑刃倍率 +30%', desc: '环剑转着圈就能砍人，倍率直接放大它的伤害',
+    stat: 'swordPower', pct: 0.30,
+  },
+  {
+    id: 'swordArray', tag: 'atk', glyph: '✹', name: '剑阵', needsWeapon: true,
+    title: '剑数量上限 +1', desc: '多一把剑轮转，环上更密、散射覆盖更广',
+    stat: 'swordMax', flat: 1,
+  },
+  {
+    id: 'swordSpin', tag: 'atk', glyph: ' ⟳', name: '疾轮', needsWeapon: true,
+    title: '剑转速 +25%', desc: '剑转得更快，同样时间扫过更多怪',
+    stat: 'swordOrbit', pct: 0.25,
+  },
+  {
+    id: 'swordForge', tag: 'atk', glyph: '⚒', name: '锻造', needsWeapon: true,
+    title: '剑回复快 20%', desc: '被消耗的剑更快回到环上（3.0 → 2.4 秒/把）',
+    stat: 'swordRegen', pct: -0.20,
+  },
 
   // ---------------- 生存 ----------------
   {
@@ -61,8 +82,8 @@ export const UPGRADES = [
   },
   {
     id: 'regen', tag: 'def', glyph: '✚', name: '再生',
-    title: '生命回复 +0.6/秒', desc: '边跑边回血，长回合里等于多几条命',
-    stat: 'hpRegen', flat: 0.6,
+    title: '生命回复 +0.2/秒', desc: '边跑边回血，5 秒回一点；数值保守，靠它硬抗不现实',
+    stat: 'hpRegen', flat: 0.2,
   },
   {
     id: 'vamp', tag: 'def', glyph: '❦', name: '吸血',
@@ -92,10 +113,12 @@ export const UPGRADES = [
 const TAGS = ['atk', 'def', 'mov'];
 
 // 抽三张：三系各一张 + 洗牌。
+// opts.hasWeapon：拿到环剑后武器系升级才会进池子（没武器抽到等于废牌）。
 // rng 可注入，测试里能固定结果。
-export function rollChoices(rng = Math.random) {
+export function rollChoices(rng = Math.random, opts = {}) {
   const picks = TAGS.map((tag) => {
-    const list = UPGRADES.filter((u) => u.tag === tag);
+    let list = UPGRADES.filter((u) => u.tag === tag);
+    if (!opts.hasWeapon) list = list.filter((u) => !u.needsWeapon);
     const i = Math.min(list.length - 1, Math.floor(rng() * list.length));
     return list[i];
   });
