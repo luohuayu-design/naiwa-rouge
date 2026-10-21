@@ -126,7 +126,7 @@ export function createRelicSystem({ scene, fx, enemies }) {
     for (const e of foes) {
       enemies.takeDamage(e, dmg, false, { quiet: false });
     }
-    if (foes.length) audio.sfx('hit');
+    if (foes.length) audio.sfx('spikes');   // 第 25 块：破土闷响（打不到怪就不响，免得空转吵）
     // 视觉：尖刺从地里冒出来（主角周围一圈随机点位；有模型用尖刺丛，没加载好用石锥）
     const cones = [];
     for (let i = 0; i < (spikeTpl ? 6 : 10); i++) {

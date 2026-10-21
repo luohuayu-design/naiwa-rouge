@@ -14,7 +14,8 @@
 //   BGM  RezaParsian/free-sfx-bgm-pack（合成，CC0）
 //   SFX  Kenney RPG Audio / UI Audio、RezaParsian、Beatscribe/homebrew_vgm
 //   处理：音效去首尾静音 + 峰值归一 -3dBFS；BGM 尾部 2s 与开头交叉淡化做无缝循环，
-//         RMS 归一 -18.5dBFS。脚本见 .tmp-audio-build.py（留在项目根，改素材时重跑）。
+//         RMS 归一 -18.5dBFS。脚本见 .tmp-audio-build.py（老 26 个）与
+//         .tmp-audio-build2.py（第 25 块追加 7 个），都留在项目根，改素材时重跑。
 // ============================================================
 
 const BGM_BASE = 'assets/audio/bgm/';
@@ -55,6 +56,14 @@ export const SFX_DEFS = {
   boss: { file: 'boss.mp3', vol: 0.70, jitter: 0 },
   victory: { file: 'victory.mp3', vol: 0.75, jitter: 0 },
   defeat: { file: 'defeat.mp3', vol: 0.75, jitter: 0 },
+  // 第 25 块追加（丰富音效）：补上以前没声音的时刻
+  aegis: { file: 'aegis.mp3', vol: 0.55, jitter: 0.03 },        // 金钟罩护体开启
+  turretShot: { file: 'turretShot.mp3', vol: 0.30, jitter: 0.10 }, // 弩炮台发射（频繁，音量压低）
+  spikes: { file: 'spikes.mp3', vol: 0.45, jitter: 0.08 },      // 地刺破土
+  curse: { file: 'curse.mp3', vol: 0.60, jitter: 0 },           // 被骨咒师咒中
+  soldout: { file: 'soldout.mp3', vol: 0.50, jitter: 0 },       // 商店售罄 / 买不了
+  ach: { file: 'ach.mp3', vol: 0.60, jitter: 0 },               // 成就解锁
+  boon: { file: 'boon.mp3', vol: 0.65, jitter: 0 },             // 永夜火种揭示
 };
 
 const STORE_KEY = 'naiwa_rouge_audio_v1';

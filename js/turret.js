@@ -188,7 +188,7 @@ export function createTurretSystem({ scene, fx, enemies }) {
       vx: (dx / len) * TURRET.BOLT_SPEED,
       vz: (dz / len) * TURRET.BOLT_SPEED,
     });
-    audio.sfx('swordFire');
+    audio.sfx('turretShot', { vol: 0.9 });   // 第 25 块：专用的短促机括声（不再蹭万剑齐发）
   }
 
   // ---------------- 每帧推进 ----------------

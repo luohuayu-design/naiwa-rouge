@@ -635,7 +635,7 @@ async function boot() {
     if (active && !aegisActive) {
       aegisActive = true;
       aegisVis(true);
-      audio.sfx('uiSwitch');
+      audio.sfx('aegis');     // 第 25 块：护体开启的蓄力嗡鸣（原来是蹭页签切换声）
       fx.ring(pos, { from: 0.5, to: 1.9, color: 0xffd66e, life: 0.5, opacity: 0.9, y: 0.1 });
       fx.ring(pos, { from: 0.3, to: 1.4, color: 0xffe9a8, life: 0.4, opacity: 0.8, y: 0.12 });
     } else if (!active && aegisActive) {
@@ -2262,9 +2262,12 @@ async function boot() {
   }
 
   function buyItem(item) {
-    if (shopSoldOut.has(item.id)) return;   // 售罄的货不能再买（同一次进店）
+    if (shopSoldOut.has(item.id)) {   // 售罄的货：锁扣「咚」一声拒绝（第 25 块）
+      audio.sfx('soldout');
+      return;
+    }
     const price = priceOf(item);      // 民心影响售价
-    if (coins < price) return;
+    if (coins < price) { audio.sfx('soldout'); return; }
     const locked = itemLocked(item, {
       hasWeapon: weapon.granted,
       round: shopRound,
@@ -2519,7 +2522,7 @@ async function boot() {
     if (!unlockAch(id)) return false;
     const a = achById(id);
     showToast('成就解锁 · ' + a.name, a.desc);
-    audio.sfx('uiSwitch');
+    audio.sfx('ach');       // 第 25 块：解锁铃（原来是蹭页签切换声）
     return true;
   }
   // 跨局累计型成就统一在结算时对一次表；即时型（喝药/挡刀）在各埋点单独查
@@ -2757,6 +2760,7 @@ async function boot() {
       closeBoons();
       return;
     }
+    audio.sfx('boon');      // 第 25 块：火种揭示的升华号角
 
     for (const b of boonPicks) {
       const rar = rarityInfo(b);
@@ -3595,9 +3599,11 @@ async function boot() {
     renderCurse();
   }
   function cursePlayer({ factor = 0.62, duration = 2.6 } = {}) {
+    const wasClean = curseT <= 0;    // 已经被咒着时不再叠音（紫圈会叠）
     if (curseT <= 0) curseFactor = factor;
     else curseFactor = Math.min(curseFactor, factor);   // 叠两次取更慢的那个
     curseT = Math.max(curseT, duration);
+    if (wasClean) audio.sfx('curse');   // 第 25 块：被拖慢的下行扫弦
     renderCurse();
   }
   function updateCurse(dt) {
