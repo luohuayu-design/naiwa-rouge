@@ -376,6 +376,57 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
 .tt-start:hover{filter:brightness(1.06);box-shadow:0 12px 36px rgba(70,220,180,.44)}
 .tt-start:active{transform:scale(.97)}
 .tt-tip{margin-top:26px;font-size:11px;letter-spacing:.08em;color:rgba(140,190,172,.45)}
+/* 主菜单按钮组（第 14 块：开始游戏 → 选关卡，另加我的记录） */
+.tt-menu{margin-top:30px;display:flex;flex-direction:column;align-items:center;gap:12px}
+.tt-menu-btn{padding:11px 44px;border-radius:999px;font:inherit;font-size:13px;
+  font-weight:700;letter-spacing:.22em;color:#bfe9d8;cursor:pointer;
+  border:1px solid rgba(126,235,196,.34);background:rgba(18,44,38,.55);
+  transition:transform .12s ease,border-color .18s ease,background .18s ease;
+  -webkit-tap-highlight-color:transparent}
+.tt-menu-btn:hover{border-color:rgba(126,235,196,.6);background:rgba(126,235,196,.1)}
+.tt-menu-btn:active{transform:scale(.97)}
+
+/* 关卡选择 / 我的记录（主页面上的子面板） */
+.tt-sub-scr{position:fixed;inset:0;z-index:21;display:none;align-items:center;justify-content:center;
+  padding:24px;background:rgba(3,9,8,.62);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px)}
+.tt-sub-scr.on{display:flex}
+.lv-card{width:min(92vw,430px);max-height:86vh;overflow:auto;border-radius:18px;padding:18px 16px 14px;
+  border:1px solid rgba(126,235,196,.22);background:rgba(8,20,17,.94);
+  box-shadow:0 24px 60px rgba(0,0,0,.55)}
+.lv-head{display:flex;align-items:center;justify-content:space-between;padding:0 4px}
+.lv-title{font-size:15px;font-weight:800;letter-spacing:.18em;color:#e6fff5}
+.lv-back{padding:7px 14px;border-radius:999px;font:inherit;font-size:12px;font-weight:700;
+  color:#bfe9d8;cursor:pointer;border:1px solid rgba(126,235,196,.3);background:transparent;
+  -webkit-tap-highlight-color:transparent}
+.lv-back:active{transform:scale(.96)}
+.lv-list{margin-top:14px;display:flex;flex-direction:column;gap:10px}
+.lv-item{position:relative;text-align:left;padding:13px 14px;border-radius:14px;cursor:pointer;
+  font:inherit;border:1px solid rgba(126,235,196,.24);background:rgba(15,36,31,.7);
+  transition:border-color .15s ease,background .15s ease,transform .12s ease;
+  -webkit-tap-highlight-color:transparent}
+.lv-item:hover{border-color:rgba(126,235,196,.55);background:rgba(126,235,196,.08)}
+.lv-item:active{transform:scale(.985)}
+.lv-item .lv-name{font-size:14px;font-weight:800;letter-spacing:.1em;color:#e6fff5}
+.lv-item .lv-meta{margin-top:5px;font-size:11.5px;line-height:1.7;color:rgba(160,204,188,.66)}
+.lv-item .lv-best{margin-top:7px;font-size:11px;color:rgba(150,225,200,.8)}
+.lv-item .lv-best b{color:#8df0c6;font-weight:700}
+.lv-item .lv-clear{position:absolute;top:12px;right:14px;font-size:10px;letter-spacing:.14em;
+  color:#8df0c6;border:1px solid rgba(141,240,198,.4);border-radius:999px;padding:3px 9px}
+.lv-item.locked{cursor:default;opacity:.55;filter:saturate(.6)}
+.lv-item.locked:hover{border-color:rgba(126,235,196,.24);background:rgba(15,36,31,.7)}
+.lv-item.locked .lv-lock{position:absolute;top:12px;right:14px;font-size:10px;letter-spacing:.14em;
+  color:rgba(160,204,188,.6)}
+.lv-empty{padding:26px 10px;text-align:center;font-size:12px;line-height:1.9;color:rgba(160,204,188,.55)}
+.lv-foot{margin-top:12px;padding:0 4px;font-size:10.5px;letter-spacing:.06em;color:rgba(140,190,172,.42)}
+/* 记录条目（我的记录面板） */
+.rc-item{padding:12px 14px;border-radius:14px;border:1px solid rgba(126,235,196,.2);
+  background:rgba(15,36,31,.6)}
+.rc-item .lv-name{font-size:13.5px;font-weight:800;letter-spacing:.1em;color:#e6fff5}
+.rc-grid{margin-top:9px;display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.rc-cell{border-radius:10px;padding:7px 4px;text-align:center;background:rgba(8,20,17,.7)}
+.rc-cell i{display:block;font-style:normal;font-size:10px;color:rgba(160,204,188,.55)}
+.rc-cell b{display:block;margin-top:3px;font-size:12.5px;color:#bfe9d8}
+.rc-cell b.hot{color:#8df0c6}
 
 /* ---------------- 通用模态（是否进入教程） ---------------- */
 .modal{position:fixed;inset:0;z-index:19;display:flex;align-items:center;justify-content:center;

@@ -196,6 +196,11 @@ async function boot() {
   const titleScr = document.getElementById('titleScr');
   const btnStart = document.getElementById('btnStart');
   const tutAsk = document.getElementById('tutAsk');
+  // 主菜单子面板：关卡选择 / 我的记录（第 14 块）
+  const levelSel = document.getElementById('levelSel');
+  const lvList = document.getElementById('lvList');
+  const recordsScr = document.getElementById('recordsScr');
+  const rcList = document.getElementById('rcList');
   const tutCard = document.getElementById('tutCard');
   const tcStep = document.getElementById('tcStep');
   const tcTitle = document.getElementById('tcTitle');
@@ -1030,10 +1035,148 @@ async function boot() {
     }
   }
 
-  btnStart.addEventListener('click', () => {
-    tutAsk.classList.add('on');
-    tutAsk.setAttribute('aria-hidden', 'false');
-  });
+  // ---------------- 主菜单：关卡选择 / 我的记录（第 14 块） ----------------
+  // 关卡清单：以后加新关 = 在这里加一条（playable 才能点）。解锁规则：
+  // 第 1 关永远开放，后面每关要「通关上一关」才解锁（看记录里的 wins）。
+  const LEVELS = [
+    { id: 1, name: LEVEL_1.name, playable: true },
+    { id: 2, name: '第二关 · 制作中', playable: false },
+  ];
+  const REC_KEY = 'naiwa_rouge_records_v1';
+  function loadRecords() {
+    try {
+      const v = JSON.parse(localStorage.getItem(REC_KEY) || '{}');
+      return v && typeof v === 'object' ? v : {};
+    } catch { return {}; }
+  }
+  function saveRunRecord(levelId, { win, time, kills, roundShown }) {
+    const all = loadRecords();
+    const r = all[levelId] || { wins: 0, bestTime: null, bestKills: 0, bestRound: 0 };
+    if (win) {
+      r.wins += 1;
+      if (r.bestTime == null || time < r.bestTime) r.bestTime = time;
+      if (kills > r.bestKills) r.bestKills = kills;
+    }
+    if (roundShown > r.bestRound) r.bestRound = roundShown;
+    all[levelId] = r;
+    try { localStorage.setItem(REC_KEY, JSON.stringify(all)); } catch { /* 隐私模式写不进就算了 */ }
+    return r;
+  }
+  const fmtTime = (t) => t == null ? '—' : (t >= 60
+    ? `${Math.floor(t / 60)} 分 ${Math.round(t % 60)} 秒`
+    : `${t.toFixed(1)} 秒`);
+
+  function showSub(el) {
+    el.classList.add('on');
+    el.setAttribute('aria-hidden', 'false');
+  }
+  function hideSub(el) {
+    el.classList.remove('on');
+    el.setAttribute('aria-hidden', 'true');
+  }
+
+  function showLevelSel() {
+    const recs = loadRecords();
+    lvList.textContent = '';
+    LEVELS.forEach((lv, i) => {
+      const unlocked = lv.playable && (i === 0 || (recs[LEVELS[i - 1].id]?.wins || 0) > 0);
+      const rec = recs[lv.id];
+      const item = document.createElement('button');
+      item.type = 'button';
+      item.className = 'lv-item' + (unlocked ? '' : ' locked');
+      item.dataset.level = String(lv.id);
+      const name = document.createElement('div');
+      name.className = 'lv-name';
+      name.textContent = lv.name;
+      const meta = document.createElement('div');
+      meta.className = 'lv-meta';
+      const best = document.createElement('div');
+      best.className = 'lv-best';
+      if (!lv.playable) {
+        meta.textContent = '新的夜路正在铺 —— 敬请期待';
+        best.textContent = '';
+      } else {
+        const totals = level.totals;
+        meta.textContent = `${totals.rounds} 个回合 · ${totals.total} 只怪 · 奇遇 / 三选一 / 商店`;
+        best.innerHTML = rec && rec.wins > 0
+          ? `最佳：最快通关 <b>${fmtTime(rec.bestTime)}</b> · 通关 <b>${rec.wins}</b> 次`
+          : (rec && rec.bestRound > 0
+            ? `最佳：最远打到第 <b>${rec.bestRound}</b> 回合`
+            : '还没有记录 —— 去闯一闯');
+      }
+      item.append(name, meta, best);
+      if (rec && rec.wins > 0) {
+        const tag = document.createElement('span');
+        tag.className = 'lv-clear';
+        tag.textContent = '已通关';
+        item.appendChild(tag);
+      } else if (!unlocked) {
+        const tag = document.createElement('span');
+        tag.className = 'lv-lock';
+        tag.textContent = '🔒 未解锁';
+        item.appendChild(tag);
+      }
+      if (unlocked) {
+        item.addEventListener('click', () => {
+          hideSub(levelSel);
+          tutAsk.classList.add('on');
+          tutAsk.setAttribute('aria-hidden', 'false');
+        });
+      }
+      lvList.appendChild(item);
+    });
+    showSub(levelSel);
+  }
+
+  function showRecords() {
+    const recs = loadRecords();
+    rcList.textContent = '';
+    let any = false;
+    LEVELS.forEach((lv) => {
+      if (!lv.playable) return;
+      const rec = recs[lv.id];
+      if (!rec || (rec.wins === 0 && !rec.bestRound)) return;
+      any = true;
+      const item = document.createElement('div');
+      item.className = 'rc-item';
+      const name = document.createElement('div');
+      name.className = 'lv-name';
+      name.textContent = lv.name;
+      const grid = document.createElement('div');
+      grid.className = 'rc-grid';
+      const cells = [
+        ['通关次数', rec.wins > 0 ? `${rec.wins} 次` : '—', rec.wins > 0],
+        ['最快通关', fmtTime(rec.bestTime), rec.bestTime != null],
+        ['最高击杀', rec.bestKills > 0 ? `${rec.bestKills} 只` : '—', rec.bestKills > 0],
+        ['最远回合', rec.bestRound > 0 ? `第 ${rec.bestRound} 回合` : '—', rec.bestRound > 0],
+      ];
+      for (const [k, v, hot] of cells) {
+        const cell = document.createElement('div');
+        cell.className = 'rc-cell';
+        const i = document.createElement('i'); i.textContent = k;
+        const b = document.createElement('b');
+        if (hot) b.className = 'hot';
+        b.textContent = v;
+        cell.append(i, b);
+        grid.appendChild(cell);
+      }
+      item.append(name, grid);
+      rcList.appendChild(item);
+    });
+    if (!any) {
+      const empty = document.createElement('div');
+      empty.className = 'lv-empty';
+      empty.textContent = '还没有任何记录。\n去闯一闯，这里会记下你的每一次通关。';
+      empty.style.whiteSpace = 'pre-line';
+      rcList.appendChild(empty);
+    }
+    showSub(recordsScr);
+  }
+
+  btnStart.addEventListener('click', showLevelSel);
+  document.getElementById('lvBack').addEventListener('click', () => hideSub(levelSel));
+  document.getElementById('btnRecords').addEventListener('click', showRecords);
+  document.getElementById('rcBack').addEventListener('click', () => hideSub(recordsScr));
   // 静音开关：记在 localStorage 里，下次进来还是关着的
   const muteBtn = document.getElementById('muteBtn');
   const muteIcon = document.getElementById('muteIcon');
@@ -1705,6 +1848,8 @@ async function boot() {
     rsGrid.textContent = '';
 
     const roundShown = Math.min(level.totals.rounds, Math.max(1, level.roundNo));
+    // 落一笔记录（第 14 块）：通关数 / 最快通关 / 最高击杀 / 最远回合，主页面「我的记录」看
+    saveRunRecord(1, { win: isWin, time: elapsed, kills, roundShown });
     const cells = [
       ['用时', elapsed.toFixed(1) + ' 秒'],
       ['击杀', kills + ' 只'],
