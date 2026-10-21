@@ -95,7 +95,8 @@ export const LEVEL_1 = {
 // 三位巫师各带一件事（enemy.js 里一人一个技能，绝不叠在同一个人身上）：
 //   骨咒师 hexer   —— 读条在你脚下钉紫阵，落地掉血 + 减速。躲得掉，但连发就烦。
 //   火焚巫祝 pyro  —— 读条留一片灼地，站上去持续掉血 4 秒。不许站桩。
-//   霜牢主祭 hierarch —— 不还手，但给周围小怪加攻速 & 减伤。血最厚，站最后排。
+//   霜牢主祭 hierarch —— 霜牢环钉在玩家脚下跟着走，环里的怪加攻速 & 减伤泛青光；
+//                        自己还会放石刺、召卫队。血最厚，站最后排，优先点掉。
 //
 // 登场节奏：R6 骨咒师 → R10 火焚 → R13 霜牢。每次只放一位新面孔，
 // 玩家有四五回合去适应，再混编。第 16~20 回合三种同时在场的「骨塔议会」
@@ -139,12 +140,12 @@ export const LEVEL_2 = {
     // ---- 第三幕（R11~R15）：混编加压，霜牢主祭登场 ----
     { minion: 7,  warrior: 3, archer: 2, bowman: 1, hexer: 2, pyro: 1, hierarch: 0, gap: 0.50, tip: '火是留在地上的，踩上去一直掉血' },
     { minion: 7,  warrior: 3, archer: 2, bowman: 2, hexer: 2, pyro: 1, hierarch: 0, gap: 0.50, tip: '紫圈、火地、红圈，三样一起来' },
-    { minion: 8,  warrior: 4, archer: 3, bowman: 2, hexer: 2, pyro: 1, hierarch: 1, gap: 0.48, tip: '后排戴骨冠的那个不还手，但小兵会变凶' },
-    { minion: 8,  warrior: 4, archer: 3, bowman: 2, hexer: 2, pyro: 2, hierarch: 1, gap: 0.46, tip: '先砍主祭 —— 它的光环一断，全场都软下来' },
-    { minion: 8,  warrior: 4, archer: 3, bowman: 2, hexer: 2, pyro: 2, hierarch: 1, gap: 0.45, tip: '光环里的怪打得更快，别被围住' },
+    { minion: 8,  warrior: 4, archer: 3, bowman: 2, hexer: 2, pyro: 1, hierarch: 1, gap: 0.48, tip: '后排戴骨冠的那个：脚下青圈里的怪会变凶，它自己还会放石刺' },
+    { minion: 8,  warrior: 4, archer: 3, bowman: 2, hexer: 2, pyro: 2, hierarch: 1, gap: 0.46, tip: '先砍主祭 —— 它一死，跟着它的卫队也会散架' },
+    { minion: 8,  warrior: 4, archer: 3, bowman: 2, hexer: 2, pyro: 2, hierarch: 1, gap: 0.45, tip: '别站在青圈里打，石刺是从主祭那边吐过来的' },
     // ---- 第四幕（R16~R20）：骨塔议会。三种巫师同场 ----
     { minion: 8,  warrior: 4, archer: 3, bowman: 2, hexer: 3, pyro: 2, hierarch: 1, gap: 0.45, tip: '第 16 回合：骨塔议会开始点名' },
-    { minion: 9,  warrior: 5, archer: 3, bowman: 2, hexer: 3, pyro: 2, hierarch: 2, gap: 0.42, tip: '两个主祭 = 两层光环，优先点掉' },
+    { minion: 9,  warrior: 5, archer: 3, bowman: 2, hexer: 3, pyro: 2, hierarch: 2, gap: 0.42, tip: '两个主祭 = 两圈青光，先点掉一个，卫队会跟着散' },
     { minion: 9,  warrior: 5, archer: 4, bowman: 3, hexer: 3, pyro: 2, hierarch: 2, gap: 0.40, tip: '别贪输出，脚下先留一条退路' },
     { minion: 9,  warrior: 5, archer: 4, bowman: 3, hexer: 3, pyro: 2, hierarch: 2, gap: 0.40, tip: '还差两回合，撑住' },
     { minion: 9,  warrior: 5, archer: 4, bowman: 3, hexer: 3, pyro: 2, hierarch: 2, gap: 0.38, tip: '最后一波：把塔里的人全拍碎' },

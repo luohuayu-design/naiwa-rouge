@@ -51,7 +51,7 @@ function enemyDesc(cfg) {
   if (cfg.contactRange != null) return '近战型，脚下的圈就是它的攻击范围';
   if (cfg.spell && cfg.spell.kind === 'hex') return '时间压力：紫阵钉在脚下，落地掉血并减速 —— 看圈就走';
   if (cfg.spell && cfg.spell.kind === 'burn') return '空间压力：地上留一片灼地烧几秒 —— 好位置会被一点点烧掉';
-  if (cfg.aura) return '目标选择压力：自己不还手，但给周围小怪加攻速、减伤 —— 优先点掉它';
+  if (cfg.aura) return '目标选择压力：霜牢环钉在你脚下跟着你走，环里的怪加攻速、减伤还泛青光 —— 它还会放石刺、召卫队，优先点掉它';
   if (cfg.volley) return '远程型：钉住你脚下的红圈，倒计时结束落箭';
   return '远程型：躲在后面朝你扔东西';
 }

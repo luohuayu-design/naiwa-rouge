@@ -179,8 +179,15 @@ export const ENEMY_TYPES = {
   //                        躲得掉，但两只以上会连发，被粘住就走不动。
   //   pyro     火焚巫祝 —— 空间压力。地上留一片灼地烧 4 秒，好位置被一片片烧掉。
   //                        不许站桩，输出节奏被迫切碎。
-  //   hierarch 霜牢主祭 —— 目标选择压力。自己不还手、血最厚、站最后排，
-  //                        但给范围内小怪 +35% 攻速 +25% 减伤。不点它就全场变凶。
+  //   hierarch 霜牢主祭 —— 目标选择压力。血最厚、站最后排。
+  //                        第 28 块重做（用户定案）：
+  //                        ① 霜牢环不再以自己为中心，而是**钉在主角脚下跟随**——
+  //                          环里的怪 +35% 攻速 +25% 减伤，且浑身泛起青光（样貌改变）；
+  //                          想让怪变回软柿子，就得把怪群从环里引出去。
+  //                        ② 每隔一段时间在自己身边召出 4 名霜牢卫队（骷髅战士，
+  //                          环绕主祭站立、不自主动，有战士同款近战判定）。
+  //                        ③ 主动攻击：朝主角方向放一串石刺（延伸有限），
+  //                          石刺尽头钻出一只骷髅小兵。
   //
   // 三者外观靠「帽子 / 眼睛发光色 / 手持法器 / 身高」四件事区分（见 skin）——
   // 素材库只有一套巫师骨架，程序化装备是这里唯一能做出三种模型的路径。
@@ -259,18 +266,30 @@ export const ENEMY_TYPES = {
     sourceHeight: 1.20,    // 实测记录见 hexer 处（并排截图比对，勿用自动量法）
     height: 1.52,          // 最高的一只：戴骨冠、披着气场，一眼就能认出来
     radius: 0.52,
-    hp: 5,                 // 不还手，换血最厚（第 20 回合 24 血，得专门冲一趟）
+    hp: 5,                 // 血最厚（第 20 回合 24 血，得专门冲一趟）
     armor: 0,
     speed: 0.95,           // 最慢，跑不掉
-    keepDistance: 6.2,     // 没有 attackRange：它不进近战分支，也不会出手
+    damage: 1,             // 石刺的伤害（第 28 块起它出手了）
+    attackRange: 8.0,      // 石刺的读条距离
+    keepDistance: 5.6,
+    attackInterval: 5.4,
+    windup: 1.2,
+    attackDuration: 2.4,
+    castTime: 1.2,         // 有它就说明「这个远程不画脚下范围环」
+    // 石刺：从主祭身前起，朝主角方向延伸 count 段、每段间隔 step，
+    // 每段 eruption 半径 radius，尽头钻出一只骷髅小兵
+    spell: { kind: 'spikes', count: 6, step: 1.15, radius: 1.0, gap: 0.16, color: 0x9ee8ff },
+    summon: { kind: 'warrior', count: 4, every: 9.0, first: 4.5, orbit: 1.45 },
+    // 霜牢环（第 28 块）：不再以主祭为中心 —— followPlayer 让环钉在主角脚下，
+    // 走到哪跟到哪；环里的怪吃加成且泛青光。环小了（4.6 → 2.6），压的是站位。
+    aura: { radius: 2.6, haste: 0.35, armor: 0.25, followPlayer: true },
     spawnTime: 1.1,
     deathTime: 1.8,
     selfDestruct: false,
     color: 0x9ee8ff,
-    aura: { radius: 4.6, haste: 0.35, armor: 0.25 },   // 攻速 +35% / 减伤 25%
     skin: { eye: 0x7ef0ff, hat: false, crown: true, staff: 'crystal', body: 0xbfe0f0 },
     anim: {
-      walk: ANIM.walk, idle: ANIM.idle,
+      walk: ANIM.walk, idle: ANIM.idle, cast: ANIM.cast,
       death: ANIM.death, spawn: ANIM.spawn,
     },
   },
@@ -618,18 +637,23 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
       : null;
     if (ring) root.add(ring.mesh);
 
-    // 主祭的气场环：半径就是光环范围，玩家能一眼看出「站在这个圈里的小兵变凶了」。
-    // 其余怪不画（远程的范围环会盖住半个战场，见 hasRing 的注释）。
+    // 主祭的霜牢环：半径就是加成范围。第 28 块起 followPlayer —— 环不挂在主祭
+    // 身上，而是挂到场景里、每帧贴到主角脚下（像弓手的红圈一样跟着人走）；
+    // 玩家一眼能看出「我现在拖着谁在变凶」。其余怪不画（远程的范围环会盖住半个战场）。
+    const auraFollow = !!(cfg.aura && cfg.aura.followPlayer);
     const auraRing = cfg.aura
       ? createRangeRing({
           radius: cfg.aura.radius,
           color: cfg.color,
-          opacity: 0.20,
+          opacity: 0.24,
           pulse: 0.07,
           y: 0.026,
         })
       : null;
-    if (auraRing) root.add(auraRing.mesh);
+    if (auraRing) {
+      if (auraFollow) scene.add(auraRing.mesh);
+      else root.add(auraRing.mesh);
+    }
 
     const bar = createBar(cfg);
     root.add(bar.spr);
@@ -685,8 +709,12 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
       bar,
       ring,
       auraRing,
-      auraHaste: 0,      // 本帧站在哪位主祭的光环里（由 update 里的 collectAuras 写）
+      guard: opts.guard || null,   // 霜牢卫队：{ master, angle, radius }（第 28 块）
+      auraHaste: 0,      // 本帧站在谁的霜牢环里（由 update 里的 collectAuras 写）
       auraArmor: 0,
+      glowT: 0,          // 被霜牢环加成的发光过渡（0~1，样貌改变用）
+      // 卫队继承主祭本局的成长倍率（第 28 块）：召唤时按这个落账
+      summonScale: { hp: opts.hpScale ?? 1, dmg: opts.damageScale ?? 1 },
       baseEmissive: mats.map((m) => (m.emissive ? m.emissive.clone() : null)),
       currentAnim: '',
     };
@@ -763,6 +791,8 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
     e.deathT = 0;
     e.hp = 0;
     e.bar.spr.visible = false;
+    // 跟随玩家的霜牢环：主祭一倒环就消（不挂在它身上，得手动收）
+    if (e.auraRing && e.cfg.aura && e.cfg.aura.followPlayer) e.auraRing.mesh.visible = false;
     if (fx) fx.death(e.pos, e.cfg.color);
     if (onDeath) onDeath(e);
 
@@ -777,6 +807,11 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
 
   // ---------------- 单只更新 ----------------
   const _ctxTmp = new THREE.Vector3();
+
+  // 霜牢加成的发光色（第 28 块）：环里的怪泛青光，一眼认出「这只变凶了」
+  const AURA_GLOW = new THREE.Color(0x2fd8f0);
+  const _glowColor = new THREE.Color();
+  const _glowBlack = new THREE.Color(0x000000);
 
   // ============================================================
   // 远程弹道（骨刀）
@@ -967,6 +1002,8 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
   // 两者都是「圈先出现 1~1.5 秒，再落地」，区别是落地之后还留不留在场上。
   function spawnSpell(e, ctx) {
     const sp = e.cfg.spell;
+    // 第 28 块：霜牢主祭的石刺 —— 不走「圈」系统，是一串沿线爆发的地刺
+    if (sp.kind === 'spikes') { spawnSpikes(e, ctx); return; }
     makeZone(sp.kind, e, ctx, sp.radius, {
       color: sp.color,
       debuff: e.cfg.debuff || null,
@@ -975,6 +1012,102 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
       burnT: 0,
       burnTicker: 0,
     });
+  }
+
+  // ============================================================
+  // 霜牢主祭 · 石刺（第 28 块）
+  // 朝主角方向放一串石头刺：从主祭身前 1.4 格起，每隔 step 爆一段，
+  // 共 count 段（延伸范围有限）；每段落地时玩家在半径内就吃一刀，
+  // 最后一段的尽头钻出一只骷髅小兵 —— 把「躲技能」变成「清小兵」的连锁。
+  // ============================================================
+  const spikesQ = [];      // 待爆发的刺段 { x, z, t, r, dmg, color, last }
+  const spikesFx = [];     // 正在伸缩的石刺锥 { mesh, t }
+  let spikeGeo = null, spikeMat = null;
+
+  function spikeAssets() {
+    if (spikeGeo) return;
+    spikeGeo = new THREE.ConeGeometry(0.17, 0.85, 5);
+    spikeMat = new THREE.MeshStandardMaterial({
+      color: 0x8f9aa6, roughness: 0.85, metalness: 0.1,
+      emissive: 0x2a6d80, emissiveIntensity: 0.35,
+    });
+  }
+
+  function spawnSpikes(e, ctx) {
+    spikeAssets();
+    const sp = e.cfg.spell;
+    const dx = ctx.playerPos.x - e.pos.x;
+    const dz = ctx.playerPos.z - e.pos.z;
+    const d = Math.hypot(dx, dz) || 1;
+    const nx = dx / d, nz = dz / d;
+    for (let i = 0; i < sp.count; i++) {
+      const dist = 1.4 + sp.step * i;
+      spikesQ.push({
+        x: e.pos.x + nx * dist,
+        z: e.pos.z + nz * dist,
+        t: sp.gap * i,                 // 从近到远一节节爆
+        r: sp.radius,
+        dmg: e.damage,
+        color: sp.color,
+        last: i === sp.count - 1,
+        scales: e.summonScale || null,   // 尽头小兵继承主祭本局的成长倍率
+      });
+    }
+  }
+
+  function eruptSpike(v, ctx) {
+    if (fx) {
+      fx.ring({ x: v.x, z: v.z }, { from: 0.15, to: v.r, color: v.color, life: 0.3, opacity: 0.6, y: 0.05 });
+      fx.burst({ x: v.x, z: v.z }, { color: 0xaebac6, count: 8, speed: 2.4, life: 0.35, size: 0.1, y: 0.15, up: 2.0, gravity: 6 });
+    }
+    // 视觉：一撮石刺锥从地里顶出来，停一拍再缩回去
+    const n = 4;
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const rr = Math.sqrt(Math.random()) * v.r * 0.65;
+      const mesh = new THREE.Mesh(spikeGeo, spikeMat);
+      mesh.frustumCulled = false;
+      mesh.position.set(v.x + Math.cos(a) * rr, -0.45, v.z + Math.sin(a) * rr);
+      mesh.rotation.set((Math.random() - 0.5) * 0.5, Math.random() * Math.PI, (Math.random() - 0.5) * 0.5);
+      scene.add(mesh);
+      spikesFx.push({ mesh, t: 0 });
+    }
+    const d = Math.hypot(ctx.playerPos.x - v.x, ctx.playerPos.z - v.z);
+    if (d <= v.r) ctx.hurtPlayer(v.dmg, null);
+    // 尽头：钻出一只骷髅小兵（把「躲技能」变成「清小兵」的连锁）
+    if (v.last) {
+      const sc = v.scales || {};
+      spawn('minion', { x: v.x, z: v.z }, {
+        hpScale: sc.hp ?? 1,
+        damageScale: sc.dmg ?? 1,
+      });
+      if (fx) fx.spawnRing({ x: v.x, z: v.z }, 0x9ee8ff);
+    }
+  }
+
+  function updateSpikes(dt, ctx) {
+    for (let i = spikesQ.length - 1; i >= 0; i--) {
+      const v = spikesQ[i];
+      v.t -= dt;
+      if (v.t <= 0) {
+        spikesQ.splice(i, 1);
+        eruptSpike(v, ctx);
+      }
+    }
+    for (let i = spikesFx.length - 1; i >= 0; i--) {
+      const s = spikesFx[i];
+      s.t += dt;
+      // 升（0~0.12s）→ 停（0.25s）→ 缩（0.25s），共约 0.6 秒
+      const y = s.t < 0.12
+        ? -0.45 + (s.t / 0.12) * 0.42
+        : s.t < 0.37 ? -0.03
+        : Math.max(-0.5, -0.03 - ((s.t - 0.37) / 0.25) * 0.5);
+      s.mesh.position.y = y;
+      if (s.t > 0.62) {
+        scene.remove(s.mesh);
+        spikesFx.splice(i, 1);
+      }
+    }
   }
 
   function updateZones(dt, ctx) {
@@ -1134,8 +1267,15 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
         : e.cfg.attackRange);
       e.ring.update(dt);
     }
-    // 主祭的气场环：一直呼吸，就是这个怪的「存在感」
-    if (e.auraRing) e.auraRing.update(dt);
+    // 主祭的霜牢环：一直呼吸。followPlayer 的每帧贴到主角脚下（第 28 块），
+    // 死亡后不再更新位置（die 里已隐藏）。
+    if (e.auraRing) {
+      if (e.cfg.aura && e.cfg.aura.followPlayer) {
+        e.auraRing.mesh.position.x = ctx.playerPos.x;
+        e.auraRing.mesh.position.z = ctx.playerPos.z;
+      }
+      e.auraRing.update(dt);
+    }
 
     // 受击闪白（复制一份 emissive，闪完原样还回去）
     if (e.flashT > 0) {
@@ -1147,6 +1287,37 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
         if (on) m.emissive.setRGB(1.0, 0.92, 0.85);
         else if (e.baseEmissive[i]) m.emissive.copy(e.baseEmissive[i]);
       }
+    }
+
+    // 霜牢加成的「样貌改变」：环里的怪浑身泛起青光（第 28 块）。
+    // glowT 平滑过渡，进环渐亮、出环渐暗；受击闪白优先（闪完再回到发光态）。
+    {
+      const buffed = e.auraHaste > 0 && e.state !== 'dead' && e.state !== 'spawn';
+      e.glowT = Math.max(0, Math.min(1, e.glowT + (buffed ? dt * 6 : -dt * 4)));
+      if (e.flashT <= 0) {
+        for (let i = 0; i < e.mats.length; i++) {
+          const m = e.mats[i];
+          if (!m.emissive) continue;
+          const base = e.baseEmissive[i];
+          if (e.glowT > 0) {
+            _glowColor.copy(base || _glowBlack).lerp(AURA_GLOW, e.glowT);
+            m.emissive.copy(_glowColor);
+          } else if (base) m.emissive.copy(base);
+        }
+      }
+    }
+
+    // ---- 主祭的霜牢卫队：环绕主祭站位、不自主动（第 28 块）----
+    // 位置完全由主祭决定；主祭一死，卫队当场散架（霜牢断了，傀儡失去支撑）。
+    if (e.guard) {
+      const m = e.guard.master;
+      if (!m || m.state === 'dead') {
+        takeDamage(e, 99999, false, { quiet: true });
+        return;
+      }
+      e.guard.angle += dt * 0.55;   // 慢慢公转，像仪仗队
+      e.pos.x = m.pos.x + Math.cos(e.guard.angle) * e.guard.radius;
+      e.pos.z = m.pos.z + Math.sin(e.guard.angle) * e.guard.radius;
     }
 
     if (e.state === 'dead') {
@@ -1188,6 +1359,8 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
     // 正在出手（attack）的不歇；歇 0.7~1.5 秒，然后重新走 3~6 秒。
     if (e.state === 'attack') {
       e.restT = 0;                 // 打人的时候不算休息
+    } else if (e.guard) {
+      // 卫队是傀儡：不会喘气、不会走神，只有站位和攻击
     } else if (e.restT > 0) {
       e.restT -= dt;
       if (e.currentAnim !== e.cfg.anim.idle) {
@@ -1208,9 +1381,31 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
 
     // ---- 巫师（第二关）：三人共用一套「保持距离 + 读条」的骨架 ----
     // 区别只在 cfg.spell 的 kind，以及有没有 cfg.aura：
-    //   hexer / pyro  有 spell → 站到射程里读条放法术
-    //   hierarch      没有 spell → 只走位，靠光环施压（不还手是它的设计，不是漏写）
+    //   hexer / pyro   有 spell → 站到射程里读条放法术
+    //   hierarch       霜牢环跟随主角 + 定时召卫队 + 石刺（第 28 块起它是主动怪）
     if (e.cfg.spell || e.cfg.aura) {
+      // 主祭的召唤计时：到点在身边召出 4 名霜牢卫队（第 28 块）。
+      // 已有的卫队不叠加 —— 先数一圈，缺几个补几个。
+      if (e.cfg.summon) {
+        e.summonCd = (e.summonCd == null) ? e.cfg.summon.first : e.summonCd - dt;
+        if (e.summonCd <= 0 && e.state !== 'attack') {
+          e.summonCd = e.cfg.summon.every;
+          const alive = list.filter((g) => g.guard && g.guard.master === e && g.state !== 'dead').length;
+          for (let i = alive; i < e.cfg.summon.count; i++) {
+            const a = (i / e.cfg.summon.count) * Math.PI * 2 + Math.random() * 0.6;
+            spawn(e.cfg.summon.kind, {
+              x: e.pos.x + Math.cos(a) * e.cfg.summon.orbit,
+              z: e.pos.z + Math.sin(a) * e.cfg.summon.orbit,
+            }, {
+              guard: { master: e, angle: a, radius: e.cfg.summon.orbit },
+              hpScale: (e.summonScale && e.summonScale.hp) ?? 1,
+              damageScale: (e.summonScale && e.summonScale.dmg) ?? 1,
+            });
+            if (fx) fx.spawnRing(e.pos, 0x9ee8ff);
+          }
+        }
+      }
+
       if (e.cfg.spell && e.state === 'attack') {
         // 读条 = 施法动画播完前摇的那一下，圈才钉到地上（圈用的是玩家**当时**的位置）
         if (!e.hitDone && e.t >= e.cfg.windup) {
@@ -1227,7 +1422,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
         return;
       }
 
-      if (e.cfg.spell) e.attackCd -= dt;   // 主祭不出手，冷却停着
+      if (e.cfg.spell) e.attackCd -= dt;   // 冷却在站定时走
       const keep = e.cfg.keepDistance;
 
       // 太近就一边后退一边念 —— 巫师不跟你贴身肉搏
@@ -1250,7 +1445,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
         return;
       }
 
-      // 主祭：不出手，站定就是它的全部动作
+      // 没写 spell 的 aura 怪兜底：站定（现在 hierarch 有 spell，走不到这里）
       if (!e.cfg.spell) {
         if (e.currentAnim !== e.cfg.anim.idle) {
           e.currentAnim = e.cfg.anim.idle;
@@ -1425,7 +1620,8 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
         return;
       }
 
-      if (dist > e.cfg.attackRange) {
+      // 卫队不追人：站错位也只是绕着主祭转，玩家主动凑上来才挨打
+      if (!e.guard && dist > e.cfg.attackRange) {
         moveToward(e, dx, dz, dist, dt, ctx);
         if (e.currentAnim !== e.cfg.anim.walk) {
           e.currentAnim = e.cfg.anim.walk;
@@ -1481,20 +1677,23 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
   }
 
   // ---------------- 群体更新 ----------------
-  // 主祭光环：每帧先收一遍所有存活主祭，再给每只怪算「站没站在谁的光环里」。
-  // 同屏主祭最多 2~3 个、怪 30 只，O(n×m) 完全可忽略。
-  // 主祭自己不受任何光环影响（不叠加，也不自肥）。
-  function collectAuras() {
+  // 霜牢环：每帧先收一遍所有存活主祭，再给每只怪算「站没站在谁的环里」。
+  // 第 28 块：环以**主角脚下**为中心（followPlayer），跟着人走 —— 玩家拖着一群
+  // 怪走进环里，环里的就变凶；把怪引出环，它们立刻恢复普通数值。
+  // 巫师不吃环（包括主祭自己）：几个法爷互相叠 buff 会滚雪球。
+  function collectAuras(ctx) {
     const sources = [];
     for (const e of list) {
       if (e.cfg.aura && e.state !== 'dead' && e.state !== 'spawn') sources.push(e);
     }
     for (const e of list) {
-      // 巫师不吃光环（包括光环源自己）：几个法爷互相叠 buff 会滚雪球
+      // 巫师不吃霜牢环（包括环源自己）
       if (e.cfg.aura || e.cfg.spell || !sources.length) { e.auraHaste = 0; e.auraArmor = 0; continue; }
       let haste = 0, armor = 0;
       for (const s of sources) {
-        if (Math.hypot(e.pos.x - s.pos.x, e.pos.z - s.pos.z) <= s.cfg.aura.radius) {
+        const cx = s.cfg.aura.followPlayer ? ctx.playerPos.x : s.pos.x;
+        const cz = s.cfg.aura.followPlayer ? ctx.playerPos.z : s.pos.z;
+        if (Math.hypot(e.pos.x - cx, e.pos.z - cz) <= s.cfg.aura.radius) {
           haste = Math.max(haste, s.cfg.aura.haste);
           armor = Math.max(armor, s.cfg.aura.armor);
         }
@@ -1505,11 +1704,12 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
   }
 
   function update(dt, ctx) {
-    collectAuras();
+    collectAuras(ctx);
     for (const e of list) updateOne(e, dt, ctx);
     updateShots(dt, ctx);
     updateZones(dt, ctx);
     updateArrows(dt, ctx);
+    updateSpikes(dt, ctx);
 
     // 分离：避免怪物叠成一个点（O(n²)，同屏最多十几只，开销可忽略）
     for (let i = 0; i < list.length; i++) {
@@ -1602,6 +1802,9 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
     zones.length = 0;
     for (const a of arrows) scene.remove(a.mesh);
     arrows.length = 0;
+    spikesQ.length = 0;
+    for (const s of spikesFx) scene.remove(s.mesh);
+    spikesFx.length = 0;
     pendingHits.length = 0;
   }
 
@@ -1620,6 +1823,8 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
     shotCount: () => shots.length,
     zoneCount: () => zones.length,      // 场上正在倒计时的圈（三种法术都算）
     arrowCount: () => arrows.length,    // 正在下落/插在地上的箭
+    spikeCount: () => spikesQ.length + spikesFx.length,   // 石刺（待爆+视觉，测试用）
+    guardCount: () => list.filter((e) => e.guard && e.state !== 'dead').length,
     pendingCount: () => pendingHits.length,
     // 巫师/法术的观测口（测试与 ?debug=1 用）
     zones: () => zones.map((v) => ({

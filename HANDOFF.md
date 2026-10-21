@@ -121,7 +121,26 @@ Three.js r160 的单摇杆幸存者肉鸽《奶蛙夜行》，纯静态站点（
   + 新 `.tmp-boonui-test.js` 9 + weapon 19 + sword-shop 26 + block13 32 + block20 31 + block21 36
   + block22 38 + econ 44 + rarity 48 + curse-ui 14 + soldout 9 + curse 84 + audio 41 + boon 146，全绿。
 
+第 28 块要点（霜牢主祭重做：霜牢环跟玩家 + 环绕卫队 + 石刺链，2026-10-21，v=32）：
+- 用户 bug 报告：主祭只会躲在角落没有任何攻击能力。三项改法全在 `enemy.js`：
+- **霜牢环跟玩家**：`aura.followPlayer: true`（半径 4.6 → 2.6）。环 mesh 挂 scene（不挂怪 root），
+  每帧贴玩家脚下；`collectAuras(ctx)` 按 `ctx.playerPos` 距离判定加成；被加成怪 `glowT` 渐变泛青光
+  （`AURA_GLOW=0x2fd8f0`，受击闪白优先）。主祭死了环先隐藏。
+- **环绕卫队**：`summon: { kind:'warrior', count:4, every:9.0, first:4.5, orbit:1.45 }`。
+  spawn 时带 `guard: { master, angle, radius }` opts；每帧 `angle += dt*0.55` 公转、
+  位置 = master + 极坐标；不自主运动（`!e.guard` 才 moveToward）、不休息；
+  master 死 → `takeDamage(99999, quiet)` 自灭（「霜牢断了，傀儡失去支撑」）。
+  召出来的卫队继承主祭本回合的 `hpScale/damageScale`。
+- **石刺链**：`spell: { kind:'spikes', count:6, step:1.15, radius:1.0, gap:0.16 }`。
+  `spikesQ`（待爆段）+ `spikesFx`（ConeGeometry 锥体：升 0.12s → 停 0.25s → 缩 0.25s）；
+  第 i 根在 1.4+step*i 距离、gap*i 延迟起爆；判定 `hurtPlayer`；**最后一段再 spawn 一只 minion**
+  （继承 scales）。`updateSpikes(dt, ctx)`、`reset()` 清空、导出 `spikeCount()/guardCount()`（测试用）。
+- `wave.js` 142~144 回合提示与注释同步新机制；`codex.js` 主祭描述改「霜牢环钉在你脚下跟着你走……」。
+- 回归：level2 单测重写 67 + block20 CDP 36（D 段改环跟玩家 + 新 D2 卫队/石刺/主祭死卫队散架），
+  全绿。注意：测试小兵必须放在玩家 2.0 距离（环 2.6 之内、自爆圈 ~1.1 之外），贴脸会自爆。
+
 第 18 块那个 P0 的完整链路（已修，留作教训）：
+
   
 `chooseUpgrade` 里 `countCard(up.id)` 没 import → 每次选卡抛 `ReferenceError`，
   
