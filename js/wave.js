@@ -75,13 +75,27 @@ export const LEVEL_1 = {
 };
 
 // 第 roundNo 回合（从 1 开始）的怪物属性倍率
+// 难度（第 18 块）：乘在每回合的成长倍率上。普通 = 原版数值，一局一选，
+// 不进设置面板（难度是「这一局玩多狠」的选择，不是机器偏好）。
+export const DIFFS = {
+  normal: { name: '普通', hp: 1, damage: 1, speed: 1, desc: '原汁原味的荒草地' },
+  nightmare: { name: '噩梦', hp: 1.35, damage: 1.25, speed: 1.04, desc: '怪更硬更疼，脚程也快一点' },
+  hell: { name: '地狱', hp: 1.8, damage: 1.55, speed: 1.08, desc: '一步走错就倒下，给头铁的蛙' },
+};
+let diff = DIFFS.normal;
+export function setDifficulty(key) {
+  if (DIFFS[key]) diff = DIFFS[key];
+  return diff;
+}
+export function getDifficulty() { return diff; }
+
 export function roundScale(roundNo) {
   const s = LEVEL_1.scale;
   const k = Math.max(0, roundNo - 1);
   return {
-    hp: 1 + s.hp * k,
-    damage: 1 + s.damage * k,
-    speed: 1 + s.speed * k,
+    hp: (1 + s.hp * k) * diff.hp,
+    damage: (1 + s.damage * k) * diff.damage,
+    speed: (1 + s.speed * k) * diff.speed,
   };
 }
 

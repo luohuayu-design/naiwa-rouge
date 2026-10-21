@@ -13,7 +13,7 @@ import { createStats, STAT_DEFS } from './stats.js';
 import { createWeaponStats } from './weaponStats.js';
 import { createFx } from './fx.js';
 import { createEnemySystem } from './enemy.js';
-import { createLevel1, LEVEL_1 } from './wave.js';
+import { createLevel1, LEVEL_1, DIFFS, setDifficulty, getDifficulty, roundScale } from './wave.js';
 import { createRangeRing } from './rangeRing.js';
 import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js';
 import { createWeaponSystem } from './weapon.js';
@@ -27,9 +27,11 @@ import audio from './audio.js';
 import { SKILLS, visibleSkills, skillForKey } from './skills.js';
 import {
   settings as readSettings, setSetting, save as saveProfile, profile,
-  bumpStat, setStatMax, codexAdd, unlockAch, hasAch, addBones, bones, resetAll,
+  bumpStat, setStatMax, codexAdd, codexCount, unlockAch, hasAch, addBones, bones, resetAll,
 } from './profile.js';
 import * as runSave from './runSave.js';
+import { CODEX_TABS, codexEntries, codexSummary } from './codex.js';
+import { achById, ACHS } from './achievements.js';
 import {
   EVENTS, ALL_EVENTS, getEventById, pickEvent, effectLines,
   choiceHint, canAfford, costShort, REP_MIN, REP_MAX, REP_START,
@@ -376,6 +378,8 @@ async function boot() {
     scene, fx, arenaRadius: ARENA_R,
     onDeath: (e) => {
       kills++;
+      codexAdd('enemies', e.type);      // 图鉴：击倒计数
+      tryAch('first_blood');
       // 小兵是自爆 → 爆炸声；其他怪是被打死 → 骨头散架声
       audio.sfx(e.cfg.selfDestruct ? 'explode' : 'die');
       // 金币掉落：按 goldRate 掷骰（概率属性，财运升级可提升）
@@ -688,6 +692,8 @@ async function boot() {
     bag[id]--;
     if (def.healFull) stats.heal(1e9);
     else if (def.heal) stats.heal(def.heal);
+    bumpStat('potions');              // 成就：累计喝药
+    if (profile().stats.potions >= 10) tryAch('potion_10');
     audio.sfx('heal');
     renderHud();
     renderBag();
@@ -736,10 +742,12 @@ async function boot() {
   function hurtPlayer(amount) {
     if (gameState !== 'playing' || iframe > 0) return;
     if (aegisActive) {
-      // 罩子挡下这一下：金环炸开提示，不掉血、不触发无敌帧（罩子本来就免伤）
+      // 罩子挡下这一下：金环提示，不掉血、不触发无敌帧（罩子本来就免伤）
       fx.ring(pos, { from: 0.7, to: 1.7, color: 0xffd66e, life: 0.34, opacity: 0.85, y: 0.35 });
       fx.ring(pos, { from: 0.5, to: 1.2, color: 0xffe9a8, life: 0.26, opacity: 0.7, y: 0.5 });
       audio.sfx('uiSwitch');
+      bumpStat('blocks');
+      if (profile().stats.blocks >= 10) tryAch('aegis_10');
       return;
     }
     stats.damage(amount);
@@ -901,8 +909,12 @@ async function boot() {
     upgradesTaken++;
     const res = applyUpgrade(stats, up, upSerial, wstats, weapon);
     takenUpgrades.push(up);
-    // 抽到金/红卡时额外一声：不是数值上的奖励，是「今晚运气站在我这边」的那一下
+    // 图鉴 / 战绩 / 成就（第 18 块）：拿到的卡记一笔，本局品质集合也记一笔
     const rIdx = up.rarity ?? 0;
+    codexAdd('cards', up.id);
+    countCard(up.id);
+    runRarities.add(rIdx);
+    // 抽到金/红卡时额外一声：不是数值上的奖励，是「今晚运气站在我这边」的那一下
     if (rIdx >= 3) audio.sfx('coin');
 
     upPanel.classList.remove('on');
@@ -1033,6 +1045,8 @@ async function boot() {
     gameState = 'playing';
     hintDone = false;
     hintEl.classList.remove('off');
+    runRarities = new Set();          // 本局品质集合重置（cards_all_kinds 用）
+    setDifficulty(profile().difficulty || 'normal');   // 难度一局一选，开局生效
     level.start();
   }
 
@@ -1206,6 +1220,7 @@ async function boot() {
       }
       lvList.appendChild(item);
     });
+    renderDiffSeg();      // 难度段控跟着上次的选择亮
     showSub(levelSel);
   }
 
@@ -1251,6 +1266,41 @@ async function boot() {
       empty.style.whiteSpace = 'pre-line';
       rcList.appendChild(empty);
     }
+    // 全局战绩（第 18 块）：跨局累计，不管哪一关
+    const st = profile().stats;
+    const cards = Object.entries(st.cards || {}).sort((a, b) => b[1] - a[1]).slice(0, 3);
+    const g = document.createElement('div');
+    g.className = 'rc-item';
+    const gt = document.createElement('div');
+    gt.className = 'lv-name';
+    gt.textContent = '夜行统计（所有关卡加起来）';
+    const grid = document.createElement('div');
+    grid.className = 'rc-grid';
+    const gcells = [
+      ['总夜行', `${st.runs || 0} 局`, st.runs > 0],
+      ['通关', `${st.wins || 0} 次`, st.wins > 0],
+      ['累计击杀', `${st.kills || 0} 只`, st.kills > 0],
+      ['累计时长', st.seconds >= 60 ? `${Math.floor(st.seconds / 60)} 分` : `${st.seconds || 0} 秒`, st.seconds > 0],
+      ['最远回合', st.bestRound > 0 ? `第 ${st.bestRound} 回合` : '—', st.bestRound > 0],
+      ['单局最多击杀', st.bestRunKills > 0 ? `${st.bestRunKills} 只` : '—', st.bestRunKills > 0],
+      ['最常拿的卡', cards.length ? cards.map(([id]) => {
+        const up = UPGRADES.find((u) => u.id === id);
+        return up ? up.name : id;
+      }).join(' / ') : '—', cards.length > 0],
+      ['累计喝药', `${st.potions || 0} 瓶`, st.potions > 0],
+    ];
+    for (const [k, v, hot] of gcells) {
+      const cell = document.createElement('div');
+      cell.className = 'rc-cell';
+      const i = document.createElement('i'); i.textContent = k;
+      const b = document.createElement('b');
+      if (hot) b.className = 'hot';
+      b.textContent = v;
+      cell.append(i, b);
+      grid.appendChild(cell);
+    }
+    g.append(gt, grid);
+    rcList.appendChild(g);
     showSub(recordsScr);
   }
 
@@ -2090,6 +2140,9 @@ async function boot() {
     if (locked) return;
     coins -= price;
     renderGold();
+    bumpStat('spent', price);         // 战绩：累计消费（shop_20 成就）
+    // 炮台 / 法器 / 富裕相关的即时成就
+    if (item.type === 'turret' && turrets.count() + 1 >= TURRET.MAX_COUNT) tryAch('turret_3');
 
     if (item.type === 'heal' || item.type === 'healFull') {
       // 药水不再立刻喝（第 13 块）：进背包，作战中随时打开喝
@@ -2169,6 +2222,7 @@ async function boot() {
       if (!ev) { runUpgrade(); return; }
       seenEvents.push(ev.id);
       if (seenEvents.length > 8) seenEvents.shift();
+      codexAdd('events', ev.id);        // 图鉴：遇见过的奇遇点亮
       openEvent(ev, roundNo, runUpgrade);
     };
 
@@ -2185,6 +2239,8 @@ async function boot() {
   function grantRingThen(next) {
     weapon.grant();
     renderSkill();
+    codexAdd('swords', 'ring');     // 图鉴（武器页签按种类也记，这里记首次获得）
+    tryAch('first_sword');
     showWeaponCard(() => queueWeaponTut('ring', next));
   }
 
@@ -2226,6 +2282,8 @@ async function boot() {
       turrets: turrets.list(),
       relics: relics.levels(),
       bag: { ...bag },
+      diff: getDifficulty() === DIFFS.normal ? null : (profile().difficulty || 'normal'),
+      rarities: [...runRarities],
     });
   }
 
@@ -2263,6 +2321,11 @@ async function boot() {
     weapon.restore(saved.weapon);
     turrets.restore(saved.turrets);
     relics.restore(saved.relics);
+    runRarities = new Set(saved.rarities || []);   // 本局品质集合一并恢复
+    if (saved.diff && DIFFS[saved.diff]) {
+      profile().difficulty = saved.diff;
+      setDifficulty(saved.diff);
+    }
     for (const [id, n] of Object.entries(saved.bag || {})) {
       if (id in BAG_ITEMS) bag[id] = Math.max(0, n | 0);
     }
@@ -2280,6 +2343,133 @@ async function boot() {
   }
 
   btnResume.addEventListener('click', resumeGame);
+
+  // ---------------- 成就 / 图鉴 / 战绩（第 18 块） ----------------
+  // 解锁即弹 toast（战斗中的提示条）；已解锁的重复调用是空操作。
+  function tryAch(id) {
+    if (!unlockAch(id)) return false;
+    const a = achById(id);
+    showToast('成就解锁 · ' + a.name, a.desc);
+    audio.sfx('uiSwitch');
+    return true;
+  }
+  // 跨局累计型成就统一在结算时对一次表；即时型（喝药/挡刀）在各埋点单独查
+  function checkCumulativeAchs({ isWin, roundShown }) {
+    const st = profile().stats;
+    if (st.kills >= 100) tryAch('kills_100');
+    if (st.kills >= 500) tryAch('kills_500');
+    if (st.kills >= 1500) tryAch('kills_1500');
+    if (st.wins >= 3) tryAch('wins_3');
+    if (st.wins >= 10) tryAch('wins_10');
+    if (st.potions >= 10) tryAch('potion_10');
+    if (st.blocks >= 10) tryAch('aegis_10');
+    if (st.spent >= 200) tryAch('shop_20');
+    if (st.runs >= 1) tryAch('first_run');
+    if (isWin) {
+      tryAch('first_win');
+      if (elapsed < 600) tryAch('win_fast');
+      if (!weapon.granted) tryAch('win_no_sword');
+      if (stats.hp.cur < 2) tryAch('low_hp_win');
+      if (getDifficulty() === DIFFS.hell) tryAch('hell_win');
+    }
+    if (roundShown >= 10) tryAch('round_10');
+    if (roundShown >= 15) tryAch('round_15');
+    if (kills >= 100) tryAch('run_kills_100');
+    if (kills >= 200) tryAch('run_kills_200');
+    if (upgradesTaken >= 10) tryAch('cards_10');
+    if (runRarities.size >= 5) tryAch('cards_all_kinds');
+    if (stats.get('luck') >= 10) tryAch('lucky_10');
+    if (turrets.count() >= 3) tryAch('turret_3');
+    if (relics.levels().spikes > 0 && relics.levels().frost > 0 && turrets.count() >= 1) tryAch('all_relics');
+  }
+  // 本局拿到过的品质档（cards_all_kinds 用），开局清空
+  let runRarities = new Set();
+
+  // ---------------- 图鉴面板 ----------------
+  const codexScr = document.getElementById('codexScr');
+  const cxTabs = document.getElementById('cxTabs');
+  const cxList = document.getElementById('cxList');
+  const cxFoot = document.getElementById('cxFoot');
+  let cxTab = 'enemies';
+
+  function renderCodex() {
+    cxTabs.textContent = '';
+    const sum = codexSummary();
+    for (const t of CODEX_TABS) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.dataset.tab = t.id;
+      b.textContent = t.id === 'events' ? `${t.name} ${sum.eventsSeen}/${sum.events}` : t.name;
+      if (t.id === cxTab) b.classList.add('on');
+      b.addEventListener('click', () => { cxTab = t.id; renderCodex(); });
+      cxTabs.appendChild(b);
+    }
+    cxList.textContent = '';
+    for (const en of codexEntries(cxTab)) {
+      const item = document.createElement('div');
+      item.className = 'cx-item' + (en.seen ? '' : ' dim');
+      if (en.color) item.style.borderColor = en.color + '55';
+      const title = document.createElement('div');
+      title.className = 'cx-title';
+      if (en.color) title.style.color = en.color;
+      title.textContent = en.title;
+      const sub = document.createElement('div');
+      sub.className = 'cx-sub';
+      sub.textContent = en.sub || '';
+      item.append(title, sub);
+      if (en.desc) {
+        const desc = document.createElement('div');
+        desc.className = 'cx-desc';
+        desc.textContent = en.desc;
+        item.appendChild(desc);
+      }
+      if (en.meta) {
+        const meta = document.createElement('div');
+        meta.className = 'cx-meta';
+        meta.textContent = en.meta;
+        item.appendChild(meta);
+      }
+      cxList.appendChild(item);
+    }
+    if (!cxList.children.length) {
+      const empty = document.createElement('div');
+      empty.className = 'cx-empty';
+      empty.textContent = '这里空空如也';
+      cxList.appendChild(empty);
+    }
+    cxFoot.textContent = cxTab === 'events'
+      ? `遇见过的奇遇会亮起来 —— 共 ${sum.events} 个，已遇 ${sum.eventsSeen} 个`
+      : '怪物会记下你击倒它们的次数 · 事件遇到一次就点亮';
+  }
+
+  function showCodex() {
+    renderCodex();
+    showSub(codexScr);
+  }
+
+  document.getElementById('btnCodex').addEventListener('click', showCodex);
+  document.getElementById('cxBack').addEventListener('click', () => hideSub(codexScr));
+
+  // ---------------- 难度选择（关卡面板里，一局一选） ----------------
+  const diffSeg = document.getElementById('diffSeg');
+  function renderDiffSeg() {
+    const cur = profile().difficulty || 'normal';
+    diffSeg.textContent = '';
+    for (const [key, d] of Object.entries(DIFFS)) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.dataset.v = key;
+      b.textContent = d.name;
+      if (key === cur) b.classList.add('on');
+      b.addEventListener('click', () => {
+        profile().difficulty = key;
+        saveProfile();
+        setDifficulty(key);
+        renderDiffSeg();
+      });
+      diffSeg.appendChild(b);
+    }
+  }
 
   // ---------------- 结算 ----------------
   function endGame(isWin) {
@@ -2309,6 +2499,14 @@ async function boot() {
     const roundShown = Math.min(level.totals.rounds, Math.max(1, level.roundNo));
     // 落一笔记录（第 14 块）：通关数 / 最快通关 / 最高击杀 / 最远回合，主页面「我的记录」看
     saveRunRecord(1, { win: isWin, time: elapsed, kills, roundShown });
+    // 全局战绩与成就（第 18 块）：局数/时长/击杀/通关跨局累计，成就统一对表
+    bumpStat('runs');
+    bumpStat('seconds', Math.round(elapsed));
+    bumpStat('kills', kills);
+    setStatMax('bestRound', roundShown);
+    setStatMax('bestRunKills', kills);
+    if (isWin) bumpStat('wins');
+    checkCumulativeAchs({ isWin, roundShown });
     runSave.clearRun();             // 一局结束（无论输赢），续玩存档就没有意义了
     refreshResume();                // 主菜单上的「继续上次」随之消失
     const cells = [
@@ -2381,6 +2579,26 @@ async function boot() {
       // 金币只在函数里读（coins 是 let，暴露快照会过期）；测试与调试用
       get coins() { return coins; },
       setCoins: (n) => { coins = Math.max(0, n | 0); renderHud(); },
+      // 图鉴 / 成就 / 战绩 / 难度（第 18 块）
+      codex: {
+        add: (g, id, n) => codexAdd(g, id, n),
+        count: (g, id) => codexCount(g, id),
+        summary: () => codexSummary(),
+        entries: (tab) => codexEntries(tab),
+        show: () => showCodex(),
+        tab: () => cxTab,
+      },
+      ach: {
+        try: (id) => tryAch(id),
+        has: (id) => hasAch(id),
+        list: () => ACHS.map((a) => a.id),
+      },
+      stats2: () => profile().stats,
+      diff: {
+        set: (k) => { profile().difficulty = k; setDifficulty(k); saveProfile(); },
+        get: () => getDifficulty().name,
+        scale: (n) => roundScale(n),
+      },
       // 场景里各类对象计数（诊断用）
       sceneStats: () => {
         let mesh = 0, skinned = 0, sprite = 0, points = 0, lights = 0, shadows = 0;

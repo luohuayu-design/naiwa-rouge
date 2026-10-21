@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#080f14">
 <link rel="icon" href="data:,">
 <title>蛙步 · 夜行</title>
-<link rel="stylesheet" href="style.css?v=21">
+<link rel="stylesheet" href="style.css?v=22">
 </head>
 <body>
 
@@ -212,6 +212,7 @@
       <button class="tt-resume" id="btnResume" type="button" hidden>继续上次</button>
       <div class="tt-row">
         <button class="tt-menu-btn" id="btnRecords" type="button">我的记录</button>
+        <button class="tt-menu-btn" id="btnCodex" type="button">图鉴</button>
         <button class="tt-menu-btn" id="btnSettings" type="button">设置</button>
       </div>
     </div>
@@ -227,7 +228,24 @@
       <button class="lv-back" id="lvBack" type="button">‹ 返回</button>
     </div>
     <div class="lv-list" id="lvList"></div>
+    <div class="set-row" style="margin-top:12px;padding:0 4px">
+      <div class="set-label"><span>难度<i>这一局玩多狠 · 结算骨币有倍率</i></span></div>
+      <div class="set-seg" id="diffSeg"></div>
+    </div>
     <div class="lv-foot">通关上一关才会解锁下一关 · 进度自动保存在本机</div>
+  </div>
+</div>
+
+<!-- 图鉴（从主页面进入） -->
+<div id="codexScr" class="tt-sub-scr" aria-hidden="true">
+  <div class="lv-card">
+    <div class="lv-head">
+      <div class="lv-title">图鉴</div>
+      <button class="lv-back" id="cxBack" type="button">‹ 返回</button>
+    </div>
+    <div class="cx-tabs" id="cxTabs"></div>
+    <div class="cx-list" id="cxList"></div>
+    <div class="lv-foot" id="cxFoot"></div>
   </div>
 </div>
 
@@ -295,7 +313,7 @@
 <!-- 不用 importmap：老手机浏览器（iOS 16.4 以下、旧版微信/安卓 WebView）
      不支持 import maps，会让整个模块解析失败、加载页永远停在 0%。
      项目内所有 import 都写成相对路径，直接靠原生 ES Module 解析。 -->
-<script type="module" src="js/main.js?v=21"></script>
+<script type="module" src="js/main.js?v=22"></script>
 
 <!-- 兜底自检：模块没跑起来时把原因写出来，别让用户对着 0% 干等 -->
 <script>

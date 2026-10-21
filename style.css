@@ -425,6 +425,25 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
   transition:border-color .16s,background .16s}
 .set-reset:hover{border-color:rgba(255,120,100,.7);background:rgba(80,24,18,.7)}
 
+/* 图鉴（第 18 块）：页签 + 条目列表 */
+.cx-tabs{margin-top:12px;display:flex;gap:6px}
+.cx-tabs button{flex:1;padding:8px 0;border-radius:10px;font:inherit;font-size:12px;font-weight:700;
+  letter-spacing:.08em;cursor:pointer;color:#9fc0b3;border:1px solid rgba(126,235,196,.2);
+  background:rgba(14,34,29,.6);transition:border-color .16s,background .16s,color .16s}
+.cx-tabs button.on{color:#06231a;border-color:#2fbf8d;background:#2fbf8d}
+.cx-list{margin-top:12px;display:flex;flex-direction:column;gap:8px;max-height:52vh;overflow:auto;padding:2px}
+.cx-item{padding:11px 13px;border-radius:12px;text-align:left;
+  border:1px solid rgba(126,235,196,.16);background:rgba(13,31,27,.7)}
+.cx-item .cx-title{font-size:13px;font-weight:800;letter-spacing:.06em;color:#e6fff5}
+.cx-item .cx-title b{font-weight:800;color:inherit}
+.cx-item .cx-sub{margin-top:4px;font-size:11px;color:#8fc0ae}
+.cx-item .cx-desc{margin-top:5px;font-size:11.5px;line-height:1.65;color:rgba(168,204,190,.8)}
+.cx-item .cx-meta{margin-top:6px;font-size:10.5px;letter-spacing:.06em;color:rgba(150,225,200,.62)}
+.cx-item.dim .cx-title,.cx-item.dim .cx-sub,.cx-item.dim .cx-desc{filter:blur(3px);user-select:none}
+.cx-item.dim{opacity:.6}
+.cx-item.dim .cx-sub{filter:none;opacity:.75}
+.cx-empty{padding:24px 0;text-align:center;font-size:12px;color:rgba(150,190,175,.5)}
+
 /* 关卡选择 / 我的记录（主页面上的子面板） */
 .tt-sub-scr{position:fixed;inset:0;z-index:21;display:none;align-items:center;justify-content:center;
   padding:24px;background:rgba(3,9,8,.62);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px)}
