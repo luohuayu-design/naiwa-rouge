@@ -25,14 +25,17 @@ export const BONE = {
   perKill: 0.3,     // 每只怪（最后一次性取整）
   win: 40,          // 通关额外奖励
   diffMul: { normal: 1, nightmare: 1.4, hell: 1.8 },   // 难度倍率
+  dailyMul: 1.25,   // 每日挑战（第 22 块）：同一颗种子只发一次好成绩，给一点额外
 };
 
-// 一局该发多少骨币。diffKey 用 profile().difficulty（normal / nightmare / hell）
-export function bonesFor({ roundShown = 1, kills = 0, isWin = false } = {}, diffKey = 'normal') {
+// 一局该发多少骨币。diffKey 用 profile().difficulty（normal / nightmare / hell）；
+// extraMul 是「本局诅咒倍率」（第 21 块，curseMul）与每日挑战加成的乘积，默认 1。
+export function bonesFor({ roundShown = 1, kills = 0, isWin = false } = {}, diffKey = 'normal', extraMul = 1) {
   const raw = Math.max(1, roundShown | 0) * BONE.perRound
     + Math.max(0, kills || 0) * BONE.perKill
     + (isWin ? BONE.win : 0);
-  const mul = BONE.diffMul[diffKey] || 1;
+  const extra = Number.isFinite(extraMul) && extraMul > 0 ? extraMul : 1;
+  const mul = (BONE.diffMul[diffKey] || 1) * extra;
   return Math.max(0, Math.round(raw * mul));
 }
 

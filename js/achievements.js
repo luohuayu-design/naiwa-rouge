@@ -39,6 +39,10 @@ export const ACHS = [
   { id: 'low_hp_win', name: '一线生机', desc: '生命低于 2 时通关' },
   { id: 'hell_win', name: '地狱归来', desc: '在「地狱」难度下通关' },
   { id: 'lucky_10', name: '福星高照', desc: '幸运达到 10' },
+  // 第 21 / 22 块
+  { id: 'curse_3', name: '三咒缠身', desc: '带着至少三条诅咒通关' },
+  { id: 'daily_done', name: '今日份', desc: '打完一次今日挑战（倒下也算）' },
+  { id: 'daily_win', name: '今日最佳', desc: '通关一次今日挑战' },
 ];
 
 const byId = new Map(ACHS.map((a) => [a.id, a]));

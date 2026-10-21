@@ -880,3 +880,67 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
   .sh-card{max-height:90vh}
   .sh-desc{display:none}
 }
+
+/* ============================================================
+   第 21 块 · 夜行诅咒（自选 debuff 换骨币倍率）
+   命名统一 rc- 前缀，别和 HUD 上骨咒师的「咒」角标（.curse-chip）撞
+   ============================================================ */
+.rc-sec{margin-top:14px;padding:12px 14px;border-radius:14px;
+  border:1px solid rgba(176,126,255,.22);
+  background:linear-gradient(180deg,rgba(30,18,44,.74),rgba(16,11,24,.6))}
+.rc-head{display:flex;align-items:baseline;justify-content:space-between;
+  font-size:12.5px;font-weight:700;letter-spacing:.16em;color:#e7d6ff}
+.rc-head i{font-style:normal;margin-left:4px;font-size:9.5px;letter-spacing:.1em;
+  color:rgba(198,166,255,.62)}
+.rc-head b{font-size:15px;font-weight:800;color:#ffd7a8;letter-spacing:.02em}
+.rc-tip{margin-top:6px;font-size:10.5px;line-height:1.65;color:rgba(198,182,222,.66)}
+.rc-list{margin-top:10px;display:flex;flex-wrap:wrap;gap:7px}
+.rc-chip{display:inline-flex;align-items:center;gap:6px;padding:7px 10px;border-radius:10px;
+  font:inherit;font-size:11.5px;font-weight:700;letter-spacing:.06em;color:#d9cdf0;
+  cursor:pointer;border:1px solid rgba(180,140,255,.24);background:rgba(255,255,255,.04)}
+.rc-chip em{font-style:normal;font-size:10px;font-weight:700;color:rgba(255,214,160,.72)}
+.rc-chip:hover{border-color:rgba(200,160,255,.5);background:rgba(180,140,255,.12)}
+.rc-chip:active{transform:scale(.97)}
+.rc-chip.on{color:#2a0f3d;border-color:#d3b0ff;
+  background:linear-gradient(180deg,#e6ccff,#b88cff);
+  box-shadow:0 6px 18px rgba(150,90,240,.28)}
+.rc-chip.on em{color:rgba(56,18,86,.82)}
+
+/* ============================================================
+   第 22 块 · 今日挑战
+   ============================================================ */
+.tt-daily{margin-top:12px;display:inline-flex;flex-direction:column;align-items:center;gap:2px;
+  padding:9px 26px;border-radius:999px;font:inherit;color:#d3e8ff;cursor:pointer;
+  border:1px solid rgba(110,170,255,.32);
+  background:linear-gradient(180deg,rgba(28,44,74,.86),rgba(14,22,38,.88))}
+.tt-daily-k{font-size:13px;font-weight:700;letter-spacing:.2em}
+.tt-daily-s{font-size:10px;letter-spacing:.06em;color:rgba(160,196,246,.72)}
+.tt-daily:hover{border-color:rgba(140,196,255,.62);background:rgba(40,64,104,.9)}
+.tt-daily:active{transform:scale(.97)}
+.tt-daily.done{border-color:rgba(120,220,170,.44)}
+.tt-daily.done .tt-daily-s{color:rgba(150,232,190,.85)}
+
+.dl-hero{margin-top:14px;padding:14px 14px 12px;border-radius:14px;text-align:center;
+  border:1px solid rgba(110,170,255,.2);
+  background:radial-gradient(circle at 50% -10%,rgba(64,116,196,.3),rgba(12,18,30,.62))}
+.dl-date{font-size:20px;font-weight:800;letter-spacing:.06em;color:#e8f2ff}
+.dl-seed{margin-top:6px;font-size:11.5px;letter-spacing:.12em;color:rgba(190,214,246,.86)}
+.dl-seed b{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:15px;
+  letter-spacing:.22em;color:#ffd9a0}
+.dl-hero i{display:block;margin-top:8px;font-style:normal;font-size:10.5px;line-height:1.7;
+  color:rgba(172,198,226,.64)}
+.dl-rules{margin-top:12px;list-style:none;display:flex;flex-direction:column;gap:6px}
+.dl-rules li{padding:8px 11px;border-radius:9px;font-size:11.5px;line-height:1.6;
+  color:rgba(214,230,246,.86);background:rgba(255,255,255,.035);
+  border-left:2px solid rgba(120,160,255,.45)}
+.dl-rules li b{color:#ffd9a0}
+.dl-best{margin-top:12px;padding:10px 12px;border-radius:11px;font-size:11.5px;line-height:1.75;
+  color:rgba(206,226,246,.8);background:rgba(255,255,255,.03);
+  border:1px dashed rgba(120,160,255,.22)}
+.dl-best b{color:#9df2c4}
+.dl-start{margin-top:14px;width:100%;padding:13px 0;border-radius:12px;font:inherit;
+  font-size:13px;font-weight:800;letter-spacing:.2em;color:#06231a;cursor:pointer;border:0;
+  background:linear-gradient(180deg,#7ef0c6,#2fbf8d)}
+.dl-start:hover{filter:brightness(1.06)}
+.dl-start:active{transform:scale(.985)}
+.dl-start:disabled{color:rgba(200,232,220,.5);background:rgba(60,120,100,.35);cursor:default}

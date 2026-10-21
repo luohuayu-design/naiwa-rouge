@@ -29,10 +29,12 @@ export function createGoldSystem({ scene, fx, stats, onGold }) {
     });
   }
 
-  // 怪死掉时调用：按 goldRate 掷骰，中了就掉一枚
-  function maybeDrop(pos) {
+  // 怪死掉时调用：按 goldRate 掷骰，中了就掉一枚。
+  // 第 22 块：rng 可注入（种子局用它保证「同一颗种子掉钱的位置也一样」）；
+  // 不传就是 Math.random，老调用完全不变。
+  function maybeDrop(pos, rng = Math.random) {
     const rate = Math.min(1, Math.max(0, stats.get('goldRate')));
-    if (Math.random() >= rate) return false;
+    if (rng() >= rate) return false;
     spawn(pos);
     return true;
   }

@@ -33,8 +33,15 @@ import {
 } from './profile.js';
 import * as runSave from './runSave.js';
 import {
-  CAMPFIRE, CAMP_TOTAL_COST, campBuy, campOwned, campApply, bonesFor, diffBoneMul,
+  CAMPFIRE, CAMP_TOTAL_COST, campBuy, campOwned, campApply, bonesFor, diffBoneMul, BONE,
 } from './campfire.js';
+// 第 21 块：夜行诅咒（自选 debuff 换骨币倍率）
+import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList } from './curses.js';
+// 第 22 块：种子与每日挑战
+import {
+  DAILY_RULES, dayKey, dayText, dailySeed, seedCode, pickDailyCurses,
+  dailyRecord, saveDailyRecord, pruneDaily, makeRng,
+} from './seed.js';
 import { CODEX_TABS, codexEntries, codexSummary } from './codex.js';
 import { achById, ACHS } from './achievements.js';
 import {
@@ -407,7 +414,7 @@ async function boot() {
       // 小兵是自爆 → 爆炸声；其他怪是被打死 → 骨头散架声
       audio.sfx(e.cfg.selfDestruct ? 'explode' : 'die');
       // 金币掉落：按 goldRate 掷骰（概率属性，财运升级可提升）
-      gold.maybeDrop(e.pos);
+      gold.maybeDrop(e.pos, rngOf('gold'));
     },
   });
 
@@ -778,7 +785,8 @@ async function boot() {
       if (profile().stats.blocks >= 10) tryAch('aegis_10');
       return;
     }
-    stats.damage(amount);
+    // 荆棘（第 21 块）：本局选了它就按比例加重；金钟罩在上面已经整下挡掉了，不吃这一项
+    stats.damage(amount * (1 + runCurseDmg));
     iframe = IFRAME;
     shake = readSettings().shake ? 0.55 : 0;   // 设置里可以关掉抖屏
     audio.sfx('hurt');
@@ -854,7 +862,8 @@ async function boot() {
     // 拿到环剑之后，武器系升级才进池子（没武器时抽到等于废牌）
     // 幸运只放宽高品质那一头（第 11 块）：史诗/传说的权重 ×(1 + 幸运 × 该档系数)
     const luck = stats.get('luck');
-    const picks = rollChoices(undefined, { round: roundNo, hasWeapon: weapon.granted, luck });
+    // 第 22 块：种子局用固定随机流（同一天同一颗种子 → 同一手牌）
+    const picks = rollChoices(rngOf('card'), { round: roundNo, hasWeapon: weapon.granted, luck });
 
     upTitle.textContent = `第 ${roundNo} 回合结束 · 三选一`;
     upSub.textContent = upgradesTaken > 0
@@ -1054,6 +1063,7 @@ async function boot() {
     titleScr.setAttribute('aria-hidden', 'false');
     refreshResume();              // 有存档就亮出「继续上次 · 第 N 回合」
     renderCampBadge();            // 篝火按钮上的骨币数（第 19 块）
+    renderDailyBadge();           // 今日挑战按钮上的「今天最好」（第 22 块）
   }
 
   function beginGame({ tutorial = false } = {}) {
@@ -1075,10 +1085,15 @@ async function boot() {
     hintDone = false;
     hintEl.classList.remove('off');
     runRarities = new Set();          // 本局品质集合重置（cards_all_kinds 用）
-    setDifficulty(profile().difficulty || 'normal');   // 难度一局一选，开局生效
+    setDifficulty(diffOverride || profile().difficulty || 'normal');   // 难度一局一选，开局生效
     setLevel(pendingLevelId);         // 第 20 块：按选关重建这一关（含场景皮肤）
     clearCurse();                     // 上一局残留的减速不许带进来
     applyCampfire();                  // 篝火（第 19 块）：局外成长在开局一次性落账
+    // 第 21 / 22 块：种子与诅咒也在开局落账。普通局 seed=0 → 全部退回 Math.random
+    initRunRng(dailyMode ? dailySeedNow : 0);
+    const rc = applyRunCurses(stats, wstats, pendingCurses);
+    runCurseDmg = rc.dmgTaken;
+    if (rc.count) stats.syncHp();     // 脆骨砍的是上限，血条得跟着压下来
     level.start();
   }
 
@@ -1184,6 +1199,39 @@ async function boot() {
   ];
   // 选关面板点了哪一关 —— beginGame 时按它切关卡（点的时候还没进战斗）
   let pendingLevelId = 1;
+
+  // ---------------- 夜行诅咒（第 21 块） ----------------
+  // 勾选结果存在 profile().runCurses：下次打开还是上次那套，不用重新想。
+  // 只在开局落账（startPlay），中途不能改 —— 改了就是「临结算再加难度骗倍率」。
+  let pendingCurses = curseList(profile().runCurses || []).map((c) => c.id);
+  let runCurseDmg = 0;          // 本局「受伤加重」合计（荆棘），hurtPlayer 用
+
+  // ---------------- 种子 / 每日挑战（第 22 块） ----------------
+  // runSeed = 0 表示不固定：所有抽签退回 Math.random，和以前的普通局完全一样。
+  // 种子局每个系统一条独立随机流，互不占用 —— 少抽一张卡不会让商店换货。
+  let runSeed = 0;
+  let rngStreams = null;
+  let dailyMode = false;        // 这一局是今日挑战
+  let dailyStamp = null;        // 开局那天的 key（跨零点结算也不串到第二天）
+  // 本局的临时难度覆盖（每日挑战固定噩梦）。**不写档案** ——
+  // 写档案的话，中途刷新会把玩家的难度永久改成噩梦（踩过）。
+  let diffOverride = null;
+
+  function initRunRng(seed) {
+    runSeed = (seed >>> 0) || 0;
+    rngStreams = runSeed ? {
+      card: makeRng(runSeed ^ 0x9e3779b1),
+      shop: makeRng(runSeed ^ 0x85ebca6b),
+      event: makeRng(runSeed ^ 0xc2b2ae35),
+      gold: makeRng(runSeed ^ 0x27d4eb2f),
+      talk: makeRng(runSeed ^ 0x165667b1),
+    } : null;
+    return runSeed;
+  }
+  function rngOf(key) {
+    return (rngStreams && rngStreams[key]) || Math.random;
+  }
+
   const REC_KEY = 'naiwa_rouge_records_v1';
   function loadRecords() {
     try {
@@ -1261,6 +1309,7 @@ async function boot() {
       if (unlocked) {
         item.addEventListener('click', () => {
           pendingLevelId = lv.id;      // 点了哪关，beginGame 就开哪关
+          dailyMode = false;           // 手动选关 = 普通局（种子与固定规则都不生效）
           hideSub(levelSel);
           // 教程只在第一关问一次：能开第二关的人早就会玩了，别拿教程挡路
           if (lv.id !== 1) { beginGame({ tutorial: false }); return; }
@@ -1271,6 +1320,7 @@ async function boot() {
       lvList.appendChild(item);
     });
     renderDiffSeg();      // 难度段控跟着上次的选择亮
+    renderCursePick();    // 诅咒勾选跟着上次的选择亮
     showSub(levelSel);
   }
 
@@ -1961,7 +2011,7 @@ async function boot() {
     }
 
     if (reply.say) talkLine('me', '你', reply.say);
-    mergeEffects(talk.acc, resolveRoll(reply.effects));
+    mergeEffects(talk.acc, resolveRoll(reply.effects, rngOf('talk')));
     if (reply.chain) talk.chains.push(reply.chain);
 
     if (reply.go != null) {           // 还有下一拍：把「反应」并到下一句里
@@ -2079,7 +2129,7 @@ async function boot() {
     shopRound = roundNo;
     // 抽签前先按「现在买有没有用」过滤：没环剑时的剑类、没到解锁回合的法器、
     // 放满时的炮台都不占格子（药水进背包，满血也能囤 —— 第 13 块）
-    shopStock = rollShopItems(Math.random, {
+    shopStock = rollShopItems(rngOf('shop'), {
       hasWeapon: weapon.granted,
       round: roundNo,
       turretCount: turrets.count(),
@@ -2267,7 +2317,8 @@ async function boot() {
           round: roundNo + 1, hasWeapon: weapon.granted, gold: coins,
           rep: reputation, hp: stats.hp.cur, luck: stats.get('luck'),
         },
-        seenEvents
+        seenEvents,
+        rngOf('event')
       );
       if (!ev) { runUpgrade(); return; }
       seenEvents.push(ev.id);
@@ -2347,6 +2398,12 @@ async function boot() {
       bag: { ...bag },
       diff: getDifficulty() === DIFFS.normal ? null : (profile().difficulty || 'normal'),
       rarities: [...runRarities],
+      // 第 21 / 22 块：诅咒、种子、每日挑战标记都要进档，否则续玩会变成「无诅咒白拿倍率」
+      curses: pendingCurses.slice(),
+      seed: runSeed,
+      daily: dailyMode,
+      dailyStamp,
+      prevDiff: diffOverride,
     });
   }
 
@@ -2385,11 +2442,23 @@ async function boot() {
     turrets.restore(saved.turrets);
     relics.restore(saved.relics);
     runRarities = new Set(saved.rarities || []);   // 本局品质集合一并恢复
+    // 注意顺序：diffOverride 在下面几行才赋值，这里直接读存档里的 prevDiff
     if (saved.diff && DIFFS[saved.diff]) {
       profile().difficulty = saved.diff;
-      setDifficulty(saved.diff);
+      setDifficulty(saved.prevDiff || saved.diff);
+    } else if (saved.prevDiff) {
+      setDifficulty(saved.prevDiff);
     }
     setLevel(saved.level || 1);       // 存档记着这一局是哪一关
+    // 第 21 / 22 块：诅咒与种子跟着存档回来。mods 里已经带着 src='curse' 回放了，
+    // 这里只补「受伤加重」（它不是属性表里的字段）和随机流。
+    pendingCurses = curseList(saved.curses || []).map((c) => c.id);
+    runCurseDmg = curseDmg(pendingCurses);
+    dailyMode = !!saved.daily;
+    dailyStamp = saved.dailyStamp || dayKey();
+    dailySeedNow = saved.seed >>> 0;
+    diffOverride = saved.prevDiff || (saved.daily ? DAILY_RULES.diff : null);
+    initRunRng(saved.seed || 0);
     clearCurse();
     for (const [id, n] of Object.entries(saved.bag || {})) {
       if (id in BAG_ITEMS) bag[id] = Math.max(0, n | 0);
@@ -2601,6 +2670,121 @@ async function boot() {
   btnCamp.addEventListener('click', showCampfire);
   document.getElementById('cfBack').addEventListener('click', () => hideSub(campScr));
 
+  // ---------------- 夜行诅咒（第 21 块） ----------------
+  // 选关面板里的勾选条：点一下加一条，再点一下摘掉，右上角实时显示骨币倍率。
+  // 只写 profile().runCurses（记住选择），真正落账在 startPlay。
+  // 注意：DOM id 不能叫 rcList —— 我的记录面板已经占了 rcList / #rcList（踩过）
+  const rcPick = document.getElementById('rcPick');
+  const rcMulTop = document.getElementById('rcMulTop');
+
+  function renderCursePick() {
+    if (!rcPick) return;
+    rcPick.textContent = '';
+    for (const c of RUN_CURSES) {
+      const on = pendingCurses.includes(c.id);
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'rc-chip' + (on ? ' on' : '');
+      chip.dataset.curse = c.id;
+      chip.title = c.desc;
+      chip.setAttribute('aria-pressed', on ? 'true' : 'false');
+      const icon = document.createElement('span');
+      icon.textContent = c.icon;
+      const name = document.createElement('span');
+      name.textContent = c.name;
+      const mul = document.createElement('em');
+      mul.textContent = `+${Math.round(c.mul * 100)}%`;
+      chip.append(icon, name, mul);
+      chip.addEventListener('click', () => toggleCurse(c.id));
+      rcPick.appendChild(chip);
+    }
+    if (rcMulTop) rcMulTop.textContent = `×${curseMul(pendingCurses).toFixed(2)}`;
+  }
+
+  function toggleCurse(id) {
+    if (!CURSE_BY_ID[id]) return;
+    pendingCurses = pendingCurses.includes(id)
+      ? pendingCurses.filter((x) => x !== id)
+      : [...pendingCurses, id];
+    profile().runCurses = pendingCurses.slice();
+    saveProfile();
+    renderCursePick();
+    audio.sfx('uiSwitch');
+  }
+
+  // ---------------- 今日挑战（第 22 块） ----------------
+  // 日期哈希出种子 → 固定关卡/难度/两条诅咒。没有服务器，也不需要有。
+  const dailyScr = document.getElementById('dailyScr');
+  const btnDaily = document.getElementById('btnDaily');
+  const btnDailySub = document.getElementById('btnDailySub');
+  const dlDate = document.getElementById('dlDate');
+  const dlSeed = document.getElementById('dlSeed');
+  const dlRules = document.getElementById('dlRules');
+  const dlBest = document.getElementById('dlBest');
+  const dlStart = document.getElementById('dlStart');
+  let dailySeedNow = 0;         // 这一局用的种子（跨零点也不变）
+  let dailyCursesNow = [];
+
+  function renderDailyBadge() {
+    if (!btnDailySub) return;
+    const rec = dailyRecord(dayKey());
+    btnDaily.classList.toggle('done', !!rec);
+    btnDailySub.textContent = rec
+      ? (rec.win ? `今天已通关 · ${rec.round} 回合` : `今天最好：第 ${rec.round} 回合`)
+      : '同一颗种子';
+  }
+
+  function showDaily() {
+    const seed = dailySeed();
+    dailyCursesNow = pickDailyCurses(seed, RUN_CURSES);
+    dlDate.textContent = dayText();
+    dlSeed.textContent = seedCode(seed);
+    dlRules.textContent = '';
+    const rules = [
+      ['关卡', `${LEVELS_BY_ID[DAILY_RULES.levelId].name}（固定）`],
+      ['难度', `${DIFFS[DAILY_RULES.diff].name}（固定）`],
+      ['诅咒', dailyCursesNow.map((id) => (CURSE_BY_ID[id] ? CURSE_BY_ID[id].name : id)).join(' · ')],
+      ['骨币', `额外 ×${BONE.dailyMul.toFixed(2)}`],
+    ];
+    for (const [k, v] of rules) {
+      const li = document.createElement('li');
+      const b = document.createElement('b');
+      b.textContent = k + '：';
+      li.append(b, document.createTextNode(v));
+      dlRules.appendChild(li);
+    }
+    const rec = dailyRecord();
+    dlBest.textContent = '';
+    if (!rec) {
+      dlBest.textContent = '今天还没有记录 —— 第一条成绩就是你今天的基准';
+    } else {
+      dlBest.append(document.createTextNode('今天最好：'));
+      const b = document.createElement('b');
+      b.textContent = rec.win ? '通关' : `第 ${rec.round} 回合`;
+      dlBest.append(b, document.createTextNode(
+        ` · 击杀 ${rec.kills} 只`
+        + (rec.time != null ? ` · 用时 ${rec.time.toFixed(1)} 秒` : '')
+      ));
+    }
+    showSub(dailyScr);
+  }
+
+  function startDaily() {
+    const seed = dailySeed();
+    dailyMode = true;
+    dailyStamp = dayKey();
+    dailySeedNow = seed;
+    diffOverride = DAILY_RULES.diff;   // 只在这一局生效，档案里的难度不动
+    pendingLevelId = DAILY_RULES.levelId;
+    pendingCurses = pickDailyCurses(seed, RUN_CURSES);
+    beginGame({ tutorial: false });
+  }
+
+  btnDaily.addEventListener('click', showDaily);
+  document.getElementById('dlBack').addEventListener('click', () => hideSub(dailyScr));
+  dlStart.addEventListener('click', () => { hideSub(dailyScr); startDaily(); });
+
+
   // ---------------- 难度选择（关卡面板里，一局一选） ----------------
   const diffSeg = document.getElementById('diffSeg');
   function renderDiffSeg() {
@@ -2626,6 +2810,7 @@ async function boot() {
   function endGame(isWin) {
     if (gameState === 'over') return;
     gameState = 'over';
+    const wasDaily = dailyMode;       // 下面会把 dailyMode 清掉，成就判定要用开局那一下
     won = isWin;
     deadT = 0;
     input.joystick.release();
@@ -2639,7 +2824,9 @@ async function boot() {
 
     audio.stopBgm({ fade: 1.0 });
     audio.sfx(isWin ? 'victory' : 'defeat', { vol: 1 });
-    rsTag.textContent = level.level.name;
+    rsTag.textContent = dailyMode && dailySeedNow
+      ? `今日挑战 · 种子 ${seedCode(dailySeedNow)}`
+      : level.level.name;
     rsTitle.textContent = isWin ? '通 关' : '倒 下';
     rsTitle.classList.toggle('fail', !isWin);
     rsSub.textContent = isWin
@@ -2663,10 +2850,34 @@ async function boot() {
     if (isWin) bumpStat('wins');
     checkCumulativeAchs({ isWin, roundShown });
     // 篝火（第 19 块）：结算发骨币 —— 打得多深、杀得多狠、选多难，都算进去
-    const diffKey = profile().difficulty || 'normal';
-    const boneGain = bonesFor({ roundShown, kills, isWin }, diffKey);
+    // 第 21 / 22 块：诅咒倍率与每日挑战加成乘在上面（都是玩家自己挣的）
+    const diffKey = diffOverride || profile().difficulty || 'normal';
+    const mulCurse = curseMul(pendingCurses);
+    const mulDaily = dailyMode ? BONE.dailyMul : 1;
+    const boneGain = bonesFor({ roundShown, kills, isWin }, diffKey, mulCurse * mulDaily);
     const boneTotal = addBones(boneGain);
     const boneMul = diffBoneMul(diffKey);
+    const diffName = getDifficulty().name;
+    if (diffOverride) {                 // 临时难度用完就撤，下一局还是玩家自己选的那档
+      diffOverride = null;
+      setDifficulty(profile().difficulty || 'normal');
+    }
+    // 今日挑战：一天只记最好的一次（胜负都记），再顺手裁掉 30 天以前的老账
+    if (dailyMode) {
+      saveDailyRecord(
+        { win: isWin, round: roundShown, kills, time: elapsed, seed: runSeed },
+        dailyStamp || dayKey()
+      );
+      pruneDaily();
+      renderDailyBadge();
+      dailyMode = false;
+    }
+    // 第 21 / 22 块的新成就：打完今日挑战、带三条诅咒通关
+    if (wasDaily) {
+      tryAch('daily_done');
+      if (isWin) tryAch('daily_win');
+    }
+    if (isWin && pendingCurses.length >= 3) tryAch('curse_3');
     clearCurse();                   // 这一局的诅咒不带到结算界面
     runSave.clearRun();             // 一局结束（无论输赢），续玩存档就没有意义了
     refreshResume();                // 主菜单上的「继续上次」随之消失
@@ -2692,8 +2903,12 @@ async function boot() {
     resultEl.setAttribute('aria-hidden', 'false');
     // 骨币单独一行：这是「下一局能变强一点」的唯一来源，结算时必须看得见
     if (rsBone) {
+      const parts = [];
+      if (boneMul > 1) parts.push(`${diffName} ×${boneMul}`);
+      if (mulCurse > 1) parts.push(`诅咒 ×${mulCurse.toFixed(2)}`);
+      if (mulDaily > 1) parts.push(`今日 ×${mulDaily.toFixed(2)}`);
       rsBone.textContent = `🔥 夜行骨币 +${boneGain}`
-        + (boneMul > 1 ? `（${getDifficulty().name} ×${boneMul}）` : '')
+        + (parts.length ? `（${parts.join(' · ')}）` : '')
         + ` · 现有 ${boneTotal}`
         + (boneTotal >= 90 ? ' —— 去篝火边看看' : '');
     }
@@ -2715,6 +2930,30 @@ async function boot() {
       curse: () => ({ t: +curseT.toFixed(2), factor: curseFactor }),
       bless: (o) => { cursePlayer(o); return { t: +curseT.toFixed(2), factor: curseFactor }; },
       zones: () => enemies.zones(),
+      // 第 21 块：夜行诅咒（选中的 id / 骨币倍率 / 受伤加重）
+      runCurses: () => pendingCurses.slice(),
+      setCurses: (ids) => {
+        pendingCurses = curseList(ids || []).map((c) => c.id);
+        profile().runCurses = pendingCurses.slice();
+        saveProfile();
+        renderCursePick();
+        return curseMul(pendingCurses);
+      },
+      curseMul: () => curseMul(pendingCurses),
+      curseDmg: () => runCurseDmg,
+      // 第 22 块：种子与每日挑战
+      seedInfo: () => ({ seed: runSeed, code: runSeed ? seedCode(runSeed) : '', daily: dailyMode, stamp: dailyStamp }),
+      setSeed: (n) => initRunRng(n),
+      daily: {
+        key: () => dayKey(),
+        seed: () => dailySeed(),
+        code: () => seedCode(dailySeed()),
+        curses: () => pickDailyCurses(dailySeed(), RUN_CURSES),
+        record: (k) => dailyRecord(k || dayKey()),
+        save: (o, k) => saveDailyRecord(o || {}, k || dayKey()),
+        show: () => showDaily(),
+        start: () => startDaily(),
+      },
       wizards: () => enemies.list
         .filter((e) => e.cfg.spell || e.cfg.aura)
         .map((e) => ({
@@ -2906,7 +3145,8 @@ async function boot() {
       upgrade: {
         show: (roundNo = level.roundNo, after = null) => showUpgrade(roundNo, after),
         choose: (up) => chooseUpgrade(up),
-        roll: (luck) => rollChoices(undefined, { luck: luck ?? stats.get('luck'), hasWeapon: weapon.granted }),
+        // 第 22 块：走「本局随机流」，种子局里调试抽卡和实战抽卡是同一颗种子
+        roll: (luck) => rollChoices(rngOf('card'), { luck: luck ?? stats.get('luck'), hasWeapon: weapon.granted }),
         odds: (roundNo = level.roundNo, luck) => rarityOdds(roundNo, {
           luck: luck ?? stats.get('luck'), hasWeapon: weapon.granted,
         }),
@@ -2948,7 +3188,7 @@ async function boot() {
           { luck: luck ?? stats.get('luck') }
         ).map((o) => o.p),
         get discount() { return nextShopDiscount; },
-        roll: (rng, luck) => rollShopItems(rng, {
+        roll: (rng, luck) => rollShopItems(rng || rngOf('shop'), {
           hasWeapon: weapon.granted,
           round: level.roundNo,
           turretCount: turrets.count(),
