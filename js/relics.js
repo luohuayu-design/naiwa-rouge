@@ -17,6 +17,7 @@
 // 商店里「买得起但要攒一攒」的档，让 9/12/15/18 回合的商店有取舍。
 // ============================================================
 import * as THREE from '../lib/three.module.js';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js';
 import { distance2D } from './stats.js';
 import audio from './audio.js';
 
@@ -45,10 +46,44 @@ export function createRelicSystem({ scene, fx, enemies }) {
   const cds = { spikes: 0, frost: 0 };
 
   // ---------------- 视觉 ----------------
-  // 地刺：一排石锥从地里钻出来再缩回去（用完即扔，不做池）
+  // 地刺（第 24 块）：KayKit「尖刺地板」里只取尖刺部分（CC0，带手绘贴图），
+  // 加载好之前先用程序化石锥顶着（外观稍简，逻辑一致）。
   const spikeGeo = new THREE.ConeGeometry(0.10, 0.55, 5);
   const spikeMat = new THREE.MeshLambertMaterial({ color: 0x9a86ff, emissive: 0x4a2fb8 });
-  const eruptions = [];       // { cones:[mesh], t, life }
+  let spikeTpl = null;        // 克隆模板（整个场景根，只藏掉石砖 —— 保住根节点的朝向/缩放）
+  (async () => {
+    try {
+      const gltf = await new GLTFLoader().loadAsync('assets/props/spikes-trap.glb');
+      const root2 = gltf.scene.clone(true);
+      // ⚠️ 这份模型的结构是「石砖网格」包着「尖刺网格」（尖刺是砖的子节点）：
+      //    不管藏节点还是藏网格都会连刺一起藏掉。只能把尖刺摘出来挂到根上，再扔掉石砖。
+      let spikesMesh = null;
+      root2.traverse((o) => { if (o.isMesh && /spike/i.test(o.name || '')) spikesMesh = o; });
+      let hasSpikes = !!spikesMesh;
+      if (hasSpikes) {
+        root2.attach(spikesMesh);                    // 保持世界变换挪到根下
+        root2.traverse((o) => {                      // 其余（石砖）全部丢弃
+          if (o.isMesh && o !== spikesMesh) o.visible = false;
+        });
+      }
+      if (hasSpikes) {
+        // 源模型是 4×4 大砖上的刺丛：整丛缩到约 2.2 宽
+        spikeTpl = root2;
+        spikeTpl.scale.setScalar(0.55);
+        const box = new THREE.Box3().setFromObject(spikeTpl);
+        spikeTpl.position.y -= box.min.y;      // 底部落地
+        spikeTpl.traverse((o) => {
+          if (o.isMesh && o.visible && o.material && 'emissive' in o.material) {
+            o.material.emissive = new THREE.Color(0x2a1f4a);
+            o.material.emissiveIntensity = 0.55;
+          }
+        });
+      }
+    } catch (e) {
+      console.warn('[relics] 尖刺模型加载失败，用程序化石锥', e && e.message);
+    }
+  })();
+  const eruptions = [];       // { cones:[mesh], t, life, h }
 
   // 霜环：贴地的半透明冰盘 + 细环，跟着主角走
   const frostDisc = new THREE.Mesh(
@@ -92,21 +127,21 @@ export function createRelicSystem({ scene, fx, enemies }) {
       enemies.takeDamage(e, dmg, false, { quiet: false });
     }
     if (foes.length) audio.sfx('hit');
-    // 视觉：石刺从地里冒出来（主角周围一圈随机点位）
+    // 视觉：尖刺从地里冒出来（主角周围一圈随机点位；有模型用尖刺丛，没加载好用石锥）
     const cones = [];
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < (spikeTpl ? 6 : 10); i++) {
       const a = Math.random() * Math.PI * 2;
       const d = Math.sqrt(Math.random()) * radius * 0.85;
-      const m = new THREE.Mesh(spikeGeo, spikeMat);
+      const m = spikeTpl ? spikeTpl.clone() : new THREE.Mesh(spikeGeo, spikeMat);
       const x = at.x + Math.cos(a) * d;
       const z = at.z + Math.sin(a) * d;
-      m.position.set(x, 0, z);
+      m.position.set(x, spikeTpl ? -1.25 : 0, z);
       m.rotation.y = Math.random() * Math.PI;
       m.frustumCulled = false;
       scene.add(m);
       cones.push(m);
     }
-    eruptions.push({ cones, t: 0, life: 0.5 });
+    eruptions.push({ cones, t: 0, life: 0.5, h: spikeTpl ? 1.25 : 0.5 });
     if (fx) fx.ring(at, { from: 0.3, to: radius, color: 0x9a86ff, life: 0.3, opacity: 0.55, y: 0.06 });
   }
 
@@ -124,12 +159,13 @@ export function createRelicSystem({ scene, fx, enemies }) {
   }
 
   function update(dt, { playerPos } = {}) {
-    // 石刺起落动画
+    // 石刺起落动画（模型尖刺：整丛从地下顶出来再缩回去）
     for (let i = eruptions.length - 1; i >= 0; i--) {
       const er = eruptions[i];
       er.t += dt;
       const k = er.t / er.life;
-      const y = k < 0.4 ? (k / 0.4) * 0.5 : Math.max(0, (1 - (k - 0.4) / 0.6) * 0.5);
+      const H = er.h || 0.5;
+      const y = k < 0.4 ? -H + (k / 0.4) * H : -Math.max(0, 1 - (k - 0.4) / 0.6) * H;
       for (const c of er.cones) c.position.y = y;
       if (k >= 1) {
         for (const c of er.cones) scene.remove(c);
@@ -190,5 +226,13 @@ export function createRelicSystem({ scene, fx, enemies }) {
     buy, update, reset, restore,
     levels: () => ({ ...levels }),
     DEF: RELIC_DEFS,
+    // 调试（第 24 块）：在指定位置常驻一丛尖刺，供截图/检查
+    debugShow: (x = 1.5, z = 0) => {
+      if (!spikeTpl) return 'tpl-not-ready';
+      const m = spikeTpl.clone();
+      m.position.set(x, 0, z);
+      scene.add(m);
+      return 'ok';
+    },
   };
 }

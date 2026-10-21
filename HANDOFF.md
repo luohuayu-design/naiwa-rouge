@@ -2,7 +2,7 @@
 
 > 新对话从这里开始读，不要先翻聊天记录。
 >   
-> 最后更新：2026-10-21 夜 · 对应代码：第 23 块（见下方「当前状态」）
+> 最后更新：2026-10-21 夜 · 对应代码：第 24 块（见下方「当前状态」）
 
 ---
 
@@ -42,6 +42,7 @@ Three.js r160 的单摇杆幸存者肉鸽《奶蛙夜行》，纯静态站点（
 | **21** | 夜行诅咒（自选 debuff 换骨币倍率）                         | 已上线（7a222bf，v=25）           |
 | **22** | 今日挑战 + 种子（日期哈希，无需服务器）                         | 已上线（7a222bf，v=25）           |
 | **23** | 金币自动拾取 + 局外成长重做（篝火 3 级 / 永夜火种 / 金币折骨币 / 关卡倍率） | 已上线（1907838，v=26） |
+| **24** | 道具外观升级：炮台/地刺换 CC0 真模型（assets/props/，加载失败自动退回程序化） | 已完成（v=27，待提交） |
 
 第 20 块要点（详见 README「第二关 · 骨塔庭院」段）：
 
@@ -69,6 +70,14 @@ Three.js r160 的单摇杆幸存者肉鸽《奶蛙夜行》，纯静态站点（
 - 结算面板：`rsBtn` 文案与 `.boon` 金色样式在 `endGame` 里按 `boonGain` 切换；`rsBone` 明细多了「第 N 关 ×1.4」和「剩 X 金币折 Y」。
 
 测试：Node 8 套 679（新增诅咒/种子 84）+ CDP 26 套 847（新增 block21 36、block22 38；第 18 块图鉴 31→35、弓手 21→22）。
+
+第 24 块要点（道具外观升级，2026-10-21 夜）：
+- **资产全部 CC0**：`assets/props/` 共 5 个 glb 约 300KB —— `spikes-trap.glb`（KayKit Dungeon Remastered 的 floor_tile_big_spikes，带手绘贴图）、`turret-crate.glb` / `ballista-bow.glb` / `ballista-bolt.glb` / `bone-deco.glb`（Quaternius，经 trebeljahr/quaternius-showcase 镜像）。**加载失败自动退回程序化外观**（turret.js 的 buildTurret 原箱炮 / relics.js 的紫色石锥），测试与弱网都不受影响。
+- **Quaternius 模型的根节点自带 -90°X 旋转**：不能直接改 `rotation`（会覆盖烘焙旋转，箭会立起来），必须包一层 Group 转向，模型自身只动 scale/position；尺寸单位还小约 100 倍，用包围盒 fit 缩放。
+- **KayKit 尖刺的节点结构是反的**：`floor_tile_big_spikes`（网格）包着 `spikes`（子网格）——不管藏砖节点还是藏砖网格都会连刺一起藏。正确做法：`root2.attach(spikesMesh)` 把刺摘到根下，再把砖网格 `visible=false`。
+- **调试钩子**：`__game.relics.debugShow(x, z)` 常驻一丛尖刺（截图/检查用）。
+- 验收脚本：`.tmp-shot-props.js`（进游戏放 2 炮台 + 地刺 + 霜环，抓喷发瞬间连拍；CPU 友好 2 线程）。
+- 弃坑记录：KayKit 骷髅包的 `Skeleton_Crossbow.gltf` 几何本身就是碎石状（疑似坏模型，别再用）；Quaternius cyberpunk 的 Turret 风格不符。外观对比离线查看器：`naiwa-rouge/.tmp-view.html` + `.tmp-shot-view.js`（已 gitignore）。
 
 第 18 块那个 P0 的完整链路（已修，留作教训）：
   
@@ -239,7 +248,8 @@ node .tmp-boon-test.mjs       # 146 永夜火种（层数/品质吃幸运/待领
 - [x] 第 21 块：诅咒系统（自选 debuff 换骨币倍率）
 - [x] 第 22 块：每日挑战 + 种子
 - [x] 第 23 块：金币自动拾取 + 局外成长重做（篝火多级 / 永夜火种 / 金币折骨币 / 关卡倍率）
-- [ ] **第 24 块：主菜单 3D 背景**（场景和模型都在，只是没跑 render；奶蛙待机 + 远处骷髅剪影 + 萤火虫）
+- [x] 第 24 块：道具外观升级（炮台=木箱+长弓+宝珠、地刺=KayKit 尖刺丛，均 CC0）
+- [ ] **第 25 块：主菜单 3D 背景**（场景和模型都在，只是没跑 render；奶蛙待机 + 远处骷髅剪影 + 萤火虫）
 - [ ] 第二关 · 巫师（`skeleton-mage` 9 段动画已就位，`ENEMY_TYPES.mage` 是 planned）
 - [ ] 更多武器/技能（`skills.js` 的 SKILLS 表，技能栏还剩 5 格）
 - [ ] 性能优化（怪物合批/假阴影/视锥剔除）—— **等用户点头再动**

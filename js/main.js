@@ -3493,6 +3493,7 @@ async function boot() {
         buy: (kind) => relics.buy(kind),
         levels: () => relics.levels(),
         DEF: RELIC_DEFS,
+        debugShow: (x, z) => relics.debugShow && relics.debugShow(x, z),
       },
       aegis: {
         get level() { return stats.get('aegis'); },

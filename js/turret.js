@@ -9,10 +9,12 @@
 //     所以「基本命中」；怪的移速再快也快不过 10 单位/秒的弩箭。
 //   · 上限 3 台（itemLocked 里拦），买第 4 台时店员会告诉你放不下了。
 //
-// 模型全部程序化：底座（圆台）+ 炮身（Box）+ 炮管（圆柱）+ 弦（Line），
-// 不新增任何下载资源；深夜里靠自发光看清楚。
+// 模型（第 24 块）：CC0 低模拼装 —— Quaternius 木箱（压扁做基座）+ 长弓横放
+// 做弩臂 + 上膛的箭 + 骨头点缀（均 CC0），加载失败时退回程序化炮台（外观稍简，
+// 逻辑完全一致）。深夜里靠自发光宝珠看清楚。
 // ============================================================
 import * as THREE from '../lib/three.module.js';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js';
 import { distance2D } from './stats.js';
 import audio from './audio.js';
 
@@ -43,7 +45,87 @@ export function createTurretSystem({ scene, fx, enemies }) {
   const boltGeo = new THREE.ConeGeometry(0.07, 0.42, 6);
   const boltMat = new THREE.MeshBasicMaterial({ color: 0xbff3ff });
 
+  // ---------------- CC0 模型版（第 24 块） ----------------
+  // 木箱压扁做基座，长弓横放做弩臂（放不放箭都行——夜里主要看发光宝珠），
+  // 全部塞进名为 tHead 的组里随索敌旋转。加载好之前 buildTurret 先走程序化。
+  let tpl = null;            // { group, head } 模板（clone 出每台炮台）
+  (async () => {
+    try {
+      const loader = new GLTFLoader();
+      const [crate, bow, bolt, bone] = await Promise.all([
+        loader.loadAsync('assets/props/turret-crate.glb'),
+        loader.loadAsync('assets/props/ballista-bow.glb'),
+        loader.loadAsync('assets/props/ballista-bolt.glb'),
+        loader.loadAsync('assets/props/bone-deco.glb'),
+      ]);
+      // fit：等比缩到目标尺寸并把包围盒中心挪回原点
+      const fit = (obj, target) => {
+        const box = new THREE.Box3().setFromObject(obj);
+        const size = new THREE.Vector3(); box.getSize(size);
+        const k = target / Math.max(size.x, size.y, size.z);
+        obj.scale.setScalar(k);
+        const b2 = new THREE.Box3().setFromObject(obj);
+        const c = new THREE.Vector3(); b2.getCenter(c);
+        obj.position.sub(c);
+        return obj;
+      };
+
+      const group = new THREE.Group();
+      // 基座：压扁的木箱（⚠️ Quaternius 根节点自带旋转，只用 scale/position，转向全靠外层组）
+      const base = fit(crate.scene, 1.0);
+      base.scale.y *= 0.38;
+      base.position.y = 0.19;
+      group.add(base);
+
+      const head = new THREE.Group();       // 旋转部分
+      head.name = 'tHead';
+      // 弩臂：长弓横放（弓根节点自带 -90°X 旋转，长轴本立着，用外层组放倒）
+      const prod = fit(bow.scene, 1.45);
+      const prodG = new THREE.Group();
+      prodG.add(prod);
+      prodG.rotation.z = -Math.PI / 2;
+      prodG.position.set(0, 0.60, -0.02);
+      head.add(prodG);
+      // 上膛的箭：长轴本就沿 Z，只调头让箭头朝前
+      const boltM = fit(bolt.scene, 0.85);
+      const boltG = new THREE.Group();
+      boltG.add(boltM);
+      boltG.rotation.y = Math.PI;
+      boltG.position.set(0, 0.62, 0.10);
+      head.add(boltG);
+      // 弓和箭都给一点自发光：深夜里不至于糊成一团
+      [prodG, boltG].forEach((g) => g.traverse((o) => {
+        if (o.isMesh && o.material && 'emissive' in o.material) {
+          o.material.emissive = new THREE.Color(0x2a2418);
+          o.material.emissiveIntensity = 0.6;
+        }
+      }));
+      // 自发光宝珠：深夜里的「它活着」信号
+      const gem = new THREE.Mesh(new THREE.SphereGeometry(0.09, 10, 8), glowMat);
+      gem.position.set(0, 1.12, -0.12);
+      head.add(gem);
+      group.add(head);
+
+      // 点缀：基座边上一根骨头
+      const deco = fit(bone.scene, 0.42);
+      const decoG = new THREE.Group();
+      decoG.add(deco);
+      decoG.rotation.z = 0.5;
+      decoG.position.set(0.52, 0.10, 0.30);
+      group.add(decoG);
+
+      tpl = { group, head };
+    } catch (e) {
+      console.warn('[turret] 模型加载失败，用程序化外观', e && e.message);
+    }
+  })();
+
   function buildTurret() {
+    if (tpl) {
+      const group = tpl.group.clone();
+      const head = group.getObjectByName('tHead') || group;
+      return { group, head };
+    }
     const group = new THREE.Group();
     const base = new THREE.Mesh(baseGeo, woodMat);
     base.position.y = 0.17;
