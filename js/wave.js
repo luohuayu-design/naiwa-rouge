@@ -181,6 +181,22 @@ export function createLevel1({ enemies, fx, getPlayerPos, onRound, onRoundClear,
     nextRound();
   }
 
+  // 存档续玩（第 17 块）：直接从第 no 回合开局，不重放前面的回合。
+  // savedMod 是读档时恢复的「本回合修正」（上一回合的事件写的），传 null 就当没有。
+  function startAt(no, savedMod) {
+    reset();
+    roundIndex = Math.max(0, Math.min(level.rounds.length - 1, (no | 0) - 1));
+    roundMod = savedMod && typeof savedMod === 'object' ? { ...savedMod } : {};
+    const roundNo = roundIndex + 1;
+    const cfg = level.rounds[roundIndex];
+    phase = 'spawning';
+    t = 0;
+    spawnIdx = 0;
+    gapT = 0;
+    spawns = null;          // 与 nextRound 一致：延迟到 update 展开
+    onRound?.(roundNo, level.rounds.length, cfg.tip);
+  }
+
   function nextRound() {
     roundIndex++;
     if (roundIndex >= level.rounds.length) {
@@ -244,7 +260,7 @@ export function createLevel1({ enemies, fx, getPlayerPos, onRound, onRoundClear,
   }
 
   return {
-    start, update, reset,
+    start, startAt, update, reset,
     level,
     applyRoundMod,
     // waveIndex 是 0 基的历史名字，按「第几回合」用时读 roundNo

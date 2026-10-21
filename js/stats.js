@@ -189,6 +189,24 @@ export function createStats(defs = STAT_DEFS) {
     return { damage: mitigateFn(raw, targetArmor), crit };
   }
 
+  // ---------------- 存档续玩（第 17 块） ----------------
+  // 把全部加成导出成普通数组（JSON 可存），读档时重放 —— src 保留，
+  // 所以 clearRoundBuffs / removeBySource 这类按来源清除的逻辑照常工作。
+  function dumpMods() {
+    const out = [];
+    for (const [key, list] of mods) {
+      for (const m of list) out.push({ stat: key, flat: m.flat || 0, pct: m.pct || 0, src: m.src || '' });
+    }
+    return out;
+  }
+
+  function loadMods(list, hpCur) {
+    for (const arr of mods.values()) arr.length = 0;
+    for (const m of list || []) addMod(m);
+    if (hpCur != null) hp.cur = Math.max(0, Number(hpCur) || 0);
+    clampHp();
+  }
+
   // 面板/日志用的快照（text 统一为字符串，避免数字/字符串混用）
   function snapshot() {
     return defs.map((d) => ({ ...d, value: get(d.key), text: String(d.fmt(get(d.key))) }));
@@ -210,6 +228,7 @@ export function createStats(defs = STAT_DEFS) {
     base, get, addMod, removeBySource, preview,
     hp, heal, damage, syncHp, clampHp,
     mitigate: mitigateFn, rollDamage, snapshot, grouped,
+    dumpMods, loadMods,
     defs,
     // 近战判定入口：主角自动攻击时直接调用
     distanceTo: distance2D,

@@ -11,6 +11,10 @@ export function createJoystick({ layer, el, maxRadius = 46, leftRatio = 0.58, de
   const knob = el.querySelector('.stick-knob');
   const out = { x: 0, y: 0, active: false, strength: 0 };
 
+  let R = maxRadius;        // 逻辑半径（设置面板可改）
+  let ratio = leftRatio;    // 触发区占比
+  let rightHand = false;    // true = 只在右半屏触发（右手玩家）
+
   let pid = null;      // 当前持有的 pointerId
   let ox = 0, oy = 0;  // 摇杆原点（屏幕坐标）
 
@@ -31,7 +35,8 @@ export function createJoystick({ layer, el, maxRadius = 46, leftRatio = 0.58, de
 
   function onDown(e) {
     if (pid !== null) return;                       // 已经有一根手指在控制
-    if (e.clientX > innerWidth * leftRatio) return; // 右侧留给后续技能键
+    // 默认只认左半屏（右侧留给技能键）；右手模式反过来
+    if (rightHand ? e.clientX < innerWidth * (1 - ratio) : e.clientX > innerWidth * ratio) return;
     if (e.pointerType === 'mouse' && e.button !== 0) return;
 
     pid = e.pointerId;
@@ -57,12 +62,12 @@ export function createJoystick({ layer, el, maxRadius = 46, leftRatio = 0.58, de
     const len = Math.hypot(dx, dy);
 
     // 摇杆头视觉上限制在底盘半径内
-    const vis = len > maxRadius ? maxRadius / len : 1;
+    const vis = len > R ? R / len : 1;
     setKnob(dx * vis, dy * vis);
 
     // 输出：归一化 + 死区重映射（推一点点不会让角色抖）
-    let nx = dx / maxRadius;
-    let ny = dy / maxRadius;
+    let nx = dx / R;
+    let ny = dy / R;
     let n = Math.hypot(nx, ny);
     if (n > 1) { nx /= n; ny /= n; n = 1; }
 
@@ -97,5 +102,12 @@ export function createJoystick({ layer, el, maxRadius = 46, leftRatio = 0.58, de
   document.addEventListener('visibilitychange', () => { if (document.hidden) release(); });
 
   out.release = release;
+  // 设置面板用：改灵敏半径与左右手，立刻生效（不必重建摇杆）
+  out.setOpts = ({ radius, hand } = {}) => {
+    if (radius != null) R = Math.max(24, Math.min(96, Number(radius) || maxRadius));
+    if (hand != null) rightHand = hand === 'right';
+    return { radius: R, hand: rightHand ? 'right' : 'left' };
+  };
+  out.getOpts = () => ({ radius: R, hand: rightHand ? 'right' : 'left' });
   return out;
 }

@@ -168,8 +168,28 @@ export function createTurretSystem({ scene, fx, enemies }) {
     bolts.length = 0;
   }
 
+  // 存档续玩（第 17 块）：按存档坐标重建炮台（不走 spawn 的随机摆位与音效）
+  function spawnAt(x, z) {
+    if (list.length >= TURRET.MAX_COUNT) return null;
+    const { group, head } = buildTurret();
+    group.position.set(x, 0, z);
+    scene.add(group);
+    const turret = { group, head, x, z, cd: 0.6, angle: 0 };
+    list.push(turret);
+    return turret;
+  }
+
+  function restore(saved) {
+    reset();
+    let n = 0;
+    for (const p of (Array.isArray(saved) ? saved : []).slice(0, TURRET.MAX_COUNT)) {
+      if (spawnAt(Number(p.x) || 0, Number(p.z) || 0)) n++;
+    }
+    return n;
+  }
+
   return {
-    spawn, update, reset,
+    spawn, spawnAt, update, reset, restore,
     count: () => list.length,
     boltCount: () => bolts.length,
     list: () => list.map((t) => ({ x: t.x, z: t.z })),

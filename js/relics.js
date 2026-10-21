@@ -175,8 +175,19 @@ export function createRelicSystem({ scene, fx, enemies }) {
     frostDisc.visible = frostRim.visible = false;
   }
 
+  // 存档续玩（第 17 块）：按存档重放等级（buy 不扣钱，扣钱在外层）
+  function restore(saved) {
+    for (const k of Object.keys(levels)) levels[k] = 0;
+    frostDisc.visible = frostRim.visible = false;
+    let n = 0;
+    for (const [k, lv] of Object.entries(saved || {})) {
+      for (let i = 0; i < (lv | 0); i++) { buy(k); n++; }
+    }
+    return n;
+  }
+
   return {
-    buy, update, reset,
+    buy, update, reset, restore,
     levels: () => ({ ...levels }),
     DEF: RELIC_DEFS,
   };

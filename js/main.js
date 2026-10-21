@@ -26,6 +26,11 @@ import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js';
 import audio from './audio.js';
 import { SKILLS, visibleSkills, skillForKey } from './skills.js';
 import {
+  settings as readSettings, setSetting, save as saveProfile, profile,
+  bumpStat, setStatMax, codexAdd, unlockAch, hasAch, addBones, bones, resetAll,
+} from './profile.js';
+import * as runSave from './runSave.js';
+import {
   EVENTS, ALL_EVENTS, getEventById, pickEvent, effectLines,
   choiceHint, canAfford, costShort, REP_MIN, REP_MAX, REP_START,
   isTalk, eventChoices, resolveRoll, mergeEffects,
@@ -100,6 +105,25 @@ async function boot() {
   applyViewport();
   window.addEventListener('resize', applyViewport);
   window.addEventListener('orientationchange', () => setTimeout(applyViewport, 120));
+
+  // ---------------- 画质（设置面板） ----------------
+  // 高：2x 像素比 + 阴影；中：1.25x + 阴影；低：1x + 关阴影（老手机发热时用）
+  const QUALITY = {
+    high: { dpr: 2, shadow: true },
+    mid: { dpr: 1.25, shadow: true },
+    low: { dpr: 1, shadow: false },
+  };
+  let qualityNow = 'high';
+  function applyQuality(q) {
+    const cfg = QUALITY[q] || QUALITY.high;
+    qualityNow = q in QUALITY ? q : 'high';
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, cfg.dpr));
+    // 关掉 shadowMap 后渲染器不再跑阴影 pass，性能立刻回来；
+    // 不用逐个改 castShadow，恢复时也是这样（省得改坏场景里的标记）
+    renderer.shadowMap.enabled = cfg.shadow;
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    return qualityNow;
+  }
 
   camera.position.copy(camOffset);
   camera.lookAt(0, 0.95, 0);
@@ -720,7 +744,7 @@ async function boot() {
     }
     stats.damage(amount);
     iframe = IFRAME;
-    shake = 0.55;
+    shake = readSettings().shake ? 0.55 : 0;   // 设置里可以关掉抖屏
     audio.sfx('hurt');
     hurtFx.classList.add('on');
     setTimeout(() => hurtFx.classList.remove('on'), 90);
@@ -988,6 +1012,7 @@ async function boot() {
     titleScr.style.display = '';
     requestAnimationFrame(() => titleScr.classList.remove('off'));
     titleScr.setAttribute('aria-hidden', 'false');
+    refreshResume();              // 有存档就亮出「继续上次 · 第 N 回合」
   }
 
   function beginGame({ tutorial = false } = {}) {
@@ -1229,7 +1254,132 @@ async function boot() {
     showSub(recordsScr);
   }
 
+  // ---------------- 设置面板（第 17 块） ----------------
+  const setScr = document.getElementById('setScr');
+  const setList = document.getElementById('setList');
+  const setReset = document.getElementById('setReset');
+
+  // 摇杆三档：逻辑半径与视觉缩放一起变（只改一个会出现「看着大、推着近」）
+  const JOY_PRESET = {
+    small: { radius: 38, scale: 0.84 },
+    mid: { radius: 46, scale: 1 },
+    large: { radius: 56, scale: 1.18 },
+  };
+
+  const SET_ROWS = [
+    { key: 'sfx', name: '音效音量', type: 'range', hint: '打斗、按钮' },
+    { key: 'music', name: '音乐音量', type: 'range', hint: '夜里的小调' },
+    { key: 'quality', name: '画质', type: 'seg', hint: '卡就切中或低', opts: [['high', '高'], ['mid', '中'], ['low', '低']] },
+    { key: 'joySize', name: '摇杆大小', type: 'seg', opts: [['small', '小'], ['mid', '中'], ['large', '大']] },
+    { key: 'joyHand', name: '摇杆位置', type: 'seg', hint: '按住哪半边出摇杆', opts: [['left', '左手'], ['right', '右手']] },
+    { key: 'shake', name: '屏幕震动', type: 'seg', hint: '受击时抖一下', opts: [['on', '开'], ['off', '关']] },
+  ];
+
+  // 把设置真正作用到音频 / 渲染 / 摇杆 / 抖屏上
+  function applySettings() {
+    const s = readSettings();
+    audio.setSfxVolume(s.sfx);
+    audio.setMusicVolume(s.music);
+    applyQuality(s.quality);
+    const pre = JOY_PRESET[s.joySize] || JOY_PRESET.mid;
+    if (input.joystick && input.joystick.setOpts) input.joystick.setOpts({ radius: pre.radius, hand: s.joyHand });
+    const stickEl = document.getElementById('stick');
+    if (stickEl) stickEl.style.setProperty('--joy-s', String(pre.scale));
+    return s;
+  }
+
+  function renderSettings() {
+    const s = readSettings();
+    setList.textContent = '';
+    for (const row of SET_ROWS) {
+      const wrap = document.createElement('div');
+      wrap.className = 'set-row';
+      const label = document.createElement('div');
+      label.className = 'set-label';
+      const name = document.createElement('span');
+      name.textContent = row.name;
+      if (row.hint) {
+        const hint = document.createElement('i');
+        hint.textContent = row.hint;
+        name.appendChild(hint);
+      }
+      label.appendChild(name);
+
+      if (row.type === 'range') {
+        const box = document.createElement('div');
+        box.className = 'set-vol';
+        const inp = document.createElement('input');
+        inp.type = 'range';
+        inp.min = '0'; inp.max = '100'; inp.step = '5';
+        inp.dataset.setting = row.key;
+        inp.value = String(Math.round((s[row.key] || 0) * 100));
+        const out = document.createElement('span');
+        out.textContent = inp.value + '%';
+        inp.addEventListener('input', () => {
+          out.textContent = inp.value + '%';
+          setSetting(row.key, Number(inp.value) / 100);
+          applySettings();
+        });
+        box.append(inp, out);
+        wrap.append(label, box);
+      } else {
+        const cur = row.key === 'shake' ? (s.shake ? 'on' : 'off') : s[row.key];
+        const seg = document.createElement('div');
+        seg.className = 'set-seg';
+        for (const [v, text] of row.opts) {
+          const b = document.createElement('button');
+          b.type = 'button';
+          b.dataset.v = v;
+          b.textContent = text;
+          if (v === cur) b.classList.add('on');
+          b.addEventListener('click', () => {
+            setSetting(row.key, row.key === 'shake' ? v === 'on' : v);
+            applySettings();
+            renderSettings();
+          });
+          seg.appendChild(b);
+        }
+        wrap.append(label, seg);
+      }
+      setList.appendChild(wrap);
+    }
+  }
+
+  // 重置要二次确认：第一次点变成「再点一次确认」，3 秒没点就撤
+  let resetArmed = false;
+  let resetTimer = 0;
+  setReset.addEventListener('click', () => {
+    if (!resetArmed) {
+      resetArmed = true;
+      setReset.textContent = '再点一次确认重置';
+      setReset.classList.add('arm');
+      clearTimeout(resetTimer);
+      resetTimer = setTimeout(() => {
+        resetArmed = false;
+        setReset.textContent = '重置全部进度';
+        setReset.classList.remove('arm');
+      }, 3000);
+      return;
+    }
+    clearTimeout(resetTimer);
+    resetArmed = false;
+    resetAll();
+    setReset.textContent = '已重置';
+    setReset.classList.remove('arm');
+    setTimeout(() => { setReset.textContent = '重置全部进度'; }, 1400);
+    renderSettings();
+    applySettings();
+  });
+
+  function showSettings() {
+    renderSettings();
+    showSub(setScr);
+  }
+
   btnStart.addEventListener('click', showLevelSel);
+  document.getElementById('btnSettings').addEventListener('click', showSettings);
+  document.getElementById('setBack').addEventListener('click', () => hideSub(setScr));
+  applySettings();
   document.getElementById('lvBack').addEventListener('click', () => hideSub(levelSel));
   document.getElementById('btnRecords').addEventListener('click', showRecords);
   document.getElementById('rcBack').addEventListener('click', () => hideSub(recordsScr));
@@ -2047,10 +2197,89 @@ async function boot() {
       setRoundLabel(cur, total);
       // 回合开始只报一句提示：事件已经改到上一回合结束时弹
       onRoundStart(cur, tip);
+      saveRunAtRound(cur);      // 存档续玩：每回合开始落一次快照
     },
     onRoundClear: handleRoundClear,
     onVictory: () => endGame(true),
   });
+
+  // ---------------- 存档续玩（第 17 块） ----------------
+  // 每回合开始把「回合刚开始」的局面写进 localStorage；结算删档。
+  // 恢复 = 数值回填 + 各模块 restore() + wave.startAt(回合)。
+  const btnResume = document.getElementById('btnResume');
+  function saveRunAtRound(roundNo) {
+    if (DEBUG && !params.has('keepsave')) return;   // 调试局不落档（测试互相覆盖）
+    runSave.saveRun({
+      round: roundNo,
+      roundMod: { ...level.roundMod },
+      coins,
+      rep: reputation,
+      discount: nextShopDiscount,
+      kills,
+      elapsed,
+      upgradesTaken,
+      upSerial,
+      shopSerial,
+      hp: stats.hp.cur,
+      playerMods: stats.dumpMods(),
+      weapon: { granted: weapon.granted, owned: weapon.owned, mods: wstats.dumpMods() },
+      turrets: turrets.list(),
+      relics: relics.levels(),
+      bag: { ...bag },
+    });
+  }
+
+  function refreshResume() {
+    const saved = runSave.loadRun();
+    if (!saved || saved.round < 1) {
+      btnResume.hidden = true;
+      return;
+    }
+    btnResume.hidden = false;
+    btnResume.textContent = `继续上次 · 第 ${saved.round} 回合`;
+  }
+
+  function resumeGame() {
+    const saved = runSave.loadRun();
+    if (!saved) return;
+    audio.unlock();
+    audio.playBgm('battle');
+    tutAsk.classList.remove('on');
+    tutAsk.setAttribute('aria-hidden', 'true');
+    titleScr.classList.add('off');
+    titleScr.setAttribute('aria-hidden', 'true');
+    setTimeout(() => { titleScr.style.display = 'none'; }, 340);
+
+    // 数值回填（与 saveRunAtRound 一一对应）
+    coins = saved.coins || 0;
+    reputation = saved.rep != null ? saved.rep : REP_START;
+    nextShopDiscount = saved.discount || 0;
+    kills = saved.kills || 0;
+    elapsed = saved.elapsed || 0;
+    upgradesTaken = saved.upgradesTaken || 0;
+    upSerial = saved.upSerial || 0;
+    shopSerial = saved.shopSerial || 0;
+    stats.loadMods(saved.playerMods, saved.hp);
+    weapon.restore(saved.weapon);
+    turrets.restore(saved.turrets);
+    relics.restore(saved.relics);
+    for (const [id, n] of Object.entries(saved.bag || {})) {
+      if (id in BAG_ITEMS) bag[id] = Math.max(0, n | 0);
+    }
+    renderBagBtn();
+
+    // 界面复位：续玩的人不需要再教怎么拖摇杆
+    tutCard.classList.remove('on');
+    tutCard.setAttribute('aria-hidden', 'true');
+    hintDone = true;
+    hintEl.classList.add('off');
+    renderHud();
+    renderSkill();
+    gameState = 'playing';
+    level.startAt(saved.round, saved.roundMod);   // 里面会触发 onRound → 立刻重写一次快照
+  }
+
+  btnResume.addEventListener('click', resumeGame);
 
   // ---------------- 结算 ----------------
   function endGame(isWin) {
@@ -2080,6 +2309,8 @@ async function boot() {
     const roundShown = Math.min(level.totals.rounds, Math.max(1, level.roundNo));
     // 落一笔记录（第 14 块）：通关数 / 最快通关 / 最高击杀 / 最远回合，主页面「我的记录」看
     saveRunRecord(1, { win: isWin, time: elapsed, kills, roundShown });
+    runSave.clearRun();             // 一局结束（无论输赢），续玩存档就没有意义了
+    refreshResume();                // 主菜单上的「继续上次」随之消失
     const cells = [
       ['用时', elapsed.toFixed(1) + ' 秒'],
       ['击杀', kills + ' 只'],
@@ -2120,6 +2351,36 @@ async function boot() {
         drawingBuffer: [renderer.domElement.width, renderer.domElement.height],
         sceneChildren: scene.children.length,
       }),
+      // 设置面板 / 本机档案（第 17 块）
+      ui: {
+        settings: () => ({ ...readSettings() }),
+        set: (k, v) => {
+          const r = setSetting(k, v);
+          applySettings();
+          if (setScr.classList.contains('on')) renderSettings();
+          return r;
+        },
+        quality: () => qualityNow,
+        renderCfg: () => ({ pixelRatio: renderer.getPixelRatio(), shadow: renderer.shadowMap.enabled }),
+        joy: () => (input.joystick.getOpts ? input.joystick.getOpts() : null),
+        joyScale: () => document.getElementById('stick').style.getPropertyValue('--joy-s'),
+        shake: () => shake,
+        audio: () => audio.volumes(),
+        showSettings: () => showSettings(),
+        profile: () => profile(),
+        bones: () => bones(),
+        reset: () => { resetAll(); renderSettings(); applySettings(); },
+      },
+      // 存档续玩（第 17 块）
+      run: {
+        save: () => saveRunAtRound(level.roundNo),
+        load: () => runSave.loadRun(),
+        clear: () => runSave.clearRun(),
+        resume: () => resumeGame(),
+      },
+      // 金币只在函数里读（coins 是 let，暴露快照会过期）；测试与调试用
+      get coins() { return coins; },
+      setCoins: (n) => { coins = Math.max(0, n | 0); renderHud(); },
       // 场景里各类对象计数（诊断用）
       sceneStats: () => {
         let mesh = 0, skinned = 0, sprite = 0, points = 0, lights = 0, shadows = 0;

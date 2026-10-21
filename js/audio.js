@@ -70,6 +70,9 @@ let sfxGain = null;
 let unlocked = false;
 let muted = false;
 let voiceCount = 0;
+// 玩家音量（设置面板调，0~1）：乘在各自的 MASTER 上，静音开关独立于它
+let sfxVol = 1.0;
+let musicVol = 1.0;
 
 const buffers = new Map();    // name -> AudioBuffer
 const loading = new Map();    // name -> Promise
@@ -117,7 +120,7 @@ function ensureCtx() {
   try {
     ctx = new AC();
     sfxGain = ctx.createGain();
-    sfxGain.gain.value = muted ? 0 : MASTER_SFX;
+    sfxGain.gain.value = muted ? 0 : MASTER_SFX * sfxVol;
     sfxGain.connect(ctx.destination);
   } catch (err) {
     console.warn('[音频] AudioContext 创建失败：', err);
@@ -223,7 +226,7 @@ function rampBgm(dt = 0.06) {
       const el = bgmEls[i];
       const def = BGM_DEFS[bgmName];
       const base = i === bgmActive && bgmName
-        ? (def ? def.vol : 0.5) * MASTER_BGM * (ducked ? DUCK : 1) * (muted ? 0 : 1)
+        ? (def ? def.vol : 0.5) * MASTER_BGM * musicVol * (ducked ? DUCK : 1) * (muted ? 0 : 1)
         : 0;
       const d = base - el.volume;
       if (Math.abs(d) < 0.004) {
@@ -292,12 +295,31 @@ export function isMuted() { return muted; }
 export function setMuted(v) {
   muted = !!v;
   savePrefs();
-  if (sfxGain) sfxGain.gain.value = muted ? 0 : MASTER_SFX;
+  if (sfxGain) sfxGain.gain.value = muted ? 0 : MASTER_SFX * sfxVol;
   rampBgm();
   return muted;
 }
 
 export function toggleMute() { return setMuted(!muted); }
+
+// ---------------- 音量（设置面板用，与静音开关独立） ----------------
+const clamp01 = (v) => Math.max(0, Math.min(1, Number(v) || 0));
+
+export function setSfxVolume(v) {
+  sfxVol = clamp01(v);
+  if (sfxGain) sfxGain.gain.value = muted ? 0 : MASTER_SFX * sfxVol;
+  return sfxVol;
+}
+
+export function setMusicVolume(v) {
+  musicVol = clamp01(v);
+  if (bgmEls.length) rampBgm();     // 立刻平滑滑到新音量
+  return musicVol;
+}
+
+export function volumes() {
+  return { sfx: sfxVol, music: musicVol, muted };
+}
 
 // ---------------- 测试用 ----------------
 export function stats() {
@@ -317,6 +339,7 @@ export function stats() {
 export const audio = {
   init, unlock, isUnlocked, sfx, preload, playBgm, stopBgm, duck,
   isMuted, setMuted, toggleMute, stats,
+  setSfxVolume, setMusicVolume, volumes,
   BGM_DEFS, SFX_DEFS,
 };
 

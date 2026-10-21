@@ -387,6 +387,21 @@ export function createWeaponSystem({ scene, stats, wstats, fx, enemies }) {
     granted = false;
   }
 
+  // 存档续玩（第 17 块）：按存档重建剑环。不走 grant()，避免触发获得特效与音效；
+  // 武器属性加成（商店买的剑油等）在存档里是 wstats 的 mods 列表，这里重放。
+  function restore(saved) {
+    reset();
+    if (!saved || !saved.granted) return;
+    granted = true;
+    owned = (Array.isArray(saved.owned) ? saved.owned : []).filter((k) => SWORD_KINDS[k]);
+    if (!owned.length) owned = ['iron', 'iron', 'iron'];
+    regenT = 0;
+    for (let i = 0; i < owned.length; i++) {
+      orbiting.push({ kind: owned[i], holder: acquire(owned[i]), spawnT: t });
+    }
+    if (Array.isArray(saved.mods)) wstats.loadMods(saved.mods);
+  }
+
   // 技能栏 / 结算用的「每种剑各有几把」（只列拥有的，顺序按 KIND_ORDER）
   function kindCounts() {
     const m = new Map();
@@ -395,7 +410,7 @@ export function createWeaponSystem({ scene, stats, wstats, fx, enemies }) {
   }
 
   return {
-    preload, grant, fire, update, reset, setVisible, addSword, kindCounts, applyKind,
+    preload, grant, fire, update, reset, restore, setVisible, addSword, kindCounts, applyKind,
     wstats,                     // 武器属性表（测试/调试用）
     get granted() { return granted; },
     get count() { return orbiting.length; },
