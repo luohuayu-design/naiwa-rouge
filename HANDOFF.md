@@ -28,22 +28,23 @@ Three.js r160 的单摇杆幸存者肉鸽《奶蛙夜行》，纯静态站点（
 
 ---
 
-## 2. 当前状态（2026-10-21 12:30）
+## 2. 当前状态（2026-10-21 12:50）
 
 | 块 | 内容 | 状态 |
 |---|---|---|
 | 1~16 | 见文末「历史」 | 已上线（v=20） |
-| **17** | 设置面板 + 存档续玩 | 已上线（提交 dad5e91） |
-| **18** | 图鉴 + 成就 + 战绩 + 难度 | 已上线（提交 7c7fd22，线上 v=22，烟测 12/12） |
-| **19** | 篝火 · 夜行骨币（局外成长） | 代码完成，测试全绿，**待提交** |
-| — | **修 P0：`countCard` 未定义导致选卡卡死** | 本轮修复，随第 19 块一起提交 |
+| **17** | 设置面板 + 存档续玩 | 已上线（dad5e91） |
+| **18** | 图鉴 + 成就 + 战绩 + 难度 | 已上线（7c7fd22） |
+| **19** | 篝火 · 夜行骨币（局外成长） | **已上线（605fe08，线上 v=23）** |
+| — | 修 P0：`countCard` 未定义导致选卡卡死 | **已上线**（同一提交） |
 
-线上 **v=22**（第 18 块），本地 index.html 已到 **v=23**。
-👉 **下一步：`git commit` → `push` → 轮询 Pages 到 v=23 → 跑线上烟测。**
+线上 **v=23**，烟测 12/12、线上选卡回归 7/7、本地全量 Node 536 + CDP 717 全绿。
+**当前没有待推送的改动。**
 
-⚠️ 线上 v=22 带着第 18 块的 P0 bug：**每次选升级卡都会抛 `ReferenceError: countCard is not defined`**，
-`chooseUpgrade` 在移除 `.on` 之前就中断 → 升级面板留在屏幕上、`pointer-events` 还是 `auto`，
-盖住技能键 → 玩家表现为「选完卡彻底卡死」。v=23 修掉，**应尽快推上去**。
+第 18 块那个 P0 的完整链路（已修，留作教训）：
+`chooseUpgrade` 里 `countCard(up.id)` 没 import → 每次选卡抛 `ReferenceError`，
+而它排在 `upPanel.classList.remove('on')` **之前** → 面板留在屏幕上、`pointer-events` 还是 `auto`，
+盖住技能键、`gameState` 卡在 `'upgrade'` → 玩家看到的就是「点了三选一没反应」。
 
 ---
 
@@ -112,7 +113,7 @@ upgrade.isOpen() / upgrade.roll / shop.cards / hurt(n) / win()
 
 ## 6. 测试
 
-**Node 5 套（468 项，纯逻辑，秒级）**
+**Node 6 套（536 项，纯逻辑，秒级）**
 ```
 cd C:/Users/MECHREVO/Desktop/班级网站
 node .tmp-stats-test.mjs      # 70  属性引擎
@@ -120,16 +121,18 @@ node .tmp-rogue-unit.mjs      # 144 回合/升级/概率（含 roundScale 对拍
 node .tmp-econ-test.mjs       # 78  经济/商店/事件作用域
 node .tmp-event-test.mjs      # 105 事件表规模与文案
 node .tmp-rarity-test.mjs     # 71  品质/幸运
+node .tmp-camp-test.mjs       # 68  篝火/骨币
 ```
 
-**CDP 端到端（需先起 8124）**
+**CDP 端到端（22 套 717 项，需先起 8124）**
 ```
-.tmp-start-test.js      46  开局→选关→教程→战斗→技能
+.tmp-start-test.js      48  开局→选关→教程→战斗→技能（含选卡关面板/技能键可点）
 .tmp-battle-test.js     39  战斗全流程
 .tmp-menu-test.js       24  主菜单/选关/记录
-.tmp-settings-test.js   31  设置面板（音量/画质/摇杆/抖屏/重置）
+.tmp-settings-test.js   32  设置面板（音量/画质/摇杆/抖屏/重置）
 .tmp-resume-test.js     28  存档续玩
 .tmp-block18-test.js    31  图鉴/成就/战绩/难度
+.tmp-block19-cdp.js     41  篝火/骨币
 .tmp-wtut-test.js       34  武器教程
 .tmp-block13-test.js    32  炮台/金钟罩/法器/背包
 .tmp-shop-chain-test.js 49  .tmp-econ-cdp-test.js 44
@@ -138,12 +141,22 @@ node .tmp-rarity-test.mjs     # 71  品质/幸运
 .tmp-talk-skill-test.js 54  .tmp-audio-test.js 41  .tmp-rarity-cdp-test.js 48
 .tmp-bowman-test.js     21  .tmp-sword-shop-test.js 26
 .tmp-live-smoke.js      12  线上烟测（GAME_URL 环境变量指线上）
+.tmp-live-upgrade.js     7  线上验证「点三选一没反应」已修
 ```
 写新 CDP 测试：抄 `.tmp-settings-test.js` 的骨架（CDP 连接 + goto + shot + 错误收集），
 **`waitFor` 要定义在 IIFE 内部**（放外面会 ReferenceError: evaluate is not defined，踩过三次）。
 
 **SwiftShader 下游戏时间慢很多**：测试必须轮询等待，不能固定 sleep 就断言。
 **无头 Chrome 的截图输出路径不能含中文**（用 `C:/Users/MECHREVO/AppData/Local/Temp/wbtest`）。
+
+**跑全量回归的正确姿势（2026-10-21 定的）**：
+- 启动参数统一带 `--num-raster-threads=4 --renderer-process-limit=1` +
+  `--disable-background-timer-throttling --disable-renderer-backgrounding --disable-backgrounding-occluded-windows`
+  （不限流的话 SwiftShader 会按 32 个逻辑核开线程，单个实例就能把 CPU 打满；
+  不关定时器节流的话 `duck` 那种 `setInterval` 渐变永远走不完）。
+- **每套之间跑一次 `node .tmp-cdp-clean.js`**，按 `cdp-*-prof` 精确清掉超时残留的孤儿 chrome
+  （`chrome.kill()` 只在正常路径执行，套件崩了就走不到，残留会叠着抢 CPU）。
+- **串行跑**，别把 22 套压成一个后台任务再去干别的：越抢 CPU 越容易超时，越超时越多残留。
 
 ---
 
