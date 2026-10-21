@@ -885,6 +885,9 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
 .sh-item:hover:not(:disabled){border-color:rgba(255,209,102,.5);background:rgba(255,209,102,.1)}
 .sh-item:active:not(:disabled){transform:scale(.985)}
 .sh-item:disabled{opacity:.42;cursor:default}
+/* 售罄（第 25 块改）：买断的货压灰、名字划掉，和「买不起」的暗态区分开 */
+.sh-item.soldout{opacity:.34;filter:saturate(.25)}
+.sh-item.soldout .sh-name{text-decoration:line-through;text-decoration-color:rgba(240,220,170,.6)}
 .sh-icon{grid-row:1/4;width:40px;height:40px;display:flex;align-items:center;justify-content:center;
   border-radius:11px;font-size:19px;line-height:1;
   border:1px solid rgba(255,209,102,.3);background:rgba(255,209,102,.09);color:#ffd98a}

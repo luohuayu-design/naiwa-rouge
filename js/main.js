@@ -2150,11 +2150,15 @@ async function boot() {
 
   // 本次商店摆的货：每进一次店重新抽 4 件（第 9 块），关掉重开不变
   let shopStock = SHOP_ITEMS.slice(0, SHOP_SHOW);
+  // 本次进店已买断的货（第 25 块改）：同一件货**一次进店只能买一件**，
+  // 买完就挂「售罄」—— 属性加成不能在一家店里反复叠，下次进店（回合刷新）重新上架
+  let shopSoldOut = new Set();
 
   function openShop(roundNo, after) {
     shopAfterCb = after || null;
     shopOpen = true;
     shopRound = roundNo;
+    shopSoldOut.clear();        // 新一批货，售罄记录清零
     // 抽签前先按「现在买有没有用」过滤：没环剑时的剑类、没到解锁回合的法器、
     // 放满时的炮台都不占格子（药水进背包，满血也能囤 —— 第 13 块）
     shopStock = rollShopItems(rngOf('shop'), {
@@ -2208,11 +2212,12 @@ async function boot() {
       const rar = rarityInfo(item);
       const price = priceOf(item);
       const locked = itemLocked(item, shopCtx);
+      const sold = shopSoldOut.has(item.id);   // 本次进店已买断
       const afford = coins >= price;
       const btn = document.createElement('button');
-      btn.className = 'sh-item';
+      btn.className = 'sh-item' + (sold ? ' soldout' : '');
       btn.type = 'button';
-      btn.disabled = !!locked || !afford;
+      btn.disabled = !!locked || !afford || sold;
       btn.dataset.rarity = rar.id;
 
       const icon = document.createElement('span');
@@ -2238,7 +2243,7 @@ async function boot() {
 
       const desc = document.createElement('div');
       desc.className = 'sh-desc';
-      desc.textContent = locked || item.desc;
+      desc.textContent = sold ? '售罄 —— 下次进店再看看' : (locked || item.desc);
 
       const buy = document.createElement('span');
       buy.className = 'sh-buy';
@@ -2257,6 +2262,7 @@ async function boot() {
   }
 
   function buyItem(item) {
+    if (shopSoldOut.has(item.id)) return;   // 售罄的货不能再买（同一次进店）
     const price = priceOf(item);      // 民心影响售价
     if (coins < price) return;
     const locked = itemLocked(item, {
@@ -2305,7 +2311,8 @@ async function boot() {
       showToast(`${def.name} ${lv} 级`, def.desc[lv - 1] + (lv < def.maxLevel ? ' · 再买可升级' : ' · 已满级'));
     }
     renderHud();
-    renderShop();   // 刷新金币与按钮可用态（面板保持打开，可以连买）
+    shopSoldOut.add(item.id);   // 买断：这件货本次进店售罄（renderShop 会挂上售罄态）
+    renderShop();   // 刷新金币与按钮可用态（面板保持打开，可以连买别的）
   }
 
   // 回合清空后的编排：
