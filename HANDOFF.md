@@ -1,7 +1,7 @@
 # 蛙步 · 夜行 —— 交接文档
 
-> 新对话从这里开始读，不要先翻聊天记录。
-> 最后更新：2026-10-21 傍晚 · 对应代码：第 22 块（见下方「当前状态」）
+> 新对话从这里开始读，不要先翻聊天记录。>   
+> 最后更新：2026-10-21 夜 · 对应代码：第 23 块（见下方「当前状态」）
 
 ---
 
@@ -13,34 +13,36 @@ Three.js r160 的单摇杆幸存者肉鸽《奶蛙夜行》，纯静态站点（
 
 ## 1. 位置与环境
 
-| 项 | 值 |
-|---|---|
-| 本地仓库 | `C:/Users/MECHREVO/Desktop/班级网站/naiwa-rouge`（**独立 git 仓库**，绝不要把它的文件提进上级 class-website 仓库） |
-| 线上 | https://luohuayu-design.github.io/naiwa-rouge/ |
-| 远端 | `luohuayu-design/naiwa-rouge`，main 分支，Pages = main / root |
-| 本地服务器 | `cd naiwa-rouge && python -m http.server 8124`（**必须 run_in_background**，否则 shell 退出就死，报错看起来像游戏没启动） |
-| 测试脚本 | 在**上级**目录 `C:/Users/MECHREVO/Desktop/班级网站/.tmp-*.js`（回归资产，别删） |
-| node | `C:/Users/MECHREVO/.workbuddy/binaries/node/versions/22.22.2-6/node.exe` |
-| 无头 Chrome | `C:/Program Files/Google/Chrome/Application/chrome.exe` |
+| 项         | 值                                                                                                  |
+| --------- | -------------------------------------------------------------------------------------------------- |
+| 本地仓库      | `C:/Users/MECHREVO/Desktop/班级网站/naiwa-rouge`（**独立 git 仓库**，绝不要把它的文件提进上级 class-website 仓库）          |
+| 线上        | <https://luohuayu-design.github.io/naiwa-rouge/>                                                   |
+| 远端        | `luohuayu-design/naiwa-rouge`，main 分支，Pages = main / root                                          |
+| 本地服务器     | `cd naiwa-rouge && python -m http.server 8124`（**必须 run_in_background**，否则 shell 退出就死，报错看起来像游戏没启动） |
+| 测试脚本      | 在**上级**目录 `C:/Users/MECHREVO/Desktop/班级网站/.tmp-*.js`（回归资产，别删）                                      |
+| node      | `C:/Users/MECHREVO/.workbuddy/binaries/node/versions/22.22.2-6/node.exe`                           |
+| 无头 Chrome | `C:/Program Files/Google/Chrome/Application/chrome.exe`                                            |
 
-**网络坑**：github.com 经常连不上（Pages 反而通）。推送用
+**网络坑**：github.com 经常连不上（Pages 反而通）。推送用  
 `git -c http.proxy= -c https.proxy= push origin main`（绕过本地 7897 代理），失败就重试几轮。
 
 ---
 
 ## 2. 当前状态（2026-10-21 12:50）
 
-| 块 | 内容 | 状态 |
-|---|---|---|
-| 1~16 | 见文末「历史」 | 已上线（v=20） |
-| **17** | 设置面板 + 存档续玩 | 已上线（dad5e91） |
-| **18** | 图鉴 + 成就 + 战绩 + 难度 | 已上线（7c7fd22） |
-| **19** | 篝火 · 夜行骨币（局外成长） | 已上线（605fe08，v=23） |
-| **20** | 第二关「骨塔庭院」+ 三位巫师 + 场景双主题 + 关卡参数化 | 已上线（358f34d / 073947d，v=24） |
-| **21** | 夜行诅咒（自选 debuff 换骨币倍率） | 已上线（7a222bf，v=25） |
-| **22** | 今日挑战 + 种子（日期哈希，无需服务器） | 已上线（7a222bf，v=25） |
+| 块      | 内容                                            | 状态                          |
+| ------ | --------------------------------------------- | --------------------------- |
+| 1~16   | 见文末「历史」                                       | 已上线（v=20）                   |
+| **17** | 设置面板 + 存档续玩                                   | 已上线（dad5e91）                |
+| **18** | 图鉴 + 成就 + 战绩 + 难度                             | 已上线（7c7fd22）                |
+| **19** | 篝火 · 夜行骨币（局外成长）                               | 已上线（605fe08，v=23）           |
+| **20** | 第二关「骨塔庭院」+ 三位巫师 + 场景双主题 + 关卡参数化               | 已上线（358f34d / 073947d，v=24） |
+| **21** | 夜行诅咒（自选 debuff 换骨币倍率）                         | 已上线（7a222bf，v=25）           |
+| **22** | 今日挑战 + 种子（日期哈希，无需服务器）                         | 已上线（7a222bf，v=25）           |
+| **23** | 金币自动拾取 + 局外成长重做（篝火 3 级 / 永夜火种 / 金币折骨币 / 关卡倍率） | 已完成（v=26，待提交）               |
 
 第 20 块要点（详见 README「第二关 · 骨塔庭院」段）：
+
 - **用户定案：一个巫师只带一件独门技能**——骨咒师（紫阵+减速诅咒）/ 火焚巫祝（灼地持续伤害）/ 霜牢主祭（光环加攻速减伤，不出手）。共用 `skeleton-mage.glb`，靠帽子/眼睛发光色/程序化法杖/身高区分。
 - `wave.js` 参数化成 `createLevel(def, deps)`，加新关 = 加数据 + `LEVELS_BY_ID` 注册；第一关数值没动（144 项单测原样通过）。
 - `scene.js` 双主题（meadow / crypt），`setTheme` 只改颜色和地面贴图。
@@ -48,48 +50,61 @@ Three.js r160 的单摇杆幸存者肉鸽《奶蛙夜行》，纯静态站点（
 - **巫师模型 `sourceHeight` 已验证（2026-10-21）**：并排截图 + 离线正交渲染剪影确认视觉比例与落脚正确（脚底 ≈ -0.01），数值保持 1.20 不动。⚠️ 巫师骨架本身比骷髅兵矮、视觉高度靠帽子/法杖撑，自动量法（逐顶点 / 读像素）会得出 2.2~3.4 的乱数，**改数值请走截图人眼比对**。
 
 第 21 / 22 块要点：
+
 - **诅咒**：`curses.js` 的 `RUN_CURSES` 六条（脆骨/铅足/迟滞/空囊/薄刃/荆棘），倍率**加法叠加**（全选 ×2.30），落账在 `startPlay`（`applyRunCurses`，带 `src='curse'`），荆棘走 `curseDmg` → `hurtPlayer` 的乘法；勾选存 `profile().runCurses`。
 - **种子**：`seed.js`，日期 → FNV-1a → mulberry32；五个系统五条**独立随机流**（card/shop/event/gold/talk），普通局 `seed=0` 时全部退回 `Math.random`。
 - **每日挑战**：固定第一关 · 噩梦 · 两条由种子挑的诅咒，额外 ×1.25 骨币；战绩键 `naiwa_rouge_daily_v1`（一天一条，只留更好的）。
 - **难度是局内临时覆盖**（`diffOverride`），**绝不写 profile** —— 写过一次，中途刷新会把玩家难度永久改成噩梦（第 22 块踩到）。
 
+第 23 块要点（局外成长重做 + 金币吸附）：
+
+- **金币进圈即拾**：`gold.update(dt, player, range)`，range = `stats.get('attackRange')`。进圈后 0.15 秒飞向奶蛙再入账（有动画）；**圈外仍然留 3 秒**。`gold.flush()` 在 `endGame` 开头把地上的钱全收进兜里（否则结算会少算），然后按 25% 折骨币。
+- **篝火改成多级**：`CAMP_MAX_LEVEL=3`、`CAMP_STEP=1.6`，`campCost(id, level)` = 原价 × 1.6^level。老档案里 `camp[id]=1` 天然读作 1 级，**不需要迁移**。
+- **骨币产出**加了两个维度：`coins`（没花完的金币 ×0.25）与 `levelId`（`BONE.levelMul`：1 关 ×1 / 2 关 ×1.4 / 3 关 ×1.8）。`bonesFor` 的签名向后兼容（老调用不传就是 0 金币 / 第 1 关）。
+- **永夜火种**（`boons.js`）：**通关一大关** → `grantBoons(3)` 写 `profile().boonPending` → 结算按钮变「领取 3 次永夜火种」→ 复用三选一面板（`upPanel` + `.boon` 皮肤），抽签走 `rollBoons(rng, {luck})`，权重和局内卡同一套 `rarity.js`。
+- **待领次数必须落档案**：玩家很可能在结算界面直接关网页。`showTitle` 会检查 `boonPending()` 并自动补弹（500ms 后，等标题页动画）。
+- 16 张卡、**每张 1~3 层上限**，满层退出抽签池；满层共 40 层（要约 12 次通关全收）。数值压得很小，全满 ≈ 一局中期的分量。
+- 结算面板：`rsBtn` 文案与 `.boon` 金色样式在 `endGame` 里按 `boonGain` 切换；`rsBone` 明细多了「第 N 关 ×1.4」和「剩 X 金币折 Y」。
+
 测试：Node 8 套 679（新增诅咒/种子 84）+ CDP 26 套 847（新增 block21 36、block22 38；第 18 块图鉴 31→35、弓手 21→22）。
 
-第 18 块那个 P0 的完整链路（已修，留作教训）：
-`chooseUpgrade` 里 `countCard(up.id)` 没 import → 每次选卡抛 `ReferenceError`，
-而它排在 `upPanel.classList.remove('on')` **之前** → 面板留在屏幕上、`pointer-events` 还是 `auto`，
+第 18 块那个 P0 的完整链路（已修，留作教训）：  
+`chooseUpgrade` 里 `countCard(up.id)` 没 import → 每次选卡抛 `ReferenceError`，  
+而它排在 `upPanel.classList.remove('on')` **之前** → 面板留在屏幕上、`pointer-events` 还是 `auto`，  
 盖住技能键、`gameState` 卡在 `'upgrade'` → 玩家看到的就是「点了三选一没反应」。
 
-第 20 块又踩一次同类坑（已修）：`codex.js` 的 `NUM()` 对 `cfg.damage` 直接 `toFixed`，
-而霜牢主祭按设计**没有 damage 字段**（从不还手）→ 一打开图鉴怪物页就抛
-`TypeError`，整个面板白屏。教训：**新怪允许缺字段，遍历 ENEMY_TYPES 的渲染代码必须容错**；
+第 20 块又踩一次同类坑（已修）：`codex.js` 的 `NUM()` 对 `cfg.damage` 直接 `toFixed`，  
+而霜牢主祭按设计**没有 damage 字段**（从不还手）→ 一打开图鉴怪物页就抛  
+`TypeError`，整个面板白屏。教训：**新怪允许缺字段，遍历 ENEMY_TYPES 的渲染代码必须容错**；  
 `enemy.js` 的 spawn 也顺手做了 `Number.isFinite` 兜底（否则 `Math.max(1, NaN)` 还是 NaN）。
 
 ---
 
 ## 3. 文件地图（js/）
 
-| 文件 | 职责 |
-|---|---|
-| `main.js` (~2900 行) | 主循环 + 所有 UI 面板（标题/选关/记录/设置/图鉴/商店/升级/事件/背包/结算/教程）+ 各系统接线。**改之前先 grep 定位** |
-| `wave.js` | 20 回合编排、`roundScale`、**难度 DIFFS**、`startAt`（读档）、升级点/商店点 |
-| `stats.js` | 通用属性引擎（`createStats(defs)`），主角 14 项 / 武器 11 项两套实例；`dumpMods/loadMods`（存档） |
-| `enemy.js` | 7 种怪（minion/warrior/archer/bowman + 第二关巫师 hexer/pyro/hierarch）、红圈落箭、法术地阵（hex/burn）、光环、`takeDamage(无敌期打不动)` |
-| `weapon.js` | 环剑、5 种元素剑、`grant/addSword/restore` |
-| `turret.js` / `relics.js` | 弩炮台（上限 3）、地刺/霜环（各 3 级），都有 `restore` |
-| `upgrade.js` | 28 张升级卡（含 rarity 0~4） |
-| `shop.js` | 18 件货、按品质加权摆 4 件、`itemLocked` |
-| `events.js` | 57 事件 + 10 连锁（对话/条件/取舍） |
-| `curses.js` | 夜行诅咒（第 21 块）：六条自选 debuff、倍率叠加、`applyRunCurses` 落账/撤销 |
-| `seed.js` | 种子与每日挑战（第 22 块）：`hashStr`/`makeRng`/`dailySeed`/`pickDailyCurses`/每日战绩存档 |
-| `rarity.js` | 五档品质唯一真相源（颜色/mul/luck） |
-| `profile.js` | **本机档案**：settings / stats / codex / ach / bones，键 `naiwa_rouge_profile_v1` |
-| `runSave.js` | 存档续玩，键 `naiwa_rouge_run_v1`（每回合开始写，结算删） |
-| `codex.js` | 图鉴五页签的数据整理（纯渲染数据，无状态） |
-| `achievements.js` | 26 条成就定义（`{id,name,desc}`） |
-| `audio.js` | 程序化音效 + BGM；`setSfxVolume/setMusicVolume`（与静音独立） |
-| `joystick.js` | 浮动摇杆；`setOpts({radius, hand})` 运行时改大小/左右手 |
-| `scene.js` `frog.js` `fx.js` `gold.js` `skills.js` `input.js` `rangeRing.js` `swordKinds.js` | 场景/角色/特效/金币/技能/输入/范围环/剑种 |
+| 文件                                                                                           | 职责                                                                                                         |
+| -------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `main.js` (~2900 行)                                                                          | 主循环 + 所有 UI 面板（标题/选关/记录/设置/图鉴/商店/升级/事件/背包/结算/教程）+ 各系统接线。**改之前先 grep 定位**                                   |
+| `wave.js`                                                                                    | 20 回合编排、`roundScale`、**难度 DIFFS**、`startAt`（读档）、升级点/商店点                                                    |
+| `stats.js`                                                                                   | 通用属性引擎（`createStats(defs)`），主角 14 项 / 武器 11 项两套实例；`dumpMods/loadMods`（存档）                                  |
+| `enemy.js`                                                                                   | 7 种怪（minion/warrior/archer/bowman + 第二关巫师 hexer/pyro/hierarch）、红圈落箭、法术地阵（hex/burn）、光环、`takeDamage(无敌期打不动)` |
+| `weapon.js`                                                                                  | 环剑、5 种元素剑、`grant/addSword/restore`                                                                         |
+| `turret.js` / `relics.js`                                                                    | 弩炮台（上限 3）、地刺/霜环（各 3 级），都有 `restore`                                                                        |
+| `upgrade.js`                                                                                 | 28 张升级卡（含 rarity 0~4）                                                                                      |
+| `shop.js`                                                                                    | 18 件货、按品质加权摆 4 件、`itemLocked`                                                                              |
+| `events.js`                                                                                  | 57 事件 + 10 连锁（对话/条件/取舍）                                                                                    |
+| `campfire.js`                                                                                | 篝火/骨币（第 19 块建，第 23 块多级）：`bonesFor`（回合/击杀/通关/金币/关卡）、六簇×3 级阶梯价、`campApply`                                   |
+| `boons.js`                                                                                   | 永夜火种（第 23 块）：16 张永久卡 + 层数上限 + 品质抽签（吃幸运）+ `boonPending` 待领次数                                                |
+| `curses.js`                                                                                  | 夜行诅咒（第 21 块）：六条自选 debuff、倍率叠加、`applyRunCurses` 落账/撤销                                                       |
+| `seed.js`                                                                                    | 种子与每日挑战（第 22 块）：`hashStr`/`makeRng`/`dailySeed`/`pickDailyCurses`/每日战绩存档                                   |
+| `rarity.js`                                                                                  | 五档品质唯一真相源（颜色/mul/luck）                                                                                     |
+| `profile.js`                                                                                 | **本机档案**：settings / stats / codex / ach / bones，键 `naiwa_rouge_profile_v1`                                 |
+| `runSave.js`                                                                                 | 存档续玩，键 `naiwa_rouge_run_v1`（每回合开始写，结算删）                                                                    |
+| `codex.js`                                                                                   | 图鉴五页签的数据整理（纯渲染数据，无状态）                                                                                      |
+| `achievements.js`                                                                            | 26 条成就定义（`{id,name,desc}`）                                                                                 |
+| `audio.js`                                                                                   | 程序化音效 + BGM；`setSfxVolume/setMusicVolume`（与静音独立）                                                           |
+| `joystick.js`                                                                                | 浮动摇杆；`setOpts({radius, hand})` 运行时改大小/左右手                                                                  |
+| `scene.js` `frog.js` `fx.js` `gold.js` `skills.js` `input.js` `rangeRing.js` `swordKinds.js` | 场景/角色/特效/金币/技能/输入/范围环/剑种                                                                                   |
 
 ---
 
@@ -127,6 +142,8 @@ turrets.count() / relics.levels()
 weapon.grant() / weapon.orbitingCount / weapon.flyingCount
 upgrade.isOpen() / upgrade.roll / shop.cards / hurt(n) / win()
 runCurses() / setCurses(ids) / curseMul() / curseDmg()        ← 第 21 块
+boons.list() / stacks(id) / pending() / grant(n) / roll(luck) / take(id) / apply() / show(after) / close() / totalStacks() / reset()   ← 第 23 块
+camp.level(id) / camp.maxed(id) / camp.list()[i].costAt(lv) / camp.list()[i].full   ← 第 23 块（多级篝火）
 seedInfo() / setSeed(n) / daily.{key,seed,code,curses,record,save,show,start}   ← 第 22 块
 ```
 
@@ -137,6 +154,7 @@ seedInfo() / setSeed(n) / daily.{key,seed,code,curses,record,save,show,start}   
 ## 6. 测试
 
 **Node 8 套（679 项，纯逻辑，秒级）**
+
 ```
 cd C:/Users/MECHREVO/Desktop/班级网站
 node .tmp-stats-test.mjs      # 70  属性引擎
@@ -150,6 +168,7 @@ node .tmp-curse-test.mjs      # 84  诅咒/种子/每日规则
 ```
 
 **CDP 端到端（22 套 717 项，需先起 8124）**
+
 ```
 .tmp-start-test.js      48  开局→选关→教程→战斗→技能（含选卡关面板/技能键可点）
 .tmp-battle-test.js     39  战斗全流程
@@ -171,18 +190,20 @@ node .tmp-curse-test.mjs      # 84  诅咒/种子/每日规则
 .tmp-block22-cdp.js     38  每日挑战（种子稳定/固定规则/同种子同手牌/存档/成就）
 .tmp-dbg-boot.js           抓启动期异常（改完代码先跑这个，比整套 CDP 快）
 ```
-写新 CDP 测试：抄 `.tmp-settings-test.js` 的骨架（CDP 连接 + goto + shot + 错误收集），
+
+写新 CDP 测试：抄 `.tmp-settings-test.js` 的骨架（CDP 连接 + goto + shot + 错误收集），  
 **`waitFor` 要定义在 IIFE 内部**（放外面会 ReferenceError: evaluate is not defined，踩过三次）。
 
-**SwiftShader 下游戏时间慢很多**：测试必须轮询等待，不能固定 sleep 就断言。
+**SwiftShader 下游戏时间慢很多**：测试必须轮询等待，不能固定 sleep 就断言。  
 **无头 Chrome 的截图输出路径不能含中文**（用 `C:/Users/MECHREVO/AppData/Local/Temp/wbtest`）。
 
 **跑全量回归的正确姿势（2026-10-21 定的）**：
-- 启动参数统一带 `--num-raster-threads=4 --renderer-process-limit=1` +
-  `--disable-background-timer-throttling --disable-renderer-backgrounding --disable-backgrounding-occluded-windows`
-  （不限流的话 SwiftShader 会按 32 个逻辑核开线程，单个实例就能把 CPU 打满；
+
+- 启动参数统一带 `--num-raster-threads=4 --renderer-process-limit=1` +    
+  `--disable-background-timer-throttling --disable-renderer-backgrounding --disable-backgrounding-occluded-windows`    
+  （不限流的话 SwiftShader 会按 32 个逻辑核开线程，单个实例就能把 CPU 打满；    
   不关定时器节流的话 `duck` 那种 `setInterval` 渐变永远走不完）。
-- **每套之间跑一次 `node .tmp-cdp-clean.js`**，按 `cdp-*-prof` 精确清掉超时残留的孤儿 chrome
+- **每套之间跑一次 `node .tmp-cdp-clean.js`**，按 `cdp-*-prof` 精确清掉超时残留的孤儿 chrome    
   （`chrome.kill()` 只在正常路径执行，套件崩了就走不到，残留会叠着抢 CPU）。
 - **串行跑**，别把 22 套压成一个后台任务再去干别的：越抢 CPU 越容易超时，越超时越多残留。
 
@@ -196,58 +217,25 @@ node .tmp-curse-test.mjs      # 84  诅咒/种子/每日规则
 - [x] 第 20 块：第二关 · 骨塔庭院
 - [x] 第 21 块：诅咒系统（自选 debuff 换骨币倍率）
 - [x] 第 22 块：每日挑战 + 种子
-- [ ] **第 23 块：主菜单 3D 背景**（场景和模型都在，只是没跑 render；奶蛙待机 + 远处骷髅剪影 + 萤火虫）
+- [x] 第 23 块：金币自动拾取 + 局外成长重做（篝火多级 / 永夜火种 / 金币折骨币 / 关卡倍率）
+- [ ] **第 24 块：主菜单 3D 背景**（场景和模型都在，只是没跑 render；奶蛙待机 + 远处骷髅剪影 + 萤火虫）
 - [ ] 第二关 · 巫师（`skeleton-mage` 9 段动画已就位，`ENEMY_TYPES.mage` 是 planned）
 - [ ] 更多武器/技能（`skills.js` 的 SKILLS 表，技能栏还剩 5 格）
 - [ ] 性能优化（怪物合批/假阴影/视锥剔除）—— **等用户点头再动**
-- 不做：主菜单排行榜（无后端）、商城/皮肤、广告位、多角色
+- [ ] 不做：主菜单排行榜（无后端）、商城/皮肤、广告位、多角色
 
----
-
-## 8. 已知坑（都是踩过的）
-
-1. **`GLTFLoader` 会洗掉骨骼名里的点**：`handslot.r` → `handslotr`，`getObjectByName` 两个名字都要试。
-2. **怪物身高不能信包围盒**：用原点 + 截图实测，写死在 `ENEMY_TYPES.sourceHeight`。
-3. **`bonetexture` 依赖 WebGL2**：小游戏/老设备上要做 WebGL2 归一化（本项目是纯网页，不受影响）。
-4. **`takeDamage` 对 `state==='spawn'`（钻地无敌期）返回 false** —— 测试杀怪前要等 `state==='chase'`。
-5. **`hurtPlayer` 只在 `gameState==='playing'` 且 `iframe<=0` 时生效** —— 面板打开/无敌帧期间调 `hurt()` 无效。
-6. **`startAt` 不重放前面回合**：只设 `roundIndex`，`roundMod` 由存档恢复。
-7. **存档 mods 必须保留 `src`**：`clearRoundBuffs` / `removeBySource` 靠它清事件 buff。
-8. **设置面板的摇杆大小要同时改逻辑半径和视觉缩放**（`--joy-s`），只改一个会「看着大、推着近」。
-9. **画质切档只切 `shadowMap.enabled`**，不要遍历改 `castShadow`（改坏过）。
-10. **`?debug=1` 时 `saveRunAtRound` 直接 return**（除非 `&keepsave=1`），否则测试互相覆盖存档。
-11. **新增跨模块调用必须核对 import**：第 18 块 `chooseUpgrade` 直接写了 `countCard(up.id)`，
-    但 `profile.js` 的这个导出没进 main.js 的 import 列表 → 每次选卡抛 `ReferenceError`，
-    且抛在 `upPanel.classList.remove('on')` **之前**，面板留在屏幕上把技能键盖死（玩家=卡死）。
-    教训：**改完 UI 流程要专门断言「面板真的关掉了」**（查 `classList` + `computedStyle.pointerEvents`），
-    只查内部 `isOpen()` 会漏——内部状态已经翻了，DOM 没翻。
-12. **`window.__errs` 在这套页面里根本不存在**：早期测试拿它判「控制台零报错」是**假绿**。
-    一律改用 CDP 的 `Runtime.exceptionThrown` 事件收集（`.tmp-battle-test.js` / `.tmp-block19-cdp.js` 已是正确写法）。
-13. **CDP 触摸：`touchEnd` 必须带上被抬起的那个触点**，传 `[]` 浏览器认为手指一直按着，
-    后面新触点踩在脏状态上。`touchStart` 只带**新增**触点，重复下发已按下的 id 是非法序列，Chrome 会整条丢弃。
-14. **新 UI 的 DOM id 先 grep 再用**：第 21 块把诅咒列表起名 `rcList`，而「我的记录」面板已经占了 `#rcList`
-    → 同一份 `main.js` 里 `const rcList` 重复声明，**整份模块 SyntaxError、加载页永远停住**。
-    现在叫 `#rcPick`（类名统一 `rc-` 前缀，避开 HUD 骨咒师的 `.curse-chip`）。
-15. **base = 0 的属性减不动**：诅咒最初设计成「幸运 −0.6」，而幸运 base 0、`stats.get()` 把负数夹回 0
-    → 这条诅咒实际上什么都没做（测试才发现）。**只减 base > 0 的属性**（移速/攻速/攻击/掉钱率），
-    或者改用 flat 加在「本来就有值」的属性上。
-16. **headless 跑 WebGL 测试会吃满 CPU**：SwiftShader 软件光栅化 + 按逻辑核开线程。
-    启动参数统一加了 `--num-raster-threads=2 --renderer-process-limit=1`（47 个套件已批量补），
-    套件超时后 `chrome.kill()` 走不到会残留孤儿进程 → 用 `.tmp-cdp-clean.js` 按 `cdp-*-prof` 精确清理。
-
----
 
 ## 9. 历史（一句话版）
 
-第 1~10 块：角色/摇杆/战场 → 战斗/波次 → 属性系统 → 环剑 → 奇遇与商店 → 界面补全 → 金币与元素剑 → 怪群分散 → 音效。
-第 11 块：五档品质 + 幸运。第 12 块：骷髅弓手（红圈落箭）+ 双拍 + 57 事件 + 金币落地 3 秒。
-第 13 块：15→20 回合（273 只）+ 弩炮台 + 金钟罩 + 地刺/霜环 + 背包。
-第 14 块：主页面菜单（开始游戏→选关 / 我的记录）。
-第 15 块：获得新武器自动弹用法教程（可跳过，每种只教一次）。
-第 16 块：金钟罩特效明显化 + 弓手去大红圈 + 背包按钮换图标放大 + 新手教程加背包步骤。
-第 17 块：设置面板（音量分离/画质/摇杆/抖屏/重置）+ 存档续玩。
-第 18 块：图鉴（5 页签）+ 26 条成就 + 全局战绩 + 难度三档。
-第 19 块：篝火 · 夜行骨币（局外成长，六簇火种）+ 修 `countCard` 未定义的 P0（选卡卡死）。
-第 20 块：第二关「骨塔庭院」（三巫师各一技 + 双主题 + 关卡参数化）。
-第 21 块：夜行诅咒（六条自选 debuff 换骨币倍率；顺带修「base=0 的属性减不动」与 DOM id 撞车）。
+第 1~10 块：角色/摇杆/战场 → 战斗/波次 → 属性系统 → 环剑 → 奇遇与商店 → 界面补全 → 金币与元素剑 → 怪群分散 → 音效。  
+第 11 块：五档品质 + 幸运。第 12 块：骷髅弓手（红圈落箭）+ 双拍 + 57 事件 + 金币落地 3 秒。  
+第 13 块：15→20 回合（273 只）+ 弩炮台 + 金钟罩 + 地刺/霜环 + 背包。  
+第 14 块：主页面菜单（开始游戏→选关 / 我的记录）。  
+第 15 块：获得新武器自动弹用法教程（可跳过，每种只教一次）。  
+第 16 块：金钟罩特效明显化 + 弓手去大红圈 + 背包按钮换图标放大 + 新手教程加背包步骤。  
+第 17 块：设置面板（音量分离/画质/摇杆/抖屏/重置）+ 存档续玩。  
+第 18 块：图鉴（5 页签）+ 26 条成就 + 全局战绩 + 难度三档。  
+第 19 块：篝火 · 夜行骨币（局外成长，六簇火种）+ 修 `countCard` 未定义的 P0（选卡卡死）。  
+第 20 块：第二关「骨塔庭院」（三巫师各一技 + 双主题 + 关卡参数化）。  
+第 21 块：夜行诅咒（六条自选 debuff 换骨币倍率；顺带修「base=0 的属性减不动」与 DOM id 撞车）。  
 第 22 块：今日挑战 + 种子（日期哈希、五条独立随机流、一天一条战绩、难度走局内临时覆盖）。

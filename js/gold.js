@@ -3,21 +3,24 @@
 //
 // 规则（用户定案）：
 //   · 打死怪物**有一定概率**掉金币（不是必然），概率是属性 goldRate；
-//   · **不需要拾取**：金币在地上弹一下，**停 3 秒**（第 12 块按用户要求从 0.5 秒加长）
-//     后自动消失并计入数据 —— 留得久是为了让「打怪掉钱」看得见，不用急着捡；
+//   · **落入攻击范围内立刻吸走**（第 23 块按用户要求：脚下那圈就是拾取范围，
+//     不用专门走过去踩）—— 金币先弹一下，进圈后 0.15 秒飞向奶蛙再入账；
+//   · 圈外的金币**停 3 秒**后自动消失并计入数据 —— 留得久是为了让
+//     「打怪掉钱」看得见，也保证远处漏掉的钱不会白白消失；
 //   · 金币是本局货币，商店（见 shop.js）里花。
 //
-// 视觉：一枚金色小圆片从怪死掉的位置弹起 → 自转 → 落地缩没；
-//       消失瞬间记入金币数（金币计数在 main.js，通过 onGold 回调）。
+// 视觉：一枚金色小圆片从怪死掉的位置弹起 → 自转 → 进圈被吸走 / 落地缩没；
+//       入账瞬间记入金币数（金币计数在 main.js，通过 onGold 回调）。
 // ============================================================
 import * as THREE from '../lib/three.module.js';
 
-const LIFE = 3.0;            // 金币从掉落到计入数据的时长（第 12 块：0.5 → 3 秒）
+const LIFE = 3.0;            // 圈外金币从掉落到计入数据的时长（第 12 块：0.5 → 3 秒）
 const POP_V = 2.6;           // 弹起的初速度
 const GRAVITY = 9.8;
+const PULL_TIME = 0.15;      // 进圈后飞向奶蛙的时间（再短就看不清，再长会拖节奏）
 
 export function createGoldSystem({ scene, fx, stats, onGold }) {
-  const coins = [];          // 场上正在「等待消失」的金币：{ mesh, x, z, t }
+  const coins = [];          // 场上正在「等待消失」的金币：{ mesh, x, z, t, pull }
   let geo = null, mat = null;
 
   function assets() {
@@ -45,23 +48,55 @@ export function createGoldSystem({ scene, fx, stats, onGold }) {
     mesh.position.set(pos.x, 0.35, pos.z);
     mesh.rotation.set(Math.random() * 0.6, Math.random() * Math.PI * 2, Math.random() * 0.6);
     scene.add(mesh);
-    coins.push({ mesh, x: pos.x, z: pos.z, t: 0 });
+    coins.push({ mesh, x: pos.x, z: pos.z, t: 0, pull: -1 });
     return true;
   }
 
-  function update(dt) {
+  // 入账：金币数 +1，再给一点金色碎屑反馈
+  function collect(c, i) {
+    scene.remove(c.mesh);
+    coins.splice(i, 1);
+    if (onGold) onGold(1);
+    if (fx) {
+      fx.burst({ x: c.mesh.position.x, z: c.mesh.position.z },
+        { color: 0xffd166, count: 7, speed: 2.2, life: 0.35, size: 0.1, y: 0.4, up: 2.2, gravity: 5 });
+      fx.ring({ x: c.mesh.position.x, z: c.mesh.position.z },
+        { from: 0.1, to: 0.55, color: 0xffd166, life: 0.3, opacity: 0.6, y: 0.05 });
+    }
+  }
+
+  // player / range 由主循环每帧传进来（攻击范围环的半径就是拾取半径）。
+  // 不传就是老行为：只能等 3 秒自动入账。
+  function update(dt, player = null, range = 0) {
     for (let i = coins.length - 1; i >= 0; i--) {
       const c = coins[i];
       c.t += dt;
-      if (c.t >= LIFE) {
-        // 消失 = 计入数据：金币数 +1，再给一点金色碎屑反馈
-        scene.remove(c.mesh);
-        coins.splice(i, 1);
-        if (onGold) onGold(1);
-        if (fx) {
-          fx.burst({ x: c.x, z: c.z }, { color: 0xffd166, count: 7, speed: 2.2, life: 0.35, size: 0.1, y: 0.4, up: 2.2, gravity: 5 });
-          fx.ring({ x: c.x, z: c.z }, { from: 0.1, to: 0.55, color: 0xffd166, life: 0.3, opacity: 0.6, y: 0.05 });
+
+      // ---- 已被吸住：飞向奶蛙，到了就入账（不看 LIFE，免得飞一半消失）----
+      if (c.pull >= 0) {
+        c.pull += dt;
+        const k = 1 - Math.exp(-18 * dt);
+        if (player) {
+          c.mesh.position.x += (player.x - c.mesh.position.x) * k;
+          c.mesh.position.z += (player.z - c.mesh.position.z) * k;
         }
+        c.mesh.position.y += (0.62 - c.mesh.position.y) * k;
+        c.mesh.rotation.y += dt * 12;
+        const s = Math.max(0.35, 1 - c.pull / PULL_TIME * 0.65);
+        c.mesh.scale.setScalar(s);
+        if (c.pull >= PULL_TIME) collect(c, i);
+        continue;
+      }
+
+      // ---- 进圈：起吸 ----
+      if (player && range > 0
+        && Math.hypot(player.x - c.mesh.position.x, player.z - c.mesh.position.z) <= range) {
+        c.pull = 0;
+        continue;
+      }
+
+      if (c.t >= LIFE) {
+        collect(c, i);
         continue;
       }
       // 弹跳：初速向上 + 重力，落地之后原地轻轻浮动（3 秒太长，静止会让人以为卡住）
@@ -76,6 +111,15 @@ export function createGoldSystem({ scene, fx, stats, onGold }) {
     }
   }
 
+  // 结算前把地上的钱全部入账 —— 「没用完的金币」不该包括还躺在地上的那些
+  function flush() {
+    const n = coins.length;
+    for (const c of coins) scene.remove(c.mesh);
+    coins.length = 0;
+    if (n > 0 && onGold) onGold(n);
+    return n;
+  }
+
   function setVisible(v) {
     for (const c of coins) c.mesh.visible = v;
   }
@@ -85,5 +129,5 @@ export function createGoldSystem({ scene, fx, stats, onGold }) {
     coins.length = 0;
   }
 
-  return { maybeDrop, spawn, update, setVisible, reset, count: () => coins.length };
+  return { maybeDrop, spawn, update, flush, setVisible, reset, count: () => coins.length };
 }

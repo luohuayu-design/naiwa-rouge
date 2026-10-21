@@ -33,8 +33,14 @@ import {
 } from './profile.js';
 import * as runSave from './runSave.js';
 import {
-  CAMPFIRE, CAMP_TOTAL_COST, campBuy, campOwned, campApply, bonesFor, diffBoneMul, BONE,
+  CAMPFIRE, CAMP_TOTAL_COST, CAMP_STEP, campBuy, campOwned, campLevel, campMaxLevel,
+  campCost, campFullCost, campMaxed, campApply, bonesFor, diffBoneMul, levelBoneMul, coinBones, BONE,
 } from './campfire.js';
+// 第 23 块：永夜火种（通关白给的 3 次永久三选一）
+import {
+  BOONS, BOON_BY_ID, BOON_PICKS, boonOwned, boonStacks, boonPending, boonTotalStacks,
+  grantBoons, rollBoons, takeBoon, applyBoons, boonStackText,
+} from './boons.js';
 // 第 21 块：夜行诅咒（自选 debuff 换骨币倍率）
 import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList } from './curses.js';
 // 第 22 块：种子与每日挑战
@@ -244,6 +250,7 @@ async function boot() {
   const rsGrid = document.getElementById('rsGrid');
   const rsTag = document.getElementById('rsTag');
   const rsBone = document.getElementById('rsBone');
+  const rsBtn = document.getElementById('rsBtn');
   const upPanel = document.getElementById('upgrade');
   const upList = document.getElementById('upList');
   const upTitle = document.getElementById('upTitle');
@@ -1064,6 +1071,10 @@ async function boot() {
     refreshResume();              // 有存档就亮出「继续上次 · 第 N 回合」
     renderCampBadge();            // 篝火按钮上的骨币数（第 19 块）
     renderDailyBadge();           // 今日挑战按钮上的「今天最好」（第 22 块）
+    // 第 23 块：上次通关后直接关了网页，这 3 次永久选择还欠着 —— 回标题页补上
+    if (boonPending() > 0) {
+      setTimeout(() => { if (!boonOpen && gameState === 'title') showBoons({ after: 'close' }); }, 500);
+    }
   }
 
   function beginGame({ tutorial = false } = {}) {
@@ -1089,6 +1100,10 @@ async function boot() {
     setLevel(pendingLevelId);         // 第 20 块：按选关重建这一关（含场景皮肤）
     clearCurse();                     // 上一局残留的减速不许带进来
     applyCampfire();                  // 篝火（第 19 块）：局外成长在开局一次性落账
+    // 第 23 块：永夜火种（通关白给的永久属性）也在这里落账。
+    // 局内的一切加成都不跨局 —— 新一局 stats 从 base 重建，这里只补局外那两份。
+    const boonLv = applyBoons(stats, wstats);
+    if (boonLv) stats.syncHp(stats.get('maxHp'));
     // 第 21 / 22 块：种子与诅咒也在开局落账。普通局 seed=0 → 全部退回 Math.random
     initRunRng(dailyMode ? dailySeedNow : 0);
     const rc = applyRunCurses(stats, wstats, pendingCurses);
@@ -2601,17 +2616,22 @@ async function boot() {
 
   function renderCampfire() {
     const have = bones();
-    const owned = campOwned();
-    const gotCount = CAMPFIRE.filter((c) => owned[c.id]).length;
+    const gotCount = CAMPFIRE.filter((c) => campLevel(c.id) > 0).length;
+    const lvSum = CAMPFIRE.reduce((a, c) => a + campLevel(c.id), 0);
+    const maxSum = CAMPFIRE.reduce((a, c) => a + campMaxLevel(c), 0);
     cfBones.textContent = String(have);
     cfList.textContent = '';
 
     for (const item of CAMPFIRE) {
-      const has = !!owned[item.id];
-      const poor = !has && have < item.cost;
+      const lv = campLevel(item.id);
+      const max = campMaxLevel(item);
+      const full = lv >= max;
+      const price = full ? 0 : campCost(item.id, lv);
+      const poor = !full && have < price;
       const row = document.createElement('div');
-      row.className = 'cf-item' + (has ? ' on' : '');
+      row.className = 'cf-item' + (lv > 0 ? ' on' : '') + (full ? ' max' : '');
       row.dataset.id = item.id;
+      row.dataset.level = String(lv);
 
       const head = document.createElement('div');
       head.className = 'cf-head';
@@ -2623,26 +2643,40 @@ async function boot() {
       name.textContent = item.name;
       const cost = document.createElement('span');
       cost.className = 'cf-cost' + (poor ? ' lack' : '');
-      cost.textContent = has ? '已点燃' : `${item.cost} 骨币`;
+      cost.textContent = full ? '已到顶' : `${price} 骨币`;
       head.append(icon, name, cost);
+
+      // 等级点：●●○ —— 一眼看出还能点几下
+      const lvRow = document.createElement('div');
+      lvRow.className = 'cf-lv';
+      for (let i = 0; i < max; i++) {
+        const dot = document.createElement('i');
+        dot.className = i < lv ? 'on' : '';
+        lvRow.appendChild(dot);
+      }
+      const lvText = document.createElement('span');
+      lvText.textContent = `Lv.${lv} / ${max}`;
+      lvRow.appendChild(lvText);
 
       const desc = document.createElement('div');
       desc.className = 'cf-desc';
       desc.textContent = item.desc;
 
-      row.append(head, desc);
+      row.append(head, lvRow, desc);
 
-      if (has) {
+      if (full) {
         const tag = document.createElement('div');
         tag.className = 'cf-owned';
-        tag.textContent = '已留在这团火里';
+        tag.textContent = '这一簇已经烧到最旺';
         row.appendChild(tag);
       } else {
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'cf-buy' + (poor ? ' poor' : '');
         btn.dataset.buy = item.id;
-        btn.textContent = poor ? `还差 ${item.cost - have} 骨币` : '点 燃';
+        btn.textContent = poor
+          ? `还差 ${price - have} 骨币`
+          : (lv === 0 ? `点 燃 · ${price} 骨币` : `升到 Lv.${lv + 1} · ${price} 骨币`);
         if (!poor) {
           btn.addEventListener('click', () => {
             const r = campBuy(item.id);
@@ -2657,9 +2691,10 @@ async function boot() {
       cfList.appendChild(row);
     }
 
-    cfFoot.textContent = gotCount >= CAMPFIRE.length
-      ? `六簇火种都点着了 —— 这团火不会再给你更多，剩下的靠手`
-      : `已点燃 ${gotCount} / ${CAMPFIRE.length} 簇 · 全点完要 ${CAMP_TOTAL_COST} 骨币 · 每簇只点一次`;
+    cfFoot.textContent = lvSum >= maxSum
+      ? `六簇火种都烧到最旺了 —— 这团火不会再给你更多，剩下的靠手`
+      : `已点燃 ${gotCount} / ${CAMPFIRE.length} 簇 · 共 ${lvSum} / ${maxSum} 级 · `
+        + `每升一级涨价 ${Math.round((CAMP_STEP - 1) * 100)}% · 全点满要 ${CAMP_TOTAL_COST} 骨币`;
   }
 
   function showCampfire() {
@@ -2669,6 +2704,130 @@ async function boot() {
 
   btnCamp.addEventListener('click', showCampfire);
   document.getElementById('cfBack').addEventListener('click', () => hideSub(campScr));
+
+  // ---------------- 永夜火种（第 23 块：通关白给的永久三选一） ----------------
+  // 用户定案：**通关一大关**后触发 3 次，直接写进局外属性；品质照旧吃幸运。
+  // 界面复用三选一那套 DOM（upPanel），只是换成永久卡、没有「带进下一回合」的措辞。
+  //
+  // 为什么用「待领次数」而不是结算时弹完就完：玩家很可能在结算界面直接关网页。
+  // grantBoons 在 endGame 就写档案，下次回标题页自动补弹（showTitle 里检查）。
+  let boonOpen = false;
+  let boonPicks = [];           // 这一次摆出来的三张
+  let boonSession = null;       // { total, done, after, luck }
+
+  function boonLuckNow() {
+    // 结算时读的是「这一局最后的幸运」（含局内卡、事件、篝火、火种），
+    // 标题页补选时 stats 还没落账，读到的就是 0 —— 补选不额外吃幸运，这是有意的。
+    const v = stats.get('luck');
+    return Number.isFinite(v) && v > 0 ? v : 0;
+  }
+
+  function renderBoonPanel() {
+    if (!boonSession) return;
+    const luck = boonSession.luck;
+    const left = boonPending();
+    upTitle.textContent = `夜行之后 · 永夜火种 ${boonSession.done + 1} / ${boonSession.total}`;
+    upSub.textContent = `还有 ${left} 次没选 · 选一张刻进骨头里，下一局开局就带着它`;
+    upFoot.textContent = `幸运 ${luck.toFixed(1)} · 幸运越高越容易见到金红 · 每项都有层数上限`;
+
+    boonPicks = rollBoons(rngOf('card'), { luck, count: 3 });
+    upList.textContent = '';
+    if (!boonPicks.length) {
+      // 池子空了（全部到顶）：不该发生，兜底直接收掉
+      closeBoons();
+      return;
+    }
+
+    for (const b of boonPicks) {
+      const rar = rarityInfo(b);
+      const n = boonStacks(b.id);
+      const btn = document.createElement('button');
+      btn.className = 'up-item';
+      btn.type = 'button';
+      btn.dataset.id = b.id;
+      btn.dataset.tag = 'boon';
+      btn.dataset.rarity = rar.id;
+
+      const glyph = document.createElement('span');
+      glyph.className = 'up-glyph';
+      glyph.textContent = b.glyph;
+
+      const name = document.createElement('span');
+      name.className = 'up-name';
+      name.textContent = b.name;
+      const rank = document.createElement('span');
+      rank.className = 'up-rank';
+      rank.textContent = rar.name;
+      name.appendChild(rank);
+
+      const effect = document.createElement('b');
+      effect.className = 'up-effect';
+      effect.textContent = b.title;
+
+      // 层数：「2 / 3」→「3 / 3」，比数值预览更实在（局外加成不在当前 stats 上）
+      const delta = document.createElement('div');
+      delta.className = 'up-delta';
+      const line = document.createElement('span');
+      line.className = 'up-chg';
+      const label = document.createElement('i');
+      label.textContent = '永久层数';
+      const from = document.createElement('s');
+      from.textContent = `${n} / ${b.maxStack}`;
+      const arrow = document.createElement('em');
+      arrow.textContent = '→';
+      const to = document.createElement('b');
+      to.textContent = `${n + 1} / ${b.maxStack}`;
+      line.append(label, from, arrow, to);
+      delta.appendChild(line);
+
+      const desc = document.createElement('span');
+      desc.className = 'up-desc';
+      desc.textContent = b.desc;
+
+      btn.append(glyph, name, effect, delta, desc);
+      btn.addEventListener('click', () => chooseBoon(b));
+      upList.appendChild(btn);
+    }
+  }
+
+  function showBoons({ after = 'close' } = {}) {
+    const total = boonPending();
+    if (!total) return false;
+    boonSession = { total, done: 0, after, luck: boonLuckNow() };
+    boonOpen = true;
+    renderBoonPanel();
+    audio.sfx('card');
+    upPanel.classList.add('on', 'boon');
+    upPanel.setAttribute('aria-hidden', 'false');
+    return true;
+  }
+
+  function chooseBoon(b) {
+    if (!boonOpen) return;
+    const r = takeBoon(b.id);
+    if (!r.ok) return;
+    audio.sfx('upgrade');
+    boonSession.done++;
+    showToast(`火种 · ${b.name}`, `永久层数 ${r.stacks} / ${b.maxStack} —— 下一局开局生效`);
+    if (boonPending() > 0 && boonTotalStacks() < BOONS.reduce((a, x) => a + x.maxStack, 0)) {
+      renderBoonPanel();
+      return;
+    }
+    closeBoons();
+  }
+
+  function closeBoons() {
+    if (!boonOpen) return;
+    boonOpen = false;
+    const after = boonSession ? boonSession.after : 'close';
+    boonSession = null;
+    upPanel.classList.remove('on', 'boon');
+    upPanel.setAttribute('aria-hidden', 'true');
+    renderCampBadge();
+    if (after === 'reload') {
+      location.reload();
+    }
+  }
 
   // ---------------- 夜行诅咒（第 21 块） ----------------
   // 选关面板里的勾选条：点一下加一条，再点一下摘掉，右上角实时显示骨币倍率。
@@ -2819,6 +2978,9 @@ async function boot() {
     wtAbort();                      // 武器教程也收掉（别盖在结算上）
     playerRing.setVisible(false);   // 倒下/通关后不再提示攻击范围
     weapon.setVisible(false);       // 环剑也一并收起
+    // 第 23 块：结算前把还躺在地上的金币全部收进兜里 ——
+    // 「这一局没花完的钱」不该漏掉那些还没吸过来的
+    gold.flush();
     gold.setVisible(false);         // 地上的金币也收掉
     renderSkill();
 
@@ -2851,11 +3013,21 @@ async function boot() {
     checkCumulativeAchs({ isWin, roundShown });
     // 篝火（第 19 块）：结算发骨币 —— 打得多深、杀得多狠、选多难，都算进去
     // 第 21 / 22 块：诅咒倍率与每日挑战加成乘在上面（都是玩家自己挣的）
+    // 第 23 块：没花完的金币折成骨币，关卡越往后倍率越高
     const diffKey = diffOverride || profile().difficulty || 'normal';
     const mulCurse = curseMul(pendingCurses);
     const mulDaily = dailyMode ? BONE.dailyMul : 1;
-    const boneGain = bonesFor({ roundShown, kills, isWin }, diffKey, mulCurse * mulDaily);
+    const coinPart = coinBones(coins);
+    const lvMul = levelBoneMul(curLevelId);
+    const boneGain = bonesFor(
+      { roundShown, kills, isWin, coins, levelId: curLevelId },
+      diffKey, mulCurse * mulDaily,
+    );
     const boneTotal = addBones(boneGain);
+    // 第 23 块：通关一大关 → 3 次永久三选一。先写档案，
+    // 玩家就算直接关网页，下次回标题页也会补弹（showTitle 里检查）。
+    const boonGain = isWin ? BOON_PICKS : 0;
+    if (boonGain) grantBoons(boonGain);
     const boneMul = diffBoneMul(diffKey);
     const diffName = getDifficulty().name;
     if (diffOverride) {                 // 临时难度用完就撤，下一局还是玩家自己选的那档
@@ -2891,6 +3063,7 @@ async function boot() {
       ['金币', String(coins)],
       ['骨币', `+${boneGain}`],
     ];
+    if (boonGain) cells.push(['永夜火种', `+${boonGain} 次`]);
     for (const [k, v] of cells) {
       const cell = document.createElement('div');
       cell.className = 'rs-cell';
@@ -2907,14 +3080,29 @@ async function boot() {
       if (boneMul > 1) parts.push(`${diffName} ×${boneMul}`);
       if (mulCurse > 1) parts.push(`诅咒 ×${mulCurse.toFixed(2)}`);
       if (mulDaily > 1) parts.push(`今日 ×${mulDaily.toFixed(2)}`);
+      if (lvMul > 1) parts.push(`第 ${curLevelId} 关 ×${lvMul}`);
+      if (coinPart > 0) parts.push(`剩 ${coins} 金币折 ${coinPart}`);
       rsBone.textContent = `🔥 夜行骨币 +${boneGain}`
         + (parts.length ? `（${parts.join(' · ')}）` : '')
         + ` · 现有 ${boneTotal}`
         + (boneTotal >= 90 ? ' —— 去篝火边看看' : '');
     }
+    // 通关才能拿永久火种：按钮直接改成「先领火种」，别让人错过
+    if (rsBtn) {
+      rsBtn.textContent = boonGain ? `领取 ${boonGain} 次永夜火种` : '再来一次';
+      rsBtn.classList.toggle('boon', !!boonGain);
+    }
   }
 
-  document.getElementById('rsBtn').addEventListener('click', () => location.reload());
+  document.getElementById('rsBtn').addEventListener('click', () => {
+    // 有没领的永久火种就先选：选完 closeBoons 会自己 reload 开下一局
+    if (boonPending() > 0 && showBoons({ after: 'reload' })) {
+      resultEl.classList.remove('on');
+      resultEl.setAttribute('aria-hidden', 'true');
+      return;
+    }
+    location.reload();
+  });
 
   // 调试钩子：只有 ?debug=1 才挂到 window，方便自动化测试读内部状态（正常游玩不暴露）
   if (new URLSearchParams(location.search).has('debug')) {
@@ -3035,7 +3223,12 @@ async function boot() {
         show: () => showCampfire(),
         hide: () => hideSub(campScr),
         gain: (o) => bonesFor(o || {}, profile().difficulty || 'normal'),
-        list: () => CAMPFIRE.map((c) => ({ id: c.id, cost: c.cost })),
+        list: () => CAMPFIRE.map((c) => ({
+          id: c.id, cost: c.cost, maxLevel: campMaxLevel(c),
+          costAt: (lv) => campCost(c.id, lv), full: campFullCost(c.id),
+        })),
+        level: (id) => campLevel(id),
+        maxed: (id) => campMaxed(id),
         total: () => CAMP_TOTAL_COST,
         reset: () => {
           profile().camp = {};
@@ -3044,6 +3237,29 @@ async function boot() {
           renderCampBadge();
           if (campScr.classList.contains('on')) renderCampfire();
         },
+      },
+      // 永夜火种（第 23 块）：通关白给的永久属性
+      boons: {
+        list: () => BOONS.map((b) => ({
+          id: b.id, name: b.name, rarity: b.rarity, maxStack: b.maxStack, stacks: boonStacks(b.id),
+        })),
+        stacks: (id) => boonStacks(id),
+        pending: () => boonPending(),
+        grant: (n) => grantBoons(n ?? BOON_PICKS),
+        roll: (luck) => rollBoons(Math.random, { luck: luck ?? stats.get('luck') }).map((b) => b.id),
+        take: (id) => takeBoon(id),
+        apply: () => applyBoons(stats, wstats),
+        show: (after) => showBoons({ after: after || 'close' }),
+        close: () => closeBoons(),
+        open: () => boonOpen,
+        totalStacks: () => boonTotalStacks(),
+        owned: () => ({ ...boonOwned() }),
+        reset: () => {
+          profile().boons = {};
+          profile().boonPending = 0;
+          saveProfile();
+        },
+        gain: (o) => bonesFor(o || {}, profile().difficulty || 'normal'),
       },
       diff: {
         set: (k) => { profile().difficulty = k; setDifficulty(k); saveProfile(); },
@@ -3419,7 +3635,8 @@ async function boot() {
       turrets.update(dt, { playerPos: pos });
       relics.update(dt, { playerPos: pos });
       aegisUpdate(dt);
-      gold.update(dt);
+      // 金币：攻击范围圈就是拾取范围（第 23 块，进圈即吸），圈外的 3 秒后自动入账
+      gold.update(dt, pos, stats.get('attackRange'));
       renderSkill();
       if (stats.hp.cur < stats.get('maxHp')) stats.heal(stats.get('hpRegen') * dt);
       // 事件造成的持续流失（乞丐吐痰）：绕过回复直接扣，能磨死人也只作用于本回合

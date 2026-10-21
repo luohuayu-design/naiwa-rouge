@@ -467,6 +467,35 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
 .cf-foot{margin-top:12px;padding:0 4px;font-size:10.5px;line-height:1.7;letter-spacing:.04em;
   color:rgba(140,190,172,.42)}
 
+/* 第 23 块：篝火可升 3 级 —— 等级点 + 满级条目 */
+.cf-item.max{border-color:rgba(255,196,110,.5);background:rgba(46,31,18,.66)}
+.cf-lv{display:flex;align-items:center;gap:5px;margin-top:7px}
+.cf-lv i{width:14px;height:4px;border-radius:2px;background:rgba(255,196,110,.16)}
+.cf-lv i.on{background:linear-gradient(90deg,#ffd9a0,#eaa94f);
+  box-shadow:0 0 6px rgba(255,170,70,.55)}
+.cf-lv span{margin-left:4px;font-size:10.5px;font-weight:800;letter-spacing:.1em;
+  color:rgba(255,214,160,.72)}
+
+/* 第 23 块：永夜火种（复用三选一面板，换成暖金） */
+/* z-index 要盖过标题页（19）/ 结算（18）/ 子面板（21）—— 标题页补选和结算领取都会用到 */
+.upgrade.boon{z-index:22}
+.upgrade.boon .up-card{border-color:rgba(255,196,110,.34);
+  background:linear-gradient(180deg,rgba(40,28,17,.98),rgba(14,12,10,.99));
+  box-shadow:0 24px 62px rgba(0,0,0,.72),inset 0 1px 0 rgba(255,220,170,.09)}
+.upgrade.boon .up-title{color:#ffd9a0}
+.up-item[data-tag="boon"]{border-color:rgba(255,196,110,.26);
+  background:linear-gradient(180deg,rgba(44,30,17,.72),rgba(20,16,12,.72))}
+.up-item[data-tag="boon"]:hover{border-color:rgba(255,206,120,.52);
+  background:linear-gradient(180deg,rgba(58,39,21,.82),rgba(26,20,14,.82))}
+.up-item[data-tag="boon"] .up-glyph{color:#ffd166;border-color:rgba(255,206,120,.38);
+  background:rgba(255,190,90,.1)}
+.up-item[data-tag="boon"] .up-effect{color:#ffdf9a}
+.up-item[data-tag="boon"] .up-chg{border-color:rgba(255,206,120,.2);background:rgba(255,190,90,.08)}
+.up-item[data-tag="boon"] .up-chg b{color:#ffdf9a}
+.rs-btn.boon{color:#2a1606;border-color:rgba(255,214,160,.55);
+  background:linear-gradient(180deg,#ffd9a0,#eaa94f)}
+.rs-btn.boon:hover{background:linear-gradient(180deg,#ffe3b8,#f0b45c)}
+
 /* 设置面板 */
 .set-list{margin-top:14px;display:flex;flex-direction:column;gap:14px}
 .set-row{padding:0 4px}
