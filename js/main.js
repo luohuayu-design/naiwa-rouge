@@ -27,9 +27,12 @@ import audio from './audio.js';
 import { SKILLS, visibleSkills, skillForKey } from './skills.js';
 import {
   settings as readSettings, setSetting, save as saveProfile, profile,
-  bumpStat, setStatMax, codexAdd, codexCount, unlockAch, hasAch, addBones, bones, resetAll,
+  bumpStat, setStatMax, codexAdd, codexCount, countCard, unlockAch, hasAch, addBones, bones, resetAll,
 } from './profile.js';
 import * as runSave from './runSave.js';
+import {
+  CAMPFIRE, CAMP_TOTAL_COST, campBuy, campOwned, campApply, bonesFor, diffBoneMul,
+} from './campfire.js';
 import { CODEX_TABS, codexEntries, codexSummary } from './codex.js';
 import { achById, ACHS } from './achievements.js';
 import {
@@ -213,6 +216,7 @@ async function boot() {
   const rsSub = document.getElementById('rsSub');
   const rsGrid = document.getElementById('rsGrid');
   const rsTag = document.getElementById('rsTag');
+  const rsBone = document.getElementById('rsBone');
   const upPanel = document.getElementById('upgrade');
   const upList = document.getElementById('upList');
   const upTitle = document.getElementById('upTitle');
@@ -1025,6 +1029,7 @@ async function boot() {
     requestAnimationFrame(() => titleScr.classList.remove('off'));
     titleScr.setAttribute('aria-hidden', 'false');
     refreshResume();              // 有存档就亮出「继续上次 · 第 N 回合」
+    renderCampBadge();            // 篝火按钮上的骨币数（第 19 块）
   }
 
   function beginGame({ tutorial = false } = {}) {
@@ -1047,7 +1052,21 @@ async function boot() {
     hintEl.classList.remove('off');
     runRarities = new Set();          // 本局品质集合重置（cards_all_kinds 用）
     setDifficulty(profile().difficulty || 'normal');   // 难度一局一选，开局生效
+    applyCampfire();                  // 篝火（第 19 块）：局外成长在开局一次性落账
     level.start();
+  }
+
+  // 篝火：把已点燃的火种加进这一局。先按来源撤一次，保证重复开局不会叠加；
+  // 续玩不走这里 —— 存档里的 mods 已经带着 src='camp' 回放了。
+  function applyCampfire() {
+    stats.removeBySource('camp');
+    wstats.removeBySource('camp');
+    const got = campApply(stats, wstats);
+    if (got.coins) addCoins(got.coins);
+    if (got.potion) bagAdd('potion', got.potion);
+    if (got.count) stats.syncHp(stats.get('maxHp'));   // 加了血上限就补满，别开局 6/7
+    renderHud();
+    return got;
   }
 
   function startTutorial() {
@@ -2450,6 +2469,92 @@ async function boot() {
   document.getElementById('btnCodex').addEventListener('click', showCodex);
   document.getElementById('cxBack').addEventListener('click', () => hideSub(codexScr));
 
+  // ---------------- 篝火 · 夜行骨币（第 19 块） ----------------
+  // 局外成长只在这里发生：主菜单进入，站着看，不打断任何一局。
+  // 骨币余额与已点燃的火种都存在 profile（bones / camp）。
+  const campScr = document.getElementById('campScr');
+  const cfList = document.getElementById('cfList');
+  const cfBones = document.getElementById('cfBones');
+  const cfFoot = document.getElementById('cfFoot');
+  const btnCamp = document.getElementById('btnCamp');
+  const campBoneNum = document.getElementById('campBoneNum');
+
+  // 主菜单按钮上的骨币角标（每次回标题都会重刷）
+  function renderCampBadge() {
+    if (campBoneNum) campBoneNum.textContent = String(bones());
+  }
+
+  function renderCampfire() {
+    const have = bones();
+    const owned = campOwned();
+    const gotCount = CAMPFIRE.filter((c) => owned[c.id]).length;
+    cfBones.textContent = String(have);
+    cfList.textContent = '';
+
+    for (const item of CAMPFIRE) {
+      const has = !!owned[item.id];
+      const poor = !has && have < item.cost;
+      const row = document.createElement('div');
+      row.className = 'cf-item' + (has ? ' on' : '');
+      row.dataset.id = item.id;
+
+      const head = document.createElement('div');
+      head.className = 'cf-head';
+      const icon = document.createElement('span');
+      icon.className = 'cf-icon';
+      icon.textContent = item.icon;
+      const name = document.createElement('span');
+      name.className = 'cf-name';
+      name.textContent = item.name;
+      const cost = document.createElement('span');
+      cost.className = 'cf-cost' + (poor ? ' lack' : '');
+      cost.textContent = has ? '已点燃' : `${item.cost} 骨币`;
+      head.append(icon, name, cost);
+
+      const desc = document.createElement('div');
+      desc.className = 'cf-desc';
+      desc.textContent = item.desc;
+
+      row.append(head, desc);
+
+      if (has) {
+        const tag = document.createElement('div');
+        tag.className = 'cf-owned';
+        tag.textContent = '已留在这团火里';
+        row.appendChild(tag);
+      } else {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'cf-buy' + (poor ? ' poor' : '');
+        btn.dataset.buy = item.id;
+        btn.textContent = poor ? `还差 ${item.cost - have} 骨币` : '点 燃';
+        if (!poor) {
+          btn.addEventListener('click', () => {
+            const r = campBuy(item.id);
+            if (!r.ok) return;
+            audio.sfx('uiSwitch');
+            renderCampfire();
+            renderCampBadge();
+          });
+        }
+        row.appendChild(btn);
+      }
+      cfList.appendChild(row);
+    }
+
+    cfFoot.textContent = gotCount >= CAMPFIRE.length
+      ? `六簇火种都点着了 —— 这团火不会再给你更多，剩下的靠手`
+      : `已点燃 ${gotCount} / ${CAMPFIRE.length} 簇 · 全点完要 ${CAMP_TOTAL_COST} 骨币 · 每簇只点一次`;
+  }
+
+  function showCampfire() {
+    renderCampfire();
+    showSub(campScr);
+  }
+
+  btnCamp.addEventListener('click', showCampfire);
+  document.getElementById('cfBack').addEventListener('click', () => hideSub(campScr));
+
   // ---------------- 难度选择（关卡面板里，一局一选） ----------------
   const diffSeg = document.getElementById('diffSeg');
   function renderDiffSeg() {
@@ -2507,6 +2612,11 @@ async function boot() {
     setStatMax('bestRunKills', kills);
     if (isWin) bumpStat('wins');
     checkCumulativeAchs({ isWin, roundShown });
+    // 篝火（第 19 块）：结算发骨币 —— 打得多深、杀得多狠、选多难，都算进去
+    const diffKey = profile().difficulty || 'normal';
+    const boneGain = bonesFor({ roundShown, kills, isWin }, diffKey);
+    const boneTotal = addBones(boneGain);
+    const boneMul = diffBoneMul(diffKey);
     runSave.clearRun();             // 一局结束（无论输赢），续玩存档就没有意义了
     refreshResume();                // 主菜单上的「继续上次」随之消失
     const cells = [
@@ -2517,6 +2627,7 @@ async function boot() {
       ['剩余生命', `${fmtHp(stats.hp.cur)} / ${stats.get('maxHp').toFixed(1)}`],
       ['攻击力', stats.get('attack').toFixed(1)],
       ['金币', String(coins)],
+      ['骨币', `+${boneGain}`],
     ];
     for (const [k, v] of cells) {
       const cell = document.createElement('div');
@@ -2528,6 +2639,13 @@ async function boot() {
     }
     resultEl.classList.add('on');
     resultEl.setAttribute('aria-hidden', 'false');
+    // 骨币单独一行：这是「下一局能变强一点」的唯一来源，结算时必须看得见
+    if (rsBone) {
+      rsBone.textContent = `🔥 夜行骨币 +${boneGain}`
+        + (boneMul > 1 ? `（${getDifficulty().name} ×${boneMul}）` : '')
+        + ` · 现有 ${boneTotal}`
+        + (boneTotal >= 90 ? ' —— 去篝火边看看' : '');
+    }
   }
 
   document.getElementById('rsBtn').addEventListener('click', () => location.reload());
@@ -2594,6 +2712,32 @@ async function boot() {
         list: () => ACHS.map((a) => a.id),
       },
       stats2: () => profile().stats,
+      // 篝火 / 夜行骨币（第 19 块）
+      camp: {
+        bones: () => bones(),
+        setBones: (n) => {
+          profile().bones = Math.max(0, n | 0);
+          saveProfile();
+          renderCampBadge();
+          if (campScr.classList.contains('on')) renderCampfire();
+          return bones();
+        },
+        owned: () => ({ ...campOwned() }),
+        buy: (id) => campBuy(id),
+        apply: () => applyCampfire(),
+        show: () => showCampfire(),
+        hide: () => hideSub(campScr),
+        gain: (o) => bonesFor(o || {}, profile().difficulty || 'normal'),
+        list: () => CAMPFIRE.map((c) => ({ id: c.id, cost: c.cost })),
+        total: () => CAMP_TOTAL_COST,
+        reset: () => {
+          profile().camp = {};
+          profile().bones = 0;
+          saveProfile();
+          renderCampBadge();
+          if (campScr.classList.contains('on')) renderCampfire();
+        },
+      },
       diff: {
         set: (k) => { profile().difficulty = k; setDifficulty(k); saveProfile(); },
         get: () => getDifficulty().name,

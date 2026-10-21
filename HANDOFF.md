@@ -28,16 +28,22 @@ Three.js r160 的单摇杆幸存者肉鸽《奶蛙夜行》，纯静态站点（
 
 ---
 
-## 2. 当前状态（2026-10-21 11:35）
+## 2. 当前状态（2026-10-21 12:30）
 
 | 块 | 内容 | 状态 |
 |---|---|---|
 | 1~16 | 见文末「历史」 | 已上线（v=20） |
-| **17** | 设置面板 + 存档续玩 | 代码完成，**提交 dad5e91 但推送失败**（ahead 1） |
-| **18** | 图鉴 + 成就 + 战绩 + 难度 | 代码完成，测试 31/31 绿，**本轮刚收尾** |
+| **17** | 设置面板 + 存档续玩 | 已上线（提交 dad5e91） |
+| **18** | 图鉴 + 成就 + 战绩 + 难度 | 已上线（提交 7c7fd22，线上 v=22，烟测 12/12） |
+| **19** | 篝火 · 夜行骨币（局外成长） | 代码完成，测试全绿，**待提交** |
+| — | **修 P0：`countCard` 未定义导致选卡卡死** | 本轮修复，随第 19 块一起提交 |
 
-线上还是 **v=20**（第 16 块）。本地 index.html 已到 **v=22**。
-👉 **下一步第一件事：`git push`，然后轮询 Pages 到 v=22，跑线上烟测。**
+线上 **v=22**（第 18 块），本地 index.html 已到 **v=23**。
+👉 **下一步：`git commit` → `push` → 轮询 Pages 到 v=23 → 跑线上烟测。**
+
+⚠️ 线上 v=22 带着第 18 块的 P0 bug：**每次选升级卡都会抛 `ReferenceError: countCard is not defined`**，
+`chooseUpgrade` 在移除 `.on` 之前就中断 → 升级面板留在屏幕上、`pointer-events` 还是 `auto`，
+盖住技能键 → 玩家表现为「选完卡彻底卡死」。v=23 修掉，**应尽快推上去**。
 
 ---
 
@@ -169,6 +175,18 @@ node .tmp-rarity-test.mjs     # 71  品质/幸运
 8. **设置面板的摇杆大小要同时改逻辑半径和视觉缩放**（`--joy-s`），只改一个会「看着大、推着近」。
 9. **画质切档只切 `shadowMap.enabled`**，不要遍历改 `castShadow`（改坏过）。
 10. **`?debug=1` 时 `saveRunAtRound` 直接 return**（除非 `&keepsave=1`），否则测试互相覆盖存档。
+11. **新增跨模块调用必须核对 import**：第 18 块 `chooseUpgrade` 直接写了 `countCard(up.id)`，
+    但 `profile.js` 的这个导出没进 main.js 的 import 列表 → 每次选卡抛 `ReferenceError`，
+    且抛在 `upPanel.classList.remove('on')` **之前**，面板留在屏幕上把技能键盖死（玩家=卡死）。
+    教训：**改完 UI 流程要专门断言「面板真的关掉了」**（查 `classList` + `computedStyle.pointerEvents`），
+    只查内部 `isOpen()` 会漏——内部状态已经翻了，DOM 没翻。
+12. **`window.__errs` 在这套页面里根本不存在**：早期测试拿它判「控制台零报错」是**假绿**。
+    一律改用 CDP 的 `Runtime.exceptionThrown` 事件收集（`.tmp-battle-test.js` / `.tmp-block19-cdp.js` 已是正确写法）。
+13. **CDP 触摸：`touchEnd` 必须带上被抬起的那个触点**，传 `[]` 浏览器认为手指一直按着，
+    后面新触点踩在脏状态上。`touchStart` 只带**新增**触点，重复下发已按下的 id 是非法序列，Chrome 会整条丢弃。
+14. **headless 跑 WebGL 测试会吃满 CPU**：SwiftShader 软件光栅化 + 按逻辑核开线程。
+    启动参数统一加了 `--num-raster-threads=2 --renderer-process-limit=1`（47 个套件已批量补），
+    套件超时后 `chrome.kill()` 走不到会残留孤儿进程 → 用 `.tmp-cdp-clean.js` 按 `cdp-*-prof` 精确清理。
 
 ---
 
@@ -182,3 +200,4 @@ node .tmp-rarity-test.mjs     # 71  品质/幸运
 第 16 块：金钟罩特效明显化 + 弓手去大红圈 + 背包按钮换图标放大 + 新手教程加背包步骤。
 第 17 块：设置面板（音量分离/画质/摇杆/抖屏/重置）+ 存档续玩。
 第 18 块：图鉴（5 页签）+ 26 条成就 + 全局战绩 + 难度三档。
+第 19 块：篝火 · 夜行骨币（局外成长，六簇火种）+ 修 `countCard` 未定义的 P0（选卡卡死）。

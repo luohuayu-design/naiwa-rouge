@@ -9,7 +9,8 @@
 //   stats     全局累计：局数、击杀、时长、金币
 //   codex     图鉴计数：{ enemies:{id:n}, cards:{}, swords:{}, relics:{}, events:{} }
 //   ach       成就：{ id: 解锁时间戳 }
-//   bones     夜行骨币（局外货币，第 18 块用）
+//   bones     夜行骨币（局外货币，第 19 块篝火用）
+//   camp      已点燃的火种 { id: 1 }（第 19 块，局外成长）
 //
 // 读不出来（隐私模式 / 老浏览器 / 存档损坏）就退回内存对象，
 // 游戏照常能玩，只是这一局结束后数据不落地。
@@ -40,6 +41,7 @@ const DEFAULT_PROFILE = {
   codex: { enemies: {}, cards: {}, swords: {}, relics: {}, events: {} },
   ach: {},
   bones: 0,
+  camp: {},          // 篝火：已点燃的火种（第 19 块）
 };
 
 let cache = null;

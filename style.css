@@ -196,6 +196,11 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
 .rs-cell i{display:block;font-style:normal;font-size:9.5px;letter-spacing:.1em;color:rgba(150,200,182,.55)}
 .rs-cell b{display:block;margin-top:3px;font-size:15px;letter-spacing:.02em;color:#d9fff0;
   font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+/* 结算里的骨币行（第 19 块）：暖色，和绿色战绩格子分开 */
+.rs-bone{margin:-6px 0 16px;padding:9px 12px;border-radius:10px;text-align:center;
+  font-size:11.5px;font-weight:700;letter-spacing:.06em;color:#ffd9a0;
+  border:1px solid rgba(255,166,80,.26);background:rgba(56,32,14,.42)}
+.rs-bone:empty{display:none}
 .rs-btn{width:100%;padding:12px;border-radius:12px;cursor:pointer;font-family:inherit;
   border:1px solid rgba(126,235,196,.4);color:#e9fff6;font-size:13.5px;font-weight:700;
   letter-spacing:.14em;background:linear-gradient(180deg,rgba(90,230,185,.22),rgba(60,180,145,.14));
@@ -396,6 +401,59 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
   -webkit-tap-highlight-color:transparent}
 .tt-resume:hover{border-color:rgba(255,209,102,.75);background:rgba(70,56,20,.7)}
 .tt-resume:active{transform:scale(.97)}
+
+/* 篝火（第 19 块）：主菜单里唯一带骨币数的入口，暖色，和草地夜色分得开 */
+.tt-camp{margin-top:12px;display:inline-flex;align-items:center;gap:9px;padding:10px 18px 10px 16px;
+  border-radius:999px;font:inherit;font-size:13px;font-weight:700;letter-spacing:.18em;
+  color:#ffdcb0;cursor:pointer;border:1px solid rgba(255,166,80,.34);
+  background:linear-gradient(180deg,rgba(62,34,14,.62),rgba(34,20,12,.66));
+  transition:transform .12s ease,border-color .18s ease,background .18s ease;
+  -webkit-tap-highlight-color:transparent}
+.tt-camp:hover{border-color:rgba(255,166,80,.7);background:rgba(80,44,18,.8)}
+.tt-camp:active{transform:scale(.97)}
+.tt-camp-fire{font-size:14px;line-height:1;filter:drop-shadow(0 0 7px rgba(255,150,60,.65))}
+.tt-camp-bone{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:999px;
+  font-size:11.5px;font-weight:800;letter-spacing:0;color:#ffe4b0;
+  background:rgba(255,166,80,.14);border:1px solid rgba(255,166,80,.26)}
+.tt-camp-bone i{width:7px;height:7px;border-radius:50%;background:#ffb765;
+  box-shadow:0 0 8px rgba(255,160,70,.85)}
+
+/* 篝火面板：钱袋 + 火种条目 */
+.cf-purse{margin-top:14px;padding:12px 14px;border-radius:14px;
+  border:1px solid rgba(255,166,80,.26);
+  background:linear-gradient(180deg,rgba(58,33,14,.6),rgba(24,16,10,.62))}
+.cf-purse-top{display:flex;align-items:baseline;justify-content:space-between}
+.cf-purse-label{font-size:11.5px;font-weight:700;letter-spacing:.18em;color:rgba(255,214,160,.85)}
+.cf-purse-top b{font-size:22px;font-weight:800;letter-spacing:.02em;color:#ffd9a0;
+  text-shadow:0 0 16px rgba(255,150,60,.42)}
+.cf-purse i{display:block;margin-top:6px;font-style:normal;font-size:10.5px;line-height:1.7;
+  color:rgba(214,178,140,.62)}
+.cf-list{margin-top:12px;display:flex;flex-direction:column;gap:9px}
+.cf-item{padding:12px 13px;border-radius:13px;text-align:left;
+  border:1px solid rgba(126,235,196,.18);background:rgba(13,31,27,.7);
+  transition:border-color .16s ease,background .16s ease}
+.cf-item.on{border-color:rgba(255,176,96,.42);background:rgba(34,24,16,.62)}
+.cf-head{display:flex;align-items:center;gap:8px}
+.cf-icon{font-size:14px;line-height:1}
+.cf-name{font-size:13px;font-weight:800;letter-spacing:.08em;color:#e6fff5}
+.cf-cost{margin-left:auto;font-size:11.5px;font-weight:800;letter-spacing:.02em;color:#ffd9a0}
+.cf-cost.lack{color:rgba(214,150,120,.75)}
+.cf-desc{margin-top:6px;font-size:11.5px;line-height:1.7;color:rgba(168,204,190,.8)}
+.cf-buy{margin-top:9px;width:100%;padding:8px 0;border-radius:10px;font:inherit;font-size:12px;
+  font-weight:800;letter-spacing:.12em;cursor:pointer;color:#2a1606;
+  border:1px solid rgba(255,214,160,.55);
+  background:linear-gradient(180deg,#ffd9a0,#eaa94f);
+  transition:filter .16s ease,transform .12s ease}
+.cf-buy:hover{filter:brightness(1.06)}
+.cf-buy:active{transform:scale(.985)}
+.cf-buy.poor{color:rgba(214,178,140,.7);cursor:default;
+  border-color:rgba(255,166,80,.2);background:rgba(48,32,20,.7)}
+.cf-buy.poor:hover{filter:none}
+.cf-owned{margin-top:9px;padding:7px 0;border-radius:10px;text-align:center;
+  font-size:11.5px;font-weight:800;letter-spacing:.16em;color:#8df0c6;
+  border:1px dashed rgba(141,240,198,.34);background:rgba(20,52,40,.4)}
+.cf-foot{margin-top:12px;padding:0 4px;font-size:10.5px;line-height:1.7;letter-spacing:.04em;
+  color:rgba(140,190,172,.42)}
 
 /* 设置面板 */
 .set-list{margin-top:14px;display:flex;flex-direction:column;gap:14px}
