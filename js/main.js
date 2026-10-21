@@ -42,7 +42,7 @@ import {
   grantBoons, rollBoons, takeBoon, applyBoons, boonStackText,
 } from './boons.js';
 // 第 21 块：夜行诅咒（自选 debuff 换骨币倍率）
-import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList } from './curses.js';
+import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js';
 // 第 22 块：种子与每日挑战
 import {
   DAILY_RULES, dayKey, dayText, dailySeed, seedCode, pickDailyCurses,
@@ -354,6 +354,15 @@ async function boot() {
       tip.className = 'ap-note';
       tip.textContent = '第 5 回合结束会自动获得环剑，下面是它的独立数值（不吃主角的攻击与暴击）。';
       apList.appendChild(tip);
+    }
+    // 第 21 块：本局带了诅咒时，点明「上面的数值已经扣过诅咒」，
+    // 不然玩家看到移速 3.74 会以为是 bug
+    if (panelTab !== 'weapon' && gameState !== 'title' && pendingCurses.length) {
+      const list = curseList(pendingCurses);
+      const note = document.createElement('div');
+      note.className = 'ap-note';
+      note.textContent = `本局夜行诅咒：${list.map((c) => `${c.name}（${c.eff || ''}）`).join(' · ')}—— 上面显示的已经是扣完之后的数值。`;
+      apList.appendChild(note);
     }
 
     for (const g of table.grouped()) {
@@ -1108,7 +1117,11 @@ async function boot() {
     initRunRng(dailyMode ? dailySeedNow : 0);
     const rc = applyRunCurses(stats, wstats, pendingCurses);
     runCurseDmg = rc.dmgTaken;
-    if (rc.count) stats.syncHp();     // 脆骨砍的是上限，血条得跟着压下来
+    if (rc.count) {
+      stats.syncHp();     // 脆骨砍的是上限，血条得跟着压下来
+      // 开局就要让玩家看见诅咒真的生效了：弹一条横幅，点名+给倍率
+      showToast('夜行诅咒生效', `${curseNames(pendingCurses)} —— 属性已扣 · 骨币 ×${rc.mul.toFixed(2)}`);
+    }
     level.start();
   }
 
@@ -2847,17 +2860,40 @@ async function boot() {
       chip.dataset.curse = c.id;
       chip.title = c.desc;
       chip.setAttribute('aria-pressed', on ? 'true' : 'false');
+      // 第一行：图标 + 名字 + 骨币倍率；第二行：具体数字（改前 → 改后）。
+      // 之前效果全塞在 title 里，手机上根本看不到 —— 现在直接印出来。
+      const row = document.createElement('span');
+      row.className = 'rc-row';
       const icon = document.createElement('span');
       icon.textContent = c.icon;
       const name = document.createElement('span');
       name.textContent = c.name;
       const mul = document.createElement('em');
       mul.textContent = `+${Math.round(c.mul * 100)}%`;
-      chip.append(icon, name, mul);
+      row.append(icon, name, mul);
+      const eff = document.createElement('small');
+      eff.className = 'rc-eff';
+      eff.textContent = c.eff || c.desc;
+      chip.append(row, eff);
       chip.addEventListener('click', () => toggleCurse(c.id));
       rcPick.appendChild(chip);
     }
     if (rcMulTop) rcMulTop.textContent = `×${curseMul(pendingCurses).toFixed(2)}`;
+    renderCurseSum();
+  }
+
+  // 已选诅咒的明细行：每条带具体数字，让玩家看清开局会被改掉什么
+  function renderCurseSum() {
+    const rcSum = document.getElementById('rcSum');
+    if (!rcSum) return;
+    const list = curseList(pendingCurses);
+    if (!list.length) {
+      rcSum.textContent = '还没选 —— 一条都不选就是普通局（骨币 ×1.00）';
+      return;
+    }
+    rcSum.textContent = '开局生效：'
+      + list.map((c) => `${c.name}（${c.eff || ''}）`).join(' · ')
+      + ` —— 骨币 ×${curseMul(pendingCurses).toFixed(2)}`;
   }
 
   function toggleCurse(id) {
@@ -3064,6 +3100,8 @@ async function boot() {
       ['骨币', `+${boneGain}`],
     ];
     if (boonGain) cells.push(['永夜火种', `+${boonGain} 次`]);
+    // 第 21 块：本局带了诅咒就把名字印进结算，倍率从哪来的要看得见
+    if (pendingCurses.length) cells.push(['诅咒', `${curseNames(pendingCurses)}（×${mulCurse.toFixed(2)}）`]);
     for (const [k, v] of cells) {
       const cell = document.createElement('div');
       cell.className = 'rs-cell';
@@ -3078,7 +3116,7 @@ async function boot() {
     if (rsBone) {
       const parts = [];
       if (boneMul > 1) parts.push(`${diffName} ×${boneMul}`);
-      if (mulCurse > 1) parts.push(`诅咒 ×${mulCurse.toFixed(2)}`);
+      if (mulCurse > 1) parts.push(`诅咒 ×${mulCurse.toFixed(2)}（${curseNames(pendingCurses)}）`);
       if (mulDaily > 1) parts.push(`今日 ×${mulDaily.toFixed(2)}`);
       if (lvMul > 1) parts.push(`第 ${curLevelId} 关 ×${lvMul}`);
       if (coinPart > 0) parts.push(`剩 ${coins} 金币折 ${coinPart}`);

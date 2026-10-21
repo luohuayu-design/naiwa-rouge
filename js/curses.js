@@ -18,15 +18,18 @@
 // ============================================================
 
 // mul：这条诅咒给多少骨币倍率（0.25 = +25%）。dmgTaken：受伤加重（荆棘专用）
+// eff：给玩家看的具体数字（按 STAT_DEFS 基础值算的「改前 → 改后」，选卡面板直接展示）
 export const RUN_CURSES = [
   {
     id: 'frail', name: '脆骨', icon: '🦴', mul: 0.25,
     desc: '生命上限 −2（6 → 4）。挨两下就没了。',
+    eff: '生命上限 6 → 4',
     mods: [{ stat: 'maxHp', flat: -2 }],
   },
   {
     id: 'lead', name: '铅足', icon: '⛓️', mul: 0.20,
     desc: '移动速度 −15%。拉扯变贵，被围住更难脱身。',
+    eff: '移动速度 4.40 → 3.74（格/秒）',
     mods: [{ stat: 'moveSpeed', pct: -0.15 }],
   },
   {
@@ -36,21 +39,25 @@ export const RUN_CURSES = [
     //    薄刃是每一拍更轻，迟滞是两拍之间更长
     id: 'sluggish', name: '迟滞', icon: '⏳', mul: 0.20,
     desc: '攻击速度 −12%（1.20 → 1.06 次/秒）。两拍之间多出来的那点空档，怪会用它贴上来。',
+    eff: '攻击速度 1.20 → 1.06 次/秒',
     mods: [{ stat: 'attackSpeed', pct: -0.12 }],
   },
   {
     id: 'hunger', name: '空囊', icon: '💸', mul: 0.20,
     desc: '金币掉落 −35%。商店那几格会看得更久。',
+    eff: '金币掉落率 45% → 29%',
     mods: [{ stat: 'goldRate', pct: -0.35 }],
   },
   {
     id: 'thin', name: '薄刃', icon: '🗡️', mul: 0.15,
     desc: '攻击力 −12%。拍下去不够疼，后面的回合会记账。',
+    eff: '攻击力 1.0 → 0.88',
     mods: [{ stat: 'attack', pct: -0.12 }],
   },
   {
     id: 'thorn', name: '荆棘', icon: '🩸', mul: 0.30,
     desc: '受到的伤害 +30%。金钟罩照挡，但漏一下很疼。',
+    eff: '每次受伤 ×1.30',
     dmgTaken: 0.30,
   },
 ];

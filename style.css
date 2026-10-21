@@ -924,16 +924,26 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
 .rc-head b{font-size:15px;font-weight:800;color:#ffd7a8;letter-spacing:.02em}
 .rc-tip{margin-top:6px;font-size:10.5px;line-height:1.65;color:rgba(198,182,222,.66)}
 .rc-list{margin-top:10px;display:flex;flex-wrap:wrap;gap:7px}
-.rc-chip{display:inline-flex;align-items:center;gap:6px;padding:7px 10px;border-radius:10px;
+/* 两行卡片：第一行图标+名字+倍率，第二行具体数字（改前 → 改后）。
+   之前效果只在 title 里（悬停才有），手机上等于没写 —— 现在印在卡面上 */
+.rc-chip{display:inline-flex;flex-direction:column;align-items:flex-start;gap:3px;
+  padding:7px 10px;border-radius:10px;
   font:inherit;font-size:11.5px;font-weight:700;letter-spacing:.06em;color:#d9cdf0;
   cursor:pointer;border:1px solid rgba(180,140,255,.24);background:rgba(255,255,255,.04)}
+.rc-chip .rc-row{display:inline-flex;align-items:center;gap:6px}
+.rc-chip .rc-eff{font-size:9.5px;font-weight:500;letter-spacing:.03em;
+  color:rgba(198,182,222,.78);line-height:1.4}
 .rc-chip em{font-style:normal;font-size:10px;font-weight:700;color:rgba(255,214,160,.72)}
 .rc-chip:hover{border-color:rgba(200,160,255,.5);background:rgba(180,140,255,.12)}
 .rc-chip:active{transform:scale(.97)}
 .rc-chip.on{color:#2a0f3d;border-color:#d3b0ff;
   background:linear-gradient(180deg,#e6ccff,#b88cff);
   box-shadow:0 6px 18px rgba(150,90,240,.28)}
+.rc-chip.on .rc-eff{color:rgba(56,18,86,.78)}
 .rc-chip.on em{color:rgba(56,18,86,.82)}
+/* 已选诅咒的明细行（选卡面板底部）：每条带具体数字 */
+.rc-sum{margin-top:9px;font-size:10.5px;line-height:1.7;letter-spacing:.03em;
+  color:rgba(255,214,160,.82)}
 
 /* ============================================================
    第 22 块 · 今日挑战
