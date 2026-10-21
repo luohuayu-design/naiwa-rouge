@@ -24,7 +24,9 @@ export const WEAPON_STAT_DEFS = [
   { key: 'swordCrit',    name: '剑暴击率',   base: 0.10,  fmt: pct,  group: '剑本体', desc: '环剑自己的暴击概率，不吃主角暴击率' },
   { key: 'swordCritMul', name: '剑暴击伤害', base: 1.50,  fmt: pct,  group: '剑本体', desc: '剑暴击时的伤害倍率' },
   { key: 'swordOrbit',   name: '剑转速',     base: 0.55,  fmt: (v) => v.toFixed(2) + ' 圈/秒', group: '剑本体', desc: '环剑绕主角旋转的速度' },
-  { key: 'swordRegen',   name: '剑回复',     base: 3.0,   fmt: (v) => v.toFixed(1) + ' 秒/把', group: '剑本体', desc: '被消耗后恢复一把剑所需的时间，越小越快' },
+  // 用户定案（第 27 块）：整环补满制 —— 不管环上有几把剑，都在 swordRefill 秒内
+  // 全部补满（5 把 → 2 秒/把，4 把 → 2.5 秒/把）。买剑不再拖慢恢复节奏。
+  { key: 'swordRefill',  name: '剑匣补满',   base: 10.0,  fmt: (v) => v.toFixed(1) + ' 秒',  group: '剑本体', desc: '整环剑补满所需的总时间（与剑数无关），越小越快' },
   // ---------------- 元素（毒 / 冰 / 雷 / 血 见 swordKinds.js） ----------------
   { key: 'poisonDps',    name: '毒伤',       base: 0.10,  fmt: (v) => v.toFixed(2) + '/秒', group: '元素', desc: '毒剑命中后每秒扣的血' },
   { key: 'poisonTime',   name: '毒持续',     base: 5.0,   fmt: (v) => v.toFixed(1) + ' 秒',  group: '元素', desc: '中毒状态的持续时间' },

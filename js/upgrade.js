@@ -140,8 +140,8 @@ export const UPGRADES = [
     id: 'swordForge', tag: 'atk', glyph: '⚒', name: '锻造',
     rarity: 0, needsWeapon: true, scope: 'weapon',
     w0: 0.90, gw: +0.010,   // 权重 = w0 + gw × (回合-1)
-    title: '剑回复快 20%', desc: '被消耗的剑更快回到环上（3.0 → 2.4 秒/把）',
-    stat: 'swordRegen', pct: -0.20,
+    title: '剑匣收紧', desc: '整环补满时间 10 → 9 秒（无论几把剑都在时限内补满）',
+    stat: 'swordRefill', flat: -1.0,
   },
   // ---- 元素剑系（拿到对应剑才真正有意义，但只要有环剑就可抽；商店可买元素剑） ----
   {

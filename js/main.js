@@ -33,8 +33,8 @@ import {
 } from './profile.js';
 import * as runSave from './runSave.js';
 import {
-  CAMPFIRE, CAMP_TOTAL_COST, CAMP_STEP, campBuy, campOwned, campLevel, campMaxLevel,
-  campCost, campFullCost, campMaxed, campApply, bonesFor, diffBoneMul, levelBoneMul, coinBones, BONE,
+  CAMPFIRE, CAMP_STEP, campBuy, campOwned, campLevel,
+  campCost, campApply, bonesFor, diffBoneMul, levelBoneMul, coinBones, BONE,
 } from './campfire.js';
 // 第 23 块：永夜火种（通关白给的 3 次永久三选一）
 import {
@@ -264,6 +264,7 @@ async function boot() {
   const levelSel = document.getElementById('levelSel');
   const lvList = document.getElementById('lvList');
   const recordsScr = document.getElementById('recordsScr');
+  const boonScr = document.getElementById('boonScr');
   const rcList = document.getElementById('rcList');
   const tutCard = document.getElementById('tutCard');
   const tcStep = document.getElementById('tcStep');
@@ -1432,6 +1433,57 @@ async function boot() {
     showSub(recordsScr);
   }
 
+  // 永夜火种一览（第 27 块）：主菜单看「已经选了哪些永久加成、各叠了几层」
+  function showBoonPanel() {
+    const bnList = document.getElementById('bnList');
+    const bnTotal = document.getElementById('bnTotal');
+    if (!bnList) return;
+    bnTotal.textContent = String(boonTotalStacks());
+    bnList.textContent = '';
+    let any = false;
+    for (const b of BOONS) {
+      const n = boonStacks(b.id);
+      if (!n) continue;
+      any = true;
+      const rar = rarityInfo(b.rarity);
+      const item = document.createElement('div');
+      item.className = 'rc-item';
+      const head = document.createElement('div');
+      head.className = 'lv-name';
+      const rank = document.createElement('span');
+      rank.className = 'up-rank';
+      rank.textContent = rar.name;
+      head.append(`${b.glyph} ${b.name} `, rank);
+      const grid = document.createElement('div');
+      grid.className = 'rc-grid';
+      const cells = [
+        ['效果', b.title, true],
+        ['层数', `${n} / ${b.maxStack}`, true],
+        ['说明', b.desc, false],
+      ];
+      for (const [k, v, hot] of cells) {
+        const cell = document.createElement('div');
+        cell.className = 'rc-cell';
+        const i = document.createElement('i'); i.textContent = k;
+        const el = document.createElement('b');
+        if (hot) el.className = 'hot';
+        el.textContent = v;
+        cell.append(i, el);
+        grid.appendChild(cell);
+      }
+      item.append(head, grid);
+      bnList.appendChild(item);
+    }
+    if (!any) {
+      const empty = document.createElement('div');
+      empty.className = 'lv-empty';
+      empty.textContent = '还没有点燃过永夜火种。\n首次通关任何一关，结算就能抽 3 次永久加成。';
+      empty.style.whiteSpace = 'pre-line';
+      bnList.appendChild(empty);
+    }
+    showSub(boonScr);
+  }
+
   // ---------------- 设置面板（第 17 块） ----------------
   const setScr = document.getElementById('setScr');
   const setList = document.getElementById('setList');
@@ -1561,6 +1613,8 @@ async function boot() {
   document.getElementById('lvBack').addEventListener('click', () => hideSub(levelSel));
   document.getElementById('btnRecords').addEventListener('click', showRecords);
   document.getElementById('rcBack').addEventListener('click', () => hideSub(recordsScr));
+  document.getElementById('btnBoons').addEventListener('click', showBoonPanel);
+  document.getElementById('bnBack').addEventListener('click', () => hideSub(boonScr));
   // 静音开关：记在 localStorage 里，下次进来还是关着的
   const muteBtn = document.getElementById('muteBtn');
   const muteIcon = document.getElementById('muteIcon');
@@ -2641,18 +2695,15 @@ async function boot() {
     const have = bones();
     const gotCount = CAMPFIRE.filter((c) => campLevel(c.id) > 0).length;
     const lvSum = CAMPFIRE.reduce((a, c) => a + campLevel(c.id), 0);
-    const maxSum = CAMPFIRE.reduce((a, c) => a + campMaxLevel(c), 0);
     cfBones.textContent = String(have);
     cfList.textContent = '';
 
     for (const item of CAMPFIRE) {
       const lv = campLevel(item.id);
-      const max = campMaxLevel(item);
-      const full = lv >= max;
-      const price = full ? 0 : campCost(item.id, lv);
-      const poor = !full && have < price;
+      const price = campCost(item.id, lv);
+      const poor = have < price;
       const row = document.createElement('div');
-      row.className = 'cf-item' + (lv > 0 ? ' on' : '') + (full ? ' max' : '');
+      row.className = 'cf-item' + (lv > 0 ? ' on' : '');
       row.dataset.id = item.id;
       row.dataset.level = String(lv);
 
@@ -2666,19 +2717,14 @@ async function boot() {
       name.textContent = item.name;
       const cost = document.createElement('span');
       cost.className = 'cf-cost' + (poor ? ' lack' : '');
-      cost.textContent = full ? '已到顶' : `${price} 骨币`;
+      cost.textContent = `${price} 骨币`;
       head.append(icon, name, cost);
 
-      // 等级点：●●○ —— 一眼看出还能点几下
+      // 等级行：无限级 —— 只显示当前等级，不显示上限
       const lvRow = document.createElement('div');
       lvRow.className = 'cf-lv';
-      for (let i = 0; i < max; i++) {
-        const dot = document.createElement('i');
-        dot.className = i < lv ? 'on' : '';
-        lvRow.appendChild(dot);
-      }
       const lvText = document.createElement('span');
-      lvText.textContent = `Lv.${lv} / ${max}`;
+      lvText.textContent = lv > 0 ? `Lv.${lv}` : '未点燃';
       lvRow.appendChild(lvText);
 
       const desc = document.createElement('div');
@@ -2687,37 +2733,29 @@ async function boot() {
 
       row.append(head, lvRow, desc);
 
-      if (full) {
-        const tag = document.createElement('div');
-        tag.className = 'cf-owned';
-        tag.textContent = '这一簇已经烧到最旺';
-        row.appendChild(tag);
-      } else {
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'cf-buy' + (poor ? ' poor' : '');
-        btn.dataset.buy = item.id;
-        btn.textContent = poor
-          ? `还差 ${price - have} 骨币`
-          : (lv === 0 ? `点 燃 · ${price} 骨币` : `升到 Lv.${lv + 1} · ${price} 骨币`);
-        if (!poor) {
-          btn.addEventListener('click', () => {
-            const r = campBuy(item.id);
-            if (!r.ok) return;
-            audio.sfx('uiSwitch');
-            renderCampfire();
-            renderCampBadge();
-          });
-        }
-        row.appendChild(btn);
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'cf-buy' + (poor ? ' poor' : '');
+      btn.dataset.buy = item.id;
+      btn.textContent = poor
+        ? `还差 ${price - have} 骨币`
+        : (lv === 0 ? `点 燃 · ${price} 骨币` : `升到 Lv.${lv + 1} · ${price} 骨币`);
+      if (!poor) {
+        btn.addEventListener('click', () => {
+          const r = campBuy(item.id);
+          if (!r.ok) return;
+          audio.sfx('uiSwitch');
+          renderCampfire();
+          renderCampBadge();
+        });
       }
+      row.appendChild(btn);
       cfList.appendChild(row);
     }
 
-    cfFoot.textContent = lvSum >= maxSum
-      ? `六簇火种都烧到最旺了 —— 这团火不会再给你更多，剩下的靠手`
-      : `已点燃 ${gotCount} / ${CAMPFIRE.length} 簇 · 共 ${lvSum} / ${maxSum} 级 · `
-        + `每升一级涨价 ${Math.round((CAMP_STEP - 1) * 100)}% · 全点满要 ${CAMP_TOTAL_COST} 骨币`;
+    cfFoot.textContent = lvSum > 0
+      ? `已点燃 ${gotCount} / ${CAMPFIRE.length} 簇 · 共 ${lvSum} 级 · 每升一级涨价 ${Math.round((CAMP_STEP - 1) * 100)}% · 火种没有上限，烧得越旺骨币要得越多`
+      : `九簇火种等你点燃 · 每升一级涨价 ${Math.round((CAMP_STEP - 1) * 100)}% · 没有上限，烧得越旺骨币要得越多`;
   }
 
   function showCampfire() {
@@ -3048,6 +3086,9 @@ async function boot() {
     rsGrid.textContent = '';
 
     const roundShown = Math.min(level.totals.rounds, Math.max(1, level.roundNo));
+    // 首通判定（第 27 块）：永夜火种只有**本关首次通关**才发 —— 必须在
+    // saveRunRecord 把 wins +1 之前先记下「之前有没有赢过」。
+    const wasFirstWin = isWin && !((loadRecords()[curLevelId] || {}).wins > 0);
     // 落一笔记录（第 14 块）：通关数 / 最快通关 / 最高击杀 / 最远回合，主页面「我的记录」看
     saveRunRecord(curLevelId, { win: isWin, time: elapsed, kills, roundShown });
     // 全局战绩与成就（第 18 块）：局数/时长/击杀/通关跨局累计，成就统一对表
@@ -3071,9 +3112,10 @@ async function boot() {
       diffKey, mulCurse * mulDaily,
     );
     const boneTotal = addBones(boneGain);
-    // 第 23 块：通关一大关 → 3 次永久三选一。先写档案，
-    // 玩家就算直接关网页，下次回标题页也会补弹（showTitle 里检查）。
-    const boonGain = isWin ? BOON_PICKS : 0;
+    // 第 23 块：通关一大关 → 3 次永久三选一；第 27 块改为**只在本关首次
+    // 通关**时发（重复刷同一关不给）。先写档案，玩家就算直接关网页，
+    // 下次回标题页也会补弹（showTitle 里检查）。
+    const boonGain = wasFirstWin ? BOON_PICKS : 0;
     if (boonGain) grantBoons(boonGain);
     const boneMul = diffBoneMul(diffKey);
     const diffName = getDifficulty().name;
@@ -3111,6 +3153,7 @@ async function boot() {
       ['骨币', `+${boneGain}`],
     ];
     if (boonGain) cells.push(['永夜火种', `+${boonGain} 次`]);
+    else if (isWin) cells.push(['永夜火种', '本关已首通过，不再发放']);
     // 第 21 块：本局带了诅咒就把名字印进结算，倍率从哪来的要看得见
     if (pendingCurses.length) cells.push(['诅咒', `${curseNames(pendingCurses)}（×${mulCurse.toFixed(2)}）`]);
     for (const [k, v] of cells) {
@@ -3273,12 +3316,11 @@ async function boot() {
         hide: () => hideSub(campScr),
         gain: (o) => bonesFor(o || {}, profile().difficulty || 'normal'),
         list: () => CAMPFIRE.map((c) => ({
-          id: c.id, cost: c.cost, maxLevel: campMaxLevel(c),
-          costAt: (lv) => campCost(c.id, lv), full: campFullCost(c.id),
+          id: c.id, cost: c.cost,
+          costAt: (lv) => campCost(c.id, lv),
         })),
         level: (id) => campLevel(id),
-        maxed: (id) => campMaxed(id),
-        total: () => CAMP_TOTAL_COST,
+        total: () => CAMPFIRE.reduce((a, c) => a + campLevel(c.id), 0),
         reset: () => {
           profile().camp = {};
           profile().bones = 0;

@@ -63,9 +63,9 @@ Three.js r160 的单摇杆幸存者肉鸽《奶蛙夜行》，纯静态站点（
 第 23 块要点（局外成长重做 + 金币吸附）：
 
 - **金币进圈即拾**：`gold.update(dt, player, range)`，range = `stats.get('attackRange')`。进圈后 0.15 秒飞向奶蛙再入账（有动画）；**圈外仍然留 3 秒**。`gold.flush()` 在 `endGame` 开头把地上的钱全收进兜里（否则结算会少算），然后按 25% 折骨币。
-- **篝火改成多级**：`CAMP_MAX_LEVEL=3`、`CAMP_STEP=1.6`，`campCost(id, level)` = 原价 × 1.6^level。老档案里 `camp[id]=1` 天然读作 1 级，**不需要迁移**。
+- **篝火改成无限级（第 27 块）**：`CAMP_STEP=1.35`，`campCost(id, level)` = 原价 × 1.35^level，**没有上限**。老档案里 `camp[id]=1` 天然读作 1 级，**不需要迁移**。
 - **骨币产出**加了两个维度：`coins`（没花完的金币 ×0.25）与 `levelId`（`BONE.levelMul`：1 关 ×1 / 2 关 ×1.4 / 3 关 ×1.8）。`bonesFor` 的签名向后兼容（老调用不传就是 0 金币 / 第 1 关）。
-- **永夜火种**（`boons.js`）：**通关一大关** → `grantBoons(3)` 写 `profile().boonPending` → 结算按钮变「领取 3 次永夜火种」→ 复用三选一面板（`upPanel` + `.boon` 皮肤），抽签走 `rollBoons(rng, {luck})`，权重和局内卡同一套 `rarity.js`。
+- **永夜火种**（`boons.js`）：**本关首次通关**（第 27 块改，`wasFirstWin` 在 `saveRunRecord` 之前判定）→ `grantBoons(3)` 写 `profile().boonPending` → 结算按钮变「领取 3 次永夜火种」→ 复用三选一面板（`upPanel` + `.boon` 皮肤），抽签走 `rollBoons(rng, {luck})`，权重和局内卡同一套 `rarity.js`。主菜单 `#boonScr` 可看已选层数。
 - **待领次数必须落档案**：玩家很可能在结算界面直接关网页。`showTitle` 会检查 `boonPending()` 并自动补弹（500ms 后，等标题页动画）。
 - 16 张卡、**每张 1~3 层上限**，满层退出抽签池；满层共 40 层（要约 12 次通关全收）。数值压得很小，全满 ≈ 一局中期的分量。
 - 结算面板：`rsBtn` 文案与 `.boon` 金色样式在 `endGame` 里按 `boonGain` 切换；`rsBone` 明细多了「第 N 关 ×1.4」和「剩 X 金币折 Y」。
@@ -106,6 +106,21 @@ Three.js r160 的单摇杆幸存者肉鸽《奶蛙夜行》，纯静态站点（
   SFX_DEFS 26→32；cursePlayer 只在「从干净被咒」时响一次（紫圈叠咒不叠音）。
   回归：audio CDP 41（音效表断言改 32）。
 
+第 27 块要点（环剑整环补满 + 篝火无限级 + 火种首通门槛 + 主菜单火种面板，2026-10-21 深夜，v=31）：
+- **环剑整环补满**：`swordRegen`（3.0 秒/把）改名 `swordRefill`（base 10.0 秒，整环补满总时长）。
+  `weapon.js` 两处 `need = swordRefill / owned.length`（5 把 → 2s/把，4 把 → 2.5s/把），
+  买剑不再拖慢恢复。升级卡「锻造」改「剑匣收紧」：`{ stat:'swordRefill', flat:-1.0 }`（10 → 9 秒）。
+- **篝火无限级**：删 `CAMP_MAX_LEVEL/campMaxLevel/campFullCost/CAMP_TOTAL_COST/campMaxed`，
+  `campLevel` 不再封顶；`CAMP_STEP` 1.6 → **1.35**；首档整体降价约 4 成（厚皮 160→90 等）；
+  UI 不再显示「Lv.x / 3」「已到顶」，只显示 `Lv.N` / 「未点燃」。
+  **新增三簇火种**：剑锋（每级剑伤害 +5%，scope:'weapon'）/ 疾风（每级攻速 +3%）/ 铁壳（每级护甲 +6），共 9 簇。
+- **永夜火种首通门槛**：`endGame` 在 `saveRunRecord` **之前**先记 `wasFirstWin`（本关 wins==0 且本局胜），
+  `boonGain = wasFirstWin ? 3 : 0`；重复刷同一关不再发，结算格子写「本关已首通过，不再发放」。
+- **主菜单「永夜火种」面板**：`#boonScr`（`btnBoons` 进入）列已选 boon、层数 n/maxStack、效果与说明。
+- 回归：camp 单测重写 106 + rogue-unit 144 + block19 CDP 44 + block23 CDP 63（含新 F2 重复通关不发）
+  + 新 `.tmp-boonui-test.js` 9 + weapon 19 + sword-shop 26 + block13 32 + block20 31 + block21 36
+  + block22 38 + econ 44 + rarity 48 + curse-ui 14 + soldout 9 + curse 84 + audio 41 + boon 146，全绿。
+
 第 18 块那个 P0 的完整链路（已修，留作教训）：
   
 `chooseUpgrade` 里 `countCard(up.id)` 没 import → 每次选卡抛 `ReferenceError`，
@@ -137,8 +152,8 @@ Three.js r160 的单摇杆幸存者肉鸽《奶蛙夜行》，纯静态站点（
 | `upgrade.js`                                                                                 | 28 张升级卡（含 rarity 0~4）                                                                                      |
 | `shop.js`                                                                                    | 18 件货、按品质加权摆 4 件、`itemLocked`                                                                              |
 | `events.js`                                                                                  | 57 事件 + 10 连锁（对话/条件/取舍）                                                                                    |
-| `campfire.js`                                                                                | 篝火/骨币（第 19 块建，第 23 块多级）：`bonesFor`（回合/击杀/通关/金币/关卡）、六簇×3 级阶梯价、`campApply`                                   |
-| `boons.js`                                                                                   | 永夜火种（第 23 块）：16 张永久卡 + 层数上限 + 品质抽签（吃幸运）+ `boonPending` 待领次数                                                |
+| `campfire.js`                                                                                | 篝火/骨币（第 19 块建，第 27 块无限级）：`bonesFor`（回合/击杀/通关/金币/关卡）、九簇×无限级阶梯价（×1.35）、`campApply`                                   |
+| `boons.js`                                                                                   | 永夜火种（第 23 块，第 27 块加首通门槛）：16 张永久卡 + 层数上限 + 品质抽签（吃幸运）+ `boonPending` 待领次数                                                |
 | `curses.js`                                                                                  | 夜行诅咒（第 21 块）：六条自选 debuff、倍率叠加、`applyRunCurses` 落账/撤销                                                       |
 | `seed.js`                                                                                    | 种子与每日挑战（第 22 块）：`hashStr`/`makeRng`/`dailySeed`/`pickDailyCurses`/每日战绩存档                                   |
 | `rarity.js`                                                                                  | 五档品质唯一真相源（颜色/mul/luck）                                                                                     |
@@ -234,8 +249,9 @@ node .tmp-boon-test.mjs       # 146 永夜火种（层数/品质吃幸运/待领
 .tmp-live-upgrade.js     7  线上验证「点三选一没反应」已修
 .tmp-block21-cdp.js     36  诅咒（勾选/倍率/落账/受伤加重/结算/换局不残留）
 .tmp-block22-cdp.js     38  每日挑战（种子稳定/固定规则/同种子同手牌/存档/成就）
-.tmp-block23-cdp.js     60  金币吸附/多级篝火/发火种/火种面板/开局落账/标题页补选
-.tmp-live-block23.js    15  线上专项（篝火 3 级 / 火种面板 / 版本号）
+.tmp-block23-cdp.js     63  金币吸附/无限级篝火/发火种（首通门槛）/火种面板/开局落账/标题页补选/重复通关不发
+.tmp-boonui-test.js      9  主菜单「永夜火种」一览面板（空态/层数/卡名）
+.tmp-live-block23.js    15  线上专项（篝火 / 火种面板 / 版本号）
 .tmp-curse-ui-test.js   14  诅咒可视化（芯片两行/明细行/开局血量/面板注记）
 .tmp-dbg-boot.js           抓启动期异常（改完代码先跑这个，比整套 CDP 快）
 ```

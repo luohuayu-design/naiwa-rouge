@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#080f14">
 <link rel="icon" href="data:,">
 <title>蛙步 · 夜行</title>
-<link rel="stylesheet" href="style.css?v=30">
+<link rel="stylesheet" href="style.css?v=31">
 </head>
 <body>
 
@@ -226,6 +226,7 @@
         <span class="tt-camp-bone"><i></i><b id="campBoneNum">0</b></span>
       </button>
       <div class="tt-row">
+        <button class="tt-menu-btn" id="btnBoons" type="button">永夜火种</button>
         <button class="tt-menu-btn" id="btnRecords" type="button">我的记录</button>
         <button class="tt-menu-btn" id="btnCodex" type="button">图鉴</button>
         <button class="tt-menu-btn" id="btnSettings" type="button">设置</button>
@@ -308,7 +309,7 @@
       <i>每局结束按回合、击杀、难度、关卡结算 · 没花完的金币也会折成骨币 · 火里点过的东西永远留在这儿</i>
     </div>
     <div class="cf-list" id="cfList"></div>
-    <div class="lv-foot" id="cfFoot">每簇可点 3 级，越往后越贵 · 只在开局生效 · 不会把难走的路走成平地</div>
+    <div class="lv-foot" id="cfFoot">火种没有等级上限，越点越贵 · 只在开局生效 · 不会把难走的路走成平地</div>
   </div>
 </div>
 
@@ -319,6 +320,24 @@
       <button class="lv-back" id="rcBack" type="button">‹ 返回</button>
     </div>
     <div class="lv-list" id="rcList"></div>
+  </div>
+</div>
+
+<!-- 永夜火种（从主页面进入，第 27 块）：已选的永久属性加成一览 -->
+<div id="boonScr" class="tt-sub-scr" aria-hidden="true">
+  <div class="lv-card">
+    <div class="lv-head">
+      <div class="lv-title">永夜火种</div>
+      <button class="lv-back" id="bnBack" type="button">‹ 返回</button>
+    </div>
+    <div class="cf-purse">
+      <div class="cf-purse-top">
+        <span class="cf-purse-label">已叠层数</span>
+        <b id="bnTotal">0</b>
+      </div>
+      <i>每关首次通关发 3 次三选一 · 选了就永久生效 · 重复刷同一关不再发</i>
+    </div>
+    <div class="lv-list" id="bnList"></div>
   </div>
 </div>
 
@@ -376,7 +395,7 @@
 <!-- 不用 importmap：老手机浏览器（iOS 16.4 以下、旧版微信/安卓 WebView）
      不支持 import maps，会让整个模块解析失败、加载页永远停在 0%。
      项目内所有 import 都写成相对路径，直接靠原生 ES Module 解析。 -->
-<script type="module" src="js/main.js?v=30"></script>
+<script type="module" src="js/main.js?v=31"></script>
 
 <!-- 兜底自检：模块没跑起来时把原因写出来，别让用户对着 0% 干等 -->
 <script>

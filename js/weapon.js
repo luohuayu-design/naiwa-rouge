@@ -4,7 +4,7 @@
 // 玩法（用户定案）：
 //   · 第 5 回合打完自动获得 3 把铁剑环绕主角旋转，各有自己的判定。
 //   · 剑碰到怪物 → 造成伤害并消失（少一把）；
-//   · 被消耗的剑每 swordRegen 秒恢复一把。**数量不设上限**（第 9 块定案）：
+//   · 被消耗的剑按「整环补满」制恢复：swordRefill 秒内无论缺几把全部补满**数量不设上限**（第 9 块定案）：
 //     拥有几把就上环几把，买多少把都能同时转，没有「闲置的剑」。
 //   · 技能「万剑齐发」：把环上所有剑沿各自朝向四周射出，并在每两把
 //     之间插入一把（一次 2n 把）；没有冷却，有剑就能放。
@@ -15,7 +15,7 @@
 //   商店可以买新剑（addSword），买到就立刻上环。
 //
 // 数值全部走**武器自己的属性表** wstats（weaponStats.js）：
-//   swordDamage / swordCrit / swordCritMul / swordOrbit / swordRegen
+//   swordDamage / swordCrit / swordCritMul / swordOrbit / swordRefill
 //   + poisonDps / poisonTime / frostSlow / frostTime / chainCount / leechRate
 // ⚠️ 第 6 块起武器与主角彻底解耦：剑的伤害、暴击、吸血都不吃主角属性，
 //    stats 在武器系统里只剩一个用途 —— 给主角回血（血剑/吸血）。
@@ -46,7 +46,7 @@ const CHAIN_RATIO = 0.6;       // 连锁伤害比例
 export function createWeaponSystem({ scene, stats, wstats, fx, enemies }) {
   let granted = false;         // 是否已获得（第 5 回合 grant）
   let owned = [];              // 拥有的剑（kind 字符串数组，按获得顺序）
-  let regenT = 0;              // 恢复计时器（攒够 swordRegen 秒长一把）
+  let regenT = 0;              // 恢复计时器（按 swordRefill 总时长推进）
   let orbitAngle = Math.random() * Math.PI * 2;
   let t = 0;                   // 总时间（浮动动画用）
 
@@ -300,11 +300,12 @@ export function createWeaponSystem({ scene, stats, wstats, fx, enemies }) {
       }
     }
 
-    // 1) 恢复：环上不满时，每 swordRegen 秒补回一把被消耗的剑。
+    // 1) 恢复：整环补满制 —— 不管缺几把，都在 swordRefill 秒内均匀补满。
+    //    每把的间隔 = 总时长 ÷ 拥有的剑数（5 把 → 2 秒/把，4 把 → 2.5 秒/把）。
     //    owned 是总库存，环上少的那几把一定是被消耗掉的，missingKind 直接找得到。
     if (orbiting.length < target) {
       regenT += dt;
-      const need = Math.max(0.2, wstats.get('swordRegen'));
+      const need = Math.max(0.2, wstats.get('swordRefill') / Math.max(1, owned.length));
       while (orbiting.length < target && regenT >= need) {
         regenT -= need;
         const kind = missingKind() || 'iron';
@@ -423,7 +424,7 @@ export function createWeaponSystem({ scene, stats, wstats, fx, enemies }) {
     // 技能栏恢复进度条：0（刚消耗）→ 1（下一把剑就绪）；满剑时恒为 0
     get regenProgress() {
       if (orbiting.length >= targetCount()) return 0;
-      const need = Math.max(0.2, wstats.get('swordRegen'));
+      const need = Math.max(0.2, wstats.get('swordRefill') / Math.max(1, owned.length));
       return Math.max(0, Math.min(1, regenT / need));
     },
   };

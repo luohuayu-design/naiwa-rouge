@@ -2,16 +2,16 @@
 // campfire.js —— 篝火 · 夜行骨币（第 19 块：局外成长；第 23 块：多级）
 //
 // 设计原则（用户拍板）：**局外因素不能把难度吃掉**。
-//   · 每簇火种可点 3 级（第 23 块从「只能点一次」改的，价格阶梯上涨）
-//   · 每级都很小：生命 +1、攻击 +8%、移速 +4%、幸运 +0.2 —— 点满一簇
-//     约等于两三张三选一，地狱难度照旧凶
-//   · 价格阶梯：第一级原价，之后每级 ×1.6（第 1/2/3 级 = 1 : 1.6 : 2.56）
+//   · 火种基本无限升级（第 27 块定案）：每级效果相同、价格阶梯上涨，不显示上限
+//   · 每级都很小：生命 +1、攻击 +8%、移速 +4%、幸运 +0.2 —— 一次升级
+//     约等于半张三选一，地狱难度照旧凶
+//   · 价格阶梯：第一级原价，之后每级 ×1.35，越点越贵
 //   · 骨币只在「结算」发，和这一局打得多深、杀得多狠、选多难、打哪一关有关
 //
 // 骨币不进战斗 HUD，也不跨关结算 —— 它只存在于篝火边（主菜单）。
 // 数据落在 profile.js 的 naiwa_rouge_profile_v1：
 //   bones  余额（第 18 块就留好了字段）
-//   camp   { id: 等级 } 已点燃的火种（老档案里的 1 表示 1 级，天然兼容）
+// camp   { id: 等级 } 已点燃的火种（数字等级，无限级，天然兼容老档案）
 // ============================================================
 
 import { profile, save, bones, addBones } from './profile.js';
@@ -66,39 +66,54 @@ export function levelBoneMul(levelId = 1) {
 // mods 走 stats.addMod 的字段（stat / flat / pct），scope:'weapon' 落到武器表。
 // coins / potion 是「开局补给」，由 main.js 在开局时发放。
 //
-// 第 23 块：每簇从「点一次」改成「可点 3 级」，**每级效果相同、价格阶梯上涨**。
-// cost 是第 1 级的价格，第 N 级 = cost × CAMP_STEP^(N-1)。
-export const CAMP_MAX_LEVEL = 3;
-export const CAMP_STEP = 1.6;          // 每级涨价 60%（1 : 1.6 : 2.56）
+// 第 27 块（用户定案）：取消等级上限 —— 火种**基本无限升级**，不显示「能升几级」。
+// 每级效果相同、价格阶梯上涨（CAMP_STEP 涨价），越点越贵，成长曲线自然放缓；
+// 第一档价格整体下调约 4 成，让局外成长更快起步、更好地支撑难度梯度。
+export const CAMP_STEP = 1.35;         // 每级涨价 35%（无限级，越点越贵）
 
 export const CAMPFIRE = [
   {
-    id: 'hide', name: '火种 · 厚皮', icon: '🫀', cost: 160, maxLevel: 3,
-    desc: '每级开局生命上限 +1（1 级 7、3 级 9）。多挨一下，就多一次转身的机会。',
+    id: 'hide', name: '火种 · 厚皮', icon: '🫀', cost: 90,
+    desc: '每级开局生命上限 +1。多挨一下，就多一次转身的机会。',
     mods: [{ stat: 'maxHp', flat: 1 }],
   },
   {
-    id: 'claw', name: '火种 · 尖爪', icon: '🐾', cost: 140, maxLevel: 3,
+    id: 'claw', name: '火种 · 尖爪', icon: '🐾', cost: 80,
     desc: '每级开局攻击力 +8%。普攻涨一点点，环剑不吃这一项。',
     mods: [{ stat: 'attack', pct: 0.08 }],
   },
   {
-    id: 'step', name: '火种 · 轻足', icon: '🌿', cost: 150, maxLevel: 3,
+    id: 'step', name: '火种 · 轻足', icon: '🌿', cost: 85,
     desc: '每级开局移动速度 +4%。拉扯时脚下快半拍。',
     mods: [{ stat: 'moveSpeed', pct: 0.04 }],
   },
   {
-    id: 'star', name: '火种 · 星屑', icon: '✨', cost: 130, maxLevel: 3,
+    id: 'star', name: '火种 · 星屑', icon: '✨', cost: 75,
     desc: '每级开局幸运 +0.2。只让三选一与商店更容易出好东西，不加任何伤害。',
     mods: [{ stat: 'luck', flat: 0.2 }],
   },
   {
-    id: 'purse', name: '布袋 · 铜板', icon: '🪙', cost: 90, maxLevel: 3,
+    id: 'edge', name: '火种 · 剑锋', icon: '🗡', cost: 110,
+    desc: '每级剑伤害 +5%。喂给环上的剑，怪越硬越看得出来。',
+    mods: [{ stat: 'swordDamage', pct: 0.05, scope: 'weapon' }],
+  },
+  {
+    id: 'gale', name: '火种 · 疾风', icon: '🌀', cost: 100,
+    desc: '每级攻击速度 +3%。弹幕更密，普攻的节奏更顺。',
+    mods: [{ stat: 'attackSpeed', pct: 0.03 }],
+  },
+  {
+    id: 'shell', name: '火种 · 铁壳', icon: '🛡', cost: 85,
+    desc: '每级护甲 +6。怪撞你一下，你少掉一点。',
+    mods: [{ stat: 'armor', flat: 6 }],
+  },
+  {
+    id: 'purse', name: '布袋 · 铜板', icon: '🪙', cost: 50,
     desc: '每级开局多 30 金币。够在第一家摊子上先挑一件。',
     coins: 30,
   },
   {
-    id: 'pouch', name: '行囊 · 小药', icon: '🧪', cost: 110, maxLevel: 3,
+    id: 'pouch', name: '行囊 · 小药', icon: '🧪', cost: 60,
     desc: '每级开局背包里多 1 瓶小药（回 3 点血，战斗中按 B 喝）。',
     potion: 1,
   },
@@ -106,12 +121,7 @@ export const CAMPFIRE = [
 
 export const CAMP_BY_ID = Object.fromEntries(CAMPFIRE.map((c) => [c.id, c]));
 
-// 某一簇点满一共产多少级（用来算总价与文案）
-export function campMaxLevel(item) {
-  return Math.max(1, Math.min(CAMP_MAX_LEVEL, item && Number(item.maxLevel) || 1));
-}
-
-// 第 level+1 级的价格（level = 当前等级，0 表示还没点）
+// 第 level+1 级的价格（level = 当前等级，0 表示还没点）。无限级：永远有下一档。
 export function campCost(id, level = null) {
   const item = CAMP_BY_ID[id];
   if (!item) return 0;
@@ -119,47 +129,28 @@ export function campCost(id, level = null) {
   return Math.round(item.cost * Math.pow(CAMP_STEP, cur));
 }
 
-// 点满一簇要花的总价
-export function campFullCost(id) {
-  const item = CAMP_BY_ID[id];
-  if (!item) return 0;
-  let sum = 0;
-  for (let i = 0; i < campMaxLevel(item); i++) sum += campCost(id, i);
-  return sum;
-}
-
-// 全部点满的总价（面板页脚用）
-export const CAMP_TOTAL_COST = CAMPFIRE.reduce((a, c) => a + campFullCost(c.id), 0);
-
 // ---------------- 等级 ----------------
 export function campOwned() {
   const c = profile().camp;
   return c && typeof c === 'object' ? c : {};
 }
 
-// 老档案里存的是 1（点过一次），读出来就是 1 级，不需要迁移
+// 老档案里存的是数字等级；无限级后不再封顶，直接取整数
 export function campLevel(id) {
   const n = Number(campOwned()[id]);
   if (!Number.isFinite(n) || n <= 0) return 0;
-  const item = CAMP_BY_ID[id];
-  return Math.min(campMaxLevel(item), Math.floor(n));
+  return Math.floor(n);
 }
 
 export function campHas(id) {
   return campLevel(id) > 0;
 }
 
-export function campMaxed(id) {
-  const item = CAMP_BY_ID[id];
-  return !!item && campLevel(id) >= campMaxLevel(item);
-}
-
-// 点火（升一级）：余额够、没到顶才成功。返回 { ok, bones, item, level, reason }
+// 点火（升一级）：余额够就成功 —— 没有等级上限。返回 { ok, bones, item, level, reason }
 export function campBuy(id) {
   const item = CAMP_BY_ID[id];
   if (!item) return { ok: false, reason: 'noitem', bones: bones() };
   const cur = campLevel(id);
-  if (cur >= campMaxLevel(item)) return { ok: false, reason: 'maxed', bones: bones(), item, level: cur };
   const price = campCost(id, cur);
   if (bones() < price) return { ok: false, reason: 'poor', bones: bones(), item, price, level: cur };
   addBones(-price);                      // 扣钱只在这里做，效果里不写负数
