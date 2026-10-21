@@ -195,7 +195,7 @@ export const ENEMY_TYPES = {
     name: '骨咒师',
     file: 'assets/monsters/skeleton-mage.glb',
     // sourceHeight 实测记录（2026-10-21）：三个巫师与 minion(1.05)/warrior(1.15) 同一把尺，
-    // 并排截图比对（.tmp-mage 截图 + 离线正交渲染剪影 ortho_*.png）确认视觉比例正确、
+    // 并排截图比对（剪影图可用班级网站根的 .tmp-height-ortho.js 重出）确认视觉比例正确、
     // 脚底 footY ≈ -0.01 不浮不陷。⚠️ 不要用「逐顶点 applyBoneTransform / gl.readPixels
     // 量像素」去"精确标定"——两种自动量法都给出 2.2~3.4 的乱数（骨架本身比小兵矮、
     // 高度全靠帽子/法杖撑起来，剪影顶点根本不是头）。要动就先并排截图人眼比对。
