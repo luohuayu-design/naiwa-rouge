@@ -13,7 +13,9 @@ import { createStats, STAT_DEFS } from './stats.js';
 import { createWeaponStats } from './weaponStats.js';
 import { createFx } from './fx.js';
 import { createEnemySystem } from './enemy.js';
-import { createLevel1, LEVEL_1, DIFFS, setDifficulty, getDifficulty, roundScale } from './wave.js';
+import {
+  createLevel, LEVEL_1, LEVEL_2, LEVELS_BY_ID, DIFFS, setDifficulty, getDifficulty, roundScale, levelStats,
+} from './wave.js';
 import { createRangeRing } from './rangeRing.js';
 import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js';
 import { createWeaponSystem } from './weapon.js';
@@ -93,7 +95,7 @@ async function boot() {
   app.appendChild(renderer.domElement);
 
   // ---------------- 场景与相机 ----------------
-  const { scene, update: updateScene } = buildNightScene({ arenaRadius: ARENA_R });
+  const { scene, update: updateScene, setTheme: setSceneTheme } = buildNightScene({ arenaRadius: ARENA_R });
 
   const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 220);
   const camOffset = CAM_OFFSET.clone();
@@ -200,6 +202,24 @@ async function boot() {
   const hpFillEl = document.getElementById('hpFill');
   const hpBarEl = hpFillEl.parentElement;
   const hudKeyEl = document.getElementById('hudKey');
+  // 减速诅咒提示（第 20 块）：中咒才亮
+  const curseChip = document.getElementById('curseChip');
+  const curseNum = document.getElementById('curseNum');
+  let curseShown = false;
+  let curseLastTxt = '';
+  let curseT = 0;          // 诅咒剩余时间（秒）
+  let curseFactor = 1;     // 当前移速倍率
+  function renderCurse() {
+    const on = curseT > 0;
+    if (on !== curseShown) {
+      curseShown = on;
+      curseChip.classList.toggle('on', on);
+      curseChip.setAttribute('aria-hidden', on ? 'false' : 'true');
+    }
+    if (!on) return;
+    const txt = `移速 ${Math.round(curseFactor * 100)}%`;
+    if (txt !== curseLastTxt) { curseLastTxt = txt; curseNum.textContent = txt; }
+  }
   const apPanel = document.getElementById('attrPanel');
   const apList = document.getElementById('apList');
   const apSub = document.getElementById('apSub');
@@ -394,7 +414,11 @@ async function boot() {
   let enemyLoadOk = true;
   try {
     // 三种怪都要预载：投手（远程）第 11 回合登场，模型 655KB
-    await enemies.preload(['minion', 'warrior', 'archer', 'bowman'], (p) => setProgress(0.55 + p * 0.42));
+    // 三位巫师共用 mage 模型（loadType 内部按 file 去重，不会解析三遍）
+    await enemies.preload(
+      ['minion', 'warrior', 'archer', 'bowman', 'hexer', 'pyro', 'hierarch'],
+      (p) => setProgress(0.55 + p * 0.42),
+    );
   } catch (err) {
     enemyLoadOk = false;
     console.warn('[怪物] 模型加载失败：', err);
@@ -1052,6 +1076,8 @@ async function boot() {
     hintEl.classList.remove('off');
     runRarities = new Set();          // 本局品质集合重置（cards_all_kinds 用）
     setDifficulty(profile().difficulty || 'normal');   // 难度一局一选，开局生效
+    setLevel(pendingLevelId);         // 第 20 块：按选关重建这一关（含场景皮肤）
+    clearCurse();                     // 上一局残留的减速不许带进来
     applyCampfire();                  // 篝火（第 19 块）：局外成长在开局一次性落账
     level.start();
   }
@@ -1154,8 +1180,10 @@ async function boot() {
   // 第 1 关永远开放，后面每关要「通关上一关」才解锁（看记录里的 wins）。
   const LEVELS = [
     { id: 1, name: LEVEL_1.name, playable: true },
-    { id: 2, name: '第二关 · 制作中', playable: false },
+    { id: 2, name: LEVEL_2.name, playable: true },
   ];
+  // 选关面板点了哪一关 —— beginGame 时按它切关卡（点的时候还没进战斗）
+  let pendingLevelId = 1;
   const REC_KEY = 'naiwa_rouge_records_v1';
   function loadRecords() {
     try {
@@ -1210,7 +1238,7 @@ async function boot() {
         meta.textContent = '新的夜路正在铺 —— 敬请期待';
         best.textContent = '';
       } else {
-        const totals = level.totals;
+        const totals = levelStats(LEVELS_BY_ID[lv.id]);   // 卡片显示的是**这一关**的统计
         meta.textContent = `${totals.rounds} 个回合 · ${totals.total} 只怪 · 奇遇 / 三选一 / 商店`;
         best.innerHTML = rec && rec.wins > 0
           ? `最佳：最快通关 <b>${fmtTime(rec.bestTime)}</b> · 通关 <b>${rec.wins}</b> 次`
@@ -1232,7 +1260,10 @@ async function boot() {
       }
       if (unlocked) {
         item.addEventListener('click', () => {
+          pendingLevelId = lv.id;      // 点了哪关，beginGame 就开哪关
           hideSub(levelSel);
+          // 教程只在第一关问一次：能开第二关的人早就会玩了，别拿教程挡路
+          if (lv.id !== 1) { beginGame({ tutorial: false }); return; }
           tutAsk.classList.add('on');
           tutAsk.setAttribute('aria-hidden', 'false');
         });
@@ -2247,7 +2278,7 @@ async function boot() {
 
     // 武器卡排在最前：拿到环剑之后抽到的事件才可能出现「夜风顺了」
     // 卡片关掉 → 武器教程（只教第一次）→ 再接事件
-    if (roundNo >= LEVEL_1.weaponAt && !weapon.granted) {
+    if (roundNo >= level.level.weaponAt && !weapon.granted) {
       grantRingThen(runEvent);
       return;
     }
@@ -2264,8 +2295,11 @@ async function boot() {
   }
 
 
-  // ---------------- 第一关 ----------------
-  const level = createLevel1({
+  // ---------------- 关卡（第 20 块：一关/二关共用同一套回合机器） ----------------
+  // level 是可变的：选关或读档时整体重建（createLevel 只吃数据，没有别的副作用）。
+  // 局中绝不切换 —— 回合机器、存档快照都按当前这一关解释。
+  let curLevelId = 1;
+  const levelDeps = {
     enemies, fx,
     getPlayerPos: () => pos,
     onRound: (cur, total, tip) => {
@@ -2276,7 +2310,16 @@ async function boot() {
     },
     onRoundClear: handleRoundClear,
     onVictory: () => endGame(true),
-  });
+  };
+  let level = createLevel(LEVEL_1, levelDeps);
+
+  // 切关卡：重建回合机器 + 换场景皮肤。id 不认识就回落到第一关。
+  function setLevel(id) {
+    curLevelId = LEVELS_BY_ID[id] ? id : 1;
+    level = createLevel(LEVELS_BY_ID[curLevelId], levelDeps);
+    setSceneTheme(level.level.theme || 'meadow');
+    return level;
+  }
 
   // ---------------- 存档续玩（第 17 块） ----------------
   // 每回合开始把「回合刚开始」的局面写进 localStorage；结算删档。
@@ -2285,6 +2328,7 @@ async function boot() {
   function saveRunAtRound(roundNo) {
     if (DEBUG && !params.has('keepsave')) return;   // 调试局不落档（测试互相覆盖）
     runSave.saveRun({
+      level: curLevelId,        // 读档要回到同一关（第二关的回合表跟一关不一样）
       round: roundNo,
       roundMod: { ...level.roundMod },
       coins,
@@ -2345,6 +2389,8 @@ async function boot() {
       profile().difficulty = saved.diff;
       setDifficulty(saved.diff);
     }
+    setLevel(saved.level || 1);       // 存档记着这一局是哪一关
+    clearCurse();
     for (const [id, n] of Object.entries(saved.bag || {})) {
       if (id in BAG_ITEMS) bag[id] = Math.max(0, n | 0);
     }
@@ -2593,17 +2639,21 @@ async function boot() {
 
     audio.stopBgm({ fade: 1.0 });
     audio.sfx(isWin ? 'victory' : 'defeat', { vol: 1 });
-    rsTag.textContent = LEVEL_1.name;
+    rsTag.textContent = level.level.name;
     rsTitle.textContent = isWin ? '通 关' : '倒 下';
     rsTitle.classList.toggle('fail', !isWin);
     rsSub.textContent = isWin
-      ? '夜色里的骷髅被清干净了，草地重新安静下来'
-      : '奶蛙被骷髅拖进了草丛……下一局记得边打边退';
+      ? (curLevelId === 2
+        ? '骨塔里的三顶尖帽都倒了，庭院第一次安静下来'
+        : '夜色里的骷髅被清干净了，草地重新安静下来')
+      : (curLevelId === 2
+        ? '奶蛙被留在了骨塔的院子里……下次先切后排'
+        : '奶蛙被骷髅拖进了草丛……下一局记得边打边退');
     rsGrid.textContent = '';
 
     const roundShown = Math.min(level.totals.rounds, Math.max(1, level.roundNo));
     // 落一笔记录（第 14 块）：通关数 / 最快通关 / 最高击杀 / 最远回合，主页面「我的记录」看
-    saveRunRecord(1, { win: isWin, time: elapsed, kills, roundShown });
+    saveRunRecord(curLevelId, { win: isWin, time: elapsed, kills, roundShown });
     // 全局战绩与成就（第 18 块）：局数/时长/击杀/通关跨局累计，成就统一对表
     bumpStat('runs');
     bumpStat('seconds', Math.round(elapsed));
@@ -2617,6 +2667,7 @@ async function boot() {
     const boneGain = bonesFor({ roundShown, kills, isWin }, diffKey);
     const boneTotal = addBones(boneGain);
     const boneMul = diffBoneMul(diffKey);
+    clearCurse();                   // 这一局的诅咒不带到结算界面
     runSave.clearRun();             // 一局结束（无论输赢），续玩存档就没有意义了
     refreshResume();                // 主菜单上的「继续上次」随之消失
     const cells = [
@@ -2653,8 +2704,25 @@ async function boot() {
   // 调试钩子：只有 ?debug=1 才挂到 window，方便自动化测试读内部状态（正常游玩不暴露）
   if (new URLSearchParams(location.search).has('debug')) {
     window.__game = {
-      stats, wstats, pos, vel, input, enemies, level, fx, playerRing, frog, camera, weapon, scene,
+      stats, wstats, pos, vel, input, enemies, fx, playerRing, frog, camera, weapon, scene,
       renderer,
+      // level 是可变引用（切关卡会整体重建），必须用 getter，否则测试盯着的是旧的回合机器
+      get level() { return level; },
+      get levelId() { return curLevelId; },
+      levels: LEVELS_BY_ID,
+      setLevel: (id) => { setLevel(id); return curLevelId; },
+      // 第 20 块：巫师的诅咒 / 法术现场（测试要能直接看）
+      curse: () => ({ t: +curseT.toFixed(2), factor: curseFactor }),
+      bless: (o) => { cursePlayer(o); return { t: +curseT.toFixed(2), factor: curseFactor }; },
+      zones: () => enemies.zones(),
+      wizards: () => enemies.list
+        .filter((e) => e.cfg.spell || e.cfg.aura)
+        .map((e) => ({
+          type: e.type, state: e.state, hp: e.hp, maxHp: e.maxHp,
+          x: +e.pos.x.toFixed(2), z: +e.pos.z.toFixed(2),
+          auraRadius: e.cfg.aura ? e.cfg.aura.radius : 0,
+          buffs: enemies.list.filter((o) => o.auraHaste > 0).length,
+        })),
       // 性能探针：draw call / 三角数 / 显存对象数（第 9 块排查后期卡顿）
       renderInfo: () => ({
         calls: renderer.info.render.calls,
@@ -3015,12 +3083,35 @@ async function boot() {
     return a + d * t;
   }
 
+  // ---------------- 骨咒师的减速诅咒（第 20 块） ----------------
+  // 紫阵命中后短时间降低**移速**，不影响攻击和技能，也不叠加（取更狠的一次）。
+  // 设计意图：这是「走位失误的惩罚」，不是「把你钉死」——
+  // 全点满的篝火也吃不掉这个 debuff，但它 2.6 秒就过去了。
+  function clearCurse() {
+    curseT = 0;
+    curseFactor = 1;
+    renderCurse();
+  }
+  function cursePlayer({ factor = 0.62, duration = 2.6 } = {}) {
+    if (curseT <= 0) curseFactor = factor;
+    else curseFactor = Math.min(curseFactor, factor);   // 叠两次取更慢的那个
+    curseT = Math.max(curseT, duration);
+    renderCurse();
+  }
+  function updateCurse(dt) {
+    if (curseT <= 0) return;
+    curseT -= dt;
+    if (curseT <= 0) { curseT = 0; curseFactor = 1; }
+    renderCurse();
+  }
+
   // 传给怪物 AI 的上下文（每帧复用同一个对象，避免反复分配）
   const combatCtx = {
     playerPos: pos,
     playerRadius: BODY_R,
     arenaRadius: ARENA_R,
     hurtPlayer,
+    cursePlayer,
   };
 
   function tick() {
@@ -3039,10 +3130,12 @@ async function boot() {
       && !panelOpen && !bagOpen;
     if (inGame) {
       elapsed += dt;
+      updateCurse(dt);
 
       // 1) 输入 → 目标速度（屏幕 y 向下 = 世界 +Z，相机在 +Z 方向看向场景）
       //    移速取属性面板里的实时值：升级加成就立刻跑得更快
-      const moveSpeed = stats.get('moveSpeed');
+      // 被骨咒师的咒打中时移速打折（第 20 块）
+      const moveSpeed = stats.get('moveSpeed') * (curseT > 0 ? curseFactor : 1);
       const dir = input.read();
       const targetVX = dir.x * moveSpeed;
       const targetVZ = dir.y * moveSpeed;

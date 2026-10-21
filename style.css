@@ -69,6 +69,18 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
 .hud-stats{margin-top:10px;font-size:11px;line-height:1.7;color:rgba(170,220,200,.42);
   font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;white-space:pre}
 
+/* 减速诅咒（第 20 块）：中咒时从左侧滑出来，条空了自己缩回去 */
+.curse-chip{margin-top:9px;display:inline-flex;align-items:center;gap:6px;
+  padding:3px 9px 3px 5px;border-radius:999px;
+  background:rgba(70,34,110,.55);border:1px solid rgba(169,107,255,.5);
+  opacity:0;transform:translateX(-6px);transition:opacity .16s ease,transform .16s ease;
+  pointer-events:none}
+.curse-chip.on{opacity:1;transform:translateX(0)}
+.cc-mark{display:grid;place-items:center;width:16px;height:16px;border-radius:50%;
+  background:rgba(169,107,255,.28);color:#e0c8ff;font-size:9.5px;line-height:1}
+.curse-chip b{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-size:10.5px;font-weight:600;color:#dcc4ff;letter-spacing:.02em}
+
 /* ---------------- 属性面板 ---------------- */
 .attr-panel{position:fixed;inset:0;z-index:14;display:flex;align-items:center;justify-content:center;
   padding:calc(18px + env(safe-area-inset-top)) 16px calc(18px + env(safe-area-inset-bottom));

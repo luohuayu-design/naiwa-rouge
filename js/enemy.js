@@ -34,6 +34,7 @@ const ANIM = {
   punch: 'Unarmed_Melee_Attack_Punch_A',
   aim: '1H_Ranged_Aiming',      // 举弓瞄准（裁剪时特意多留的两段弓类动画）
   shoot: '1H_Ranged_Shoot',     // 放箭
+  cast: 'Spellcast_Shoot',      // 巫师读条（mage 模型自带，第 20 块）
 };
 
 export const ENEMY_TYPES = {
@@ -167,19 +168,111 @@ export const ENEMY_TYPES = {
     },
   },
 
-  // ---------------- 预案：巫师（暂不生成） ----------------
-  // 魔法小怪：读条后放范围法术；光环给周围小怪加攻速/减伤，给主角上减速 debuff。
-  mage: {
-    name: '骷髅巫师', planned: true,
+  // ============================================================
+  // 第二关：三位巫师
+  //
+  // 【设计定案 · 第 20 块】用户明确要求：**一个巫师只带一个招牌技能**，
+  // 不许出现「一个人又会减速又会灼地还带光环」的全能法师。
+  // 所以三人共用一套 mage 骨架，但各自只负责一种压力，逼玩家换应对方式：
+  //
+  //   hexer    骨咒师   —— 时间压力。紫阵钉在脚下，落地掉血 + 减速。
+  //                        躲得掉，但两只以上会连发，被粘住就走不动。
+  //   pyro     火焚巫祝 —— 空间压力。地上留一片灼地烧 4 秒，好位置被一片片烧掉。
+  //                        不许站桩，输出节奏被迫切碎。
+  //   hierarch 霜牢主祭 —— 目标选择压力。自己不还手、血最厚、站最后排，
+  //                        但给范围内小怪 +35% 攻速 +25% 减伤。不点它就全场变凶。
+  //
+  // 三者外观靠「帽子 / 眼睛发光色 / 手持法器 / 身高」四件事区分（见 skin）——
+  // 素材库只有一套巫师骨架，程序化装备是这里唯一能做出三种模型的路径。
+  // 将来若有独立 glb，只改各自的 file / sourceHeight 即可，其余代码不用动。
+  //
+  // sourceHeight 已验证（2026-10-21）：三个巫师与 minion 1.05 / warrior 1.15 同一把尺，
+  // 并排截图 + 离线正交渲染剪影确认视觉比例与落脚正确（脚底 ≈ -0.01）。
+  // 注意：骨架本身比骷髅兵矮，视觉高度主要靠帽子/骨冠/法杖撑起来，
+  // 所以「含配件总高」的自动量法会得出乱数，改数值请走截图人眼比对。
+  // ============================================================
+  hexer: {
+    name: '骨咒师',
     file: 'assets/monsters/skeleton-mage.glb',
-    sourceHeight: 1.20,    // 未标定（估算），启用前必须按原点诊断法重测
-    height: 1.30, radius: 0.45, hp: 4, armor: 0, speed: 1.1,
-    attackRange: 7.5, castTime: 1.6, damage: 1, attackInterval: 3.2,
-    aura: { radius: 4.5, haste: 0.3 },        // 给范围内小怪 +30% 攻速
-    debuff: { key: 'slow', factor: 0.55, duration: 3 },  // 主角移速 ×0.55
-    spawnTime: 1.0, deathTime: 1.6, selfDestruct: false,
+    // sourceHeight 实测记录（2026-10-21）：三个巫师与 minion(1.05)/warrior(1.15) 同一把尺，
+    // 并排截图比对（.tmp-mage 截图 + 离线正交渲染剪影 ortho_*.png）确认视觉比例正确、
+    // 脚底 footY ≈ -0.01 不浮不陷。⚠️ 不要用「逐顶点 applyBoneTransform / gl.readPixels
+    // 量像素」去"精确标定"——两种自动量法都给出 2.2~3.4 的乱数（骨架本身比小兵矮、
+    // 高度全靠帽子/法杖撑起来，剪影顶点根本不是头）。要动就先并排截图人眼比对。
+    sourceHeight: 1.20,
+    height: 1.32,
+    radius: 0.45,
+    hp: 4,
+    armor: 0,
+    speed: 1.05,           // 慢，但站得远：想杀它得主动冲进去
+    attackRange: 8.0,      // 读条距离
+    keepDistance: 5.0,     // 比这个近就后退
+    damage: 1,
+    attackInterval: 3.4,
+    windup: 1.5,           // 读条 = 圈出现到落地，玩家有 1.5 秒走出去
+    attackDuration: 2.0,
+    castTime: 1.5,         // 有它就说明「这个远程不画脚下范围环」
+    spell: { kind: 'hex', radius: 2.4, color: 0xa96bff },
+    debuff: { factor: 0.62, duration: 2.6 },   // 主角移速 ×0.62，2.6 秒
+    spawnTime: 1.0,
+    deathTime: 1.6,
+    selfDestruct: false,
     color: 0xd7a8ff,
-    anim: { walk: ANIM.walk, idle: ANIM.idle, death: ANIM.death, spawn: ANIM.spawn },
+    skin: { eye: 0xc08cff, hat: true, staff: 'bone', body: 0xcfc4e8 },
+    anim: {
+      walk: ANIM.walk, idle: ANIM.idle, cast: ANIM.cast,
+      death: ANIM.death, spawn: ANIM.spawn,
+    },
+  },
+
+  pyro: {
+    name: '火焚巫祝',
+    file: 'assets/monsters/skeleton-mage.glb',
+    sourceHeight: 1.20,    // 实测记录见 hexer 处（并排截图比对，勿用自动量法）
+    height: 1.22,          // 比骨咒师矮一点：摘了帽子，也更快
+    radius: 0.42,
+    hp: 3,
+    armor: 0,
+    speed: 1.35,           // 三个巫师里最灵活，追它容易被灼地拖住
+    attackRange: 7.2,
+    keepDistance: 4.6,
+    damage: 1,
+    attackInterval: 4.0,
+    windup: 1.1,           // 读条更短，但威胁是留在地上的火而不是瞬间伤害
+    attackDuration: 1.7,
+    castTime: 1.1,
+    spell: { kind: 'burn', radius: 2.0, color: 0xff8a3c, burnTime: 4.0, tick: 0.6 },
+    spawnTime: 1.0,
+    deathTime: 1.5,
+    selfDestruct: false,
+    color: 0xffb27a,
+    skin: { eye: 0xff7a3a, hat: false, staff: 'torch', body: 0xe8b8a0 },
+    anim: {
+      walk: ANIM.walk, idle: ANIM.idle, cast: ANIM.cast,
+      death: ANIM.death, spawn: ANIM.spawn,
+    },
+  },
+
+  hierarch: {
+    name: '霜牢主祭',
+    file: 'assets/monsters/skeleton-mage.glb',
+    sourceHeight: 1.20,    // 实测记录见 hexer 处（并排截图比对，勿用自动量法）
+    height: 1.52,          // 最高的一只：戴骨冠、披着气场，一眼就能认出来
+    radius: 0.52,
+    hp: 5,                 // 不还手，换血最厚（第 20 回合 24 血，得专门冲一趟）
+    armor: 0,
+    speed: 0.95,           // 最慢，跑不掉
+    keepDistance: 6.2,     // 没有 attackRange：它不进近战分支，也不会出手
+    spawnTime: 1.1,
+    deathTime: 1.8,
+    selfDestruct: false,
+    color: 0x9ee8ff,
+    aura: { radius: 4.6, haste: 0.35, armor: 0.25 },   // 攻速 +35% / 减伤 25%
+    skin: { eye: 0x7ef0ff, hat: false, crown: true, staff: 'crystal', body: 0xbfe0f0 },
+    anim: {
+      walk: ANIM.walk, idle: ANIM.idle,
+      death: ANIM.death, spawn: ANIM.spawn,
+    },
   },
 };
 
@@ -237,6 +330,131 @@ function attachBow(root, model) {
   bow.position.copy(BOW_POS);
   slot.add(bow);
   return bow;
+}
+
+// ------------------------------------------------------------
+// 巫师的「三套装备」（程序化，不额外占下载体积）
+//
+// 素材库只有一套 mage 骨架，三位巫师是靠这里做出「三个模型」的：
+//   帽子开关 + 眼睛发光色 + 手持法器 + 身高，四件事叠起来在游戏视角下足够分辨。
+// 法杖挂右手骨骼，朝向用和弓一样的「骨骼世界四元数 → 模型世界四元数」反解，
+// 所以不管 KayKit 的骨骼轴怎么摆，杖身都保持竖直。
+//
+// ⚠️ GLTFLoader 会把骨骼名里的 '.' 洗掉（handslot.r → handslotr），两个名字都要试。
+// ------------------------------------------------------------
+const STAFF_STYLES = {
+  bone:    { rod: 0xcfc9b8, tip: 0xa96bff, len: 1.00, orb: 0.075 },   // 骨咒师：短骨杖 + 紫晶
+  torch:   { rod: 0x8a5a34, tip: 0xff7a2a, len: 0.82, orb: 0.062 },   // 火焚巫祝：短炬 + 橙火
+  crystal: { rod: 0xa9d8ee, tip: 0x7ef0ff, len: 1.42, orb: 0.085 },   // 霜牢主祭：长杖 + 青晶
+};
+
+function makeStaff(kind) {
+  const st = STAFF_STYLES[kind] || STAFF_STYLES.bone;
+  const g = new THREE.Group();
+  const rodMat = new THREE.MeshStandardMaterial({ color: st.rod, roughness: 0.72, metalness: 0.12 });
+  const glowMat = new THREE.MeshBasicMaterial({ color: st.tip });
+
+  const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.028, st.len, 6), rodMat);
+  rod.position.y = st.len * 0.30;
+  rod.castShadow = true;
+  rod.frustumCulled = false;
+  g.add(rod);
+
+  const tipY = st.len * 0.30 + st.len * 0.5 + 0.06;
+  const orb = new THREE.Mesh(new THREE.IcosahedronGeometry(st.orb, 1), glowMat);
+  orb.position.y = tipY;
+  orb.frustumCulled = false;
+  g.add(orb);
+
+  if (kind === 'bone') {
+    // 三根骨刺围住紫晶，像一只骨爪
+    for (let i = 0; i < 3; i++) {
+      const a = (i / 3) * Math.PI * 2;
+      const spike = new THREE.Mesh(new THREE.ConeGeometry(0.018, 0.14, 4), rodMat);
+      spike.position.set(Math.cos(a) * 0.065, tipY + 0.035, Math.sin(a) * 0.065);
+      spike.rotation.z = -Math.cos(a) * 0.55;
+      spike.rotation.x = Math.sin(a) * 0.55;
+      spike.frustumCulled = false;
+      g.add(spike);
+    }
+  } else if (kind === 'torch') {
+    // 两侧各一颗小火球，看起来像举着火
+    for (let i = 0; i < 2; i++) {
+      const s = new THREE.Mesh(new THREE.IcosahedronGeometry(0.042, 0), glowMat);
+      s.position.set(i ? 0.085 : -0.085, tipY - 0.075, 0);
+      s.frustumCulled = false;
+      g.add(s);
+    }
+  } else {
+    // 主祭：一圈悬浮的横环，气场感
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.105, 0.011, 4, 20), glowMat);
+    ring.position.y = tipY;
+    ring.rotation.x = Math.PI / 2;
+    ring.frustumCulled = false;
+    g.add(ring);
+  }
+
+  g.userData.mats = [rodMat];
+  return g;
+}
+
+function attachStaff(root, model, kind) {
+  const slot = model.getObjectByName('handslot.r')
+    || model.getObjectByName('handslotr')
+    || model.getObjectByName('hand.r')
+    || model.getObjectByName('handr');
+  if (!slot) return null;
+  const staff = makeStaff(kind);
+  model.updateMatrixWorld(true);
+  const qb = new THREE.Quaternion();
+  const qr = new THREE.Quaternion();
+  slot.getWorldQuaternion(qb);
+  root.getWorldQuaternion(qr);
+  staff.quaternion.copy(qb.invert().multiply(qr));
+  staff.position.set(0, -0.03, 0);
+  slot.add(staff);
+  return staff;
+}
+
+// 换肤：帽子开合 / 眼睛发光色 / 骨体染色 / 骨冠
+function applyWizardSkin(model, skin) {
+  if (!skin) return;
+  const body = new THREE.Color(skin.body ?? 0xffffff);
+  const eye = new THREE.Color(skin.eye ?? 0xffffff);
+
+  model.traverse((o) => {
+    if (!o.isMesh) return;
+    const n = o.name || '';
+    if (/Hat/i.test(n)) { o.visible = !!skin.hat; return; }   // 帽子是独立 mesh
+    const m = o.material;
+    if (!m) return;
+    if (/Eyes/i.test(n)) {
+      if (m.color) m.color.copy(eye);
+      if (m.emissive) { m.emissive.copy(eye); m.emissiveIntensity = 2.4; }
+      return;
+    }
+    if (m.color) m.color.copy(body);   // 骨体整体染色（贴图偏白，乘上去就是新色调）
+  });
+
+  // 骨冠：主祭专属。挂在 head 骨骼上，跟着动画一起动。
+  if (skin.crown) {
+    const head = model.getObjectByName('head');
+    if (head) {
+      const crownMat = new THREE.MeshStandardMaterial({
+        color: 0xd8f6ff, emissive: 0x1f5a70, emissiveIntensity: 0.9,
+        roughness: 0.38, metalness: 0.55,
+      });
+      for (let i = 0; i < 6; i++) {
+        const a = (i / 6) * Math.PI * 2;
+        const spike = new THREE.Mesh(new THREE.ConeGeometry(0.030, 0.20, 4), crownMat);
+        spike.position.set(Math.cos(a) * 0.175, 0.16, Math.sin(a) * 0.175);
+        spike.rotation.z = -Math.cos(a) * 0.28;
+        spike.rotation.x = Math.sin(a) * 0.28;
+        spike.frustumCulled = false;
+        head.add(spike);
+      }
+    }
+  }
 }
 
 function lerpAngle(a, b, t) {
@@ -308,6 +526,14 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
   async function loadType(type) {
     if (assets.has(type)) return assets.get(type);
     const cfg = ENEMY_TYPES[type];
+    // 同一个 glb 只解析一次：三位巫师共用 mage 骨架，
+    // 不共用就会出现「一份模型在内存里存三份、动画也建三套」。
+    for (const [k, v] of assets) {
+      if (ENEMY_TYPES[k] && ENEMY_TYPES[k].file === cfg.file) {
+        assets.set(type, v);
+        return v;
+      }
+    }
     const gltf = await new GLTFLoader().loadAsync(cfg.file);
 
     const clips = {};
@@ -338,12 +564,17 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
       return null;
     }
 
-    const maxHp = Math.max(1, Math.round(cfg.hp * (opts.hpScale ?? 1)));
-    const damage = Math.max(1, Math.round(cfg.damage * (opts.damageScale ?? 1)));
+    // 数值兜底：霜牢主祭这类「不出手」的怪没有 damage 字段，
+    // 直接乘会得到 NaN（Math.max(1, NaN) 依然是 NaN），存档/面板都可能带出脏值。
+    const hpBase = Number.isFinite(cfg.hp) ? cfg.hp : 1;
+    const dmgBase = Number.isFinite(cfg.damage) ? cfg.damage : 0;
+    const spdBase = Number.isFinite(cfg.speed) ? cfg.speed : 1;
+    const maxHp = Math.max(1, Math.round(hpBase * (opts.hpScale ?? 1)));
+    const damage = Math.max(1, Math.round(dmgBase * (opts.damageScale ?? 1)));
     // 同一种怪也**不是同一个速度**：生成时在 ±15% 内随机（用户要求「浮动速率」）。
     // 这一条加上「各自随机休息」和「曲线接近」，是打散怪群的第一层手段。
     const speedMul = 0.85 + Math.random() * 0.30;
-    const speed = cfg.speed * (opts.speedScale ?? 1) * speedMul;
+    const speed = spdBase * (opts.speedScale ?? 1) * speedMul;
 
     const root = new THREE.Group();
     root.position.set(at.x, 0, at.z);
@@ -365,6 +596,8 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
       o.material = o.material.clone(); // 独立材质，受击闪光才不会全队一起亮
       mats.push(o.material);
     });
+    // 巫师换肤（帽子/眼睛/骨体/骨冠）—— 必须在材质 clone 之后、渲染之前
+    if (cfg.skin) applyWizardSkin(model, cfg.skin);
     root.add(model);
 
     // 脚下的范围环：只给「能近身伤到主角」的怪。
@@ -384,6 +617,19 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
         })
       : null;
     if (ring) root.add(ring.mesh);
+
+    // 主祭的气场环：半径就是光环范围，玩家能一眼看出「站在这个圈里的小兵变凶了」。
+    // 其余怪不画（远程的范围环会盖住半个战场，见 hasRing 的注释）。
+    const auraRing = cfg.aura
+      ? createRangeRing({
+          radius: cfg.aura.radius,
+          color: cfg.color,
+          opacity: 0.20,
+          pulse: 0.07,
+          y: 0.026,
+        })
+      : null;
+    if (auraRing) root.add(auraRing.mesh);
 
     const bar = createBar(cfg);
     root.add(bar.spr);
@@ -438,6 +684,9 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
       mats,
       bar,
       ring,
+      auraRing,
+      auraHaste: 0,      // 本帧站在哪位主祭的光环里（由 update 里的 collectAuras 写）
+      auraArmor: 0,
       baseEmissive: mats.map((m) => (m.emissive ? m.emissive.clone() : null)),
       currentAnim: '',
     };
@@ -452,6 +701,16 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
         e.bow = bow;
         e.mats.push(...bow.userData.mats);
         e.baseEmissive.push(...bow.userData.mats.map((m) => (m.emissive ? m.emissive.clone() : null)));
+      }
+    }
+
+    // 巫师：右手一把法杖（三套样式见 STAFF_STYLES）。材质同样进 mats，受击一起闪。
+    if (cfg.skin && cfg.skin.staff) {
+      const staff = attachStaff(root, model, cfg.skin.staff);
+      if (staff) {
+        e.staff = staff;
+        e.mats.push(...staff.userData.mats);
+        e.baseEmissive.push(...staff.userData.mats.map((m) => (m.emissive ? m.emissive.clone() : null)));
       }
     }
 
@@ -471,7 +730,9 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
   //   quiet 只扣血不播命中碎屑（连锁闪电等批量伤害用）
   function takeDamage(e, amount, crit = false, opts = {}) {
     if (e.state === 'dead' || e.state === 'spawn') return false;
-    e.hp -= amount;
+    // 主祭光环的减伤：站在圈里的小兵更耐打（乘法，不吃掉暴击的观感）
+    const dealt = e.auraArmor > 0 ? amount * (1 - e.auraArmor) : amount;
+    e.hp -= dealt;
     if (!opts.dot) e.flashT = 0.1;
     e.bar.spr.visible = true;
     e.bar.draw(e.hp / e.maxHp, e.hp, e.maxHp);
@@ -481,7 +742,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
       }
       // 伤害统一保留 1 位小数（用户要求：所有数值都保留小数）
       if (!opts.noText) {
-        fx.text({ x: e.pos.x, z: e.pos.z }, Math.max(0.1, amount).toFixed(1), {
+        fx.text({ x: e.pos.x, z: e.pos.z }, Math.max(0.1, dealt).toFixed(1), {
           color: opts.dot ? '#9dff6a' : crit ? '#ffe066' : '#eafff4',
           crit: crit && !opts.dot,
           y: e.cfg.height * 0.95,
@@ -610,30 +871,43 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
   //   rim   圈边亮环（呼吸）
   //   tick  里面的细环从大缩到小 —— 缩到底就是箭落地
   // ============================================================
-  const zones = [];      // 正在倒计时的红圈
+  const zones = [];      // 正在倒计时的地面圈（弓手红圈 / 骨咒师紫阵 / 火焚灼地）
   const arrows = [];     // 正在下落的箭（纯视觉；伤害在落地那一刻结算）
-  let zoneGeo = null, zoneRimGeo = null, zoneTickGeo = null, zoneMats = null;
+  let zoneGeo = null, zoneRimGeo = null, zoneTickGeo = null;
   let arrowGeo = null, arrowMat = null;
+
+  // 三种圈用三套配色：红=箭、紫=咒、橙=火。玩家看颜色就知道该防什么。
+  const ZONE_PALETTES = {
+    arrow: { disc: 0xff3a28, rim: 0xff5c46, tick: 0xffb0a0 },
+    hex:   { disc: 0x5a2bb8, rim: 0xa96bff, tick: 0xd9c4ff },
+    burn:  { disc: 0xc23a12, rim: 0xff8a3c, tick: 0xffd08a },
+  };
+  const zoneMatSets = {};
+  function zoneMatsFor(key) {
+    if (zoneMatSets[key]) return zoneMatSets[key];
+    const p = ZONE_PALETTES[key] || ZONE_PALETTES.arrow;
+    zoneMatSets[key] = {
+      disc: new THREE.MeshBasicMaterial({
+        color: p.disc, transparent: true, opacity: 0.17,
+        depthWrite: false, side: THREE.DoubleSide,
+      }),
+      rim: new THREE.MeshBasicMaterial({
+        color: p.rim, transparent: true, opacity: 0.85,
+        depthWrite: false, side: THREE.DoubleSide,
+      }),
+      tick: new THREE.MeshBasicMaterial({
+        color: p.tick, transparent: true, opacity: 0.8,
+        depthWrite: false, side: THREE.DoubleSide,
+      }),
+    };
+    return zoneMatSets[key];
+  }
 
   function zoneAssets() {
     if (zoneGeo) return;
     zoneGeo = new THREE.CircleGeometry(1, 48).rotateX(-Math.PI / 2);
     zoneRimGeo = new THREE.RingGeometry(0.93, 1, 56).rotateX(-Math.PI / 2);
     zoneTickGeo = new THREE.RingGeometry(0.9, 1, 48).rotateX(-Math.PI / 2);
-    zoneMats = {
-      disc: new THREE.MeshBasicMaterial({
-        color: 0xff3a28, transparent: true, opacity: 0.17,
-        depthWrite: false, side: THREE.DoubleSide,
-      }),
-      rim: new THREE.MeshBasicMaterial({
-        color: 0xff5c46, transparent: true, opacity: 0.85,
-        depthWrite: false, side: THREE.DoubleSide,
-      }),
-      tick: new THREE.MeshBasicMaterial({
-        color: 0xffb0a0, transparent: true, opacity: 0.8,
-        depthWrite: false, side: THREE.DoubleSide,
-      }),
-    };
     // 箭：一根细杆 + 箭头，躺着朝下，落地时插在地上
     arrowGeo = new THREE.CylinderGeometry(0.022, 0.022, 0.62, 5);
     arrowGeo.translate(0, -0.31, 0);           // 原点在箭尾，往下长
@@ -643,59 +917,140 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
     });
   }
 
-  // 在主角当前位置钉一个红圈
-  function spawnVolley(e, ctx) {
+  // 在主角当前位置钉一个圈（三种法术共用这套外观：填充 + 呼吸边 + 收缩环）
+  function makeZone(kind, e, ctx, r, extra = {}) {
     zoneAssets();
-    const cfg = e.cfg.volley;
+    const mats = zoneMatsFor(kind);
     const x = ctx.playerPos.x;
     const z = ctx.playerPos.z;
-    const r = cfg.radius;
 
-    const disc = new THREE.Mesh(zoneGeo, zoneMats.disc);
+    const disc = new THREE.Mesh(zoneGeo, mats.disc);
     disc.position.set(x, 0.052, z);
     disc.scale.setScalar(r);
     disc.frustumCulled = false;
-    const rim = new THREE.Mesh(zoneRimGeo, zoneMats.rim);
+    const rim = new THREE.Mesh(zoneRimGeo, mats.rim);
     rim.position.set(x, 0.058, z);
     rim.scale.setScalar(r);
     rim.frustumCulled = false;
-    const tick = new THREE.Mesh(zoneTickGeo, zoneMats.tick);
+    const tick = new THREE.Mesh(zoneTickGeo, mats.tick);
     tick.position.set(x, 0.064, z);
     tick.scale.setScalar(r);
     tick.frustumCulled = false;
     scene.add(disc, rim, tick);
 
-    zones.push({
-      x, z, r,
+    const v = {
+      kind, x, z, r,
       dmg: e.damage,
       t: e.cfg.windup,       // 还剩多少秒落地
       total: e.cfg.windup,
-      disc, rim, tick,
+      disc, rim, tick, mats,
+      phase: 'warn',
+      ...extra,
+    };
+    zones.push(v);
+    if (fx) fx.ring({ x, z }, { from: r * 0.55, to: r, color: extra.color ?? 0xff5c46, life: 0.3, opacity: 0.7, y: 0.06 });
+    return v;
+  }
+
+  // 弓手：在主角当前位置钉一个红圈
+  function spawnVolley(e, ctx) {
+    const cfg = e.cfg.volley;
+    makeZone('arrow', e, ctx, cfg.radius, {
       color: cfg.color,
       arrows: cfg.arrows ?? 7,
       fall: cfg.fall ?? 0.3,
       y0: cfg.y ?? 6.2,
     });
-
-    // 起手一声闷响式的提示：圈边缘往外扫一圈白光（不依赖音效也能注意到）
-    if (fx) fx.ring({ x, z }, { from: r * 0.55, to: r, color: cfg.color, life: 0.3, opacity: 0.7, y: 0.06 });
   }
 
-  function updateZones(dt) {
+  // 巫师：紫阵（落地一次性）或灼地（落地后持续燃烧）
+  // 两者都是「圈先出现 1~1.5 秒，再落地」，区别是落地之后还留不留在场上。
+  function spawnSpell(e, ctx) {
+    const sp = e.cfg.spell;
+    makeZone(sp.kind, e, ctx, sp.radius, {
+      color: sp.color,
+      debuff: e.cfg.debuff || null,
+      burnLeft: sp.burnTime || 0,
+      burnTick: sp.tick || 0.75,
+      burnT: 0,
+      burnTicker: 0,
+    });
+  }
+
+  function updateZones(dt, ctx) {
     for (let i = zones.length - 1; i >= 0; i--) {
       const v = zones[i];
+
+      // ---- 灼地的持续阶段：先判是否站在火里，再走计时 ----
+      if (v.phase === 'burn') {
+        v.t -= dt;
+        v.burnTicker -= dt;
+        v.mats.rim.opacity = 0.5 + 0.28 * Math.sin(v.burnT * 11);
+        v.mats.disc.opacity = 0.13 + 0.06 * Math.sin(v.burnT * 7 + 1.3);
+        v.burnT += dt;
+        if (v.burnTicker <= 0) {
+          v.burnTicker += v.burnTick;
+          const d = Math.hypot(ctx.playerPos.x - v.x, ctx.playerPos.z - v.z);
+          if (d <= v.r) {
+            // 灼地单跳只算半次伤害：踩满约 4 跳，不至于一脚就死
+            ctx.hurtPlayer(Math.max(1, Math.round(v.dmg * 0.5)), null);
+            if (fx) fx.burst({ x: v.x, z: v.z }, { color: 0xff7a2a, count: 4, speed: 1.6, life: 0.3, size: 0.09, y: 0.2, up: 1.2, gravity: 5 });
+          }
+        }
+        if (v.t <= 0) {
+          scene.remove(v.disc, v.rim, v.tick);
+          zones.splice(i, 1);
+        }
+        continue;
+      }
+
+      // ---- 预警阶段：边呼吸边收缩，缩到底就是落地 ----
       v.t -= dt;
       const k = Math.max(0, Math.min(1, 1 - v.t / v.total));
-      // 呼吸 + 收紧：越接近落地，圈边越亮、里面的收缩环越小
       const pulse = 0.72 + 0.28 * Math.sin((v.total - v.t) * 12);
-      zoneMats.rim.opacity = 0.55 + 0.4 * pulse;
+      v.mats.rim.opacity = 0.55 + 0.4 * pulse;
       v.tick.scale.setScalar(Math.max(0.12, v.r * (1 - k * 0.82)));
-      zoneMats.tick.opacity = 0.5 + 0.45 * k;
+      v.mats.tick.opacity = 0.5 + 0.45 * k;
 
-      if (v.t <= 0) {
-        scene.remove(v.disc, v.rim, v.tick);
-        zones.splice(i, 1);
+      if (v.t > 0) continue;
+
+      if (v.kind === 'burn') {
+        // 落地 → 转成地上的火，留在原地继续烧
+        v.phase = 'burn';
+        v.t = v.burnLeft;
+        v.burnT = 0;
+        v.burnTicker = 0;         // 落地立刻烧一下
+        v.tick.visible = false;   // 收缩环收工
+        v.mats.disc.opacity = 0.17;
+        if (fx) {
+          fx.burst({ x: v.x, z: v.z }, { color: 0xff8a3c, count: 18, speed: 3.2, life: 0.6, size: 0.14, y: 0.25, up: 1.8, gravity: 4 });
+          fx.ring({ x: v.x, z: v.z }, { from: 0.2, to: v.r, color: 0xff8a3c, life: 0.32, opacity: 0.75, y: 0.07 });
+        }
+        continue;
+      }
+
+      scene.remove(v.disc, v.rim, v.tick);
+      zones.splice(i, 1);
+
+      const d = Math.hypot(ctx.playerPos.x - v.x, ctx.playerPos.z - v.z);
+      const inside = d <= v.r;
+
+      if (v.kind === 'arrow') {
         dropArrows(v);
+        continue;
+      }
+
+      // 紫阵：只在你没走出去的时候生效 —— 掉血 + 减速
+      if (inside) {
+        ctx.hurtPlayer(v.dmg, null);
+        if (v.debuff && ctx.cursePlayer) ctx.cursePlayer(v.debuff);
+        if (fx) {
+          fx.ring({ x: v.x, z: v.z }, { from: 0.2, to: v.r, color: 0xa96bff, life: 0.34, opacity: 0.8, y: 0.07 });
+          fx.burst({ x: v.x, z: v.z }, { color: 0xc08cff, count: 16, speed: 3.4, life: 0.55, size: 0.13, y: 0.3, up: 1.6, gravity: 4 });
+        }
+      } else if (fx) {
+        // 躲掉了也给个「咒语打空」的反馈，玩家才知道这一步走对了
+        fx.ring({ x: v.x, z: v.z }, { from: 0.2, to: v.r * 1.05, color: 0x7a5aa8, life: 0.28, opacity: 0.4, y: 0.06 });
       }
     }
   }
@@ -779,6 +1134,8 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
         : e.cfg.attackRange);
       e.ring.update(dt);
     }
+    // 主祭的气场环：一直呼吸，就是这个怪的「存在感」
+    if (e.auraRing) e.auraRing.update(dt);
 
     // 受击闪白（复制一份 emissive，闪完原样还回去）
     if (e.flashT > 0) {
@@ -849,6 +1206,76 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
       }
     }
 
+    // ---- 巫师（第二关）：三人共用一套「保持距离 + 读条」的骨架 ----
+    // 区别只在 cfg.spell 的 kind，以及有没有 cfg.aura：
+    //   hexer / pyro  有 spell → 站到射程里读条放法术
+    //   hierarch      没有 spell → 只走位，靠光环施压（不还手是它的设计，不是漏写）
+    if (e.cfg.spell || e.cfg.aura) {
+      if (e.cfg.spell && e.state === 'attack') {
+        // 读条 = 施法动画播完前摇的那一下，圈才钉到地上（圈用的是玩家**当时**的位置）
+        if (!e.hitDone && e.t >= e.cfg.windup) {
+          e.hitDone = true;
+          spawnSpell(e, ctx);
+        }
+        if (e.t >= e.cfg.attackDuration) {
+          e.state = 'chase';
+          e.t = 0;
+          e.attackCd = Math.max(0.3, (e.cfg.attackInterval - e.cfg.attackDuration) / (1 + e.auraHaste));
+          e.currentAnim = e.cfg.anim.walk;
+          e.play(e.cfg.anim.walk, { fade: 0.18 });
+        }
+        return;
+      }
+
+      if (e.cfg.spell) e.attackCd -= dt;   // 主祭不出手，冷却停着
+      const keep = e.cfg.keepDistance;
+
+      // 太近就一边后退一边念 —— 巫师不跟你贴身肉搏
+      if (dist < keep) {
+        moveToward(e, -dx, -dz, dist, dt, ctx);
+        if (e.currentAnim !== e.cfg.anim.walk) {
+          e.currentAnim = e.cfg.anim.walk;
+          e.play(e.cfg.anim.walk, { fade: 0.2 });
+        }
+        return;
+      }
+
+      // 在射程外就慢慢挪进来（速度很慢，玩家有充足时间决定要不要去切它）
+      if (e.cfg.attackRange != null && dist > e.cfg.attackRange) {
+        moveToward(e, dx, dz, dist, dt, ctx);
+        if (e.currentAnim !== e.cfg.anim.walk) {
+          e.currentAnim = e.cfg.anim.walk;
+          e.play(e.cfg.anim.walk, { fade: 0.2 });
+        }
+        return;
+      }
+
+      // 主祭：不出手，站定就是它的全部动作
+      if (!e.cfg.spell) {
+        if (e.currentAnim !== e.cfg.anim.idle) {
+          e.currentAnim = e.cfg.anim.idle;
+          e.play(e.cfg.anim.idle, { fade: 0.2 });
+        }
+        return;
+      }
+
+      if (e.attackCd <= 0) {
+        e.state = 'attack';
+        e.t = 0;
+        e.hitDone = false;
+        e.currentAnim = e.cfg.anim.cast;
+        e.play(e.cfg.anim.cast, { once: true, fade: 0.12, duration: e.cfg.attackDuration });
+        // 读条起手提示：脚下同色脉冲，和投手的蓄力环一个意思
+        if (fx) fx.ring(e.pos, { from: 0.3, to: 1.6, color: e.cfg.spell.color, life: e.cfg.windup, opacity: 0.42, y: 0.055 });
+        return;
+      }
+      if (e.currentAnim !== e.cfg.anim.idle) {
+        e.currentAnim = e.cfg.anim.idle;
+        e.play(e.cfg.anim.idle, { fade: 0.2 });
+      }
+      return;
+    }
+
     // ---- 弓手：把红圈钉在你脚下 → 1.15 秒后箭雨落地 ----
     // 和投手一样有「保持距离 / 靠近 / 站定出手」三个动作，
     // 但出手不是弹道，而是 spawnVolley() 在地面钉一个固定圈。
@@ -863,7 +1290,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
         if (e.t >= e.cfg.attackDuration) {
           e.state = 'chase';
           e.t = 0;
-          e.attackCd = Math.max(0.3, e.cfg.attackInterval - e.cfg.attackDuration);
+          e.attackCd = Math.max(0.3, (e.cfg.attackInterval - e.cfg.attackDuration) / (1 + e.auraHaste));
           e.currentAnim = e.cfg.anim.walk;
           e.play(e.cfg.anim.walk, { fade: 0.18 });
         }
@@ -917,7 +1344,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
         if (e.t >= e.cfg.attackDuration) {
           e.state = 'chase';
           e.t = 0;
-          e.attackCd = Math.max(0.2, e.cfg.attackInterval - e.cfg.attackDuration);
+          e.attackCd = Math.max(0.2, (e.cfg.attackInterval - e.cfg.attackDuration) / (1 + e.auraHaste));
           e.currentAnim = e.cfg.anim.walk;
           e.play(e.cfg.anim.walk, { fade: 0.18 });
         }
@@ -979,7 +1406,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
         if (e.t >= e.cfg.attackDuration) {
           e.state = 'chase';
           e.t = 0;
-          e.attackCd = e.cfg.attackInterval - e.cfg.attackDuration;
+          e.attackCd = (e.cfg.attackInterval - e.cfg.attackDuration) / (1 + e.auraHaste);
           e.currentAnim = e.cfg.anim.walk;
           e.play(e.cfg.anim.walk, { fade: 0.18 });
         }
@@ -1054,10 +1481,34 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
   }
 
   // ---------------- 群体更新 ----------------
+  // 主祭光环：每帧先收一遍所有存活主祭，再给每只怪算「站没站在谁的光环里」。
+  // 同屏主祭最多 2~3 个、怪 30 只，O(n×m) 完全可忽略。
+  // 主祭自己不受任何光环影响（不叠加，也不自肥）。
+  function collectAuras() {
+    const sources = [];
+    for (const e of list) {
+      if (e.cfg.aura && e.state !== 'dead' && e.state !== 'spawn') sources.push(e);
+    }
+    for (const e of list) {
+      // 巫师不吃光环（包括光环源自己）：几个法爷互相叠 buff 会滚雪球
+      if (e.cfg.aura || e.cfg.spell || !sources.length) { e.auraHaste = 0; e.auraArmor = 0; continue; }
+      let haste = 0, armor = 0;
+      for (const s of sources) {
+        if (Math.hypot(e.pos.x - s.pos.x, e.pos.z - s.pos.z) <= s.cfg.aura.radius) {
+          haste = Math.max(haste, s.cfg.aura.haste);
+          armor = Math.max(armor, s.cfg.aura.armor);
+        }
+      }
+      e.auraHaste = haste;
+      e.auraArmor = armor;
+    }
+  }
+
   function update(dt, ctx) {
+    collectAuras();
     for (const e of list) updateOne(e, dt, ctx);
     updateShots(dt, ctx);
-    updateZones(dt);
+    updateZones(dt, ctx);
     updateArrows(dt, ctx);
 
     // 分离：避免怪物叠成一个点（O(n²)，同屏最多十几只，开销可忽略）
@@ -1091,6 +1542,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
       e.bar.tex.dispose();
       e.bar.mat.dispose();
       if (e.ring) e.ring.dispose();
+      if (e.auraRing) e.auraRing.dispose();
       e.mixer.stopAllAction();
       e.mixer.uncacheRoot(e.model);
       list.splice(i, 1);
@@ -1139,6 +1591,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
       e.bar.tex.dispose();
       e.bar.mat.dispose();
       if (e.ring) e.ring.dispose();
+      if (e.auraRing) e.auraRing.dispose();
       e.mixer.stopAllAction();
       e.mixer.uncacheRoot(e.model);
     }
@@ -1165,9 +1618,16 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
     takeDamage,
     applyDot, applySlow, chainTargets,
     shotCount: () => shots.length,
-    zoneCount: () => zones.length,      // 场上正在倒计时的红圈
+    zoneCount: () => zones.length,      // 场上正在倒计时的圈（三种法术都算）
     arrowCount: () => arrows.length,    // 正在下落/插在地上的箭
     pendingCount: () => pendingHits.length,
+    // 巫师/法术的观测口（测试与 ?debug=1 用）
+    zones: () => zones.map((v) => ({
+      kind: v.kind, phase: v.phase, x: +v.x.toFixed(2), z: +v.z.toFixed(2), r: v.r,
+      t: +v.t.toFixed(2), dmg: v.dmg,
+    })),
+    auraCount: () => list.filter((e) => e.cfg.aura && e.state !== 'dead' && e.state !== 'spawn').length,
+    buffedCount: () => list.filter((e) => e.auraHaste > 0).length,
     get: (type) => ENEMY_TYPES[type],
     // 调试/测试用
     all: () => list,

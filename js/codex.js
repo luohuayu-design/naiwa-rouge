@@ -29,7 +29,32 @@ export const CODEX_TABS = [
   { id: 'events', name: '奇遇' },
 ];
 
-const NUM = (v) => (Number.isInteger(v) ? String(v) : v.toFixed(1));
+// 数值格式化。**必须容错**：霜牢主祭按设计没有 damage 字段
+// （它一次都不还手），旧写法 undefined.toFixed() 会让整个图鉴面板崩掉。
+const NUM = (v) =>
+  typeof v === 'number' && !Number.isNaN(v) ? (Number.isInteger(v) ? String(v) : v.toFixed(1)) : null;
+
+// 把有值的项拼成「生命 5 · 速度 0.9」，跳过 null，避免出现「伤害 —」这种噪音
+const statLine = (pairs) =>
+  pairs.filter(([, v]) => NUM(v) !== null).map(([k, v]) => `${k} ${NUM(v)}`).join(' · ');
+
+// 怪物数值行。没有 damage 的（霜牢主祭）显式写「不还手」，
+// 不然玩家会以为是数值漏填。
+function enemySub(cfg) {
+  const line = statLine([['生命', cfg.hp], ['伤害', cfg.damage], ['速度', cfg.speed]]);
+  return Number.isFinite(cfg.damage) ? line : `${line} · 从不还手`;
+}
+
+// 怪物一句话说明：按「它给你什么压力」分类，第二关三个巫师各有专属文案
+function enemyDesc(cfg) {
+  if (cfg.selfDestruct) return '追到脚边就自爆 —— 别让它贴太近';
+  if (cfg.contactRange != null) return '近战型，脚下的圈就是它的攻击范围';
+  if (cfg.spell && cfg.spell.kind === 'hex') return '时间压力：紫阵钉在脚下，落地掉血并减速 —— 看圈就走';
+  if (cfg.spell && cfg.spell.kind === 'burn') return '空间压力：地上留一片灼地烧几秒 —— 好位置会被一点点烧掉';
+  if (cfg.aura) return '目标选择压力：自己不还手，但给周围小怪加攻速、减伤 —— 优先点掉它';
+  if (cfg.volley) return '远程型：钉住你脚下的红圈，倒计时结束落箭';
+  return '远程型：躲在后面朝你扔东西';
+}
 
 // 每个页签产出 [{ title, sub, desc, meta, seen, count, color }]
 export function codexEntries(tab) {
@@ -39,14 +64,8 @@ export function codexEntries(tab) {
       .map(([id, cfg]) => ({
         id,
         title: cfg.name,
-        sub: `生命 ${NUM(cfg.hp)} · 伤害 ${NUM(cfg.damage)} · 速度 ${NUM(cfg.speed)}`,
-        desc: cfg.selfDestruct
-          ? '追到脚边就自爆 —— 别让它贴太近'
-          : cfg.contactRange != null
-            ? '近战型，脚下的圈就是它的攻击范围'
-            : cfg.volley
-              ? '远程型：钉住你脚下的红圈，倒计时结束落箭'
-              : '远程型：躲在后面朝你扔东西',
+        sub: enemySub(cfg),
+        desc: enemyDesc(cfg),
         meta: `击倒 ${codexCount('enemies', id)} 只`,
         seen: true,
         count: codexCount('enemies', id),

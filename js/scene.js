@@ -1,22 +1,55 @@
 // ============================================================
-// scene.js —— 深夜草地竞技场
+// scene.js —— 深夜场景（两套皮肤）
 //
-// 只负责「看起来像深夜草地」这一件事：地面、月光、雾、萤火虫、
-// 边界石圈。战斗/敌人都还没进来，所以这里没有任何逻辑，
-// 只有 buildNightScene() 和每帧的 update()。
+// 只负责「看起来像什么」这一件事：地面、月光、雾、萤火虫、边界石圈。
+// 第 20 块加了第二关的主题：同样是深夜，但换成骨塔庭院的紫雾与枯土，
+// 一进关就能感觉到「这已经不是荒草地了」。
+//
+// 两套配色集中在 THEMES 里，buildNightScene({ theme }) 建哪套，
+// 局中要换就调返回的 setTheme('crypt')（不改几何，只改颜色和贴图）。
 // ============================================================
 import * as THREE from '../lib/three.module.js';
 
-export function buildNightScene({ arenaRadius = 15 } = {}) {
+export const THEMES = {
+  // 第一关 · 荒草地：冷月光 + 青绿边圈 + 萤火虫
+  meadow: {
+    bg: 0x0b1319,
+    fog: 0x0d1f2b, fogDensity: 0.0175,
+    hemiSky: 0x4a6f96, hemiGround: 0x112218, hemiIntensity: 1.15,
+    moon: 0xc7dcff, moonIntensity: 2.95, moonBase: 2.7,
+    rim: 0x3f7f74, rimIntensity: 0.62,
+    edge: 0x7be6bd, edgeOpacity: 0.30,
+    stone: 0x35473f,
+    tuft: 0x437a56, tuftVisible: true,
+    fly: 0xe6ff9e, flyCount: 90,
+    ground: 'grass',
+  },
+  // 第二关 · 骨塔庭院：紫雾 + 枯土 + 游魂火星，边圈是咒术的紫色
+  crypt: {
+    bg: 0x110c19,
+    fog: 0x1c1230, fogDensity: 0.0152,
+    hemiSky: 0x6a4a96, hemiGround: 0x181022, hemiIntensity: 1.05,
+    moon: 0xc9b4ff, moonIntensity: 2.55, moonBase: 2.35,
+    rim: 0x7a3fa0, rimIntensity: 0.70,
+    edge: 0xa96bff, edgeOpacity: 0.34,
+    stone: 0x39324a,
+    tuft: 0x3a3050, tuftVisible: false,   // 骨塔的院子不长草
+    fly: 0xc08cff, flyCount: 72,          // 换成飘着的游魂火星
+    ground: 'crypt',
+  },
+};
+
+export function buildNightScene({ arenaRadius = 15, theme = 'meadow' } = {}) {
+  const TH = THEMES[theme] || THEMES.meadow;
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x0b1319);
-  scene.fog = new THREE.FogExp2(0x0d1f2b, 0.0175);
+  scene.background = new THREE.Color(TH.bg);
+  scene.fog = new THREE.FogExp2(TH.fog, TH.fogDensity);
 
   // ---------------- 灯光：冷月光 + 环境天光 ----------------
-  const hemi = new THREE.HemisphereLight(0x4a6f96, 0x112218, 1.15);
+  const hemi = new THREE.HemisphereLight(TH.hemiSky, TH.hemiGround, TH.hemiIntensity);
   scene.add(hemi);
 
-  const moonLight = new THREE.DirectionalLight(0xc7dcff, 2.95);
+  const moonLight = new THREE.DirectionalLight(TH.moon, TH.moonIntensity);
   moonLight.position.set(-11, 17, 9);
   moonLight.castShadow = true;
   moonLight.shadow.mapSize.set(2048, 2048);
@@ -33,16 +66,13 @@ export function buildNightScene({ arenaRadius = 15 } = {}) {
   scene.add(moonLight.target);
 
   // 一点点偏青的补光，避免背光面死黑
-  const rim = new THREE.DirectionalLight(0x3f7f74, 0.62);
+  const rim = new THREE.DirectionalLight(TH.rim, TH.rimIntensity);
   rim.position.set(9, 6, -12);
   scene.add(rim);
 
   // ---------------- 地面 ----------------
-  const grassTex = makeGrassTexture();
-  const ground = new THREE.Mesh(
-    new THREE.CircleGeometry(90, 96),
-    new THREE.MeshStandardMaterial({ map: grassTex, roughness: 1, metalness: 0 })
-  );
+  const groundMat = new THREE.MeshStandardMaterial({ map: makeGroundTexture(TH.ground), roughness: 1, metalness: 0 });
+  const ground = new THREE.Mesh(new THREE.CircleGeometry(90, 96), groundMat);
   ground.rotation.x = -Math.PI / 2;
   ground.receiveShadow = true;
   scene.add(ground);
@@ -50,7 +80,7 @@ export function buildNightScene({ arenaRadius = 15 } = {}) {
   // ---------------- 边界：发光草圈 + 石头 ----------------
   const ringGeo = new THREE.RingGeometry(arenaRadius - 0.22, arenaRadius + 0.02, 160);
   const ringMat = new THREE.MeshBasicMaterial({
-    color: 0x7be6bd, transparent: true, opacity: 0.42,
+    color: TH.edge, transparent: true, opacity: 0.42,
     side: THREE.DoubleSide, depthWrite: false,
   });
   const ring = new THREE.Mesh(ringGeo, ringMat);
@@ -60,7 +90,7 @@ export function buildNightScene({ arenaRadius = 15 } = {}) {
 
   // 石头沿边界一圈：给「走到头了」一个明确的视觉反馈
   const stoneGeo = new THREE.IcosahedronGeometry(0.45, 0);
-  const stoneMat = new THREE.MeshStandardMaterial({ color: 0x35473f, roughness: 0.95, flatShading: true });
+  const stoneMat = new THREE.MeshStandardMaterial({ color: TH.stone, roughness: 0.95, flatShading: true });
   const STONES = 26;
   const stones = new THREE.InstancedMesh(stoneGeo, stoneMat, STONES);
   stones.castShadow = true;
@@ -92,7 +122,7 @@ export function buildNightScene({ arenaRadius = 15 } = {}) {
   // ---------------- 草丛（细锥体，纯粹是地面细节） ----------------
   const tuftGeo = new THREE.ConeGeometry(0.055, 0.34, 4, 1, true);
   const tuftMat = new THREE.MeshStandardMaterial({
-    color: 0x437a56, roughness: 1, side: THREE.DoubleSide, flatShading: true,
+    color: TH.tuft, roughness: 1, side: THREE.DoubleSide, flatShading: true,
   });
   const TUFTS = 900;
   const tufts = new THREE.InstancedMesh(tuftGeo, tuftMat, TUFTS);
@@ -108,6 +138,7 @@ export function buildNightScene({ arenaRadius = 15 } = {}) {
     tufts.setMatrixAt(i, m4);
   }
   tufts.instanceMatrix.needsUpdate = true;
+  tufts.visible = TH.tuftVisible;   // 骨塔庭院不长草
   scene.add(tufts);
 
   // ---------------- 萤火虫 ----------------
@@ -125,7 +156,7 @@ export function buildNightScene({ arenaRadius = 15 } = {}) {
   const flyGeo = new THREE.BufferGeometry();
   flyGeo.setAttribute('position', new THREE.BufferAttribute(flyPos, 3));
   const flyMat = new THREE.PointsMaterial({
-    color: 0xe6ff9e, size: 0.13, transparent: true, opacity: 0.8,
+    color: TH.fly, size: 0.13, transparent: true, opacity: 0.8,
     depthWrite: false, blending: THREE.AdditiveBlending, sizeAttenuation: true,
   });
   const flies = new THREE.Points(flyGeo, flyMat);
@@ -158,6 +189,37 @@ export function buildNightScene({ arenaRadius = 15 } = {}) {
   moon.scale.setScalar(20);
   scene.add(moon);
 
+  // ---------------- 主题切换（第 20 块：一关/二关两套皮肤） ----------------
+  // 只改颜色、雾和地面贴图，不重建几何 —— 开局切一次，开销可以忽略。
+  let edgeBase = TH.edgeOpacity;
+  let moonBase = TH.moonBase;
+  const texCache = { [TH.ground]: groundMat.map };
+
+  function setTheme(name) {
+    const t = THEMES[name] || THEMES.meadow;
+    scene.background.set(t.bg);
+    scene.fog.color.set(t.fog);
+    scene.fog.density = t.fogDensity;
+    hemi.color.set(t.hemiSky);
+    hemi.groundColor.set(t.hemiGround);
+    hemi.intensity = t.hemiIntensity;
+    moonLight.color.set(t.moon);
+    moonLight.intensity = t.moonIntensity;
+    moonBase = t.moonBase;
+    rim.color.set(t.rim);
+    rim.intensity = t.rimIntensity;
+    ringMat.color.set(t.edge);
+    edgeBase = t.edgeOpacity;
+    stoneMat.color.set(t.stone);
+    tuftMat.color.set(t.tuft);
+    tufts.visible = t.tuftVisible;
+    flyMat.color.set(t.fly);
+    if (!texCache[t.ground]) texCache[t.ground] = makeGroundTexture(t.ground);
+    groundMat.map = texCache[t.ground];
+    groundMat.needsUpdate = true;
+    return name;
+  }
+
   // ---------------- 每帧动画 ----------------
   const clock = { t: 0 };
   function update(dt) {
@@ -165,7 +227,7 @@ export function buildNightScene({ arenaRadius = 15 } = {}) {
     const t = clock.t;
 
     // 边界呼吸
-    ringMat.opacity = 0.30 + Math.sin(t * 1.6) * 0.10;
+    ringMat.opacity = edgeBase + Math.sin(t * 1.6) * 0.10;
 
     // 萤火虫：慢速游走 + 呼吸
     const arr = flyGeo.attributes.position.array;
@@ -179,10 +241,81 @@ export function buildNightScene({ arenaRadius = 15 } = {}) {
     flyMat.opacity = 0.55 + Math.sin(t * 1.3) * 0.22;
 
     // 月光给个极慢的强弱变化，画面不至于死板
-    moonLight.intensity = 2.7 + Math.sin(t * 0.35) * 0.15;
+    moonLight.intensity = moonBase + Math.sin(t * 0.35) * 0.15;
   }
 
-  return { scene, update, moonLight };
+  return { scene, update, moonLight, setTheme };
+}
+
+// ------------------------------------------------------------
+// 地面贴图：按主题选一套（都平铺 16×16）
+// ------------------------------------------------------------
+function makeGroundTexture(kind) {
+  if (kind === 'crypt') return makeCryptTexture();
+  return makeGrassTexture();
+}
+
+// 骨塔庭院的枯土：灰紫石地 + 碎骨渣，一点绿色都没有。
+// 和草地贴图一样，细节做在平铺接缝里，看不出格子。
+function makeCryptTexture() {
+  const S = 512;
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = S;
+  const g = cv.getContext('2d');
+
+  g.fillStyle = '#2b2338';
+  g.fillRect(0, 0, S, S);
+
+  let seed = 424271;
+  const rnd = () => {
+    seed = (seed * 1103515245 + 12345) % 2147483648;
+    return seed / 2147483648;
+  };
+
+  // 大块明暗：被踩实的土 / 积灰的洼地
+  for (let i = 0; i < 170; i++) {
+    const x = rnd() * S, y = rnd() * S, r = 22 + rnd() * 78;
+    const rad = g.createRadialGradient(x, y, 0, x, y, r);
+    const dark = rnd() > 0.48;
+    rad.addColorStop(0, dark ? 'rgba(16,11,24,0.45)' : 'rgba(74,63,96,0.30)');
+    rad.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = rad;
+    g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+  }
+
+  // 碎石与骨渣：细小的亮点/暗点，是「枯」的关键细节
+  for (let i = 0; i < 2600; i++) {
+    const x = rnd() * S, y = rnd() * S;
+    const r = 0.7 + rnd() * 1.7;
+    const a = 0.10 + rnd() * 0.26;
+    g.fillStyle = rnd() > 0.42 ? `rgba(150,138,175,${a})` : `rgba(14,9,20,${a + 0.12})`;
+    g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+  }
+
+  // 几道干裂的缝
+  g.lineCap = 'round';
+  for (let i = 0; i < 26; i++) {
+    let x = rnd() * S, y = rnd() * S;
+    g.strokeStyle = `rgba(12,8,18,${0.18 + rnd() * 0.22})`;
+    g.lineWidth = 0.9 + rnd() * 1.2;
+    g.beginPath();
+    g.moveTo(x, y);
+    let len = 4;
+    for (let k = 0; k < 5; k++) {
+      x += (rnd() - 0.5) * 22;
+      y += (rnd() - 0.5) * 22;
+      len += 4;
+      g.lineTo(x, y);
+    }
+    g.stroke();
+  }
+
+  const tex = new THREE.CanvasTexture(cv);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(16, 16);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 8;
+  return tex;
 }
 
 // ------------------------------------------------------------

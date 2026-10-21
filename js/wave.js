@@ -1,5 +1,11 @@
 // ============================================================
-// wave.js —— 第一关：20 个回合的编排与刷怪位置
+// wave.js —— 关卡编排与刷怪位置（第一关 · 荒草地 / 第二关 · 骨塔庭院）
+//
+// 【第 20 块改造】原来的 createLevel1 把 LEVEL_1 写死在里面，加第二关就要复制
+// 一整份 200 行的回合机器。现在改成 createLevel(def, deps)：关卡只是数据，
+// 回合机器只有一份。createLevel1 保留成薄包装（老测试和旧代码不用改）。
+// LEVEL_1 的数值一个字没动 —— 加 order 表只是为了通用化刷怪顺序，
+// 顺序与段间隔和原来完全等价（见 buildSpawns 注释）。
 //
 // 关卡设计（数值都在这一个文件里，改这里就能调节奏）：
 //   第一关 · 荒草地：20 回合，小兵 + 战士 + 投手 + 弓手（两种远程），合计 273 只
@@ -39,6 +45,11 @@
 export const LEVEL_1 = {
   id: 1,
   name: '第一关 · 荒草地',
+  theme: 'meadow',         // 场景皮肤（scene.js 的 THEMES）
+  // 刷怪顺序 + 段内间隔系数（乘以本回合的 gap）：近身先来，远程后到。
+  // 与改造前硬编码的 minion→warrior→archer→bowman（1/1.6/2.0/2.2，段间 0.35s）
+  // 完全等价；数量为 0 的段会被跳过（原实现在那种情况下加了 0.35s 但后面没有怪，无影响）。
+  order: [['minion', 1], ['warrior', 1.6], ['archer', 2.0], ['bowman', 2.2]],
   spawnRadius: 13.2,       // 刷怪圆环半径
   spawnJitter: 0.5,        // 半径随机浮动
   minPlayerDistance: 7.0,  // 离主角至少这么远
@@ -74,6 +85,74 @@ export const LEVEL_1 = {
   ],
 };
 
+// ============================================================
+// 第二关 · 骨塔庭院（第 20 块）
+//
+// 和一关的区别不是「数值更高」，而是**压力的形状变了**：
+//   一关是密度逐渐堆高，玩家靠走位 + 输出就能推过去；
+//   二关场上永远站着几种「不打就难受」的巫师，逼玩家判断该先切谁。
+//
+// 三位巫师各带一件事（enemy.js 里一人一个技能，绝不叠在同一个人身上）：
+//   骨咒师 hexer   —— 读条在你脚下钉紫阵，落地掉血 + 减速。躲得掉，但连发就烦。
+//   火焚巫祝 pyro  —— 读条留一片灼地，站上去持续掉血 4 秒。不许站桩。
+//   霜牢主祭 hierarch —— 不还手，但给周围小怪加攻速 & 减伤。血最厚，站最后排。
+//
+// 登场节奏：R6 骨咒师 → R10 火焚 → R13 霜牢。每次只放一位新面孔，
+// 玩家有四五回合去适应，再混编。第 16~20 回合三种同时在场的「骨塔议会」
+// 是这一关的毕业考。
+//
+// 数值比一关狠一档：每回合 +20% 生命 / +12% 伤害（一关是 16% / 10%），
+// 第 20 回合 ×4.80 血 / ×3.28 伤害。速度成长不变（还是 +3.5%），
+// 因为二关的威胁来自技能，不该靠「追得上你」来制造压力。
+// 武器提前到第 4 回合给（一关是 5）—— 一开场就有投手，不给武器太难受。
+// ============================================================
+export const LEVEL_2 = {
+  id: 2,
+  name: '第二关 · 骨塔庭院',
+  theme: 'crypt',
+  order: [
+    ['minion', 1], ['warrior', 1.6], ['archer', 2.0], ['bowman', 2.2],
+    ['hexer', 2.6], ['pyro', 2.6], ['hierarch', 3.2],
+  ],
+  spawnRadius: 13.2,
+  spawnJitter: 0.5,
+  minPlayerDistance: 7.0,
+  minSpawnGap: 2.0,
+  gap: 2.6,
+  upgradeAfter: [1, 2, 3, 4, 5, 8, 10, 12, 15, 17, 19, 20],
+  shopAfter: [3, 6, 9, 12, 15, 18],
+  weaponAt: 4,
+  scale: { hp: 0.20, damage: 0.12, speed: 0.035 },
+  rounds: [
+    // ---- 第一幕（R1~R5）：骨塔的院子。先认路，投手提前登场 ----
+    { minion: 3,  warrior: 0, archer: 0, bowman: 0, hexer: 0, pyro: 0, hierarch: 0, gap: 0.90, tip: '骨塔的院子，草都不长' },
+    { minion: 4,  warrior: 1, archer: 0, bowman: 0, hexer: 0, pyro: 0, hierarch: 0, gap: 0.80, tip: '还是老规矩：边走边拍' },
+    { minion: 4,  warrior: 1, archer: 1, bowman: 0, hexer: 0, pyro: 0, hierarch: 0, gap: 0.80, tip: '一上来就有投手了，横着走躲骨刀' },
+    { minion: 5,  warrior: 2, archer: 1, bowman: 0, hexer: 0, pyro: 0, hierarch: 0, gap: 0.75, tip: '这一波之后，你会有新武器' },
+    { minion: 5,  warrior: 2, archer: 1, bowman: 0, hexer: 0, pyro: 0, hierarch: 0, gap: 0.70, tip: '院子深处有灯亮着 —— 有人在等你' },
+    // ---- 第二幕（R6~R10）：三位巫师依次登场 ----
+    { minion: 6,  warrior: 2, archer: 1, bowman: 0, hexer: 1, pyro: 0, hierarch: 0, gap: 0.65, tip: '戴尖帽的那个在念咒：脚下出紫圈就赶紧走' },
+    { minion: 6,  warrior: 2, archer: 2, bowman: 0, hexer: 1, pyro: 0, hierarch: 0, gap: 0.60, tip: '被它的咒打中会走不动路，别硬吃' },
+    { minion: 6,  warrior: 2, archer: 2, bowman: 1, hexer: 1, pyro: 0, hierarch: 0, gap: 0.58, tip: '骨咒师血厚，值得专门冲一趟' },
+    { minion: 7,  warrior: 3, archer: 2, bowman: 1, hexer: 1, pyro: 0, hierarch: 0, gap: 0.55, tip: '两只骨咒师了，紫圈会叠' },
+    { minion: 7,  warrior: 3, archer: 2, bowman: 1, hexer: 2, pyro: 1, hierarch: 0, gap: 0.55, tip: '新面孔：橙眼的会在地上留火，别站着不动' },
+    // ---- 第三幕（R11~R15）：混编加压，霜牢主祭登场 ----
+    { minion: 7,  warrior: 3, archer: 2, bowman: 1, hexer: 2, pyro: 1, hierarch: 0, gap: 0.50, tip: '火是留在地上的，踩上去一直掉血' },
+    { minion: 7,  warrior: 3, archer: 2, bowman: 2, hexer: 2, pyro: 1, hierarch: 0, gap: 0.50, tip: '紫圈、火地、红圈，三样一起来' },
+    { minion: 8,  warrior: 4, archer: 3, bowman: 2, hexer: 2, pyro: 1, hierarch: 1, gap: 0.48, tip: '后排戴骨冠的那个不还手，但小兵会变凶' },
+    { minion: 8,  warrior: 4, archer: 3, bowman: 2, hexer: 2, pyro: 2, hierarch: 1, gap: 0.46, tip: '先砍主祭 —— 它的光环一断，全场都软下来' },
+    { minion: 8,  warrior: 4, archer: 3, bowman: 2, hexer: 2, pyro: 2, hierarch: 1, gap: 0.45, tip: '光环里的怪打得更快，别被围住' },
+    // ---- 第四幕（R16~R20）：骨塔议会。三种巫师同场 ----
+    { minion: 8,  warrior: 4, archer: 3, bowman: 2, hexer: 3, pyro: 2, hierarch: 1, gap: 0.45, tip: '第 16 回合：骨塔议会开始点名' },
+    { minion: 9,  warrior: 5, archer: 3, bowman: 2, hexer: 3, pyro: 2, hierarch: 2, gap: 0.42, tip: '两个主祭 = 两层光环，优先点掉' },
+    { minion: 9,  warrior: 5, archer: 4, bowman: 3, hexer: 3, pyro: 2, hierarch: 2, gap: 0.40, tip: '别贪输出，脚下先留一条退路' },
+    { minion: 9,  warrior: 5, archer: 4, bowman: 3, hexer: 3, pyro: 2, hierarch: 2, gap: 0.40, tip: '还差两回合，撑住' },
+    { minion: 9,  warrior: 5, archer: 4, bowman: 3, hexer: 3, pyro: 2, hierarch: 2, gap: 0.38, tip: '最后一波：把塔里的人全拍碎' },
+  ],
+};
+
+export const LEVELS_BY_ID = { 1: LEVEL_1, 2: LEVEL_2 };
+
 // 第 roundNo 回合（从 1 开始）的怪物属性倍率
 // 难度（第 18 块）：乘在每回合的成长倍率上。普通 = 原版数值，一局一选，
 // 不进设置面板（难度是「这一局玩多狠」的选择，不是机器偏好）。
@@ -89,8 +168,10 @@ export function setDifficulty(key) {
 }
 export function getDifficulty() { return diff; }
 
-export function roundScale(roundNo) {
-  const s = LEVEL_1.scale;
+// 第 roundNo 回合的怪物属性倍率。
+// 第二关各传自己的 level（成长更陡），第一关不传 = 老行为，老测试与旧调用都不用动。
+export function roundScale(roundNo, level = LEVEL_1) {
+  const s = level.scale || LEVEL_1.scale;
   const k = Math.max(0, roundNo - 1);
   return {
     hp: (1 + s.hp * k) * diff.hp,
@@ -99,8 +180,10 @@ export function roundScale(roundNo) {
   };
 }
 
+// 关卡里出现过的怪种全部汇总（不再写死四种：第二关多了三位巫师）。
+// 怪种清单以 order 为准 —— 不能只看第 1 回合，弓手是第 12 回合才登场的。
 export function levelStats(level = LEVEL_1) {
-  const KEYS = ['minion', 'warrior', 'archer', 'bowman'];
+  const KEYS = level.order.map(([t]) => t);
   const sum = { total: 0, rounds: level.rounds.length };
   for (const k of KEYS) sum[k] = 0;
   for (const r of level.rounds) {
@@ -110,41 +193,34 @@ export function levelStats(level = LEVEL_1) {
   return sum;
 }
 
-// 把「n 只小兵 + m 只战士 + k 只投手」展开成带延迟的生成列表：
-// 小兵先到，战士晚半拍出场（给玩家先清小兵的窗口），
-// 投手最后登场（先把近身的处理完，再面对远处的冷箭）。
+// 把一回合的怪表展开成带延迟的生成列表。
+// 顺序与段间隔完全由关卡的 order 决定：
+//   近身先到 → 远程后到 → 巫师最后（先把贴脸的清掉，再面对后排的吟唱）。
+//   每段之前隔 0.35 秒，数量为 0 的段直接跳过（不白占时间）。
+// 第一关的 order 就是老代码里写死的 minion→warrior→archer→bowman（1/1.6/2.0/2.2），
+// 展开结果与改造前逐条一致。
 // mod：本回合修正（随机事件写入），数量按 mod.countScale 缩放。
-function buildSpawns(roundNo, mod = {}) {
-  const cfg = LEVEL_1.rounds[roundNo - 1];
+function buildSpawns(roundNo, mod = {}, level = LEVEL_1) {
+  const cfg = level.rounds[roundNo - 1];
   const cs = mod.countScale != null ? Math.max(0, mod.countScale) : 1;
   const n = (v) => Math.max(0, Math.round((v || 0) * cs));
   const out = [];
   let t = 0.75;
-  for (let i = 0; i < n(cfg.minion); i++) {
-    out.push({ type: 'minion', delay: t });
-    t += cfg.gap;
-  }
-  t += 0.35;
-  for (let i = 0; i < n(cfg.warrior); i++) {
-    out.push({ type: 'warrior', delay: t });
-    t += cfg.gap * 1.6;
-  }
-  t += 0.35;
-  for (let i = 0; i < n(cfg.archer); i++) {
-    out.push({ type: 'archer', delay: t });
-    t += cfg.gap * 2.0;
-  }
-  // 弓手最后登场：先把近身和弹道处理完，再面对地上的红圈
-  t += 0.35;
-  for (let i = 0; i < n(cfg.bowman); i++) {
-    out.push({ type: 'bowman', delay: t });
-    t += cfg.gap * 2.2;
+  let first = true;
+  for (const [type, gapMul] of level.order) {
+    const count = n(cfg[type]);
+    if (count <= 0) continue;
+    if (!first) t += 0.35;
+    first = false;
+    for (let i = 0; i < count; i++) {
+      out.push({ type, delay: t });
+      t += cfg.gap * gapMul;
+    }
   }
   return out;
 }
 
-export function createLevel1({ enemies, fx, getPlayerPos, onRound, onRoundClear, onVictory, onKill }) {
-  const level = LEVEL_1;
+export function createLevel(level, { enemies, fx, getPlayerPos, onRound, onRoundClear, onVictory, onKill }) {
   const recentSpawns = [];
   let roundIndex = -1;      // 0 基：0 = 第 1 回合
   let phase = 'idle';       // idle | spawning | gap | done
@@ -237,12 +313,12 @@ export function createLevel1({ enemies, fx, getPlayerPos, onRound, onRoundClear,
 
   function update(dt) {
     if (phase === 'spawning') {
-      if (spawns == null) spawns = buildSpawns(roundIndex + 1, roundMod);
+      if (spawns == null) spawns = buildSpawns(roundIndex + 1, roundMod, level);
       t += dt;
       while (spawnIdx < spawns.length && t >= spawns[spawnIdx].delay) {
         const sp = spawns[spawnIdx++];
         const at = pickSpawn();
-        const sc = roundScale(roundIndex + 1);
+        const sc = roundScale(roundIndex + 1, level);
         const e = enemies.spawn(sp.type, at, {
           hpScale: sc.hp, damageScale: sc.damage, speedScale: sc.speed,
         });
@@ -289,4 +365,13 @@ export function createLevel1({ enemies, fx, getPlayerPos, onRound, onRoundClear,
     shouldShop(roundNo) { return level.shopAfter.includes(roundNo); },
     onKill,
   };
+}
+
+// ---- 兼容包装：老代码/老测试调 createLevel1(deps) 就是第一关 ----
+export function createLevel1(deps) { return createLevel(LEVEL_1, deps); }
+export function createLevel2(deps) { return createLevel(LEVEL_2, deps); }
+
+// 按关卡号创建（主流程用这个）。未知关卡回落到第一关。
+export function createLevelById(id, deps) {
+  return createLevel(LEVELS_BY_ID[id] || LEVEL_1, deps);
 }
