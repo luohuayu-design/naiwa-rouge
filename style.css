@@ -580,19 +580,24 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
 
 /* ---------------- 背包（第 13 块） ---------------- */
 /* 背包按钮：与金币/民心同排的圆钮，有东西时亮起并显示数量 */
-.bag-btn{display:inline-flex;align-items:center;justify-content:center;gap:3px;
-  width:30px;height:30px;margin-top:10px;margin-left:6px;padding:0;
-  border-radius:999px;border:1px solid rgba(160,220,255,.26);
-  background:rgba(10,24,30,.55);font-size:14px;line-height:1;
+.bag-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;
+  width:52px;height:52px;margin-top:10px;margin-left:6px;padding:4px 0 3px;
+  border-radius:14px;border:1px solid rgba(160,220,255,.3);
+  background:linear-gradient(180deg,rgba(16,38,46,.8),rgba(8,18,24,.75));
+  font-size:14px;line-height:1;
+  box-shadow:0 4px 14px rgba(0,0,0,.45),inset 0 1px 0 rgba(180,235,255,.1);
   cursor:pointer;pointer-events:auto;-webkit-tap-highlight-color:transparent;
   transition:border-color .18s,background .18s,transform .12s}
-.bag-btn:hover{border-color:rgba(160,220,255,.5);background:rgba(14,32,40,.7)}
+.bag-btn .bg-img{width:30px;height:30px;filter:drop-shadow(0 0 5px rgba(150,235,255,.35));
+  opacity:.88;pointer-events:none}
+.bag-btn.on .bg-img{opacity:1;filter:drop-shadow(0 0 7px rgba(255,209,102,.55))}
+.bag-btn:hover{border-color:rgba(160,220,255,.55);background:rgba(14,32,40,.75)}
 .bag-btn:active{transform:scale(.92)}
 .bag-btn:focus-visible{outline:2px solid rgba(126,235,196,.6);outline-offset:2px}
-.bag-btn i{font-style:normal;font-size:10px;font-weight:700;color:#8ea6b4;
-  min-width:11px;text-align:center}
+.bag-btn i{font-style:normal;font-size:10.5px;font-weight:700;color:#8ea6b4;
+  min-width:11px;text-align:center;line-height:1}
 .bag-btn.on i{color:#ffd166}
-.bag-btn.on{border-color:rgba(255,209,102,.45)}
+.bag-btn.on{border-color:rgba(255,209,102,.5)}
 
 /* 背包面板：复用属性面板的 .ap-card 骨架，列表是可点的物品行 */
 .bag-panel{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;

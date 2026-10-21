@@ -368,10 +368,11 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
     root.add(model);
 
     // 脚下的范围环：只给「能近身伤到主角」的怪。
-    // 远程（archer/mage）暂时不画，等第二关做射程提示时再上虚线环。
+    // 远程（投手 projectile / 弓手 volley / mage castTime）不画 —— 弓手的招牌
+    // 是钉在主角脚下的那片红圈，再画个 7 格射程环整个战场都是红的（第 15 块修）。
     const hasRing = cfg.ringColor != null && (
       cfg.contactRange != null
-      || (cfg.attackRange != null && cfg.projectile == null && cfg.castTime == null)
+      || (cfg.attackRange != null && cfg.projectile == null && cfg.castTime == null && cfg.volley == null)
     );
     const ring = hasRing
       ? createRangeRing({

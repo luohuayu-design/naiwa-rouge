@@ -500,16 +500,39 @@ async function boot() {
   const AEGIS = { PERIOD: 15, DURATION: 3, STEP: 1.5, MIN_PERIOD: 10 };
   let aegisCycle = 0;          // 距离下一次护体还有多久（含护体那 3 秒）
   let aegisActive = false;
+  // 特效三件套（第 16 块加强：之前的单层淡球 0.16 透明度几乎看不见）：
+  //   金球（半透明）+ 白金线框壳（反向旋转）+ 地面脉冲金环 —— 隔着屏幕都要觉得「无敌了」
   const aegisShield = new THREE.Mesh(
-    new THREE.SphereGeometry(1.05, 20, 14),
+    new THREE.SphereGeometry(1.12, 24, 18),
     new THREE.MeshBasicMaterial({
-      color: 0xffd66e, transparent: true, opacity: 0.16,
+      color: 0xffd66e, transparent: true, opacity: 0.28,
       depthWrite: false, blending: THREE.AdditiveBlending,
     })
   );
-  aegisShield.position.y = 0.75;
-  aegisShield.visible = false;
-  scene.add(aegisShield);
+  const aegisWire = new THREE.Mesh(
+    new THREE.IcosahedronGeometry(1.22, 1),
+    new THREE.MeshBasicMaterial({
+      color: 0xffe9a8, transparent: true, opacity: 0.5, wireframe: true,
+      depthWrite: false, blending: THREE.AdditiveBlending,
+    })
+  );
+  const aegisGround = new THREE.Mesh(
+    new THREE.RingGeometry(0.82, 1, 48).rotateX(-Math.PI / 2),
+    new THREE.MeshBasicMaterial({
+      color: 0xffc94d, transparent: true, opacity: 0.55,
+      depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
+    })
+  );
+  aegisShield.position.y = 0.78;
+  aegisWire.position.y = 0.78;
+  aegisGround.position.y = 0.05;
+  aegisShield.visible = aegisWire.visible = aegisGround.visible = false;
+  scene.add(aegisShield, aegisWire, aegisGround);
+  function aegisVis(v) {
+    aegisShield.visible = v;
+    aegisWire.visible = v;
+    aegisGround.visible = v;
+  }
 
   function aegisPeriod() {
     const lv = Math.ceil(stats.get('aegis'));
@@ -517,29 +540,41 @@ async function boot() {
     return Math.max(AEGIS.MIN_PERIOD, AEGIS.PERIOD - (lv - 1) * AEGIS.STEP);
   }
   function aegisReset() {
-    aegisCycle = aegisPeriod();
+    // 注意：激活窗口的判定是「cycle ≤ DURATION」，所以这里必须从 DURATION 起算，
+    // 不能设成整个周期 —— 设成周期的话下一帧就判定为「不激活」，罩子亮一下就没（踩过）
+    aegisCycle = AEGIS.DURATION;
     aegisActive = true;        // 拿到的那一瞬间先罩 3 秒（奖励感）
-    aegisShield.visible = true;
+    aegisVis(true);
   }
 
   function aegisUpdate(dt) {
     const lv = stats.get('aegis');
-    if (lv < 1) { aegisActive = false; aegisShield.visible = false; return; }
+    if (lv < 1) { aegisActive = false; aegisVis(false); return; }
     if (aegisCycle <= 0) aegisCycle = aegisPeriod();
     aegisCycle -= dt;
     const active = aegisCycle <= AEGIS.DURATION;
     if (active && !aegisActive) {
       aegisActive = true;
-      aegisShield.visible = true;
+      aegisVis(true);
       audio.sfx('uiSwitch');
-      fx.ring(pos, { from: 0.5, to: 1.6, color: 0xffd66e, life: 0.5, opacity: 0.8, y: 0.1 });
+      fx.ring(pos, { from: 0.5, to: 1.9, color: 0xffd66e, life: 0.5, opacity: 0.9, y: 0.1 });
+      fx.ring(pos, { from: 0.3, to: 1.4, color: 0xffe9a8, life: 0.4, opacity: 0.8, y: 0.12 });
     } else if (!active && aegisActive) {
       aegisActive = false;
-      aegisShield.visible = false;
+      aegisVis(false);
     }
     if (aegisActive) {
-      aegisShield.position.set(pos.x, 0.75 + Math.sin(elapsed * 4) * 0.05, pos.z);
+      // 球体浮沉 + 线框反向旋转 + 地面金环呼吸放大，三层一起动才够醒目
+      const bob = Math.sin(elapsed * 4) * 0.05;
+      aegisShield.position.set(pos.x, 0.78 + bob, pos.z);
       aegisShield.rotation.y = elapsed * 1.2;
+      aegisWire.position.set(pos.x, 0.78 + bob, pos.z);
+      aegisWire.rotation.y = -elapsed * 0.9;
+      aegisWire.rotation.x = elapsed * 0.45;
+      aegisGround.position.set(pos.x, 0.05, pos.z);
+      const pulse = 1.18 + Math.sin(elapsed * 5.5) * 0.16;
+      aegisGround.scale.setScalar(pulse);
+      aegisGround.material.opacity = 0.4 + 0.25 * (0.5 + 0.5 * Math.sin(elapsed * 5.5));
     }
   }
 
@@ -605,6 +640,7 @@ async function boot() {
   function setBag(open) {
     bagOpen = open;
     if (open) {
+      tutBagUsed = true;         // 新手教程第 4 步：开过一次背包就算见过
       renderBag();
       bagPanel.classList.add('on');
       bagPanel.setAttribute('aria-hidden', 'false');
@@ -647,6 +683,7 @@ async function boot() {
   let tutStep = 0;
   let tutMoved = 0;
   let tutDummy = null;
+  let tutBagUsed = false;      // 背包那一步：打开过背包（再用「关掉」判过关）
   const TUT_STEPS = [
     {
       title: '先动起来',
@@ -658,7 +695,11 @@ async function boot() {
     },
     {
       title: '随时查看属性',
-      text: '点左上角的血条可以暂停游戏、查看全部属性。打开再关掉，教程就结束了。',
+      text: '点左上角的血条可以暂停游戏、查看全部属性（主角和环剑分两页）。打开再关掉。',
+    },
+    {
+      title: '背包与按钮',
+      text: '右下角的背包按钮（或按 B）随时能打开：商店买的药水存在这里，危急时点一下就用。旁边的喇叭是声音开关。打开背包再关掉，教程就结束了。',
     },
   ];
 
@@ -671,8 +712,10 @@ async function boot() {
   function hurtPlayer(amount) {
     if (gameState !== 'playing' || iframe > 0) return;
     if (aegisActive) {
-      // 罩子挡下这一下：金环提示，不掉血、不触发无敌帧（罩子本来就免伤）
-      fx.ring(pos, { from: 0.7, to: 1.3, color: 0xffd66e, life: 0.28, opacity: 0.7, y: 0.35 });
+      // 罩子挡下这一下：金环炸开提示，不掉血、不触发无敌帧（罩子本来就免伤）
+      fx.ring(pos, { from: 0.7, to: 1.7, color: 0xffd66e, life: 0.34, opacity: 0.85, y: 0.35 });
+      fx.ring(pos, { from: 0.5, to: 1.2, color: 0xffe9a8, life: 0.26, opacity: 0.7, y: 0.5 });
+      audio.sfx('uiSwitch');
       return;
     }
     stats.damage(amount);
@@ -978,6 +1021,7 @@ async function boot() {
     tutStep = 0;
     tutMoved = 0;
     tutDummy = null;
+    tutBagUsed = false;
     hintEl.classList.add('off');
     tutCard.classList.add('on');
     tutCard.setAttribute('aria-hidden', 'false');
@@ -1032,7 +1076,7 @@ async function boot() {
     startPlay();
   }
 
-  // 教程每帧推进：移动距离 / 靶子是否被拍死 / 属性面板是否开过又关掉
+  // 教程每帧推进：移动距离 / 靶子是否被拍死 / 属性面板是否开过又关掉 / 背包是否开过又关掉
   function tutorialTick(moved) {
     if (tutStep === 0) {
       tutMoved += moved;
@@ -1042,6 +1086,8 @@ async function boot() {
       if (tutDummy && tutDummy.state === 'dead') tutNext();
     } else if (tutStep === 2) {
       if (panelOpenedOnce && !panelOpen) tutNext();
+    } else if (tutStep === 3) {
+      if (tutBagUsed && !bagOpen) tutNext();
     }
   }
 
@@ -1245,9 +1291,9 @@ async function boot() {
     // 数字键 = 技能快捷键（1 对应第一格，往后类推；武器教程里也能按）
     const sk = skillForKey(e.key);
     if (sk && (gameState === 'playing' || gameState === 'wtut')) pressSkill(sk);
-    // B = 背包（第 13 块）：作战中随时开/关
+    // B = 背包（第 13 块）：作战中随时开/关（新手教程里也允许，第 4 步要教它）
     if (e.key === 'b' || e.key === 'B') {
-      if (gameState === 'playing') setBag(!bagOpen);
+      if (gameState === 'playing' || gameState === 'tutorial') setBag(!bagOpen);
     }
   }, { once: false });
 
@@ -2308,6 +2354,17 @@ async function boot() {
         get period() { return aegisPeriod(); },
         reset: () => aegisReset(),
         add: () => { stats.addMod({ stat: 'aegis', flat: 1, src: 'dbg:aegis' }); aegisReset(); },
+        // 特效三件套的可见性与参数（第 16 块：要「很明显」）
+        get fx() {
+          return {
+            sphere: aegisShield.visible, wire: aegisWire.visible, ground: aegisGround.visible,
+            sphereOpacity: aegisShield.material.opacity,
+            wireOpacity: aegisWire.material.opacity,
+            groundScale: +aegisGround.scale.x.toFixed(3),
+            groundX: +aegisGround.position.x.toFixed(2),
+            groundZ: +aegisGround.position.z.toFixed(2),
+          };
+        },
       },
       bag: {
         get counts() { return { ...bag }; },
