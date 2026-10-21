@@ -515,6 +515,23 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
 .wc-btn:active{transform:scale(.985)}
 .wc-foot{margin-top:10px;font-size:10px;letter-spacing:.06em;color:rgba(140,190,180,.42)}
 
+/* ---------------- 武器用法教程（获得新武器自动弹，可跳过） ----------------
+   复用新手教程的底部卡片骨架（不挡操作），换成青蓝配色与剑的主题。 */
+.wt-card{z-index:15;border-color:rgba(150,235,255,.3);
+  background:linear-gradient(180deg,rgba(13,34,40,.97),rgba(5,14,18,.98))}
+.wt-card .tc-step{color:rgba(160,225,235,.72)}
+.wt-card .tc-bar{background:rgba(150,235,255,.14)}
+.wt-card .tc-bar i{background:linear-gradient(90deg,#4fc2d6,#9ce9f5);
+  box-shadow:0 0 10px rgba(120,225,245,.55)}
+.wt-name{margin-top:6px;font-size:10.5px;font-weight:800;letter-spacing:.24em;color:#8fe4f2}
+.wt-next{margin-top:9px;width:100%;padding:9px 0;border-radius:10px;font:inherit;
+  font-size:12px;font-weight:700;letter-spacing:.12em;color:#04211f;cursor:pointer;
+  border:0;background:linear-gradient(180deg,#9ff0e2,#5fd8c0);
+  box-shadow:0 6px 16px rgba(80,220,190,.25);pointer-events:auto;
+  -webkit-tap-highlight-color:transparent;display:none;transition:transform .1s ease}
+.wt-next.on{display:block}
+.wt-next:active{transform:scale(.985)}
+
 /* ============================================================
    金币 / 随机事件卡 / 商店
    ============================================================ */

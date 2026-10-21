@@ -207,6 +207,15 @@ async function boot() {
   const tcText = document.getElementById('tcText');
   const tcBar = document.getElementById('tcBar');
   const wcard = document.getElementById('weaponCard');
+  // 武器用法教程（第 15 块）：获得新武器时自动弹，可跳过
+  const wtEl = document.getElementById('weaponTut');
+  const wtStepEl = document.getElementById('wtStep');
+  const wtNameEl = document.getElementById('wtName');
+  const wtTitleEl = document.getElementById('wtTitle');
+  const wtTextEl = document.getElementById('wtText');
+  const wtBarEl = document.getElementById('wtBar');
+  const wtNextBtn = document.getElementById('wtNext');
+  const wtSkipBtn = document.getElementById('wtSkip');
   let hintDone = false;
 
   // 关键属性（生命走血条，这里放三个最常看的）
@@ -894,7 +903,8 @@ async function boot() {
 
   // 传给技能的条件/上下文（每帧现拼，技能自己决定看不看）
   function skillCtx() {
-    return { playing: gameState === 'playing', weapon, playerPos: pos, stats, coins };
+    // 'wtut'（武器教程）也算能操作：教程最后一步要玩家真的放一次万剑齐发
+    return { playing: gameState === 'playing' || gameState === 'wtut', weapon, playerPos: pos, stats, coins };
   }
 
   function renderSkill() {
@@ -1232,9 +1242,9 @@ async function boot() {
       renderMute();
       return;
     }
-    // 数字键 = 技能快捷键（1 对应第一格，往后类推）
+    // 数字键 = 技能快捷键（1 对应第一格，往后类推；武器教程里也能按）
     const sk = skillForKey(e.key);
-    if (sk && gameState === 'playing') pressSkill(sk);
+    if (sk && (gameState === 'playing' || gameState === 'wtut')) pressSkill(sk);
     // B = 背包（第 13 块）：作战中随时开/关
     if (e.key === 'b' || e.key === 'B') {
       if (gameState === 'playing') setBag(!bagOpen);
@@ -1271,6 +1281,169 @@ async function boot() {
     if (next) next();
   }
   document.getElementById('wcOk').addEventListener('click', closeWeaponCard);
+
+  // ---------------- 武器用法教程（第 15 块） ----------------
+  // 需求：拿到**新武器**时自动开一个小教程，教这件武器怎么用，随时能跳过。
+  // 规则：
+  //   · 每种武器只教一次（localStorage 记住，「跳过」也算知道了，不再打扰）；
+  //   · 卡片贴在底部、不挡操作 —— 环剑最后一步要玩家**真的按一次万剑齐发**才算学会；
+  //   · 教程期间 gameState='wtut'：能走、能放技能，但回合波次不推进（和面板一样）。
+  //   · 表驱动：加新武器只要往 WEAPON_TUT 里补一条（key = SWORD_KINDS 的 kind）。
+  const WTUT_KEY = 'naiwa_rouge_wtut_v1';
+  const WEAPON_TUT = {
+    ring: {
+      name: '环 剑',
+      steps: [
+        { title: '剑会自己转', text: '三把剑绕着你转圈，碰到怪就自动砍一刀 —— 攻击不用按键，走位就够了。' },
+        { title: '剑会补回来', text: '砍中怪的那把剑会消失，之后每 3 秒补回一把。剑买得越多，环就越密。' },
+        {
+          title: '技能 · 万剑齐发',
+          text: '按数字 1，或点右下角的剑形按钮：把环上的剑一次全射出去（每两把之间再补一把）。现在就试一次。',
+          wait: 'fire',
+        },
+      ],
+    },
+    iron: {
+      name: '铁 剑',
+      steps: [{ title: '剑阵又厚一把', text: '铁剑没有附加效果，图的就是稳定：环上多一把，砍中怪的机会就多一次。' }],
+    },
+    poison: {
+      name: '毒 剑',
+      steps: [{ title: '命中就上毒', text: '毒是按秒跳血的，砍得越勤、毒得越久。打血厚的战士先给它上毒再绕圈走。' }],
+    },
+    frost: {
+      name: '冰 剑',
+      steps: [{ title: '命中就变慢', text: '冰缓让怪跑不动 —— 投手的骨刀、战士的贴脸都追不上你。被围住时先蹭一刀再撤。' }],
+    },
+    thunder: {
+      name: '雷 剑',
+      steps: [{ title: '命中会连锁', text: '砍中一只，闪电顺带弹到旁边一只。怪越密越划算，只剩一只时别指望它。' }],
+    },
+    leech: {
+      name: '血 剑',
+      steps: [{ title: '命中就回血', text: '按剑伤的一部分回血，和吸血属性叠乘。残血时别退，往怪身上蹭反而更安全。' }],
+    },
+  };
+
+  let wtOpen = false;
+  let wtKind = null;
+  let wtStepIdx = 0;
+  const wtQueue = [];
+  let wtNext = null;          // 教程全部结束后接续回合链（事件/三选一/商店）
+  let wtFired = false;
+
+  function wtSeen() {
+    try {
+      const a = JSON.parse(localStorage.getItem(WTUT_KEY) || '[]');
+      return Array.isArray(a) ? a : [];
+    } catch { return []; }
+  }
+
+  function wtMarkSeen(kind) {
+    const list = wtSeen();
+    if (list.includes(kind)) return;
+    list.push(kind);
+    try { localStorage.setItem(WTUT_KEY, JSON.stringify(list)); } catch { /* 隐私模式下忽略 */ }
+  }
+
+  // 面板/结算/标题页开着时先排队，等它们关掉再弹（别叠在商店上面）
+  function wtBlocked() {
+    return gameState === 'shop' || gameState === 'upgrade' || gameState === 'event'
+      || gameState === 'weapon' || gameState === 'title' || gameState === 'over';
+  }
+
+  // 获得武器时调用：没教过的才排队；教过就直接接续 next（回合链不能断）
+  function queueWeaponTut(kind, next) {
+    if (next) wtNext = next;
+    if (WEAPON_TUT[kind] && !wtSeen().includes(kind)) {
+      wtQueue.push(kind);
+      wtPump();
+    } else {
+      wtFlush();
+    }
+  }
+
+  function wtPump() {
+    if (wtOpen || wtQueue.length === 0 || wtBlocked()) return;
+    wtShow(wtQueue.shift());
+  }
+
+  function wtFlush() {
+    if (wtOpen || wtQueue.length > 0) return;
+    const cb = wtNext;
+    wtNext = null;
+    if (cb) cb();
+  }
+
+  function wtShow(kind) {
+    wtOpen = true;
+    wtKind = kind;
+    wtStepIdx = 0;
+    wtFired = false;
+    gameState = 'wtut';            // 能走能放技能，但 level.update 不跑（波次不动）
+    input.joystick.release();
+    vel.set(0, 0, 0);
+    wtEl.classList.add('on');
+    wtEl.setAttribute('aria-hidden', 'false');
+    audio.sfx('card');
+    wtRender();
+  }
+
+  function wtRender() {
+    const t = WEAPON_TUT[wtKind];
+    const s = t.steps[wtStepIdx];
+    wtStepEl.textContent = `武器教程 ${wtStepIdx + 1} / ${t.steps.length}`;
+    wtNameEl.textContent = t.name;
+    wtTitleEl.textContent = s.title;
+    wtTextEl.textContent = s.text;
+    wtBarEl.style.width = ((wtStepIdx / t.steps.length) * 100).toFixed(1) + '%';
+    wtNextBtn.classList.toggle('on', !s.wait);
+    wtNextBtn.textContent = wtStepIdx + 1 >= t.steps.length ? '知道了' : '下一步';
+  }
+
+  function wtAdvance() {
+    const t = WEAPON_TUT[wtKind];
+    wtStepIdx++;
+    if (wtStepIdx >= t.steps.length) { wtFinish(); return; }
+    wtRender();
+  }
+
+  // 学完 / 跳过都记成「已教过」，同一种武器不再打扰
+  function wtFinish() {
+    if (!wtOpen) return;
+    wtMarkSeen(wtKind);
+    wtOpen = false;
+    wtKind = null;
+    wtEl.classList.remove('on');
+    wtEl.setAttribute('aria-hidden', 'true');
+    if (wtQueue.length > 0) { wtPump(); return; }
+    gameState = 'playing';
+    wtFlush();
+  }
+
+  // 结算/重开时硬收（不留排队，别让教程盖在结算面板上）
+  function wtAbort() {
+    wtQueue.length = 0;
+    wtNext = null;
+    wtOpen = false;
+    wtKind = null;
+    wtEl.classList.remove('on');
+    wtEl.setAttribute('aria-hidden', 'true');
+  }
+
+  wtNextBtn.addEventListener('click', () => wtAdvance());
+  wtSkipBtn.addEventListener('click', () => wtFinish());
+
+  // 每帧看万剑齐发有没有真的放出去（教程最后一步的过关条件）
+  function wtTick() {
+    if (!wtOpen) return;
+    const t = WEAPON_TUT[wtKind];
+    const s = t && t.steps[wtStepIdx];
+    if (s && s.wait === 'fire' && !wtFired && weapon.flyingCount > 0) {
+      wtFired = true;
+      wtAdvance();
+    }
+  }
 
   // ============================================================
   // 夜行奇遇（第 7 块）：**回合结束**弹卡，选择作用于**下一回合**
@@ -1637,6 +1810,7 @@ async function boot() {
     const next = shopAfterCb;
     shopAfterCb = null;
     if (next) next();
+    wtPump();                  // 店里买了新种类剑 → 出来再教（不叠在货架上面）
   }
   document.getElementById('shClose').addEventListener('click', closeShop);
   shopEl.addEventListener('click', (e) => { if (e.target === shopEl) closeShop(); });
@@ -1739,9 +1913,12 @@ async function boot() {
       if (item.stat === 'aegis' && !aegisActive && aegisCycle <= 0) aegisReset();
       showToast(item.name, '永久生效 · ' + item.desc);
     } else if (item.type === 'sword') {
+      const firstOfKind = !weapon.kindCounts()[item.kind];   // 这个种类第一次上环
       weapon.addSword(item.kind);
       showToast(`${SWORD_KINDS[item.kind].name} 入列`, `环上现在有 ${weapon.count} 把剑在转`);
       renderSkill();
+      // 新种类剑：离店后自动弹一次用法教程（可跳过）
+      if (firstOfKind) queueWeaponTut(item.kind, null);
     } else if (item.type === 'turret') {
       const t = turrets.spawn(pos);
       showToast(item.name, t ? `已立起（场上 ${turrets.count()}/${TURRET.MAX_COUNT} 台）· 本局一直在` : '放不下了');
@@ -1800,13 +1977,19 @@ async function boot() {
     };
 
     // 武器卡排在最前：拿到环剑之后抽到的事件才可能出现「夜风顺了」
+    // 卡片关掉 → 武器教程（只教第一次）→ 再接事件
     if (roundNo >= LEVEL_1.weaponAt && !weapon.granted) {
-      weapon.grant();
-      renderSkill();
-      showWeaponCard(runEvent);
+      grantRingThen(runEvent);
       return;
     }
     runEvent();
+  }
+
+  // 第一次拿到环剑：武器卡 → 用法教程 → 接续回合链
+  function grantRingThen(next) {
+    weapon.grant();
+    renderSkill();
+    showWeaponCard(() => queueWeaponTut('ring', next));
   }
 
 
@@ -1832,6 +2015,7 @@ async function boot() {
     input.joystick.release();
     vel.set(0, 0, 0);
     setBag(false);                  // 背包开着就收掉
+    wtAbort();                      // 武器教程也收掉（别盖在结算上）
     playerRing.setVisible(false);   // 倒下/通关后不再提示攻击范围
     weapon.setVisible(false);       // 环剑也一并收起
     gold.setVisible(false);         // 地上的金币也收掉
@@ -1956,6 +2140,24 @@ async function boot() {
         next: () => tutNext(),
         skip: () => endTutorial(),
         start: () => startTutorial(),
+      },
+      // 武器用法教程（第 15 块）：测试用
+      weaponTut: {
+        get open() { return wtOpen; },
+        get kind() { return wtKind; },
+        get step() { return wtStepIdx; },
+        get total() { return wtKind && WEAPON_TUT[wtKind] ? WEAPON_TUT[wtKind].steps.length : 0; },
+        get queue() { return wtQueue.slice(); },
+        get title() { return wtTitleEl.textContent; },
+        get visible() { return wtEl.classList.contains('on'); },
+        get nextShown() { return wtNextBtn.classList.contains('on'); },
+        seen: () => wtSeen(),
+        show: (kind) => { queueWeaponTut(kind, null); },
+        // 走真实链路：武器卡 → 教程（测第 5 回合的完整顺序）
+        grantRing: () => grantRingThen(null),
+        next: () => wtAdvance(),
+        skip: () => wtFinish(),
+        reset: () => { try { localStorage.removeItem(WTUT_KEY); } catch { /* 忽略 */ } },
       },
       hurt: (n) => hurtPlayer(n),
       win: () => endGame(true),
@@ -2151,9 +2353,10 @@ async function boot() {
     let speed01 = 0;
     const prevX = pos.x, prevZ = pos.z;
 
-    // 教程也算「在游戏里」：能移动、能打怪，只是不推进回合波次
+    // 教程/武器教程也算「在游戏里」：能移动、能打怪，只是不推进回合波次
     // 背包打开时同样冻结（第 13 块：随时能开，开就是暂停）
-    const inGame = (gameState === 'playing' || gameState === 'tutorial') && !panelOpen && !bagOpen;
+    const inGame = (gameState === 'playing' || gameState === 'tutorial' || gameState === 'wtut')
+      && !panelOpen && !bagOpen;
     if (inGame) {
       elapsed += dt;
 
@@ -2213,6 +2416,7 @@ async function boot() {
       }
       if (iframe > 0) iframe -= dt;
       if (gameState === 'tutorial') tutorialTick(Math.hypot(pos.x - prevX, pos.z - prevZ));
+      if (gameState === 'wtut') wtTick();
     } else if (gameState === 'over') {
       // 结算后：失败就慢慢侧倒，胜利保持站姿待机
       deadT += dt;
@@ -2226,6 +2430,9 @@ async function boot() {
       // 标题页 / 三选一 / 武器卡 / 属性面板：世界全冻结，只留待机呼吸
       frog.update(dt, 0);
     }
+
+    // 排着队的武器教程：等面板/结算都关掉、回到可操作状态再弹
+    if (wtQueue.length > 0 && gameState === 'playing') wtPump();
 
     frog.root.position.x = pos.x;
     frog.root.position.z = pos.z;
