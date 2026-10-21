@@ -144,14 +144,15 @@ Three.js r160 的单摇杆幸存者肉鸽《奶蛙夜行》，纯静态站点（
 
 1. **全中文**：注释、文案、提交信息、README 都要中文。用户明确要求过。
 2. **有疑问先问，不要边猜边写**。
-3. **数值改动必须跑回归**：Node 5 套 + 相关 CDP 套（见 §6）。
-4. **属性公式**：`(base + flat) × (1 + Σpct)`；`base = 0` 的属性只能用 flat（多乘会永远 0）。
-5. **两套属性表**：主角 `STAT_DEFS`（14 项）、武器 `WEAPON_STAT_DEFS`（11 项）。剑击只读 `wstats`，不读主角。
-6. **品质是抽签权重**，不是先摇档再挑卡（公式：`(w0+gw×(回合-1)) × rarity.mul × (1+luck×系数)`）。
-7. **`handleRoundClear` 只允许存在一份**（同名 function 重复声明会静默覆盖，曾导致商店不弹）。
-8. **一件武器只教一次**：`localStorage['naiwa_rouge_wtut_v1']`；`gameState='wtut'` 时能走能放技能但不推进波次。
-9. **README.md 必须与实况同步**（用户规则）。
-10. **测试用的 `?debug=1` 默认不落存档**（要落档加 `&keepsave=1`）。
+3. **资产优先 GitHub 现成 CC0**（2026-10-21 用户定的铁律）：需要 3D 模型、贴图、UI 形状贴图时，**先上 GitHub 找现成的**（KayKit / Quaternius 等包已验证可用），不要手写程序化几何凑合；程序化外观只作加载失败的兜底。已入库：`assets/props/`（第 24 块）。
+4. **数值改动必须跑回归**：Node 5 套 + 相关 CDP 套（见 §6）。
+5. **属性公式**：`(base + flat) × (1 + Σpct)`；`base = 0` 的属性只能用 flat（多乘会永远 0）。
+6. **两套属性表**：主角 `STAT_DEFS`（14 项）、武器 `WEAPON_STAT_DEFS`（11 项）。剑击只读 `wstats`，不读主角。
+7. **品质是抽签权重**，不是先摇档再挑卡（公式：`(w0+gw×(回合-1)) × rarity.mul × (1+luck×系数)`）。
+8. **`handleRoundClear` 只允许存在一份**（同名 function 重复声明会静默覆盖，曾导致商店不弹）。
+9. **一件武器只教一次**：`localStorage['naiwa_rouge_wtut_v1']`；`gameState='wtut'` 时能走能放技能但不推进波次。
+10. **README.md 必须与实况同步**（用户规则）。
+11. **测试用的 `?debug=1` 默认不落存档**（要落档加 `&keepsave=1`）。
 
 ---
 
