@@ -59,6 +59,9 @@ const DEFAULT_PROFILE = {
   //   boon     永夜火种首次三选一前的说明看过了
   // 看过之后不再拦路，但界面上的常驻警示条一直在。
   notice: { campfire: false, boon: false },
+  // 礼包兑换（第 44 块）：{ <兑换码哈希>: 兑换时间戳 }
+  //   只存哈希，不存明文码；同一个哈希第二次进来就拦下 = 一码一次。
+  gifts: {},
 };
 
 let cache = null;
@@ -189,6 +192,26 @@ export function addBones(n) {
   p.bones = Math.max(0, (p.bones || 0) + n);
   save();
   return p.bones;
+}
+
+// ---------------- 礼包兑换（第 44 块） ----------------
+export function giftLog() {
+  const p = profile();
+  if (!p.gifts || typeof p.gifts !== 'object') p.gifts = {};
+  return p.gifts;
+}
+
+export function giftRedeemed(hash) {
+  return !!giftLog()[hash];
+}
+
+// 记一笔「这个码本机已用」。返回兑换时间戳。
+export function markGift(hash) {
+  const g = giftLog();
+  if (g[hash]) return g[hash];
+  g[hash] = Date.now();
+  save();
+  return g[hash];
 }
 
 // ---------------- 主线（第 32 块） ----------------

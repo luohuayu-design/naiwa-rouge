@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#080f14">
 <link rel="icon" href="data:,">
 <title>蛙步 · 夜行</title>
-<link rel="stylesheet" href="style.css?v=49">
+<link rel="stylesheet" href="style.css?v=50">
 </head>
 <body>
 
@@ -244,6 +244,7 @@
       </div>
       <div class="tt-row">
         <button class="tt-menu-btn" id="btnCodex" type="button">图鉴</button>
+        <button class="tt-menu-btn" id="btnGift" type="button">礼包兑换</button>
         <button class="tt-menu-btn" id="btnSettings" type="button">设置</button>
       </div>
     </div>
@@ -311,6 +312,29 @@
     </div>
     <div class="save-list" id="saveListBox"></div>
     <div class="lv-foot">中途退出的每一局都会留档 · 通关选完永夜火种后该存档自动消失</div>
+  </div>
+</div>
+
+<!-- 礼包兑换（第 44 块）：输码换骨币。码表在 js/gift.js，只有哈希，没明文 -->
+<div id="giftScr" class="tt-sub-scr" aria-hidden="true">
+  <div class="lv-card">
+    <div class="lv-head">
+      <div class="lv-title">礼包兑换</div>
+      <button class="lv-back" id="giftBack" type="button">‹ 返回</button>
+    </div>
+    <div class="gf-purse">
+      <span>当前骨币</span>
+      <b id="giftBoneNum">0</b>
+    </div>
+    <div class="gf-in">
+      <input class="gf-input" id="giftCode" type="text" maxlength="26" autocomplete="off"
+        autocapitalize="characters" autocorrect="off" spellcheck="false"
+        placeholder="NA-XXXX-XXXX" aria-label="礼包兑换码">
+      <button class="gf-btn" id="giftRedeem" type="button">兑换</button>
+    </div>
+    <div class="gf-msg" id="giftMsg"></div>
+    <div class="gf-log" id="giftLog"></div>
+    <div class="lv-foot">一个码在本机只能用一次 · 大小写和横杠都不影响 · 换来的骨币直接进篝火</div>
   </div>
 </div>
 
@@ -511,7 +535,7 @@
 <!-- 不用 importmap：老手机浏览器（iOS 16.4 以下、旧版微信/安卓 WebView）
      不支持 import maps，会让整个模块解析失败、加载页永远停在 0%。
      项目内所有 import 都写成相对路径，直接靠原生 ES Module 解析。 -->
-<script type="module" src="js/main.js?v=49"></script>
+<script type="module" src="js/main.js?v=50"></script>
 
 <!-- 兜底自检：模块没跑起来时把原因写出来，别让用户对着 0% 干等 -->
 <script>

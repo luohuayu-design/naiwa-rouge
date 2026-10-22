@@ -56,7 +56,21 @@ Three.js r160 的单摇杆幸存者肉鸽《奶蛙夜行》，纯静态站点（
 | **40** | 局内「存档并退出」：HUD 顶部右角按钮 → 确认弹窗（继续游戏 / 存档退出）→ 写一份存档回主菜单，标题页写明「已存档 · 第 X / 总 回合」 | 已上线（v=47） |
 | **41** | 永久选择提示：篝火入口 + 永夜火种面板首次打开各弹一次告知（讲明写进存档、伴随每个开局、不可撤销），并各带一条常驻警示条（`.cf-warn` / `.up-warn`）；提示已读记在 `profile.notice` | 已上线（v=47） |
 | **42** | 主线剧情读秒：主线每一拍的回话按钮先锁 3 秒、按钮右上角跑倒计时，读完才亮 | 已上线（v=48） |
-| **43** | 读秒放开到全部对话：随机奇遇同样读秒；顺手修掉「旧定时器空转把新一拍的按钮锁死」的真 bug（代次令牌 + 按 DOM 现状清理） | v=49 |
+| **43** | 读秒放开到全部对话：随机奇遇同样读秒；顺手修掉「旧定时器空转把新一拍的按钮锁死」的真 bug（代次令牌 + 按 DOM 现状清理） | 已上线（v=49） |
+| **44** | 礼包兑换（主菜单 → 礼包兑换）：纯前端离线码表，源码只存 16 位哈希；输码换骨币（A 类 300 / B 类 100，各 10 个）；一码一机一次，记录在 `profile.gifts`；已兑换列表带时间与档位 | v=50 |
+
+第 44 块要点（礼包兑换，2026-10-22，v=50）：
+
+- **用户要求**：主菜单加礼包兑换，不依赖服务器；自带若干码；同一个码对同一用户只生效一次；先给 A 类（300 骨币）/ B 类（100 骨币）各 10 个。
+- **码不写在源码里**：`js/gift.js` 的 `GIFT_TABLE` 只有 `[16 位哈希, 骨币]`。哈希 = 归一化后的码做两次加盐 FNV-1a（`0x811c9dc5` 与 `#naiwa#…#gift#` / `0x01000193`），拼成 16 位十六进制。扒源码拿不到能用的码。
+- **明文码只在 `gift-codes.local.md`**（`.gitignore` 已排除，含 `*.local.md`）。**千万不要提交这个文件**，一做公开仓库就等于把码发给所有人。
+- **归一化 `normalizeCode()`**：转大写、只留 `A-Z0-9`。大小写、横杠、空格、全角横杠全都不影响；短于 6 个字符直接当无效。
+- **一码一次**：`profile.gifts = { <hash>: 兑换时间戳 }`；`giftRedeemed()` 拦重复，`markGift()` 记账。代价说清楚：**换浏览器 / 清缓存 / 换设备 = 记录清零，同码可再用**。纯前端极限，要真锁死必须上服务器。
+- **管理员沙盒**：第 38 块的 `suppressSave` 照样生效 —— 管理员期内兑换的骨币和用码记录都不落盘，退出管理员就还原。
+- **UI**：主菜单第二排变成「图鉴 / 礼包兑换 / 设置」。`#giftScr` 里有当前骨币、输入框、兑换按钮、结果提示（`.gf-msg.ok` / `.err`）、已兑换列表（`A 类 · +300 骨币` + `2026/10/22 21:35`）。兑换成功同步刷 `#campBoneNum` 与礼包页骨币数。输入框回车上直接兑换。
+- **调试钩子**：`__game.gift = { count, lookup, log, bones, open, redeem }`。
+- **测试**：`.tmp-gift-test.mjs` **17** 项（码表规模 / 归一化 / 哈希稳定 / 20 个真码逐个查表 / 无碰撞 / 换写法可查 / 反查档位 / 10 个假码全拒）；`.tmp-block44-cdp.js` **36** 项（入口 / 空输入 / 假码 / A 类 +300 / 重复被拦 / B 类 +100 / 列表文案 / 刷新后骨币与记录还在 / 刷新后用过的码仍被拦）。回归 `.tmp-block41-cdp.js` 37/0。
+- **再发一批新码**：跑 `node .tmp-gift-gen.mjs` 生成明文+哈希，把哈希追加进 `js/gift.js` 的 `GIFT_TABLE`、明文追加进 `gift-codes.local.md`。
 
 第 43 块要点（读秒放开到奇遇 + 修锁死，2026-10-22，v=49）：
 - **用户要求**：「也套吧」——随机奇遇的文案也是一两百字，一起读秒。
@@ -375,8 +389,9 @@ Three.js r160 的单摇杆幸存者肉鸽《奶蛙夜行》，纯静态站点（
 | `curses.js`                                                                                  | 夜行诅咒（第 21 块）：六条自选 debuff、倍率叠加、`applyRunCurses` 落账/撤销                                                       |
 | `seed.js`                                                                                    | 种子与每日挑战（第 22 块）：`hashStr`/`makeRng`/`dailySeed`/`pickDailyCurses`/每日战绩存档                                   |
 | `rarity.js`                                                                                  | 五档品质唯一真相源（颜色/mul/luck）                                                                                     |
-| `profile.js`                                                                                 | **本机档案**：settings / stats / codex / ach / bones，键 `naiwa_rouge_profile_v1`                                 |
+| `profile.js`                                                                                 | **本机档案**：settings / stats / codex / ach / bones / camp / boons / story / notice / gifts，键 `naiwa_rouge_profile_v1`；管理员沙盒靠 `setSaveSuppressed` 关掉落盘 |
 | `runSave.js`                                                                                 | 读取存档（第 38 块：多存档列表），键 `naiwa_rouge_runs_v1`（数组，按 uid upsert；每回合开始写 + pagehide 补一次；通关选完永夜火种才清） |
+| `gift.js`                                                                                    | 礼包兑换（第 44 块）：`GIFT_TABLE` 只存 16 位哈希 + 骨币，`normalizeCode`/`codeHash`/`lookupGift`/`giftByHash`；明文码在 gitignore 的 `gift-codes.local.md` |
 | `codex.js`                                                                                   | 图鉴五页签的数据整理（纯渲染数据，无状态）                                                                                      |
 | `achievements.js`                                                                            | 26 条成就定义（`{id,name,desc}`）                                                                                 |
 | `audio.js`                                                                                   | 程序化音效 + BGM；`setSfxVolume/setMusicVolume`（与静音独立）                                                           |

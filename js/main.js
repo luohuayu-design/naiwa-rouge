@@ -32,7 +32,10 @@ import {
   bumpStat, setStatMax, codexAdd, codexCount, countCard, unlockAch, hasAch, addBones, bones, resetAll,
   storyProgress, markStorySeen, markStoryRead, addStoryMark, setStoryEnding,
   setSaveSuppressed, reloadFromStorage,
+  giftLog, giftRedeemed, markGift,
 } from './profile.js';
+// 第 44 块：礼包兑换（码表只有哈希，明细在 gift.js 顶部注释）
+import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js';
 import * as runSave from './runSave.js';
 import {
   CAMPFIRE, CAMP_STEP, campBuy, campOwned, campLevel,
@@ -3249,6 +3252,88 @@ async function boot() {
   document.getElementById('btnCodex').addEventListener('click', showCodex);
   document.getElementById('cxBack').addEventListener('click', () => hideSub(codexScr));
 
+  // ---------------- 礼包兑换（第 44 块）----------------
+  // 纯前端：码表在 gift.js 里只存哈希；「用过没有」记在本机档案 profile.gifts。
+  // 换设备 / 清缓存 = 记录清零，同一个码能再用一次 —— 这是不联网的极限。
+  const giftScr = document.getElementById('giftScr');
+  const giftCode = document.getElementById('giftCode');
+  const giftRedeem = document.getElementById('giftRedeem');
+  const giftMsg = document.getElementById('giftMsg');
+  const giftBoneNum = document.getElementById('giftBoneNum');
+  const giftLogBox = document.getElementById('giftLog');
+
+  function giftSay(text, kind) {
+    giftMsg.textContent = text || '';
+    giftMsg.className = 'gf-msg' + (text ? ` on ${kind || ''}` : '');
+  }
+
+  function renderGiftLog() {
+    const log = giftLog();
+    const rows = Object.keys(log)
+      .map((h) => ({ h, at: log[h] }))
+      .sort((a, b) => b.at - a.at);
+    giftLogBox.textContent = '';
+    if (!rows.length) { giftLogBox.classList.remove('on'); return; }
+    giftLogBox.classList.add('on');
+    const head = document.createElement('h4');
+    head.textContent = `本机已兑换 ${rows.length} 个礼包`;
+    giftLogBox.appendChild(head);
+    for (const r of rows.slice(0, 8)) {
+      const info = giftByHash(r.h);
+      const row = document.createElement('div');
+      row.className = 'gf-row';
+      const tier = document.createElement('span');
+      tier.className = 'gf-tier' + (info.tier === 'B' ? ' b' : '');
+      tier.textContent = info.tier === '?' ? '礼包' : `${info.tier} 类 · +${info.bones} 骨币`;
+      const when = document.createElement('span');
+      when.className = 'gf-when';
+      when.textContent = fmtSaveTime(r.at);
+      row.append(tier, when);
+      giftLogBox.appendChild(row);
+    }
+  }
+
+  function doRedeem() {
+    if (!normalizeCode(giftCode.value)) {
+      giftSay('先把手里的礼包码填进去', 'err');
+      return;
+    }
+    const hit = lookupGift(giftCode.value);
+    if (!hit) {
+      giftSay('没有这个礼包码 —— 看看有没有漏字或打错，横杠和大小写都不影响', 'err');
+      audio.sfx('soldout');
+      return;
+    }
+    if (giftRedeemed(hit.hash)) {
+      giftSay('这个礼包码在本机已经用过了，一个码只能换一次', 'err');
+      audio.sfx('soldout');
+      return;
+    }
+    addBones(hit.bones);
+    markGift(hit.hash);
+    giftCode.value = '';
+    giftSay(`兑换成功 —— ${hit.tier} 类礼包，+${hit.bones} 骨币`, 'ok');
+    giftBoneNum.textContent = adminOn ? '∞' : String(bones());
+    renderCampBadge();               // 主菜单篝火角标同步长钱
+    renderGiftLog();
+    audio.sfx('card');
+  }
+
+  function showGift() {
+    giftBoneNum.textContent = adminOn ? '∞' : String(bones());
+    giftCode.value = '';
+    giftSay('', '');
+    renderGiftLog();
+    showSub(giftScr);
+  }
+
+  giftRedeem.addEventListener('click', doRedeem);
+  giftCode.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); doRedeem(); }
+  });
+  document.getElementById('btnGift').addEventListener('click', showGift);
+  document.getElementById('giftBack').addEventListener('click', () => hideSub(giftScr));
+
   // ---------------- 夜行记忆（第 32 块） ----------------
   // 十八夜，一夜一关。前 3 夜已经在关卡里走过；剩下 15 夜是给后面那些
   // 还没做出来的关卡预留的剧本，现在先当档案读。
@@ -4185,6 +4270,15 @@ async function boot() {
         set: (k) => { profile().difficulty = k; setDifficulty(k); saveProfile(); },
         get: () => getDifficulty().name,
         scale: (n) => roundScale(n),
+      },
+      // 第 44 块：礼包兑换（测试钩子）
+      gift: {
+        count: GIFT_COUNT,
+        lookup: (raw) => lookupGift(raw),
+        log: () => ({ ...giftLog() }),
+        bones: () => bones(),
+        open: () => showGift(),
+        redeem: (raw) => { giftCode.value = raw; doRedeem(); return giftMsg.textContent; },
       },
       // 场景里各类对象计数（诊断用）
       sceneStats: () => {

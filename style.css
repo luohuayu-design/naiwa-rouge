@@ -623,6 +623,39 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
 .lv-next:active{transform:scale(.985)}
 .lv-step{font-style:normal;font-size:10px;font-weight:600;letter-spacing:.1em;
   color:rgba(140,200,178,.55);margin-left:8px;vertical-align:middle}
+/* 礼包兑换（第 44 块）：输码换骨币 */
+.gf-purse{margin-top:14px;display:flex;align-items:center;justify-content:space-between;
+  padding:11px 14px;border-radius:13px;
+  border:1px solid rgba(126,235,196,.2);background:rgba(15,36,31,.66);
+  font-size:11.5px;letter-spacing:.1em;color:rgba(160,204,188,.72)}
+.gf-purse b{font-size:17px;font-weight:800;letter-spacing:.03em;color:#ffd873}
+.gf-in{margin-top:12px;display:flex;gap:9px}
+.gf-input{flex:1;min-width:0;padding:13px 14px;border-radius:12px;box-sizing:border-box;
+  font:inherit;font-size:15px;font-weight:700;letter-spacing:.16em;text-align:center;
+  text-transform:uppercase;color:#eafff4;
+  border:1px solid rgba(126,235,196,.28);background:rgba(8,22,19,.86);outline:none}
+.gf-input::placeholder{letter-spacing:.16em;color:rgba(140,190,172,.34)}
+.gf-input:focus{border-color:rgba(126,235,196,.6);box-shadow:0 0 0 3px rgba(70,220,180,.12)}
+.gf-btn{padding:0 22px;border-radius:12px;font:inherit;font-size:13px;font-weight:800;
+  letter-spacing:.16em;color:#06231a;cursor:pointer;border:0;
+  background:linear-gradient(180deg,#7ef0c6,#2fbf8d);-webkit-tap-highlight-color:transparent}
+.gf-btn:active{transform:scale(.97)}
+.gf-msg{margin-top:10px;font-size:11.5px;font-weight:700;line-height:1.7;
+  letter-spacing:.02em;display:none}
+.gf-msg.on{display:block}
+.gf-msg.ok{color:#8df0c6}
+.gf-msg.err{color:#ff9a9a}
+.gf-log{margin-top:12px;display:none;flex-direction:column;gap:7px}
+.gf-log.on{display:flex}
+.gf-log h4{margin:0;font-size:10.5px;font-weight:700;letter-spacing:.16em;
+  color:rgba(140,190,172,.5)}
+.gf-row{display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:9px 12px;border-radius:11px;
+  border:1px solid rgba(126,235,196,.14);background:rgba(12,30,26,.6);
+  font-size:11.5px;color:rgba(170,214,198,.8)}
+.gf-row .gf-tier{font-weight:800;letter-spacing:.1em;color:#ffd873}
+.gf-row .gf-tier.b{color:#a8d8ff}
+.gf-row .gf-when{font-size:10.5px;color:rgba(140,190,172,.5);letter-spacing:.04em}
 /* 读取存档（第 38 块）：存档卡片列表 */
 .save-list{margin-top:14px;display:flex;flex-direction:column;gap:10px}
 .save-item{position:relative;text-align:left;padding:13px 14px;border-radius:14px;cursor:pointer;

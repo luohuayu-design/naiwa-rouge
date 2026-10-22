@@ -7,3 +7,7 @@ desktop.ini
 .tmp-cand/
 .tmp-view.html
 .tmp-shot-view.js
+
+# 礼包码明文：只在本地留档，别提交（提交了码就等于公开）
+gift-codes.local.md
+*.local.md
