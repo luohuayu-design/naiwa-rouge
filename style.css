@@ -387,6 +387,11 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
 .ld-err{margin-top:14px;font-size:12px;line-height:1.7;color:#ffb3a7;display:none}
 .ld-err.on{display:block}
 
+/* 第 48 块：加载页轮播介绍语（首条是「首次加载较慢」提示） */
+.ld-tip{margin-top:18px;min-height:34px;font-size:11.5px;line-height:1.7;
+  color:rgba(200,232,216,.66);transition:opacity .45s ease}
+.ld-tip.fade{opacity:0}
+
 /* ============================================================
    开始界面 / 新手教程 / 武器获得卡
    ============================================================ */
@@ -1320,3 +1325,32 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
 .sk-num{position:absolute;left:0;right:0;top:4px;z-index:2;pointer-events:none;
   font-size:15px;font-weight:900;font-style:normal;text-align:center;
   color:#ffe9a8;text-shadow:0 0 6px rgba(0,0,0,.9),0 1px 2px rgba(0,0,0,.9)}
+
+/* ============================================================
+   种子挑战（第 49 块）：输入种子 → 战绩匹配难度 → 游玩记录
+   ============================================================ */
+.tt-seedbtn{margin-top:10px}
+.tt-seedbtn .tt-daily-k{color:#ffe9a8}
+.sd-row{display:flex;gap:8px;margin-top:14px}
+.sd-input{flex:1;min-width:0;padding:11px 13px;border-radius:12px;font:inherit;font-size:14px;
+  color:#eaf7ef;background:rgba(8,22,19,.85);border:1px solid rgba(126,235,196,.28);outline:none;
+  -webkit-user-select:text;user-select:text}
+.sd-input:focus{border-color:rgba(126,235,196,.66);box-shadow:0 0 0 3px rgba(126,235,196,.12)}
+.sd-input::placeholder{color:rgba(150,190,174,.4)}
+.sd-dice{flex-shrink:0;width:46px;border-radius:12px;font-size:19px;cursor:pointer;
+  border:1px solid rgba(126,235,196,.3);background:rgba(14,32,28,.9);transition:.15s}
+.sd-dice:hover{background:rgba(126,235,196,.14)}
+.sd-dice:active{transform:scale(.92)}
+.sd-match{margin-top:10px;padding:9px 12px;border-radius:11px;font-size:11.5px;line-height:1.8;
+  color:rgba(200,232,216,.8);background:rgba(10,26,23,.6);border:1px solid rgba(126,235,196,.16)}
+.sd-match b{color:#ffe9a8}
+.sd-list-h{margin-top:14px;font-size:11px;letter-spacing:.14em;color:rgba(150,190,174,.55)}
+.sd-list{margin-top:8px;display:flex;flex-direction:column;gap:6px;max-height:200px;overflow:auto}
+.sd-item{display:flex;align-items:center;gap:9px;padding:8px 11px;border-radius:11px;
+  border:1px solid rgba(126,235,196,.14);background:rgba(10,24,21,.7)}
+.sd-item .sd-code{font-weight:800;font-size:12.5px;color:#ffe9a8;letter-spacing:.06em}
+.sd-item .sd-txt{font-size:10.5px;color:rgba(160,200,184,.6);overflow:hidden;text-overflow:ellipsis;
+  white-space:nowrap;max-width:110px}
+.sd-item .sd-info{flex:1;text-align:right;font-size:10.5px;color:rgba(180,220,200,.7)}
+.sd-item .sd-win{color:#8cf0c8;font-weight:700}
+.sd-empty{padding:14px 0;text-align:center;font-size:11.5px;color:rgba(150,190,174,.45)}

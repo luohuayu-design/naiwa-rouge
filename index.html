@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#080f14">
 <link rel="icon" href="data:,">
 <title>蛙步 · 夜行</title>
-<link rel="stylesheet" href="style.css?v=57">
+<link rel="stylesheet" href="style.css?v=58">
 </head>
 <body>
 
@@ -231,6 +231,11 @@
         <span class="tt-daily-k">今日挑战</span>
         <span class="tt-daily-s" id="btnDailySub">同一颗种子</span>
       </button>
+      <!-- 种子挑战（第 49 块）：自己输入种子，难度按战绩自动匹配 -->
+      <button class="tt-daily tt-seedbtn" id="btnSeed" type="button">
+        <span class="tt-daily-k">种子挑战</span>
+        <span class="tt-daily-s">输入种子开一局</span>
+      </button>
       <!-- 篝火（第 19 块）：局外成长。骨币只在结算发，只在这里花 -->
       <button class="tt-camp" id="btnCamp" type="button">
         <span class="tt-camp-fire">🔥</span>
@@ -410,6 +415,30 @@
   </div>
 </div>
 
+<!-- 种子挑战（第 49 块）：玩家输入种子 → 关卡/难度/诅咒按战绩自动匹配 → 游玩记录留底 -->
+<div id="seedScr" class="tt-sub-scr" aria-hidden="true">
+  <div class="lv-card">
+    <div class="lv-head">
+      <div class="lv-title">种子挑战</div>
+      <button class="lv-back" id="sdBack" type="button">‹ 返回</button>
+    </div>
+    <div class="dl-hero">
+      <div class="dl-date">同一颗种子，同一场夜</div>
+      <i>输入任意文字当种子：三选一、商店货、奇遇、掉不掉钱全部由此确定。<br>
+         关卡 / 难度 / 诅咒不用选 —— 按你的战绩自动匹配，打得越强给得越狠。</i>
+    </div>
+    <div class="sd-row">
+      <input id="seedInput" class="sd-input" type="text" maxlength="24" placeholder="输入种子，比如：奶蛙666" autocomplete="off">
+      <button class="sd-dice" id="sdDice" type="button" title="随机一个种子">🎲</button>
+    </div>
+    <div class="sd-match" id="sdMatch"></div>
+    <button class="dl-start" id="sdStart" type="button">用这个种子开一局</button>
+    <div class="sd-list-h">最近的种子记录</div>
+    <div class="sd-list" id="sdList"></div>
+    <div class="lv-foot">一颗种子一条记录，只留最好的那次 · 最近 40 条</div>
+  </div>
+</div>
+
 <!-- 篝火（从主页面进入，第 19 块 / 第 23 块改成可升 3 级）：夜行骨币换局外成长 -->
 <div id="campScr" class="tt-sub-scr" aria-hidden="true">
   <div class="lv-card">
@@ -581,13 +610,14 @@
     <div class="ld-title">正在唤醒奶蛙</div>
     <div class="ld-bar"><i id="ldBar"></i></div>
     <div class="ld-txt" id="ldTxt">0%</div>
+    <div class="ld-tip" id="ldTip"></div>
   </div>
 </div>
 
 <!-- 不用 importmap：老手机浏览器（iOS 16.4 以下、旧版微信/安卓 WebView）
      不支持 import maps，会让整个模块解析失败、加载页永远停在 0%。
      项目内所有 import 都写成相对路径，直接靠原生 ES Module 解析。 -->
-<script type="module" src="js/main.js?v=57"></script>
+<script type="module" src="js/main.js?v=58"></script>
 
 <!-- 兜底自检：模块没跑起来时把原因写出来，别让用户对着 0% 干等 -->
 <script>

@@ -24,7 +24,7 @@
 //
 // ctx 由 main.js 每帧拼好传进来：{ playing, weapon, playerPos, stats, coins }
 // ============================================================
-import audio from './audio.js?v=57';
+import audio from './audio.js?v=58';
 
 export const SKILLS = [
   {

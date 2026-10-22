@@ -5,69 +5,70 @@
 // 目标是把三件事调顺：摇杆输入 → 角色速度/朝向 → 相机跟随。
 // 后续叠战斗时，只需要在 tick() 里加敌人更新与自动攻击，不用动输入层。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=57';
-import { buildNightScene } from './scene.js?v=57';
-import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=57';
-import { createInput } from './input.js?v=57';
-import { createStats, STAT_DEFS } from './stats.js?v=57';
-import { createWeaponStats } from './weaponStats.js?v=57';
-import { createFx } from './fx.js?v=57';
-import { createEnemySystem } from './enemy.js?v=57';
+import * as THREE from '../lib/three.module.js?v=58';
+import { buildNightScene } from './scene.js?v=58';
+import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=58';
+import { createInput } from './input.js?v=58';
+import { createStats, STAT_DEFS } from './stats.js?v=58';
+import { createWeaponStats } from './weaponStats.js?v=58';
+import { createFx } from './fx.js?v=58';
+import { createEnemySystem } from './enemy.js?v=58';
 import {
   createLevel, LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVELS_BY_ID, DIFFS, setDifficulty, getDifficulty, roundScale, levelStats,
-} from './wave.js?v=57';
-import { createRangeRing } from './rangeRing.js?v=57';
-import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=57';
-import { createWeaponSystem } from './weapon.js?v=57';
-import { createArrowRainSystem } from './arrowRain.js?v=57';
-import { SWORD_KINDS } from './swordKinds.js?v=57';
-import { createGoldSystem } from './gold.js?v=57';
-import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW } from './shop.js?v=57';
-import { createTurretSystem, TURRET } from './turret.js?v=57';
-import { createRelicSystem, RELIC_DEFS } from './relics.js?v=57';
-import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=57';
-import audio from './audio.js?v=57';
-import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=57';
+} from './wave.js?v=58';
+import { createRangeRing } from './rangeRing.js?v=58';
+import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=58';
+import { createWeaponSystem } from './weapon.js?v=58';
+import { createArrowRainSystem } from './arrowRain.js?v=58';
+import { SWORD_KINDS } from './swordKinds.js?v=58';
+import { createGoldSystem } from './gold.js?v=58';
+import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW } from './shop.js?v=58';
+import { createTurretSystem, TURRET } from './turret.js?v=58';
+import { createRelicSystem, RELIC_DEFS } from './relics.js?v=58';
+import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=58';
+import audio from './audio.js?v=58';
+import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=58';
 import {
   settings as readSettings, setSetting, save as saveProfile, profile,
   bumpStat, setStatMax, codexAdd, codexCount, countCard, unlockAch, hasAch, addBones, bones, resetAll,
   storyProgress, markStorySeen, markStoryRead, addStoryMark, setStoryEnding,
   setSaveSuppressed, reloadFromStorage,
   giftLog, giftRedeemed, markGift,
-} from './profile.js?v=57';
+} from './profile.js?v=58';
 // 第 44 块：礼包兑换（码表只有哈希，明细在 gift.js 顶部注释）
-import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=57';
+import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=58';
 // 第 46 块：音效包（抽象奶蛙音效包 —— 4 段奶蛙叫声，通关第一关解锁）
-import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=57';
-import * as runSave from './runSave.js?v=57';
+import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=58';
+import * as runSave from './runSave.js?v=58';
 import {
   CAMPFIRE, CAMP_STEP, campBuy, campOwned, campLevel,
   campCost, campApply, bonesFor, diffBoneMul, levelBoneMul, coinBones, BONE,
-} from './campfire.js?v=57';
+} from './campfire.js?v=58';
 // 第 23 块：永夜火种（通关白给的 3 次永久三选一）
 import {
   BOONS, BOON_BY_ID, BOON_PICKS, boonOwned, boonStacks, boonPending, boonTotalStacks,
   grantBoons, rollBoons, takeBoon, applyBoons, boonStackText,
-} from './boons.js?v=57';
+} from './boons.js?v=58';
 // 第 21 块：夜行诅咒（自选 debuff 换骨币倍率）
-import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=57';
+import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=58';
 // 第 22 块：种子与每日挑战
 import {
   DAILY_RULES, dayKey, dayText, dailySeed, seedCode, pickDailyCurses,
+  seedFromText, pickSeedRules, loadSeedRecords, saveSeedRecord, pruneSeeds,
   dailyRecord, saveDailyRecord, pruneDaily, makeRng,
-} from './seed.js?v=57';
-import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=57';
-import { achById, ACHS } from './achievements.js?v=57';
+} from './seed.js?v=58';
+import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=58';
+import { achById, ACHS } from './achievements.js?v=58';
 import {
   EVENTS, ALL_EVENTS, getEventById, pickEvent, effectLines,
   choiceHint, canAfford, costShort, REP_MIN, REP_MAX, REP_START,
   isTalk, eventChoices, resolveRoll, mergeEffects,
-} from './events.js?v=57';
+} from './events.js?v=58';
 // 第 32 块：主线《笑不出来的那一夜》（18 夜，一夜一关，前 3 夜已有关卡）
 import {
   STORY_ARC, STORY_CHAPTERS, STORY_ENDINGS, MARK_INFO,
   storyChapterAt, storyChapterById, storyEndingKey,
-} from './story.js?v=57';
+} from './story.js?v=58';
 
 // 标记模块已经跑起来了：index.html 的兜底自检靠它判断
 // 「模块根本没执行」还是「执行了但加载慢」。
@@ -197,6 +198,35 @@ async function boot() {
     const pct = Math.max(0, Math.min(1, p || 0));
     ldBar.style.width = (pct * 100).toFixed(0) + '%';
     ldTxt.textContent = (pct * 100).toFixed(0) + '%';
+  }
+
+  // ---------------- 加载页轮播介绍语（第 48 块） ----------------
+  // 首条 = 首次加载慢的提示；之后每 3.2 秒换一句游戏介绍，淡出淡入。
+  const LOAD_TIPS = [
+    '首次加载较慢，请耐心等待……',
+    '《蛙步 · 夜行》—— 奶蛙的深夜生存之旅',
+    '摇杆走位，环剑自动出鞘，活过 20 个回合',
+    '毒 / 冰 / 雷 / 血元素剑，商店买了就上环',
+    '炮台 · 法器 · 金钟罩 · 背包，深夜装备库',
+    '一百多条夜行奇遇，路边处处有故事',
+    '篝火与永夜火种：死掉也不白死，越打越强',
+    '自选诅咒换骨币倍率，胆子越大赚得越多',
+    '提建议 / 报 bug 有礼包兑换码 —— 主菜单「公告」看详情',
+    '祝你今夜走得比昨夜远',
+  ];
+  const ldTip = document.getElementById('ldTip');
+  let loadTipTimer = null;
+  if (ldTip) {
+    let tipIdx = 0;
+    ldTip.textContent = LOAD_TIPS[0];
+    loadTipTimer = setInterval(() => {
+      ldTip.classList.add('fade');
+      setTimeout(() => {
+        tipIdx = (tipIdx + 1) % LOAD_TIPS.length;
+        ldTip.textContent = LOAD_TIPS[tipIdx];
+        ldTip.classList.remove('fade');
+      }, 450);
+    }, 3200);
   }
 
   let frog;
@@ -1253,7 +1283,7 @@ async function boot() {
     const boonLv = applyBoons(stats, wstats);
     if (boonLv) stats.syncHp(stats.get('maxHp'));
     // 第 21 / 22 块：种子与诅咒也在开局落账。普通局 seed=0 → 全部退回 Math.random
-    initRunRng(dailyMode ? dailySeedNow : 0);
+    initRunRng(dailyMode ? dailySeedNow : (customSeed ? customSeed.seed : 0));
     const rc = applyRunCurses(stats, wstats, pendingCurses);
     runCurseDmg = rc.dmgTaken;
     if (rc.count) {
@@ -1385,6 +1415,8 @@ async function boot() {
   let rngStreams = null;
   let dailyMode = false;        // 这一局是今日挑战
   let dailyStamp = null;        // 开局那天的 key（跨零点结算也不串到第二天）
+  // 第 49 块：自定义种子挑战。非 null = 本局是种子局（{ seed, code, text, rules }）
+  let customSeed = null;
   // 本局的临时难度覆盖（每日挑战固定噩梦）。**不写档案** ——
   // 写档案的话，中途刷新会把玩家的难度永久改成噩梦（踩过）。
   let diffOverride = null;
@@ -1483,6 +1515,7 @@ async function boot() {
         item.addEventListener('click', () => {
           pendingLevelId = lv.id;      // 点了哪关，beginGame 就开哪关
           dailyMode = false;           // 手动选关 = 普通局（种子与固定规则都不生效）
+          customSeed = null;           // 种子局同理（第 49 块）
           goToDiff();                  // 进了第二步：选难度
         });
       }
@@ -3032,6 +3065,7 @@ async function boot() {
       seed: runSeed,
       daily: dailyMode,
       dailyStamp,
+      seedPlay: customSeed ? { seed: customSeed.seed, code: customSeed.code, text: customSeed.text } : null,
       prevDiff: diffOverride,
     });
   }
@@ -3141,6 +3175,7 @@ async function boot() {
     dailyMode = !!saved.daily;
     dailyStamp = saved.dailyStamp || dayKey();
     dailySeedNow = saved.seed >>> 0;
+    customSeed = saved.seedPlay || null;   // 第 49 块：种子局续玩（rules 不需要，开局才用）
     diffOverride = saved.prevDiff || (saved.daily ? DAILY_RULES.diff : null);
     initRunRng(saved.seed || 0);
     clearCurse();
@@ -4055,6 +4090,7 @@ async function boot() {
   // 日期哈希出种子 → 固定关卡/难度/两条诅咒。没有服务器，也不需要有。
   const dailyScr = document.getElementById('dailyScr');
   const btnDaily = document.getElementById('btnDaily');
+  const btnSeed = document.getElementById('btnSeed');   // 第 49 块：种子挑战
   const btnDailySub = document.getElementById('btnDailySub');
   const dlDate = document.getElementById('dlDate');
   const dlSeed = document.getElementById('dlSeed');
@@ -4111,6 +4147,7 @@ async function boot() {
   function startDaily() {
     const seed = dailySeed();
     dailyMode = true;
+    customSeed = null;               // 与种子挑战互斥（第 49 块）
     dailyStamp = dayKey();
     dailySeedNow = seed;
     diffOverride = DAILY_RULES.diff;   // 只在这一局生效，档案里的难度不动
@@ -4122,6 +4159,93 @@ async function boot() {
   btnDaily.addEventListener('click', showDaily);
   document.getElementById('dlBack').addEventListener('click', () => hideSub(dailyScr));
   dlStart.addEventListener('click', () => { hideSub(dailyScr); startDaily(); });
+
+  // ---------------- 种子挑战（第 49 块） ----------------
+  // 玩家输入任意文字当种子；关卡/难度/诅咒由战绩自动匹配（pickSeedRules）。
+  const seedScr = document.getElementById('seedScr');
+  const seedInput = document.getElementById('seedInput');
+  const seedMatch = document.getElementById('sdMatch');
+  const seedList = document.getElementById('sdList');
+
+  function seedRulesOf(text) {
+    const seed = seedFromText(text);
+    return { seed, rules: pickSeedRules(seed, loadRecords(), RUN_CURSES) };
+  }
+
+  // 把「战绩 → 关卡/难度/诅咒」的匹配结果说给玩家听
+  function renderSeedMatch() {
+    const text = seedInput.value.trim();
+    if (!text) { seedMatch.innerHTML = '<i style="color:rgba(150,190,174,.5)">输入或掷个种子，看这一局给你安排什么</i>'; return; }
+    const { seed, rules } = seedRulesOf(text);
+    const lvName = (LEVELS_BY_ID[rules.levelId] || LEVELS_BY_ID[1]).name;
+    const diffName = { normal: '普通', hard: '困难', nightmare: '噩梦' }[rules.diff] || rules.diff;
+    const curseNames2 = rules.curses.map((id) => RUN_CURSES.find((c) => c.id === id)?.name || id);
+    seedMatch.innerHTML =
+      `种子 <b>${seedCode(seed)}</b> → <b>${lvName}</b> · <b>${diffName}</b> · 诅咒 <b>${curseNames2.length ? curseNames2.join('、') : '无'}</b><br>` +
+      `<span style="color:rgba(150,190,174,.55)">（按你的战绩自动匹配：通关 ${rules.wins} 次 → ${rules.wins >= 6 ? '噩梦 2 诅咒' : rules.wins >= 2 ? '困难 1 诅咒' : '普通 0 诅咒'}）</span>`;
+  }
+
+  function renderSeedList() {
+    const list = loadSeedRecords();
+    seedList.textContent = '';
+    if (!list.length) {
+      const empty = document.createElement('div');
+      empty.className = 'sd-empty';
+      empty.textContent = '还没有种子记录 —— 开一局试试手气';
+      seedList.appendChild(empty);
+      return;
+    }
+    for (const r of list.slice(0, 12)) {
+      const item = document.createElement('div');
+      item.className = 'sd-item';
+      const code = document.createElement('span');
+      code.className = 'sd-code';
+      code.textContent = r.code;
+      const txt = document.createElement('span');
+      txt.className = 'sd-txt';
+      txt.textContent = r.text ? `「${r.text}」` : '';
+      const info = document.createElement('span');
+      info.className = 'sd-info';
+      info.innerHTML = r.win
+        ? `<span class="sd-win">通关</span> · 第 ${r.round} 回合`
+        : `最远 ${r.round} 回合 · ${r.kills} 击杀`;
+      item.append(code, txt, info);
+      seedList.appendChild(item);
+    }
+  }
+
+  function showSeed() {
+    renderSeedMatch();
+    renderSeedList();
+    showSub(seedScr);
+  }
+
+  function startSeedRun() {
+    let text = seedInput.value.trim();
+    if (!text) {
+      // 没填就随机一个短码当种子文本（也是玩家可以互相分享的码）
+      text = 'SD' + Math.random().toString(36).slice(2, 6).toUpperCase();
+      seedInput.value = text;
+    }
+    const { seed, rules } = seedRulesOf(text);
+    customSeed = { seed, code: seedCode(seed), text, rules };
+    dailyMode = false;               // 种子局和今日挑战互斥
+    diffOverride = rules.diff;       // 只在这一局生效，档案难度不动
+    pendingLevelId = rules.levelId;
+    pendingCurses = rules.curses.slice();
+    hideSub(seedScr);
+    beginGame({ tutorial: false });
+  }
+
+  btnSeed.addEventListener('click', showSeed);
+  document.getElementById('sdBack').addEventListener('click', () => hideSub(seedScr));
+  document.getElementById('sdStart').addEventListener('click', startSeedRun);
+  document.getElementById('sdDice').addEventListener('click', () => {
+    seedInput.value = 'SD' + Math.random().toString(36).slice(2, 6).toUpperCase();
+    renderSeedMatch();
+  });
+  seedInput.addEventListener('input', renderSeedMatch);
+  seedInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') startSeedRun(); });
 
 
   // ---------------- 难度选择（关卡面板里，一局一选） ----------------
@@ -4168,9 +4292,11 @@ async function boot() {
 
     audio.stopBgm({ fade: 1.0 });
     audio.sfx(isWin ? 'victory' : 'defeat', { vol: 1 });
-    rsTag.textContent = dailyMode && dailySeedNow
-      ? `今日挑战 · 种子 ${seedCode(dailySeedNow)}`
-      : level.level.name;
+    rsTag.textContent = customSeed
+      ? `种子挑战 · ${customSeed.text || ''}（${customSeed.code}）`
+      : (dailyMode && dailySeedNow
+        ? `今日挑战 · 种子 ${seedCode(dailySeedNow)}`
+        : level.level.name);
     rsTitle.textContent = isWin ? '通 关' : '倒 下';
     rsTitle.classList.toggle('fail', !isWin);
     rsSub.textContent = isWin
@@ -4231,6 +4357,19 @@ async function boot() {
         renderDailyBadge();
       }
       dailyMode = false;
+    }
+    // 第 49 块：种子挑战记录 —— 一颗种子只留最好的那次
+    if (customSeed) {
+      if (!adminOn) {
+        saveSeedRecord({
+          code: customSeed.code, text: customSeed.text, seed: customSeed.seed,
+          win: isWin, round: roundShown, kills, time: elapsed,
+          level: curLevelId, diff: getDifficulty().name,
+        });
+        pruneSeeds();
+        renderSeedList();
+      }
+      customSeed = null;
     }
     // 第 21 / 22 块的新成就：打完今日挑战、带三条诅咒通关
     if (wasDaily) {
@@ -5147,6 +5286,7 @@ async function boot() {
   showTitle();
   setTimeout(() => {
     loadingEl.classList.add('off');
+    if (loadTipTimer) { clearInterval(loadTipTimer); loadTipTimer = null; }   // 第 48 块
     setTimeout(() => { loadingEl.style.display = 'none'; }, 500);
     if (AUTO_START) {
       // 调试模式直接开打：公告不挡自动化测试（要测公告就手调 __game.notice.show()）

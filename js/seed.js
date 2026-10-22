@@ -141,3 +141,82 @@ export function pruneDaily(keep = 30) {
 export function dailyCount() {
   return Object.keys(loadAll().days).length;
 }
+
+// ---------------- 自定义种子挑战（第 49 块） ----------------
+// 玩家随手输入一串字（「奶蛙666」也行、乱敲也行）→ 加盐哈希成 32 位种子。
+// 种子决定三选一 / 商店 / 奇遇 / 掉钱这些「抽什么」；关卡、难度、诅咒
+// 由战绩自动匹配（用户定案：实力和难度要相配，公式简单直白）。
+
+export function seedFromText(text) {
+  return hashStr(`naiwa-rouge-seed:${String(text).trim()}`);
+}
+
+// 难度匹配（records = loadRecords() 的战绩表）：
+//   总通关 wins        → 难度：0~1 普通 / 2~5 困难 / ≥6 噩梦
+//   第二关是否解锁     → 通关过第一关（wins≥3 且解锁）才去第二关
+//   诅咒条数           → 0 / 1 / 2 随 wins 分段（诅咒由种子从表里挑）
+export function pickSeedRules(seed, records, curseTable) {
+  let wins = 0;
+  for (const k in records) wins += (records[k]?.wins || 0) | 0;
+  const lvl2Open = ((records[1]?.wins) | 0) > 0;
+  const levelId = lvl2Open && wins >= 3 ? 2 : 1;
+  const diff = wins >= 6 ? 'nightmare' : wins >= 2 ? 'hard' : 'normal';
+  const curseCount = wins >= 6 ? 2 : wins >= 2 ? 1 : 0;
+  const curses = curseCount > 0 ? pickDailyCurses(seed, curseTable, curseCount) : [];
+  return { levelId, diff, curses, wins };
+}
+
+// ---------------- 种子游玩记录（本机） ----------------
+const SEED_KEY = 'naiwa_rouge_seeds_v1';
+
+function loadSeedsRaw() {
+  try {
+    const v = JSON.parse(localStorage.getItem(SEED_KEY) || '{}');
+    return v && typeof v === 'object' && v.runs ? v : { runs: {} };
+  } catch (_) {
+    return { runs: {} };
+  }
+}
+
+export function loadSeedRecords() {
+  const { runs } = loadSeedsRaw();
+  return Object.values(runs)
+    .sort((a, b) => (b.at || 0) - (a.at || 0));
+}
+
+// 一颗种子一条记录，取更好的那次（通关优先 → 回合 → 击杀），与每日挑战同款比较
+export function saveSeedRecord(payload) {
+  const all = loadSeedsRaw();
+  const code = payload.code;
+  const old = all.runs[code] || null;
+  const better = !old
+    || (payload.win && !old.win)
+    || (!!payload.win === !!old.win && (payload.round | 0) > (old.round | 0))
+    || (!!payload.win === !!old.win && (payload.round | 0) === (old.round | 0) && (payload.kills | 0) > (old.kills | 0));
+  if (better) {
+    all.runs[code] = {
+      code,
+      text: String(payload.text || '').slice(0, 24),
+      seed: payload.seed >>> 0,
+      win: !!payload.win,
+      round: Math.max(0, payload.round | 0),
+      kills: Math.max(0, payload.kills | 0),
+      time: Number.isFinite(payload.time) ? payload.time : null,
+      level: payload.level | 0,
+      diff: String(payload.diff || ''),
+      at: Date.now(),
+    };
+    try { localStorage.setItem(SEED_KEY, JSON.stringify(all)); } catch (_) { /* 隐私模式就算了 */ }
+    return { record: all.runs[code], improved: true };
+  }
+  return { record: old, improved: false };
+}
+
+// 只留最近 40 条
+export function pruneSeeds(keep = 40) {
+  const all = loadSeedsRaw();
+  const list = Object.values(all.runs).sort((a, b) => (b.at || 0) - (a.at || 0));
+  for (const r of list.slice(keep)) delete all.runs[r.code];
+  try { localStorage.setItem(SEED_KEY, JSON.stringify(all)); } catch (_) { /* 同上 */ }
+  return list.length;
+}
