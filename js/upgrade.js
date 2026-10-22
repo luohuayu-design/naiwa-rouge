@@ -31,9 +31,9 @@
 //   标了 scope:'weapon' 的项改的是武器表（剑系 / 元素系），其余改主角表。
 //   两块表都要传进来，没传 wstats 时武器项会退化到主角表（只为兼容老调用）。
 // ============================================================
-import { STAT_DEFS } from './stats.js?v=53';
-import { WEAPON_STAT_DEFS } from './weaponStats.js?v=53';
-import { RARITIES, rarityWeight, oddsOf } from './rarity.js?v=53';
+import { STAT_DEFS } from './stats.js?v=54';
+import { WEAPON_STAT_DEFS } from './weaponStats.js?v=54';
+import { RARITIES, rarityWeight, oddsOf } from './rarity.js?v=54';
 
 // 一张卡改的是哪块表
 function tableFor(scope, stats, wstats) {
