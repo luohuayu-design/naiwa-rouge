@@ -445,6 +445,8 @@ Three.js r160 的单摇杆幸存者肉鸽《奶蛙夜行》，纯静态站点（
 11. **测试用的 `?debug=1` 默认不落存档**（要落档加 `&keepsave=1`）。
 12. **新内容「先推送再交给用户测」**（2026-10-22 用户定的铁律）：功能做完 + 本地回归绿 → **立刻 commit & push**，把线上地址和「这轮改了什么 / 怎么试」一起交给用户，让他先上手给反馈；不要憋着等自己把一切都打磨完才推送。用户的反馈比自测更早、更准。
 
+13. **发版必须同时 bump 两处版本号**（2026-10-22 的教训，v=52 翻过车）：除了 `index.html` 的 `main.js?v=N` / `style.css?v=N`，**`js/*.js` 里所有相对 import 也都带 `?v=N`**（`import audio from './audio.js?v=53'`）。GitHub Pages 的 `Cache-Control: max-age=600` 只保证 10 分钟，不带版本的模块 import 会命中用户浏览器里的旧缓存——这次就是 `main.js?v=52` 是新的、`audio.js` 还是旧缓存，`audio.setPack is not a function`。发版统一 `sed -i "s|\\.js?v=N|.js?v=N+1|g; s|\\?v=N'|?v=N+1'|g" js/*.js index.html`。语法检查别只查 main.js，改过 import 的文件都要 `node --check`。
+
 ---
 
 ## 5. 调试钩子（`?debug=1` 才有 `window.__game`）
