@@ -2379,6 +2379,68 @@ async function boot() {
   // 每一拍选的效果先累积（mergeEffects），全部聊完一次性结算成一张账单；
   // 金币、生命这种「当场就掏」的代价，选了就扣。
   let talk = null;     // { ev, beat, acc, paid[], chains[] }
+
+  // ---------------- 主线剧情的「读秒再推进」（第 42 块）----------------
+  // 主线每一拍都是一两百字，一句一句推进时玩家很容易连点把剧情跳过去。
+  // 规则：主线章节的每一拍显示之后，回话按钮先锁 3 秒、按钮上跑倒计时，
+  //       读完了才亮。随机奇遇不受影响（它们的 __readDelay 是 0）。
+  const STORY_READ_DELAY = 3;      // 秒
+  let talkCdTimer = null;
+  let talkCdLeft = 0;             // 还在倒计时的秒数（测试要看这个）
+  let talkCdBtns = [];
+
+  function clearTalkCountdown() {
+    if (talkCdTimer) { clearInterval(talkCdTimer); talkCdTimer = null; }
+    for (const b of talkCdBtns) {
+      if (!b) continue;
+      b.classList.remove('cd-wait');
+      const cd = b.querySelector('.ev-cd');
+      if (cd) cd.remove();
+    }
+    talkCdBtns = [];
+    talkCdLeft = 0;
+  }
+
+  // 把这拍的所有回话按钮锁 sec 秒，按钮右上角跑倒计时
+  function armTalkCountdown(btns, sec) {
+    clearTalkCountdown();
+    const list = (btns || []).filter((b) => b);
+    if (!list.length || !(sec > 0)) return;
+    const affordable = list.filter((b) => !b.disabled);   // 付不起的一直是灰的，不参与解锁
+    const deadline = performance.now() + sec * 1000;
+    for (const b of list) {
+      b.classList.add('cd-wait');
+      const cd = document.createElement('em');
+      cd.className = 'ev-cd';
+      cd.textContent = Math.ceil(sec) + 's';
+      b.appendChild(cd);
+    }
+    affordable.forEach((b) => { b.disabled = true; });
+    talkCdBtns = list;
+    const tick = () => {
+      const left = Math.max(0, deadline - performance.now());
+      talkCdLeft = Math.ceil(left / 1000);
+      for (const b of list) {
+        const cd = b.querySelector('.ev-cd');
+        if (cd) cd.textContent = talkCdLeft > 0 ? talkCdLeft + 's' : '';
+      }
+      if (left <= 0) {
+        for (const b of list) {
+          b.classList.remove('cd-wait');
+          const cd = b.querySelector('.ev-cd');
+          if (cd) cd.remove();
+        }
+        affordable.forEach((b) => { b.disabled = false; });
+        talkCdTimer = null;
+        talkCdBtns = [];
+        talkCdLeft = 0;
+        return;
+      }
+    };
+    tick();
+    talkCdTimer = setInterval(tick, 100);
+  }
+
   // 本次会话里已经记过的印记（防止同一次游玩重复计数；跨局靠档案累计）
   const storyMarked = new Set();
 
@@ -2393,10 +2455,13 @@ async function boot() {
 
   // 把终章的结局预先挂到章节对象上（不改原数据，避免读档/重播串味）
   function resolveStoryChapter(ch) {
-    if (!ch || !ch.endings) return ch;
+    if (!ch) return ch;
+    // 第 42 块：主线每一拍都要读秒再推进（随机奇遇没有这个标记）
+    const base = { ...ch, __readDelay: STORY_READ_DELAY };
+    if (!ch.endings) return base;
     const key = storyEndingKey(storyProgress().marks);
     const end = ch.endings[key] || ch.endings.none;
-    return { ...ch, __ending: end, __endingKey: key };
+    return { ...base, __ending: end, __endingKey: key };
   }
 
   // 局内撞到一夜：先记「亲历」，再走事件卡
@@ -2456,6 +2521,8 @@ async function boot() {
     for (const r of beat.replies || []) {
       evChoices.appendChild(makeChoiceBtn(r, (x) => chooseTalkReply(x)));
     }
+    // 第 42 块：主线读秒 —— 这一拍先读完，按钮才亮
+    armTalkCountdown([...evChoices.querySelectorAll('.ev-btn')], talk.ev.__readDelay || 0);
     evTalk.scrollTop = evTalk.scrollHeight;
   }
 
@@ -2568,6 +2635,7 @@ async function boot() {
   function closeEvent() {
     if (!eventOpen) return;
     eventOpen = false;
+    clearTalkCountdown();          // 第 42 块：关掉事件卡时把读秒停下
     evCard.classList.remove('on');
     evCard.setAttribute('aria-hidden', 'true');
     evResult.classList.remove('on');
@@ -4342,10 +4410,14 @@ async function boot() {
           });
         },
         get acc() { return talk ? JSON.parse(JSON.stringify(talk.acc)) : null; },
+        // 第 42 块：读秒还剩几秒 / 按钮是不是还锁着
+        get cdLeft() { return talkCdLeft; },
+        get cdLocked() { return talkCdBtns.length > 0; },
       },
       // 主线（第 32 块，测试用）
       story: {
         arc: STORY_ARC,
+        readDelay: STORY_READ_DELAY,
         chapters: STORY_CHAPTERS,
         endings: STORY_ENDINGS,
         get progress() { return JSON.parse(JSON.stringify(storyProgress())); },

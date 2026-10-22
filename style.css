@@ -900,6 +900,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
 .ev-effect span.good{border-color:rgba(140,240,190,.3);background:rgba(120,240,180,.09);color:#a5f2cd}
 .ev-choices{margin-top:15px;display:flex;flex-direction:column;gap:8px}
 .ev-btn{width:100%;padding:11px 12px;border-radius:12px;font:inherit;text-align:left;cursor:pointer;
+  position:relative;
   border:1px solid rgba(255,214,130,.3);background:rgba(255,214,130,.07);color:#f4e6c4;
   -webkit-tap-highlight-color:transparent;transition:border-color .15s,background .15s,transform .1s}
 .ev-btn:hover{border-color:rgba(255,214,130,.55);background:rgba(255,214,130,.13)}
@@ -911,6 +912,16 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
 .ev-btn:disabled{cursor:not-allowed;opacity:.42;border-color:rgba(255,120,100,.24);
   background:rgba(255,110,90,.05);transform:none}
 .ev-btn:disabled i{color:rgba(255,150,130,.7)}
+/* 第 42 块：主线剧情读秒 —— 还没读够，按钮锁着，右上角跑倒计时 */
+.ev-btn.cd-wait{padding-right:52px;cursor:progress;opacity:.66;
+  border-color:rgba(255,214,130,.22);background:rgba(255,214,130,.05)}
+.ev-btn.cd-wait:disabled{opacity:.66;border-color:rgba(255,214,130,.22);
+  background:rgba(255,214,130,.05)}
+.ev-btn.cd-wait b{color:rgba(244,230,196,.72)}
+.ev-cd{position:absolute;right:10px;top:9px;font-style:normal;font-size:10.5px;font-weight:700;
+  letter-spacing:.04em;color:#ffd166;background:rgba(40,30,8,.75);
+  border:1px solid rgba(255,209,102,.38);border-radius:999px;padding:1px 7px;
+  font-family:ui-monospace,Menlo,Consolas,monospace}
 /* 结果页：角色回应 + 实际结算，读完再继续 */
 .ev-result{display:none;margin-top:14px}
 .ev-result.on{display:block}
