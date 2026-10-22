@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#080f14">
 <link rel="icon" href="data:,">
 <title>蛙步 · 夜行</title>
-<link rel="stylesheet" href="style.css?v=50">
+<link rel="stylesheet" href="style.css?v=51">
 </head>
 <body>
 
@@ -246,6 +246,10 @@
         <button class="tt-menu-btn" id="btnCodex" type="button">图鉴</button>
         <button class="tt-menu-btn" id="btnGift" type="button">礼包兑换</button>
         <button class="tt-menu-btn" id="btnSettings" type="button">设置</button>
+      </div>
+      <!-- 公告（第 45 块）：开局自动弹一次，之后随时点这里回看 -->
+      <div class="tt-row tt-row-notice">
+        <button class="tt-menu-btn tt-notice-btn" id="btnNotice" type="button">📢 公告</button>
       </div>
     </div>
     <div class="tt-tip">按住左半屏拖动移动 · 走到怪身边自动攻击</div>
@@ -523,6 +527,37 @@
   </div>
 </div>
 
+<!-- 公告弹窗（第 45 块）：进主界面后按「日期 + 公告版本」检查一次；
+     勾了「今日内不再弹出」当天就不会再自动弹，但主菜单「公告」按钮随时能回看。
+     改公告内容时把 main.js 里的 NOTICE_VER +1，就算今天勾过也会重新看到新公告。 -->
+<div id="noticeOv" aria-hidden="true">
+  <div class="notice-box">
+    <button class="notice-x" id="noticeX" type="button" aria-label="关闭公告">✕</button>
+    <div class="notice-hd">📢 公告</div>
+    <div class="notice-bd">
+      <p class="nb-p">《蛙步 · 夜行》是一个人熬夜一点点改出来的，路过的每个角落都还可能留着没扫干净的灰。玩着别扭、卡住了、数值离谱、想加把新剑或者新怪 —— 都直接跟我说，不用客气。</p>
+      <p class="nb-p">提建议和报 bug 都有回报：说得有用的建议、能复现的 bug，我会发一个礼包兑换码（A 类 300 骨币 / B 类 100 骨币），在主菜单「礼包兑换」里输入就能换。说得越具体（哪一关、第几回合、点了什么、屏幕上出现了什么），码越大方。</p>
+      <div class="cp-row">
+        <div class="cp-meta">
+          <span class="cp-label">🌸 本人 QQ · 落花雨</span>
+          <span class="cp-val">3829845261</span>
+        </div>
+        <button class="notice-copy" data-copy="3829845261" type="button">📋 复制</button>
+      </div>
+      <div class="cp-row">
+        <div class="cp-meta">
+          <span class="cp-label">🔗 本站网址</span>
+          <span class="cp-val">https://luohuayu-design.github.io/naiwa-rouge/</span>
+        </div>
+        <button class="notice-copy" data-copy="https://luohuayu-design.github.io/naiwa-rouge/" type="button">📋 复制</button>
+      </div>
+      <p class="nb-p nb-note">进度写在你这台设备的浏览器里：换设备、清缓存、用无痕模式都会丢档，别乱清。</p>
+    </div>
+    <label class="notice-chk"><input type="checkbox" id="noticeHideToday"> 今日内不再弹出</label>
+    <button class="notice-btn" id="noticeOk" type="button">我知道了</button>
+  </div>
+</div>
+
 <!-- 加载遮罩 -->
 <div id="loading">
   <div class="ld-box">
@@ -535,7 +570,7 @@
 <!-- 不用 importmap：老手机浏览器（iOS 16.4 以下、旧版微信/安卓 WebView）
      不支持 import maps，会让整个模块解析失败、加载页永远停在 0%。
      项目内所有 import 都写成相对路径，直接靠原生 ES Module 解析。 -->
-<script type="module" src="js/main.js?v=50"></script>
+<script type="module" src="js/main.js?v=51"></script>
 
 <!-- 兜底自检：模块没跑起来时把原因写出来，别让用户对着 0% 干等 -->
 <script>

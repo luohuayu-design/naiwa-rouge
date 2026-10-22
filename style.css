@@ -1213,3 +1213,52 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
 .rp-grid button:hover{background:rgba(72,40,14,.86)}
 .rp-grid button:active{transform:scale(.94)}
 .rp-grid button.cur{color:#06231a;background:#ffd9a0;border-color:transparent}
+
+/* ============================================================
+   公告（第 45 块）：进主界面自动弹一次，主菜单「公告」随时回看
+   照搬 naiwa-step 的那套：日期 + 版本号 决定要不要弹
+   ============================================================ */
+#noticeOv{position:fixed;inset:0;z-index:46;display:none;align-items:center;justify-content:center;
+  padding:12px;background:rgba(2,7,6,.78);
+  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+#noticeOv.on{display:flex}
+.notice-box{position:relative;width:min(440px,95vw);max-height:90vh;overflow:auto;
+  display:flex;flex-direction:column;gap:9px;padding:14px 15px 12px;border-radius:18px;
+  border:1px solid rgba(126,235,196,.3);
+  background:linear-gradient(160deg,rgba(19,44,38,.99),rgba(7,18,16,1));
+  box-shadow:0 26px 60px rgba(0,0,0,.66),inset 0 1px 0 rgba(180,255,228,.08);
+  animation:noticePop .34s cubic-bezier(.2,1.4,.4,1)}
+@keyframes noticePop{from{transform:scale(.9);opacity:0}to{transform:scale(1);opacity:1}}
+.notice-x{position:absolute;top:9px;right:10px;z-index:3;width:28px;height:28px;border-radius:50%;
+  border:none;cursor:pointer;line-height:28px;font-size:15px;font-weight:900;
+  color:#ffd9a0;background:rgba(126,235,196,.14);transition:.15s}
+.notice-x:hover{background:rgba(126,235,196,.34);color:#fff;transform:scale(1.1) rotate(90deg)}
+.notice-x:active{transform:scale(.92)}
+.notice-hd{padding-right:32px;font-size:17px;font-weight:800;letter-spacing:.12em;color:#ffe9a8}
+.notice-bd{font-size:12.5px;line-height:1.85;color:rgba(200,230,218,.9);word-break:break-word;
+  -webkit-user-select:text;user-select:text}
+.notice-bd .nb-p{margin-bottom:8px}
+.notice-bd .nb-note{font-size:11px;color:rgba(160,204,188,.62)}
+.cp-row{display:flex;align-items:center;gap:9px;margin-bottom:8px;padding:7px 9px;border-radius:11px;
+  border:1px solid rgba(126,235,196,.2);background:rgba(10,26,23,.7)}
+.cp-meta{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.cp-label{font-size:10.5px;font-weight:700;letter-spacing:.1em;color:rgba(126,235,196,.84)}
+.cp-val{font-size:12.5px;color:#ffe9a8;overflow-wrap:anywhere;-webkit-user-select:text;user-select:text}
+.notice-copy{flex-shrink:0;padding:6px 11px;border-radius:999px;font:inherit;font-size:11.5px;
+  font-weight:700;cursor:pointer;color:#04201a;border:1px solid rgba(190,255,232,.6);
+  background:linear-gradient(180deg,#a9f7d6,#5fd8ab);box-shadow:0 6px 16px rgba(70,220,180,.24);
+  -webkit-tap-highlight-color:transparent;transition:transform .1s}
+.notice-copy:active{transform:scale(.94)}
+.notice-chk{display:flex;align-items:center;gap:7px;padding:2px 1px;font-size:11.5px;
+  color:rgba(160,204,188,.78);cursor:pointer}
+.notice-chk input{width:15px;height:15px;accent-color:#5fd8ab;cursor:pointer}
+.notice-btn{padding:11px 0;border-radius:999px;font:inherit;font-size:13.5px;font-weight:800;
+  letter-spacing:.14em;cursor:pointer;color:#04201a;border:1px solid rgba(190,255,232,.6);
+  background:linear-gradient(180deg,#a9f7d6,#5fd8ab);box-shadow:0 8px 22px rgba(70,220,180,.28);
+  -webkit-tap-highlight-color:transparent;transition:transform .1s}
+.notice-btn:active{transform:scale(.97)}
+/* 主菜单第三排：公告入口，比主按钮低调一档 */
+.tt-row-notice{margin-top:10px}
+.tt-row-notice .tt-notice-btn{flex:0 0 auto;max-width:none;padding:8px 26px;font-size:12px;
+  letter-spacing:.16em;color:#ffe9a8;border-color:rgba(255,209,102,.3);background:rgba(52,42,16,.34)}
+.tt-row-notice .tt-notice-btn:hover{border-color:rgba(255,209,102,.68);background:rgba(70,56,20,.62)}

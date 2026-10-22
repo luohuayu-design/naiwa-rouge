@@ -3334,6 +3334,73 @@ async function boot() {
   document.getElementById('btnGift').addEventListener('click', showGift);
   document.getElementById('giftBack').addEventListener('click', () => hideSub(giftScr));
 
+  // ---------------- 公告（第 45 块）----------------
+  // 照搬 naiwa-step 那套：进主界面自动弹一次，「日期 + 公告版本」写在本机；
+  // 勾了「今日内不再弹出」当天就不再自动弹。改了公告内容把 NOTICE_VER +1，
+  // 之前勾过的人也会重新看到一次。主菜单「公告」按钮则永远能强制回看。
+  const NOTICE_VER = '1';
+  const NOTICE_KEY = 'naiwa_rouge_notice_v1';   // 已在 profile.js 的 RESET_KEYS 里，重置进度会一起清掉
+  const noticeOv = document.getElementById('noticeOv');
+  const noticeHideToday = document.getElementById('noticeHideToday');
+
+  const noticeToday = () => {
+    const n = new Date();
+    return `${n.getFullYear()}-${n.getMonth() + 1}-${n.getDate()}`;
+  };
+
+  // 一键复制：优先用 clipboard API；老 WebView / 非 https 环境用 textarea + execCommand 兜底
+  async function copyText(t) {
+    try { await navigator.clipboard.writeText(t); return true; } catch (_) { /* 继续兜底 */ }
+    const ta = document.createElement('textarea');
+    ta.value = t;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.focus(); ta.select();
+    let ok = false;
+    try { ok = document.execCommand('copy'); } catch (_) { /* 不支持就算了 */ }
+    ta.remove();
+    return ok;
+  }
+
+  // 复制按钮走事件委托（只绑一次）：成功变「✅ 已复制」，1.6 秒后还原
+  noticeOv.addEventListener('click', async (e) => {
+    const b = e.target.closest('.notice-copy');
+    if (!b) return;
+    const old = b.textContent;
+    const ok = await copyText(b.dataset.copy || '');
+    b.textContent = ok ? '✅ 已复制' : '❌ 复制失败';
+    if (ok) audio.sfx('card');
+    setTimeout(() => { b.textContent = old; }, 1600);
+  });
+
+  function closeNotice() {
+    if (noticeHideToday.checked) {
+      try {
+        localStorage.setItem(NOTICE_KEY, `${noticeToday()}|${NOTICE_VER}`);
+      } catch (_) { /* 隐私模式写不进就算了，下次还会弹 */ }
+    }
+    noticeOv.classList.remove('on');
+    noticeOv.setAttribute('aria-hidden', 'true');
+  }
+
+  // force=true = 从主菜单点「📢 公告」强制打开（忽略「今日不再弹出」）
+  function showNotice(force) {
+    if (!force) {
+      let seen = '';
+      try { seen = localStorage.getItem(NOTICE_KEY) || ''; } catch (_) { seen = ''; }
+      if (seen === `${noticeToday()}|${NOTICE_VER}`) return false;   // 今天这一版已经关过
+    }
+    noticeHideToday.checked = false;
+    noticeOv.classList.add('on');
+    noticeOv.setAttribute('aria-hidden', 'false');
+    return true;
+  }
+
+  document.getElementById('noticeOk').addEventListener('click', closeNotice);
+  document.getElementById('noticeX').addEventListener('click', closeNotice);
+  document.getElementById('btnNotice').addEventListener('click', () => showNotice(true));
+
   // ---------------- 夜行记忆（第 32 块） ----------------
   // 十八夜，一夜一关。前 3 夜已经在关卡里走过；剩下 15 夜是给后面那些
   // 还没做出来的关卡预留的剧本，现在先当档案读。
@@ -4271,6 +4338,16 @@ async function boot() {
         get: () => getDifficulty().name,
         scale: (n) => roundScale(n),
       },
+      // 第 45 块：公告（测试钩子）—— show(true) 强制打开，show(false) 走「今日不再弹」判断
+      notice: {
+        show: (force) => showNotice(force !== false),
+        hide: () => { closeNotice(); return noticeOv.classList.contains('on'); },
+        open: () => noticeOv.classList.contains('on'),
+        ver: () => NOTICE_VER,
+        key: () => { try { return localStorage.getItem(NOTICE_KEY) || ''; } catch (_) { return ''; } },
+        clear: () => { try { localStorage.removeItem(NOTICE_KEY); } catch (_) { /* 忽略 */ } },
+        copy: (t) => copyText(t),
+      },
       // 第 44 块：礼包兑换（测试钩子）
       gift: {
         count: GIFT_COUNT,
@@ -4863,8 +4940,13 @@ async function boot() {
   setTimeout(() => {
     loadingEl.classList.add('off');
     setTimeout(() => { loadingEl.style.display = 'none'; }, 500);
-    // 调试模式默认跳过标题页与教程，自动化测试直接进第 1 回合
-    if (AUTO_START) setTimeout(() => beginGame({ tutorial: false }), 300);
+    if (AUTO_START) {
+      // 调试模式直接开打：公告不挡自动化测试（要测公告就手调 __game.notice.show()）
+      setTimeout(() => beginGame({ tutorial: false }), 300);
+    } else {
+      // 第 45 块：进主界面后弹一次公告 —— 等遮罩淡完再弹，不然像加载卡住了
+      setTimeout(() => showNotice(false), 700);
+    }
   }, loadFailed ? 2200 : 60);
 
   // 5 秒后不管有没有动，提示都淡掉，避免挡视线
