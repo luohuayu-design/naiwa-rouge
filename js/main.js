@@ -82,13 +82,20 @@ async function boot() {
   // 调试模式跳过叙事（随机事件卡 / 商店自动弹出）：自动化测试需要确定性的开局，
   // 想测叙事用 ?debug=1&story=1 打开。
   const DEBUG_SKIP_NARRATIVE = DEBUG && !params.has('story');
-  const ARENA_R = 15;          // 可走半径（石头圈在 15.55）
+  let ARENA_R = 15;            // 可走半径（石头圈在 +0.55）。第 33 块起随关卡变：第三关 19
+  function setArenaRadius(r) {
+    ARENA_R = r;
+    setSceneArena(r);
+    enemies.setArenaRadius(r);
+    return r;
+  }
   const BODY_R = 0.65;         // 角色自身半径（贴边留一点余量）
   const ACCEL = 14;            // 速度趋近系数，越大越「跟手」
   const TURN_SPEED = 13;       // 转身角速度系数
   const CAM_OFFSET = new THREE.Vector3(0, 10.6, 9.2);
   const CAM_LERP = 7;
-  const IFRAME = 0.55;         // 受击后的无敌时间（防止被多只小兵同帧秒杀）
+  const IFRAME = 0.9;          // 受击后的无敌时间（第 33 块 0.55→0.9：怪堆里不再被连环蹭血；
+                               // 略短于大多数怪的攻击间隔，走位仍能被惩罚，但不会被同屏多只怪轮流点名）
   // 移动速度不在这里调了 —— 见 stats.js 的 STAT_DEFS 里 moveSpeed（属性面板实时生效）
 
   // 音频：这里只建对象（0 请求、0 声音）。真正的解锁在第一次点击/按键
@@ -114,7 +121,7 @@ async function boot() {
   app.appendChild(renderer.domElement);
 
   // ---------------- 场景与相机 ----------------
-  const { scene, update: updateScene, setTheme: setSceneTheme } = buildNightScene({ arenaRadius: ARENA_R });
+  const { scene, update: updateScene, setTheme: setSceneTheme, setArena: setSceneArena } = buildNightScene({ arenaRadius: ARENA_R });
 
   const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 220);
   const camOffset = CAM_OFFSET.clone();
@@ -1480,7 +1487,7 @@ async function boot() {
       grid.className = 'rc-grid';
       const cells = [
         ['效果', b.title, true],
-        ['层数', `${n} / ${b.maxStack}`, true],
+        ['层数', boonStackText(b), true],
         ['说明', b.desc, false],
       ];
       for (const [k, v, hot] of cells) {
@@ -2660,11 +2667,12 @@ async function boot() {
   };
   let level = createLevel(LEVEL_1, levelDeps);
 
-  // 切关卡：重建回合机器 + 换场景皮肤。id 不认识就回落到第一关。
+  // 切关卡：重建回合机器 + 换场景皮肤 + 换场地半径（第三关更大，第 33 块）。id 不认识就回落到第一关。
   function setLevel(id) {
     curLevelId = LEVELS_BY_ID[id] ? id : 1;
     level = createLevel(LEVELS_BY_ID[curLevelId], levelDeps);
     setSceneTheme(level.level.theme || 'meadow');
+    setArenaRadius(level.level.arena || 15);
     return level;
   }
 
@@ -2902,6 +2910,15 @@ async function boot() {
   const srNext = document.getElementById('srNext');
   let srIdx = 0;
 
+  // 第 33 块：一夜一章按顺序解锁 —— 走完（亲历）或读完上一夜，才翻开下一页。
+  // 第 1 夜默认开放；4~18 夜这些档案夜靠在面板里逐夜读下去解锁。
+  function chapterUnlocked(i) {
+    if (i <= 0) return true;
+    const c = STORY_CHAPTERS[i - 1];
+    const p = storyProgress();
+    return !!(p.seen[c.id] || p.read[c.id]);
+  }
+
   function renderStoryLog() {
     const p = storyProgress();
     const seenN = STORY_CHAPTERS.filter((c) => p.seen[c.id]).length;
@@ -2929,9 +2946,12 @@ async function boot() {
     STORY_CHAPTERS.forEach((ch, i) => {
       const live = !!p.seen[ch.id];
       const read = live || !!p.read[ch.id];
+      const unlocked = chapterUnlocked(i);
+      const prev = STORY_CHAPTERS[i - 1];
       const item = document.createElement('button');
       item.type = 'button';
-      item.className = 'st-item' + (live ? ' cur' : '') + (read ? '' : ' unread');
+      item.className = 'st-item' + (live ? ' cur' : '')
+        + (read ? '' : unlocked ? ' unread' : ' locked');
       item.dataset.id = ch.id;
 
       const ico = document.createElement('div'); ico.className = 'st-ico'; ico.textContent = read ? ch.icon : '🌫';
@@ -2941,25 +2961,33 @@ async function boot() {
       const nm = document.createElement('div'); nm.className = 'st-name';
       nm.textContent = read ? ch.title : '（还没走到）';
       const who = document.createElement('div'); who.className = 'st-who';
-      who.textContent = read ? `—— ${ch.who}` : (ch.levelId ? `进入第 ${ch.levelId} 关带到第 ${ch.atRound} 回合` : '还没做出来的地方');
+      who.textContent = read ? `—— ${ch.who}`
+        : unlocked ? (ch.levelId ? `进入第 ${ch.levelId} 关带到第 ${ch.atRound} 回合` : '还没做出来的地方')
+          : `走完第 ${prev.no} 夜后翻开`;
       txt.append(no, nm, who);
 
       const tag = document.createElement('div');
       tag.className = 'st-tag' + (live ? ' done' : '');
-      tag.textContent = live ? '亲历' : (p.read[ch.id] ? '已读' : '档案');
+      tag.textContent = live ? '亲历' : (p.read[ch.id] ? '已读' : unlocked ? '档案' : '未解锁');
 
       item.append(ico, txt, tag);
       item.addEventListener('click', () => openStoryReader(i));
       stList.appendChild(item);
     });
 
+    const locked = STORY_CHAPTERS.filter((c, i) => !chapterUnlocked(i)).length;
     const unread = STORY_CHAPTERS.length - STORY_CHAPTERS.filter((c) => p.read[c.id] || p.seen[c.id]).length;
     stFoot.textContent = unread > 0
-      ? `还有 ${unread} 夜没读过 · 读完第 18 夜会结算你的结局`
+      ? `还有 ${unread} 夜没读过${locked > 0 ? ` · ${locked} 夜未解锁（走完上一夜才翻开）` : ''} · 读完第 18 夜会结算你的结局`
       : '十八夜都读完了 · 点开任何一夜可以重读';
   }
 
   function openStoryReader(i) {
+    if (!chapterUnlocked(i)) {
+      const prev = STORY_CHAPTERS[i - 1];
+      showToast('夜行记忆', `这一页还没翻开 —— 先走完第 ${prev ? prev.no : '?'} 夜`);
+      return;
+    }
     srIdx = Math.max(0, Math.min(STORY_CHAPTERS.length - 1, i));
     renderStoryReader();
     storyReadEl.classList.add('on');
@@ -2995,7 +3023,7 @@ async function boot() {
     srTitle.textContent = ch.title;
     srPos.textContent = `${ch.no} / ${STORY_CHAPTERS.length}`;
     srPrev.disabled = srIdx === 0;
-    srNext.disabled = srIdx === STORY_CHAPTERS.length - 1;
+    srNext.disabled = srIdx === STORY_CHAPTERS.length - 1 || !chapterUnlocked(srIdx + 1);
     srBody.textContent = '';
 
     if (ch.story) {
@@ -3052,7 +3080,7 @@ async function boot() {
   }
 
   srPrev.addEventListener('click', () => { if (srIdx > 0) { srIdx--; renderStoryReader(); } });
-  srNext.addEventListener('click', () => { if (srIdx < STORY_CHAPTERS.length - 1) { srIdx++; renderStoryReader(); } });
+  srNext.addEventListener('click', () => { if (srIdx < STORY_CHAPTERS.length - 1 && chapterUnlocked(srIdx + 1)) { srIdx++; renderStoryReader(); } });
   document.getElementById('srClose').addEventListener('click', closeStoryReader);
   document.getElementById('btnStory').addEventListener('click', () => { renderStoryLog(); showSub(storyScr); });
   document.getElementById('stBack').addEventListener('click', () => hideSub(storyScr));
@@ -3215,11 +3243,11 @@ async function boot() {
       const label = document.createElement('i');
       label.textContent = '永久层数';
       const from = document.createElement('s');
-      from.textContent = `${n} / ${b.maxStack}`;
+      from.textContent = boonStackText(b);
       const arrow = document.createElement('em');
       arrow.textContent = '→';
       const to = document.createElement('b');
-      to.textContent = `${n + 1} / ${b.maxStack}`;
+      to.textContent = `${n + 1} / ${Number.isFinite(b.maxStack) ? b.maxStack : '∞'}`;
       line.append(label, from, arrow, to);
       delta.appendChild(line);
 
@@ -3251,7 +3279,7 @@ async function boot() {
     if (!r.ok) return;
     audio.sfx('upgrade');
     boonSession.done++;
-    showToast(`火种 · ${b.name}`, `永久层数 ${r.stacks} / ${b.maxStack} —— 下一局开局生效`);
+    showToast(`火种 · ${b.name}`, `永久层数 ${r.stacks} / ${Number.isFinite(b.maxStack) ? b.maxStack : '∞'} —— 下一局开局生效`);
     if (boonPending() > 0 && boonTotalStacks() < BOONS.reduce((a, x) => a + x.maxStack, 0)) {
       renderBoonPanel();
       return;
@@ -3438,6 +3466,7 @@ async function boot() {
     const wasDaily = dailyMode;       // 下面会把 dailyMode 清掉，成就判定要用开局那一下
     won = isWin;
     deadT = 0;
+    iframe = 0;                     // 结算不再闪（无敌帧闪烁只属于战斗中）
     input.joystick.release();
     vel.set(0, 0, 0);
     setBag(false);                  // 背包开着就收掉
@@ -4140,7 +4169,7 @@ async function boot() {
   const combatCtx = {
     playerPos: pos,
     playerRadius: BODY_R,
-    arenaRadius: ARENA_R,
+    get arenaRadius() { return ARENA_R; },   // 随关卡变（第三关 19，第 33 块）
     hurtPlayer,
     cursePlayer,
   };
@@ -4243,6 +4272,10 @@ async function boot() {
     frog.root.position.z = pos.z;
     frog.yaw.rotation.y = yaw + MODEL_YAW;
     if (inGame) frog.update(dt, speed01);
+
+    // 受击无敌帧的视觉反馈：模型一闪一闪（第 33 块）。
+    // 只藏身体不藏影子逻辑太琐碎，直接切换可见性；无敌帧结束的下一帧必定恢复可见。
+    frog.mesh.visible = !(iframe > 0 && Math.floor(elapsed * 9) % 2 === 1);
 
     // 管理员模式：跳过按钮跟着 gameState 自动显隐（不在打的时候收起来）
     renderSkipBtn();

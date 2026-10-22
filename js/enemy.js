@@ -703,6 +703,7 @@ function createBar(cfg) {
 
 // ------------------------------------------------------------
 export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
+  let arenaR = arenaRadius;   // 可走半径，随关卡变（第三关 19，第 33 块）—— setArenaRadius 改
   const assets = new Map();   // type -> { scene, clips, height, minY }
   const list = [];            // 场上所有怪（含正在消散的）
   let uid = 0;
@@ -2188,7 +2189,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
     if (d < 0.001) { dx = 0; dz = 1; d = 1; }
     e.pos.x += (dx / d) * dist;
     e.pos.z += (dz / d) * dist;
-    const lim = arenaRadius - e.cfg.radius;
+    const lim = arenaR - e.cfg.radius;
     const r = Math.hypot(e.pos.x, e.pos.z);
     if (r > lim) {
       e.pos.x = (e.pos.x / r) * lim;
@@ -2274,6 +2275,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
 
   return {
     preload, spawn, update, reset,
+    setArenaRadius: (r) => { arenaR = r; return arenaR; },   // 换关时同步可走半径（第 33 块）
     list,
     aliveCount,
     takeDamage,

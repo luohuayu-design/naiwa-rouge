@@ -68,7 +68,7 @@ export function buildNightScene({ arenaRadius = 15, theme = 'meadow' } = {}) {
   moonLight.shadow.mapSize.set(2048, 2048);
   moonLight.shadow.camera.near = 1;
   moonLight.shadow.camera.far = 48;
-  const S = arenaRadius + 4;
+  const S = arenaRadius + 8;
   moonLight.shadow.camera.left = -S;
   moonLight.shadow.camera.right = S;
   moonLight.shadow.camera.top = S;
@@ -118,18 +118,22 @@ export function buildNightScene({ arenaRadius = 15, theme = 'meadow' } = {}) {
     seed = (seed * 1664525 + 1013904223) % 4294967296;
     return seed / 4294967296;
   };
-  for (let i = 0; i < STONES; i++) {
-    const a = (i / STONES) * Math.PI * 2 + rnd() * 0.08;
-    const r = arenaRadius + 0.55 + rnd() * 0.3;
-    p.set(Math.cos(a) * r, 0.18 + rnd() * 0.1, Math.sin(a) * r);
-    e.set(rnd() * Math.PI, rnd() * Math.PI, rnd() * Math.PI);
-    q.setFromEuler(e);
-    const s = 0.7 + rnd() * 0.9;
-    sc.set(s * 1.2, s * 0.8, s);
-    m4.compose(p, q, sc);
-    stones.setMatrixAt(i, m4);
+  // 摆放逻辑抽成函数（第 33 块）：第三关场地更大，setArena 时按新半径重摆一遍
+  function placeStones(radius) {
+    for (let i = 0; i < STONES; i++) {
+      const a = (i / STONES) * Math.PI * 2 + rnd() * 0.08;
+      const r = radius + 0.55 + rnd() * 0.3;
+      p.set(Math.cos(a) * r, 0.18 + rnd() * 0.1, Math.sin(a) * r);
+      e.set(rnd() * Math.PI, rnd() * Math.PI, rnd() * Math.PI);
+      q.setFromEuler(e);
+      const s = 0.7 + rnd() * 0.9;
+      sc.set(s * 1.2, s * 0.8, s);
+      m4.compose(p, q, sc);
+      stones.setMatrixAt(i, m4);
+    }
+    stones.instanceMatrix.needsUpdate = true;
   }
-  stones.instanceMatrix.needsUpdate = true;
+  placeStones(arenaRadius);
   scene.add(stones);
 
   // ---------------- 草丛（细锥体，纯粹是地面细节） ----------------
@@ -139,18 +143,21 @@ export function buildNightScene({ arenaRadius = 15, theme = 'meadow' } = {}) {
   });
   const TUFTS = 900;
   const tufts = new THREE.InstancedMesh(tuftGeo, tuftMat, TUFTS);
-  for (let i = 0; i < TUFTS; i++) {
-    const a = rnd() * Math.PI * 2;
-    const r = Math.sqrt(rnd()) * (arenaRadius + 5);
-    p.set(Math.cos(a) * r, 0.14 + rnd() * 0.06, Math.sin(a) * r);
-    e.set((rnd() - 0.5) * 0.45, rnd() * Math.PI * 2, (rnd() - 0.5) * 0.45);
-    q.setFromEuler(e);
-    const s = 0.6 + rnd() * 1.1;
-    sc.set(s, s * (0.8 + rnd() * 0.6), s);
-    m4.compose(p, q, sc);
-    tufts.setMatrixAt(i, m4);
+  function placeTufts(radius) {
+    for (let i = 0; i < TUFTS; i++) {
+      const a = rnd() * Math.PI * 2;
+      const r = Math.sqrt(rnd()) * (radius + 5);
+      p.set(Math.cos(a) * r, 0.14 + rnd() * 0.06, Math.sin(a) * r);
+      e.set((rnd() - 0.5) * 0.45, rnd() * Math.PI * 2, (rnd() - 0.5) * 0.45);
+      q.setFromEuler(e);
+      const s = 0.6 + rnd() * 1.1;
+      sc.set(s, s * (0.8 + rnd() * 0.6), s);
+      m4.compose(p, q, sc);
+      tufts.setMatrixAt(i, m4);
+    }
+    tufts.instanceMatrix.needsUpdate = true;
   }
-  tufts.instanceMatrix.needsUpdate = true;
+  placeTufts(arenaRadius);
   tufts.visible = TH.tuftVisible;   // 骨塔庭院不长草
   scene.add(tufts);
 
@@ -233,6 +240,26 @@ export function buildNightScene({ arenaRadius = 15, theme = 'meadow' } = {}) {
     return name;
   }
 
+  // ---------------- 场地半径（第 33 块）：第三关场地更大 ----------------
+  // 只重摆边界圈、石头、草丛和萤火虫的分布；灯光 / 雾 / 地面（半径 90 的大圆）不动。
+  function setArena(radius) {
+    ring.geometry.dispose();
+    ring.geometry = new THREE.RingGeometry(radius - 0.22, radius + 0.02, 160);
+    placeStones(radius);
+    placeTufts(radius);
+    for (let i = 0; i < FLIES; i++) {
+      const a = rnd() * Math.PI * 2;
+      const r = Math.sqrt(rnd()) * (radius + 2);
+      const d = flyData[i];
+      d.bx = Math.cos(a) * r;
+      d.bz = Math.sin(a) * r;
+      flyPos[i * 3] = d.bx;
+      flyPos[i * 3 + 2] = d.bz;
+    }
+    flyGeo.attributes.position.needsUpdate = true;
+    return radius;
+  }
+
   // ---------------- 每帧动画 ----------------
   const clock = { t: 0 };
   function update(dt) {
@@ -257,7 +284,7 @@ export function buildNightScene({ arenaRadius = 15, theme = 'meadow' } = {}) {
     moonLight.intensity = moonBase + Math.sin(t * 0.35) * 0.15;
   }
 
-  return { scene, update, moonLight, setTheme };
+  return { scene, update, moonLight, setTheme, setArena };
 }
 
 // ------------------------------------------------------------

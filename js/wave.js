@@ -178,15 +178,17 @@ export const LEVEL_3 = {
   id: 3,
   name: '第三关 · 焦土钟楼',
   theme: 'ash',
+  arena: 19,               // 第 33 块：场地扩大（一/二关 15）—— 怪多，摊开打
   // 顺序：近身先来 → 远程 → 支援（骸盾/孵骨最后）—— 先清贴脸的，再决定先切谁
   order: [
     ['minion', 1], ['warrior', 1.6], ['charger', 1.8],
     ['archer', 2.0], ['bowman', 2.2], ['shielder', 2.4], ['brood', 2.6],
   ],
-  spawnRadius: 13.2,
+  spawnRadius: 17.4,       // 刷怪圆环跟着场地走（19 − 一点余量）
   spawnJitter: 0.5,
-  minPlayerDistance: 7.0,
-  minSpawnGap: 2.0,
+  minPlayerDistance: 8.0,  // 场大了，出生点离人也更远一点
+  minSpawnGap: 2.4,        // 出生点之间铺得更开，不扎堆
+  gapScale: 1.35,          // 第 33 块：段内生成间隔整体放慢 35%，怪不成堆
   gap: 2.6,
   upgradeAfter: [1, 2, 3, 4, 5, 8, 10, 12, 15, 17, 19, 20],
   shopAfter: [3, 6, 9, 12, 15, 18],
@@ -270,9 +272,12 @@ export function levelStats(level = LEVEL_1) {
 // 第一关的 order 就是老代码里写死的 minion→warrior→archer→bowman（1/1.6/2.0/2.2），
 // 展开结果与改造前逐条一致。
 // mod：本回合修正（随机事件写入），数量按 mod.countScale 缩放。
+// level.gapScale：全关生成节奏系数（第 33 块，第三关 1.35 = 放慢 35%），
+// 只拉开怪与怪的间隔，不改回合表里的数量。
 function buildSpawns(roundNo, mod = {}, level = LEVEL_1) {
   const cfg = level.rounds[roundNo - 1];
   const cs = mod.countScale != null ? Math.max(0, mod.countScale) : 1;
+  const gs = level.gapScale || 1;
   const n = (v) => Math.max(0, Math.round((v || 0) * cs));
   const out = [];
   let t = 0.75;
@@ -284,7 +289,7 @@ function buildSpawns(roundNo, mod = {}, level = LEVEL_1) {
     first = false;
     for (let i = 0; i < count; i++) {
       out.push({ type, delay: t });
-      t += cfg.gap * gapMul;
+      t += cfg.gap * gapMul * gs;
     }
   }
   return out;

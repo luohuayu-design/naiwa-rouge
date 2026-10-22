@@ -5,7 +5,7 @@
 //   · 局内的一切加成不跨局保留（本来就是这样：每局 stats 从 base 重建）
 //   · **通关一大关**之后额外触发 3 次「永久三选一」，直接写进局外档案
 //   · 这 3 次的品质照旧吃幸运 —— 幸运越高越容易见到史诗 / 传说
-//   · 局外因素不能吃掉难度：每张卡数值都很小，而且每项有层数上限
+//   · 局外因素不能吃掉难度：每张卡每层的数值都很小（大的是层数本身，靠通关攒）
 //
 // 和 campfire.js 的分工：
 //   campfire = 花骨币买，可控、可预期（想要的属性自己点，贵但稳）
@@ -24,98 +24,97 @@ import { rarityWeight } from './rarity.js';
 export const BOON_PICKS = 3;
 
 // ---------------- 永久卡池 ----------------
-// 数值原则：**一张卡 ≈ 一张局内普通卡的三分之一到一半**，而且全部有层数上限。
-// 算一笔总账：每项满层合计约等于「生命 +3、攻击 +18%、移速 +9%、
-// 攻速 +15%、范围 +0.45、防御 +21、回复 +0.36/s、掉钱 +15%、幸运 +1.1」，
-// 再加上两张传说各一层 —— 大约是一局里 6~8 次三选一的分量，
-// 需要通关好几轮才攒得出来，不会把噩梦走成平地。
+// 数值原则（第 33 块改版）：**层数上限全部取消**（双拍 / 不灭这两张机制卡除外），
+// 每一层的数值也整体上调了一档 —— 局外成长现在是一条「可以一直走下去」的长线。
+// 算一笔总账：普通卡每层约等于局内普通卡的二分之一，靠通关反复攒，
+// 不会一次性把噩梦走成平地（每层还是很小，大的是层数本身）。
 //
 // rarity 是抽签权重（rarity.js 的 mul × 幸运系数），不是「越稀有数值越大」的
 // 唯一依据 —— 但高品质那几张确实更贵。
 export const BOONS = [
   // ---------------- 普通 ----------------
   {
-    id: 'b_bone', name: '坚骨', glyph: '🦴', rarity: 0, maxStack: 3,
+    id: 'b_bone', name: '坚骨', glyph: '🦴', rarity: 0, maxStack: Infinity,
     stat: 'maxHp', flat: 1,
-    title: '生命上限 +1', desc: '下一局开局多 1 点血上限，叠三层就是 6 → 9。',
+    title: '生命上限 +1', desc: '下一局开局多 1 点血上限，想叠多高都行。',
   },
   {
-    id: 'b_claw', name: '利爪', glyph: '🐾', rarity: 0, maxStack: 3,
-    stat: 'attack', pct: 0.06,
-    title: '攻击力 +6%', desc: '只加奶蛙自己的普攻，环剑不吃这一项。',
+    id: 'b_claw', name: '利爪', glyph: '🐾', rarity: 0, maxStack: Infinity,
+    stat: 'attack', pct: 0.08,
+    title: '攻击力 +8%', desc: '只加奶蛙自己的普攻，环剑不吃这一项。',
   },
   {
-    id: 'b_step', name: '快步', glyph: '🌿', rarity: 0, maxStack: 3,
-    stat: 'moveSpeed', pct: 0.03,
-    title: '移动速度 +3%', desc: '拉扯时脚下快半拍，跑圈更省力。',
+    id: 'b_step', name: '快步', glyph: '🌿', rarity: 0, maxStack: Infinity,
+    stat: 'moveSpeed', pct: 0.04,
+    title: '移动速度 +4%', desc: '拉扯时脚下快半拍，跑圈更省力。',
   },
   {
-    id: 'b_hand', name: '快手', glyph: '⚡', rarity: 0, maxStack: 3,
-    stat: 'attackSpeed', pct: 0.05,
-    title: '攻击速度 +5%', desc: '出手更密一点，和攻击力叠乘。',
+    id: 'b_hand', name: '快手', glyph: '⚡', rarity: 0, maxStack: Infinity,
+    stat: 'attackSpeed', pct: 0.06,
+    title: '攻击速度 +6%', desc: '出手更密一点，和攻击力叠乘。',
   },
   // ---------------- 稀有 ----------------
   {
-    id: 'b_reach', name: '长臂', glyph: '◎', rarity: 1, maxStack: 3,
-    stat: 'attackRange', flat: 0.15,
-    title: '攻击范围 +0.15', desc: '脚下那圈更大 —— 也意味着金币吸得更远。',
+    id: 'b_reach', name: '长臂', glyph: '◎', rarity: 1, maxStack: Infinity,
+    stat: 'attackRange', flat: 0.18,
+    title: '攻击范围 +0.18', desc: '脚下那圈更大 —— 也意味着金币吸得更远。',
   },
   {
-    id: 'b_hide', name: '铜皮', glyph: '🛡', rarity: 1, maxStack: 3,
+    id: 'b_hide', name: '铜皮', glyph: '🛡', rarity: 1, maxStack: Infinity,
     stat: 'armor', flat: 5,
-    title: '防御 +5', desc: '减伤率 = 防御 /(100 + 防御)，叠三层约 13%。',
+    title: '防御 +5', desc: '每次挨打实打实少掉 5 点伤害（伤害 = 攻击 − 防御），可以一直叠。',
   },
   {
-    id: 'b_purse', name: '拾荒', glyph: '🪙', rarity: 1, maxStack: 3,
-    stat: 'goldRate', flat: 0.05,
-    title: '金币掉落率 +5%', desc: '地上的钱多一点，商店里能挑的东西就多一点。',
+    id: 'b_purse', name: '拾荒', glyph: '🪙', rarity: 1, maxStack: Infinity,
+    stat: 'goldRate', flat: 0.06,
+    title: '金币掉落率 +6%', desc: '地上的钱多一点，商店里能挑的东西就多一点。',
   },
   // ---------------- 精良 ----------------
   {
-    id: 'b_regen', name: '回春', glyph: '🌱', rarity: 2, maxStack: 3,
-    stat: 'hpRegen', flat: 0.12,
-    title: '生命回复 +0.12/秒', desc: '一场仗打下来能多回十几点，但救不了被围住的时候。',
+    id: 'b_regen', name: '回春', glyph: '🌱', rarity: 2, maxStack: Infinity,
+    stat: 'hpRegen', flat: 0.15,
+    title: '生命回复 +0.15/秒', desc: '一场仗打下来能多回几十点，但救不了被围住的时候。',
   },
   {
-    id: 'b_star', name: '星屑', glyph: '✨', rarity: 2, maxStack: 3,
-    stat: 'luck', flat: 0.2,
-    title: '幸运 +0.2', desc: '只让三选一和商店更容易出好东西，不加任何伤害。',
+    id: 'b_star', name: '星屑', glyph: '✨', rarity: 2, maxStack: Infinity,
+    stat: 'luck', flat: 0.25,
+    title: '幸运 +0.25', desc: '只让三选一和商店更容易出好东西，不加任何伤害。',
   },
   {
-    id: 'b_eye', name: '锐目', glyph: '✦', rarity: 2, maxStack: 3,
-    stat: 'critRate', flat: 0.05,
-    title: '暴击率 +5%', desc: '近战命中时按概率打出 1.5 倍伤害。',
+    id: 'b_eye', name: '锐目', glyph: '✦', rarity: 2, maxStack: Infinity,
+    stat: 'critRate', flat: 0.06,
+    title: '暴击率 +6%', desc: '近战命中时按概率打出 1.5 倍伤害。',
   },
   // ---------------- 史诗 ----------------
   {
-    id: 'b_leech', name: '吸血', glyph: '🩸', rarity: 3, maxStack: 2,
-    stat: 'lifesteal', flat: 0.03,
-    title: '近战吸血 +3%', desc: '近战伤害按比例回血，环剑不吃这一项。',
+    id: 'b_leech', name: '吸血', glyph: '🩸', rarity: 3, maxStack: Infinity,
+    stat: 'lifesteal', flat: 0.04,
+    title: '近战吸血 +4%', desc: '近战伤害按比例回血，环剑不吃这一项。',
   },
   {
-    id: 'b_heavy', name: '重击', glyph: '💥', rarity: 3, maxStack: 2,
-    stat: 'critDamage', pct: 0.12,
-    title: '暴击伤害 +12%', desc: '没有暴击率时它一文不值 —— 两张一起拿才成套路。',
+    id: 'b_heavy', name: '重击', glyph: '💥', rarity: 3, maxStack: Infinity,
+    stat: 'critDamage', pct: 0.15,
+    title: '暴击伤害 +15%', desc: '没有暴击率时它一文不值 —— 配几张锐目才成套路。',
   },
   {
-    id: 'b_plate', name: '厚甲', glyph: '🪨', rarity: 3, maxStack: 2,
+    id: 'b_plate', name: '厚甲', glyph: '🪨', rarity: 3, maxStack: Infinity,
     stat: 'armor', flat: 12,
-    title: '防御 +12', desc: '比铜皮厚一倍多，被围住时能多撑两下。',
+    title: '防御 +12', desc: '比铜皮厚一倍多，被围住时每一下都实打实少掉 12 点。',
   },
   // ---------------- 传说 ----------------
   {
     id: 'b_double', name: '双拍', glyph: '✌', rarity: 4, maxStack: 1,
     stat: 'multiHit', flat: 1,
-    title: '同时命中 +1', desc: '一次出手拍中两只不同的怪。只有一层，拿到就是永久改手感。',
+    title: '同时命中 +1', desc: '一次出手拍中两只不同的怪。机制卡只有一层，拿到就是永久改手感。',
   },
   {
     id: 'b_aegis', name: '不灭', glyph: '🔆', rarity: 4, maxStack: 1,
     stat: 'aegis', flat: 1,
-    title: '金钟罩 +1 层', desc: '开局就有周期护体：每 15 秒无敌 3 秒。只有一层。',
+    title: '金钟罩 +1 层', desc: '开局就有周期护体：每 15 秒无敌 3 秒。机制卡只有一层。',
   },
   {
-    id: 'b_fate', name: '福星', glyph: '🍀', rarity: 4, maxStack: 2,
-    title: '幸运 +0.5', stat: 'luck', flat: 0.5,
+    id: 'b_fate', name: '福星', glyph: '🍀', rarity: 4, maxStack: Infinity,
+    title: '幸运 +0.6', stat: 'luck', flat: 0.6,
     desc: '幸运是唯一会「自己喂自己」的属性 —— 它让下一次抽到福星的概率也变高。',
   },
 ];
@@ -130,6 +129,8 @@ function owned() {
 
 export function boonStacks(id) {
   const n = Number(owned()[id]);
+  // 只认有限正数 —— 档案被改成 Infinity / NaN 之类的脏值时按 0 层处理，
+  // 不然 applyBoons 的叠加循环会跑飞
   return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
 }
 
@@ -221,8 +222,8 @@ export function applyBoons(stats, wstats) {
   return count;
 }
 
-// 面板文案：这一项现在一共加了多少（第几层 / 上限）
+// 面板文案：这一项现在一共加了多少（第几层 / 上限；无上限显示 ∞）
 export function boonStackText(b) {
   const n = boonStacks(b.id);
-  return `${n} / ${b.maxStack}`;
+  return `${n} / ${Number.isFinite(b.maxStack) ? b.maxStack : '∞'}`;
 }
