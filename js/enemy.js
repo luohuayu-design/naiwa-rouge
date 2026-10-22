@@ -293,6 +293,120 @@ export const ENEMY_TYPES = {
       death: ANIM.death, spawn: ANIM.spawn,
     },
   },
+  // ============================================================
+  // 第三关：焦土钟楼的三只怪（第 29 块）
+  //
+  // 一二关已经把「密度」和「站位躲避」用掉了，三关必须换一种压力：
+  //   **打断与目标优先级**。三只怪都带「放着不管就滚雪球」的性质，
+  //   逼玩家在怪群里挑出该先处理的那一只 —— 这也是给新装备（震钟 / 棘甲 /
+  //   震剑）留出的解法空间：它们全都围绕「打断 + 击退」。
+  //
+  //   charger  骨骑冲锋兵 —— 机动压力。蓄力 0.85 秒（地上一道直线预警），
+  //                        然后沿直线冲 6.5 格；撞上就是 2 点伤害。侧移能躲，
+  //                        站桩必吃；撞完有 1.1 秒僵直，是输出窗口。
+  //   shielder 骸盾兵     —— 节奏压力。举盾 1.6 秒（减伤 70%、不移动）↔
+  //                        放盾 1.6 秒（正常受伤、加速追人）。要挑放盾窗口打。
+  //   brood    孵骨巫祝   —— 目标优先级压力。每 7 秒脚下孵 2 只小兵（上限 6 只），
+  //                        不点掉它，这一回合永远清不完。
+  //
+  // 外观依旧靠「模型重涂 + 程序化配件」区分（assets 铁律：不手写模型）：
+  //   charger  战士骨架放大 1.15、铁灰染色 → 看上去像披了铁片的重甲兵
+  //   shielder 战士骨架、骨白偏青 + 左手一面程序化骨盾（举盾时盾抬起并发光）
+  //   brood    法师骨架、暗绿眼、摘帽、提一盏骨篮（骨篮就是缩短的法杖）
+  // ============================================================
+  charger: {
+    name: '骨骑冲锋兵',
+    file: 'assets/monsters/skeleton-warrior.glb',
+    sourceHeight: 1.15,    // warrior 实测身高（同一把尺）
+    height: 1.58,          // 放大一圈：一眼能认出「这只最壮」
+    radius: 0.58,
+    hp: 4,
+    armor: 0,
+    speed: 1.05,           // 慢慢逼近，威胁全在冲锋那一下
+    damage: 2,             // 冲锋撞上 2 点（比普通战士疼）
+    attackRange: 5.4,      // 进入这个距离开始蓄力
+    attackInterval: 3.6,   // 两次冲锋之间至少隔这么久
+    windup: 0.85,          // 蓄力 = 地上那条直线的显示时间（躲的窗口）
+    attackDuration: 0.85,  // 蓄力阶段总时长（和 windup 一致，动画按它播）
+    // 冲锋本体：沿蓄力时锁定的方向直线推进；撞到主角结算一次伤害
+    charge: {
+      dashSpeed: 9.0,      // 冲刺速度（主角 4.4 —— 跑是跑不掉的，只能侧移）
+      dashTime: 0.62,      // 冲多久（9 × 0.62 ≈ 5.6 格）
+      hitRadius: 1.05,     // 冲过主角身边这么近就算撞上
+      recover: 1.10,       // 撞完 / 冲完的僵直（输出窗口）
+      lineLen: 6.5,        // 预警线长度（比实际冲刺略长，给玩家余量）
+      lineW: 1.15,         // 预警线宽度（视觉上等于「撞到的判定宽度」）
+      color: 0xff5a3c,     // 预警线 / 冲锋拖影颜色
+    },
+    spawnTime: 1.0,
+    deathTime: 1.5,
+    selfDestruct: false,
+    color: 0xff8a6a,
+    // ⚠️ 不设 ringColor：它 5.4 的「起手距离」画成范围环会把半个战场染红，
+    // 玩家要看的预警是蓄力时地上那条直线（见 showChargeLine）。
+    tint: 0x9aa0a8,        // 战士骨架整体偏铁灰
+    anim: {
+      walk: ANIM.walk, idle: ANIM.idle, death: ANIM.death, spawn: ANIM.spawn,
+      attack: ANIM.punch,
+    },
+  },
+
+  shielder: {
+    name: '骸盾兵',
+    file: 'assets/monsters/skeleton-warrior.glb',
+    sourceHeight: 1.15,
+    height: 1.44,
+    radius: 0.55,
+    hp: 5,                 // 比同期的战士厚一点，逼玩家挑窗口打
+    armor: 0,
+    speed: 1.18,
+    damage: 1,
+    attackRange: 1.6,
+    attackInterval: 1.9,
+    windup: 0.5,
+    attackDuration: 0.78,
+    // 举盾循环：举 1.6 秒（减伤 70%、原地不动）↔ 放 1.6 秒（正常受伤、追人）
+    shield: { up: 1.6, down: 1.6, reduce: 0.70, firstUp: 0.6 },
+    spawnTime: 1.0,
+    deathTime: 1.5,
+    selfDestruct: false,
+    color: 0xa9c8d8,
+    ringColor: 0x8fbfd8,
+    tint: 0xb9c6cc,
+    anim: {
+      walk: ANIM.walk, idle: ANIM.idle, death: ANIM.death, spawn: ANIM.spawn,
+      attack: ANIM.punch,
+    },
+  },
+
+  brood: {
+    name: '孵骨巫祝',
+    file: 'assets/monsters/skeleton-mage.glb',
+    sourceHeight: 1.20,   // 实测记录见 hexer 处
+    height: 1.26,
+    radius: 0.42,
+    hp: 4,                 // 血不厚：设计上就是「你肯冲进去就能拆掉」
+    armor: 0,
+    speed: 1.12,
+    damage: 1,
+    attackRange: 7.0,
+    keepDistance: 5.0,
+    attackInterval: 4.6,
+    windup: 1.2,
+    attackDuration: 1.9,
+    castTime: 1.2,         // 有它就说明「这个远程不画脚下范围环」
+    // 召唤：在她脚下孵出小兵（cap 是「同一只 brood 名下的存活上限」）
+    spell: { kind: 'brood', count: 2, cap: 6, radius: 1.25, color: 0x8ef07a },
+    spawnTime: 1.0,
+    deathTime: 1.6,
+    selfDestruct: false,
+    color: 0xaef08a,
+    skin: { eye: 0x8ef07a, hat: false, staff: 'brood', body: 0xcfe0b8 },
+    anim: {
+      walk: ANIM.walk, idle: ANIM.idle, cast: ANIM.cast,
+      death: ANIM.death, spawn: ANIM.spawn,
+    },
+  },
 };
 
 // ------------------------------------------------------------
@@ -365,6 +479,7 @@ const STAFF_STYLES = {
   bone:    { rod: 0xcfc9b8, tip: 0xa96bff, len: 1.00, orb: 0.075 },   // 骨咒师：短骨杖 + 紫晶
   torch:   { rod: 0x8a5a34, tip: 0xff7a2a, len: 0.82, orb: 0.062 },   // 火焚巫祝：短炬 + 橙火
   crystal: { rod: 0xa9d8ee, tip: 0x7ef0ff, len: 1.42, orb: 0.085 },   // 霜牢主祭：长杖 + 青晶
+  brood:   { rod: 0x6b7a52, tip: 0x8ef07a, len: 0.66, orb: 0.055 },   // 孵骨巫祝：短骨篮 + 绿卵光（第 29 块）
 };
 
 function makeStaff(kind) {
@@ -433,6 +548,57 @@ function attachStaff(root, model, kind) {
   staff.position.set(0, -0.03, 0);
   slot.add(staff);
   return staff;
+}
+
+// ------------------------------------------------------------
+// 骸盾兵的骨盾（第 29 块，程序化）
+// 挂在左手骨骼上；举盾时盾牌抬到胸前并发青光，放盾时垂下。
+// 材质一起进 mats，受击闪白时盾也闪（不然会出现「人白盾不白」的割裂感）。
+// ------------------------------------------------------------
+function makeShield() {
+  const g = new THREE.Group();
+  const boneMat = new THREE.MeshStandardMaterial({ color: 0xdfe9ee, roughness: 0.62, metalness: 0.18 });
+  const rimMat = new THREE.MeshStandardMaterial({ color: 0x6f8c9a, roughness: 0.5, metalness: 0.45 });
+
+  // 盾面：略扁的六棱柱，看起来像一块拼起来的厚骨板
+  const face = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.34, 0.07, 6), boneMat);
+  face.rotation.x = Math.PI / 2;
+  face.castShadow = true;
+  face.frustumCulled = false;
+  g.add(face);
+
+  // 盾沿：一圈略大的六棱柱当边框
+  const rim = new THREE.Mesh(new THREE.TorusGeometry(0.33, 0.028, 4, 6), rimMat);
+  rim.frustumCulled = false;
+  g.add(rim);
+
+  // 中间一颗骨钉
+  const stud = new THREE.Mesh(new THREE.IcosahedronGeometry(0.075, 0), rimMat);
+  stud.position.z = 0.05;
+  stud.frustumCulled = false;
+  g.add(stud);
+
+  g.userData.mats = [boneMat, rimMat];
+  g.userData.boneMat = boneMat;
+  return g;
+}
+
+function attachShield(root, model) {
+  const slot = model.getObjectByName('handslot.l')
+    || model.getObjectByName('handslotl')
+    || model.getObjectByName('hand.l')
+    || model.getObjectByName('handl');
+  if (!slot) return null;
+  const shield = makeShield();
+  model.updateMatrixWorld(true);
+  const qb = new THREE.Quaternion();
+  const qr = new THREE.Quaternion();
+  slot.getWorldQuaternion(qb);
+  root.getWorldQuaternion(qr);
+  shield.quaternion.copy(qb.invert().multiply(qr));
+  shield.position.set(0.04, 0.06, 0.02);
+  slot.add(shield);
+  return shield;
 }
 
 // 换肤：帽子开合 / 眼睛发光色 / 骨体染色 / 骨冠
@@ -617,6 +783,14 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
     });
     // 巫师换肤（帽子/眼睛/骨体/骨冠）—— 必须在材质 clone 之后、渲染之前
     if (cfg.skin) applyWizardSkin(model, cfg.skin);
+    // 第三关的重涂（第 29 块）：非巫师怪没有 skin 表，用 tint 整体压一层色。
+    // KayKit 的骨贴图偏白，乘一层颜色就是新色调 —— 和巫师换肤同一条思路。
+    if (cfg.tint) {
+      const tc = new THREE.Color(cfg.tint);
+      model.traverse((o) => {
+        if (o.isMesh && o.material && o.material.color) o.material.color.copy(tc);
+      });
+    }
     root.add(model);
 
     // 脚下的范围环：只给「能近身伤到主角」的怪。
@@ -717,6 +891,13 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
       summonScale: { hp: opts.hpScale ?? 1, dmg: opts.damageScale ?? 1 },
       baseEmissive: mats.map((m) => (m.emissive ? m.emissive.clone() : null)),
       currentAnim: '',
+      // ---- 第三关（第 29 块）----
+      shieldUp: false,                                    // 骸盾兵此刻举没举盾
+      shieldT: cfg.shield ? cfg.shield.firstUp : 0,        // 距离下次翻转盾的时间
+      chargeDirX: 0, chargeDirZ: 0,                        // 骨骑冲锋锁定的方向
+      chargeLine: null,                                    // 蓄力预警线（网格，按需创建）
+      chargeDone: false, chargeHitDone: false,
+      summonedBy: null,                                    // 孵出来的小兵记着「谁生的」
     };
 
     // 弓手：往右手塞一把弓（受击闪白要连弓一起，所以材质也进 mats）。
@@ -742,6 +923,16 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
       }
     }
 
+    // 骸盾兵：左手一面骨盾（第 29 块）。材质同样进 mats，受击时盾一起闪白。
+    if (cfg.shield) {
+      const sh = attachShield(root, model);
+      if (sh) {
+        e.shieldMesh = sh;
+        e.mats.push(...sh.userData.mats);
+        e.baseEmissive.push(...sh.userData.mats.map((m) => (m.emissive ? m.emissive.clone() : null)));
+      }
+    }
+
     // 出生：先播从地里钻出来的动画
     bar.draw(1, maxHp, maxHp);
     e.currentAnim = cfg.anim.spawn;
@@ -758,8 +949,11 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
   //   quiet 只扣血不播命中碎屑（连锁闪电等批量伤害用）
   function takeDamage(e, amount, crit = false, opts = {}) {
     if (e.state === 'dead' || e.state === 'spawn') return false;
-    // 主祭光环的减伤：站在圈里的小兵更耐打（乘法，不吃掉暴击的观感）
-    const dealt = e.auraArmor > 0 ? amount * (1 - e.auraArmor) : amount;
+    // 减伤有两个来源，乘法叠加：
+    //   auraArmor —— 主祭霜牢环（第 28 块）
+    //   shieldUp  —— 骸盾兵举盾（第 29 块，举盾时减伤 70%）
+    const red = Math.min(0.95, (e.auraArmor || 0) + (e.shieldUp && e.cfg.shield ? e.cfg.shield.reduce : 0));
+    const dealt = red > 0 ? amount * (1 - red) : amount;
     e.hp -= dealt;
     if (!opts.dot) e.flashT = 0.1;
     e.bar.spr.visible = true;
@@ -793,6 +987,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
     e.bar.spr.visible = false;
     // 跟随玩家的霜牢环：主祭一倒环就消（不挂在它身上，得手动收）
     if (e.auraRing && e.cfg.aura && e.cfg.aura.followPlayer) e.auraRing.mesh.visible = false;
+    hideChargeLine(e);   // 骨骑死在蓄力里：预警线立刻收掉（第 29 块）
     if (fx) fx.death(e.pos, e.cfg.color);
     if (onDeath) onDeath(e);
 
@@ -807,6 +1002,44 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
 
   // ---------------- 单只更新 ----------------
   const _ctxTmp = new THREE.Vector3();
+
+  // ---------------- 骨骑的蓄力预警线（第 29 块） ----------------
+  // 地上一道红色长条：长度 = 冲刺距离 + 余量，方向在起手那一刻锁定。
+  // 玩家看到它就知道该往哪一侧侧移 —— 这是三关唯一「必须横向走位」的提示。
+  const chargeLineGeo = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
+  let chargeLineMatBase = null;
+  function showChargeLine(e) {
+    const ch = e.cfg.charge;
+    if (!chargeLineMatBase) {
+      chargeLineMatBase = new THREE.MeshBasicMaterial({
+        color: ch.color, transparent: true, opacity: 0.34,
+        depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
+      });
+    }
+    if (!e.chargeLine) {
+      e.chargeLine = new THREE.Mesh(chargeLineGeo, chargeLineMatBase.clone());
+      e.chargeLine.renderOrder = 2;
+      e.chargeLine.frustumCulled = false;
+      scene.add(e.chargeLine);
+    }
+    const L = ch.lineLen;
+    e.chargeLine.visible = true;
+    e.chargeLine.position.set(
+      e.pos.x + e.chargeDirX * L * 0.5, 0.045,
+      e.pos.z + e.chargeDirZ * L * 0.5
+    );
+    e.chargeLine.rotation.y = Math.atan2(e.chargeDirX, e.chargeDirZ);
+    e.chargeLine.scale.set(ch.lineW, 1, L);
+  }
+
+  function hideChargeLine(e) { if (e.chargeLine) e.chargeLine.visible = false; }
+
+  function disposeChargeLine(e) {
+    if (!e.chargeLine) return;
+    scene.remove(e.chargeLine);
+    if (e.chargeLine.material) e.chargeLine.material.dispose();
+    e.chargeLine = null;
+  }
 
   // 霜牢加成的发光色（第 28 块）：环里的怪泛青光，一眼认出「这只变凶了」
   const AURA_GLOW = new THREE.Color(0x2fd8f0);
@@ -1004,6 +1237,8 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
     const sp = e.cfg.spell;
     // 第 28 块：霜牢主祭的石刺 —— 不走「圈」系统，是一串沿线爆发的地刺
     if (sp.kind === 'spikes') { spawnSpikes(e, ctx); return; }
+    // 第 29 块：孵骨巫祝 —— 在脚下孵小兵（同一只名下存活上限 cap，否则会无限滚雪球）
+    if (sp.kind === 'brood') { spawnBroodlings(e); return; }
     makeZone(sp.kind, e, ctx, sp.radius, {
       color: sp.color,
       debuff: e.cfg.debuff || null,
@@ -1012,6 +1247,35 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
       burnT: 0,
       burnTicker: 0,
     });
+  }
+
+  // ============================================================
+  // 孵骨巫祝 · 孵小兵（第 29 块）
+  // 每读一次条孵 count 只，但「她名下存活的」不超过 cap —— 想让她停手
+  // 只有一条路：把她本人打掉。孵出来的小兵带 `summonedBy` 便于计数。
+  // ============================================================
+  function spawnBroodlings(e) {
+    const sp = e.cfg.spell;
+    const alive = list.filter((m) =>
+      m.summonedBy === e && m.state !== 'dead').length;
+    const room = Math.max(0, (sp.cap || 6) - alive);
+    const n = Math.min(sp.count || 2, room);
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const r = (sp.radius || 1.2) * (0.45 + Math.random() * 0.55);
+      const m = spawn('minion', {
+        x: e.pos.x + Math.cos(a) * r,
+        z: e.pos.z + Math.sin(a) * r,
+      }, {
+        hpScale: (e.summonScale && e.summonScale.hp) ?? 1,
+        damageScale: (e.summonScale && e.summonScale.dmg) ?? 1,
+      });
+      if (m) m.summonedBy = e;
+    }
+    if (fx) {
+      fx.ring(e.pos, { from: 0.3, to: (sp.radius || 1.2) + 0.8, color: sp.color, life: 0.45, opacity: 0.55, y: 0.05 });
+      fx.burst(e.pos, { color: sp.color, count: 14, speed: 2.6, life: 0.5, size: 0.13, y: 0.3, up: 1.6 });
+    }
   }
 
   // ============================================================
@@ -1354,6 +1618,29 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
       e.root.rotation.y = lerpAngle(e.root.rotation.y, Math.atan2(dx, dz), 1 - Math.exp(-9 * dt));
     }
 
+    // ---- 骸盾兵：举盾 ↔ 放盾 循环（第 29 块）----
+    // 举盾 1.6 秒（减伤 70%、不移动、不打人）↔ 放盾 1.6 秒（正常挨打、追人）。
+    // 出手（attack）期间不翻转 —— 打到一半突然举盾会显得很假。
+    if (e.cfg.shield) {
+      if (e.state !== 'attack') {
+        e.shieldT -= dt;
+        if (e.shieldT <= 0) {
+          e.shieldUp = !e.shieldUp;
+          e.shieldT = e.shieldUp ? e.cfg.shield.up : e.cfg.shield.down;
+          if (e.shieldMesh) {
+            e.shieldMesh.position.y = e.shieldUp ? 0.17 : 0.02;
+            e.shieldMesh.scale.setScalar(e.shieldUp ? 1.12 : 1);
+          }
+          if (fx) {
+            fx.ring(e.pos, {
+              from: 0.3, to: 1.05, life: 0.28, opacity: 0.5, y: 0.06,
+              color: e.shieldUp ? 0x9fd8ff : 0x8a9aa2,
+            });
+          }
+        }
+      }
+    }
+
     // ---- 随机休息：走一阵子就站着喘口气（第 6 块）----
     // 作用：一群怪不会再像列队一样踩着同一个节拍压过来。
     // 正在出手（attack）的不歇；歇 0.7~1.5 秒，然后重新走 3~6 秒。
@@ -1377,6 +1664,107 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
         e.play(e.cfg.anim.idle, { fade: 0.2 });
         return;
       }
+    }
+
+    // ---- 骨骑冲锋兵（第三关，第 29 块）----
+    // 三种状态：attack（蓄力，地上画直线）→ dash（直线推进，撞人一次）→ recover（僵直）。
+    // 侧移就能躲开：方向在蓄力开始那一刻锁定，冲到一半不会拐弯。
+    if (e.cfg.charge) {
+      const ch = e.cfg.charge;
+
+      if (e.state === 'attack') {
+        // 预警线跟着呼吸，读条越接近尾声越亮
+        if (e.chargeLine) {
+          const k = Math.min(1, e.t / Math.max(0.01, e.cfg.windup));
+          e.chargeLine.material.opacity = 0.22 + 0.26 * k;
+        }
+        if (!e.chargeDone && e.t >= e.cfg.windup) {
+          e.chargeDone = true;
+          e.state = 'dash';
+          e.t = 0;
+          hideChargeLine(e);
+          e.currentAnim = e.cfg.anim.walk;
+          e.play(e.cfg.anim.walk, { fade: 0.06 });
+          if (fx) fx.ring(e.pos, { from: 0.2, to: ch.lineW, color: ch.color, life: 0.2, opacity: 0.6, y: 0.06 });
+        }
+        return;
+      }
+
+      if (e.state === 'dash') {
+        const step = ch.dashSpeed * dt;
+        e.pos.x += e.chargeDirX * step;
+        e.pos.z += e.chargeDirZ * step;
+        // 撞墙就停（场地边界）
+        const lim = ctx.arenaRadius - e.cfg.radius;
+        const rr = Math.hypot(e.pos.x, e.pos.z);
+        let stop = rr > lim;
+        if (stop) {
+          e.pos.x = (e.pos.x / rr) * lim;
+          e.pos.z = (e.pos.z / rr) * lim;
+        }
+        // 撞人：整段冲刺只结算一次
+        if (!e.chargeHitDone) {
+          const pd = Math.hypot(ctx.playerPos.x - e.pos.x, ctx.playerPos.z - e.pos.z);
+          if (pd <= ch.hitRadius + ctx.playerRadius) {
+            e.chargeHitDone = true;
+            ctx.hurtPlayer(e.damage, e);
+            if (fx) {
+              fx.burst(e.pos, { color: ch.color, count: 16, speed: 4.4, life: 0.45, size: 0.16, y: 0.8, up: 1.8 });
+            }
+          }
+        }
+        if (e.chargeHitDone) stop = true;
+        if (stop || e.t >= ch.dashTime) {
+          e.state = 'recover';
+          e.t = 0;
+          e.currentAnim = e.cfg.anim.idle;
+          e.play(e.cfg.anim.idle, { fade: 0.18 });
+        }
+        return;
+      }
+
+      if (e.state === 'recover') {
+        if (e.currentAnim !== e.cfg.anim.idle) {
+          e.currentAnim = e.cfg.anim.idle;
+          e.play(e.cfg.anim.idle, { fade: 0.18 });
+        }
+        if (e.t >= ch.recover) {
+          e.state = 'chase';
+          e.t = 0;
+          e.attackCd = Math.max(0.4, e.cfg.attackInterval - ch.recover);
+        }
+        return;
+      }
+
+      // chase：进起手距离就蓄力，否则慢慢逼近
+      e.attackCd -= dt;
+      if (dist <= e.cfg.attackRange && e.attackCd <= 0) {
+        e.state = 'attack';
+        e.t = 0;
+        e.chargeDone = false;
+        e.chargeHitDone = false;
+        if (dist > 0.001) {
+          e.chargeDirX = dx / dist;
+          e.chargeDirZ = dz / dist;
+        } else {
+          e.chargeDirX = 0; e.chargeDirZ = 1;
+        }
+        e.currentAnim = e.cfg.anim.attack;
+        e.play(e.cfg.anim.attack, { once: true, fade: 0.08, duration: e.cfg.windup });
+        showChargeLine(e);
+        return;
+      }
+      if (dist > e.cfg.attackRange) {
+        moveToward(e, dx, dz, dist, dt, ctx);
+        if (e.currentAnim !== e.cfg.anim.walk) {
+          e.currentAnim = e.cfg.anim.walk;
+          e.play(e.cfg.anim.walk, { fade: 0.2 });
+        }
+      } else if (e.currentAnim !== e.cfg.anim.idle) {
+        e.currentAnim = e.cfg.anim.idle;
+        e.play(e.cfg.anim.idle, { fade: 0.2 });
+      }
+      return;
     }
 
     // ---- 巫师（第二关）：三人共用一套「保持距离 + 读条」的骨架 ----
@@ -1590,6 +1978,15 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
 
     // ---- 战士：近战攻击循环 ----
     if (e.type === 'warrior' || e.cfg.attackRange != null) {
+      // 骸盾兵举盾时原地不动、也不打人（第 29 块）—— 这是玩家的输出窗口，
+      // 盾一举起来就打它只是浪费输出（减伤 70%）。
+      if (e.cfg.shield && e.shieldUp && e.state !== 'attack') {
+        if (e.currentAnim !== e.cfg.anim.idle) {
+          e.currentAnim = e.cfg.anim.idle;
+          e.play(e.cfg.anim.idle, { fade: 0.2 });
+        }
+        return;
+      }
       if (e.state === 'attack') {
         if (!e.hitDone && e.t >= e.cfg.windup) {
           e.hitDone = true;
@@ -1743,6 +2140,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
       e.bar.mat.dispose();
       if (e.ring) e.ring.dispose();
       if (e.auraRing) e.auraRing.dispose();
+      disposeChargeLine(e);
       e.mixer.stopAllAction();
       e.mixer.uncacheRoot(e.model);
       list.splice(i, 1);
@@ -1778,6 +2176,45 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
     return out.slice(0, Math.max(0, Math.round(count))).map((x) => x.e);
   }
 
+  // ---------------- 击退 / 打断（第 29 块：震钟法器、震剑） ----------------
+  // 击退：沿「远离来源」的方向推 dist 格，撞到场地边界就贴着边界停。
+  // 只推位置、不改状态 —— 被推开的小兵会自己再走回来（这就是它的价值：
+  // 把贴脸的怪从身上扒开，抢一口输出的空间）。
+  function knockback(e, fromX, fromZ, dist) {
+    if (!e || e.state === 'dead' || e.state === 'spawn') return;
+    let dx = e.pos.x - fromX;
+    let dz = e.pos.z - fromZ;
+    let d = Math.hypot(dx, dz);
+    if (d < 0.001) { dx = 0; dz = 1; d = 1; }
+    e.pos.x += (dx / d) * dist;
+    e.pos.z += (dz / d) * dist;
+    const lim = arenaRadius - e.cfg.radius;
+    const r = Math.hypot(e.pos.x, e.pos.z);
+    if (r > lim) {
+      e.pos.x = (e.pos.x / r) * lim;
+      e.pos.z = (e.pos.z / r) * lim;
+    }
+    // 站得太近的判定体：推开后立刻更新血条/环的位置（下一帧也会跟上）
+    if (e.chargeLine) hideChargeLine(e);
+  }
+
+  // 打断：读条 / 蓄力 / 冲锋全部退回追击状态，并给一段起手惩罚。
+  // 返回是否真的打断了一件事（震钟拿它决定要不要响音效）。
+  function interrupt(e) {
+    if (!e || e.state === 'dead' || e.state === 'spawn') return false;
+    if (e.state !== 'attack' && e.state !== 'dash') return false;
+    hideChargeLine(e);
+    e.state = 'chase';
+    e.t = 0;
+    e.hitDone = true;          // 别让「同一次施法」在退回追击时又结算一次
+    e.chargeDone = true;
+    e.attackCd = Math.max(e.attackCd, 0.9);
+    e.currentAnim = e.cfg.anim.idle;
+    e.play(e.cfg.anim.idle, { fade: 0.16 });
+    if (fx) fx.ring(e.pos, { from: 0.2, to: 1.1, color: 0xa8f0ff, life: 0.3, opacity: 0.6, y: 0.06 });
+    return true;
+  }
+
   function aliveCount() {
     let n = 0;
     for (const e of list) if (e.state !== 'dead') n++;
@@ -1792,6 +2229,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
       e.bar.mat.dispose();
       if (e.ring) e.ring.dispose();
       if (e.auraRing) e.auraRing.dispose();
+      disposeChargeLine(e);
       e.mixer.stopAllAction();
       e.mixer.uncacheRoot(e.model);
     }
@@ -1833,6 +2271,11 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
     })),
     auraCount: () => list.filter((e) => e.cfg.aura && e.state !== 'dead' && e.state !== 'spawn').length,
     buffedCount: () => list.filter((e) => e.auraHaste > 0).length,
+    // 第三关的观测口（第 29 块）
+    shieldedCount: () => list.filter((e) => e.shieldUp && e.state !== 'dead').length,
+    chargingCount: () => list.filter((e) => e.cfg.charge && (e.state === 'attack' || e.state === 'dash')).length,
+    broodlingCount: (parent) => list.filter((e) => e.summonedBy && (!parent || e.summonedBy === parent) && e.state !== 'dead').length,
+    knockback, interrupt,
     get: (type) => ENEMY_TYPES[type],
     // 调试/测试用
     all: () => list,

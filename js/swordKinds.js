@@ -53,7 +53,15 @@ export const SWORD_KINDS = {
     tagline: '命中回血',
     desc: '命中时按伤害的 15% 回血，和吸血属性叠乘，站撸的底气。',
   },
+  quake: {
+    name: '震剑',
+    color: 0xffe0a8,
+    emissive: 0xffb03c,
+    icon: 'assets/weapons/icon-quake.svg',   // 金铜色剑身 + 两侧震波线（第 29 块）
+    tagline: '命中震退',
+    desc: '命中时 35% 概率把怪震退 1.4 格，并打断它的蓄力 / 读条。第三关的骨骑与孵骨最怕它。',
+  },
 };
 
 // 环上混合多种剑时的显示顺序（技能栏 / 商店 / 结算都用这个顺序）
-export const KIND_ORDER = ['iron', 'poison', 'frost', 'thunder', 'leech'];
+export const KIND_ORDER = ['iron', 'poison', 'frost', 'thunder', 'leech', 'quake'];

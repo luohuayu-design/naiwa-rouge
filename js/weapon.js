@@ -209,6 +209,10 @@ export function createWeaponSystem({ scene, stats, wstats, fx, enemies }) {
 
   // ---------------- 命中判定与伤害 ----------------
   const _tmp = new THREE.Vector3();
+  // 震剑要「把怪从主角身边推出去」，所以记一份最近一帧的主角位置（第 29 块）
+  const _playerAt = { x: 0, z: 0 };
+  const QUAKE_CHANCE = 0.35;
+  const QUAKE_KNOCK = 1.4;
 
   function aliveEnemies() {
     return enemies.list.filter((e) => e.state !== 'dead' && e.state !== 'spawn');
@@ -235,6 +239,15 @@ export function createWeaponSystem({ scene, stats, wstats, fx, enemies }) {
         const cd = dmg * CHAIN_RATIO;
         enemies.takeDamage(tgt, cd, false, { quiet: true });
         bolt(e.pos, tgt.pos);
+      }
+    } else if (kind === 'quake') {
+      // 震剑（第 29 块）：命中时有概率把目标震退 + 打断蓄力/读条。
+      // 数值不走武器表（固定 35% / 1.4 格）—— 它是「打断」这一层的解法，
+      // 不吃伤害成长，避免和三关的骨骑冲锋数值打架。
+      if (e.state !== 'dead' && e.state !== 'spawn' && Math.random() < QUAKE_CHANCE) {
+        enemies.interrupt(e);
+        enemies.knockback(e, _playerAt.x, _playerAt.z, QUAKE_KNOCK);
+        if (fx) fx.ring(e.pos, { from: 0.2, to: 1.05, color: 0xffc46a, life: 0.26, opacity: 0.6, y: 0.06 });
       }
     }
   }
@@ -285,6 +298,7 @@ export function createWeaponSystem({ scene, stats, wstats, fx, enemies }) {
     const target = targetCount();
     const list = aliveEnemies();
     const p = playerPos || { x: 0, z: 0 };
+    _playerAt.x = p.x; _playerAt.z = p.z;   // 震剑击退要用（第 29 块）
 
     // 0) 雷剑闪电淡出
     for (let i = bolts.length - 1; i >= 0; i--) {

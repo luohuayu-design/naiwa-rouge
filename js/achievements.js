@@ -43,6 +43,10 @@ export const ACHS = [
   { id: 'curse_3', name: '三咒缠身', desc: '带着至少三条诅咒通关' },
   { id: 'daily_done', name: '今日份', desc: '打完一次今日挑战（倒下也算）' },
   { id: 'daily_win', name: '今日最佳', desc: '通关一次今日挑战' },
+  // 第 29 块：第三关的三只新怪
+  { id: 'charger_30', name: '别站在直线上', desc: '累计击倒 30 只骨骑冲锋兵' },
+  { id: 'shielder_30', name: '等盾放下来', desc: '累计击倒 30 只骸盾兵' },
+  { id: 'brood_10', name: '断她的产房', desc: '累计击倒 10 只孵骨巫祝' },
 ];
 
 const byId = new Map(ACHS.map((a) => [a.id, a]));

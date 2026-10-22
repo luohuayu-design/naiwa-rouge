@@ -37,6 +37,19 @@ export const THEMES = {
     fly: 0xc08cff, flyCount: 72,          // 换成飘着的游魂火星
     ground: 'crypt',
   },
+  // 第三关 · 焦土钟楼：暗红余烬 + 铁灰，边圈是没灭的残火（第 29 块）
+  ash: {
+    bg: 0x140d0d,
+    fog: 0x2a1410, fogDensity: 0.0168,
+    hemiSky: 0x8a4a3a, hemiGround: 0x241210, hemiIntensity: 1.05,
+    moon: 0xffb48a, moonIntensity: 2.60, moonBase: 2.40,
+    rim: 0x9a4a24, rimIntensity: 0.72,
+    edge: 0xff8a3c, edgeOpacity: 0.34,
+    stone: 0x4a3a34,
+    tuft: 0x4a3630, tuftVisible: false,   // 焦土上不长草
+    fly: 0xffb066, flyCount: 78,         // 飘着的火星
+    ground: 'ash',
+  },
 };
 
 export function buildNightScene({ arenaRadius = 15, theme = 'meadow' } = {}) {
@@ -252,7 +265,73 @@ export function buildNightScene({ arenaRadius = 15, theme = 'meadow' } = {}) {
 // ------------------------------------------------------------
 function makeGroundTexture(kind) {
   if (kind === 'crypt') return makeCryptTexture();
+  if (kind === 'ash') return makeAshTexture();
   return makeGrassTexture();
+}
+
+// 焦土钟楼的地面：暗红褐土 + 烧裂的缝 + 余烬亮点（第 29 块）。
+// 和枯土同一套做法（大块明暗 + 细碎颗粒 + 裂缝），只是配色走炭红。
+function makeAshTexture() {
+  const S = 512;
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = S;
+  const g = cv.getContext('2d');
+
+  g.fillStyle = '#2a1c18';
+  g.fillRect(0, 0, S, S);
+
+  let seed = 771203;
+  const rnd = () => {
+    seed = (seed * 1103515245 + 12345) % 2147483648;
+    return seed / 2147483648;
+  };
+
+  // 大块明暗：踩实的焦土 / 冷却下来的灰坑
+  for (let i = 0; i < 170; i++) {
+    const x = rnd() * S, y = rnd() * S, r = 22 + rnd() * 78;
+    const rad = g.createRadialGradient(x, y, 0, x, y, r);
+    const dark = rnd() > 0.46;
+    rad.addColorStop(0, dark ? 'rgba(14,8,7,0.46)' : 'rgba(96,52,34,0.26)');
+    rad.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = rad;
+    g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+  }
+
+  // 颗粒：灰色灰烬 + 少数还亮着的余烬
+  for (let i = 0; i < 2800; i++) {
+    const x = rnd() * S, y = rnd() * S;
+    const r = 0.7 + rnd() * 1.7;
+    const a = 0.10 + rnd() * 0.24;
+    if (rnd() > 0.965) {
+      g.fillStyle = `rgba(255,138,60,${0.22 + rnd() * 0.30})`;   // 余烬
+    } else {
+      g.fillStyle = rnd() > 0.45 ? `rgba(150,132,120,${a})` : `rgba(12,7,6,${a + 0.12})`;
+    }
+    g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+  }
+
+  // 烧裂的缝：比枯土更直更硬（像被火烧开的地面）
+  g.lineCap = 'round';
+  for (let i = 0; i < 30; i++) {
+    let x = rnd() * S, y = rnd() * S;
+    g.strokeStyle = `rgba(10,5,4,${0.20 + rnd() * 0.24})`;
+    g.lineWidth = 0.9 + rnd() * 1.4;
+    g.beginPath();
+    g.moveTo(x, y);
+    for (let k = 0; k < 6; k++) {
+      x += (rnd() - 0.5) * 26;
+      y += (rnd() - 0.5) * 16;
+      g.lineTo(x, y);
+    }
+    g.stroke();
+  }
+
+  const tex = new THREE.CanvasTexture(cv);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(16, 16);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 8;
+  return tex;
 }
 
 // 骨塔庭院的枯土：灰紫石地 + 碎骨渣，一点绿色都没有。

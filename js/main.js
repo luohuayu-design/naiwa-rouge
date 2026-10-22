@@ -14,7 +14,7 @@ import { createWeaponStats } from './weaponStats.js';
 import { createFx } from './fx.js';
 import { createEnemySystem } from './enemy.js';
 import {
-  createLevel, LEVEL_1, LEVEL_2, LEVELS_BY_ID, DIFFS, setDifficulty, getDifficulty, roundScale, levelStats,
+  createLevel, LEVEL_1, LEVEL_2, LEVEL_3, LEVELS_BY_ID, DIFFS, setDifficulty, getDifficulty, roundScale, levelStats,
 } from './wave.js';
 import { createRangeRing } from './rangeRing.js';
 import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js';
@@ -428,6 +428,10 @@ async function boot() {
       kills++;
       codexAdd('enemies', e.type);      // 图鉴：击倒计数
       tryAch('first_blood');
+      // 第三关的新怪各有一条里程碑（第 29 块）
+      if (e.type === 'charger' && codexCount('enemies', 'charger') >= 30) tryAch('charger_30');
+      if (e.type === 'shielder' && codexCount('enemies', 'shielder') >= 30) tryAch('shielder_30');
+      if (e.type === 'brood' && codexCount('enemies', 'brood') >= 10) tryAch('brood_10');
       // 小兵是自爆 → 爆炸声；其他怪是被打死 → 骨头散架声
       audio.sfx(e.cfg.selfDestruct ? 'explode' : 'die');
       // 金币掉落：按 goldRate 掷骰（概率属性，财运升级可提升）
@@ -440,7 +444,8 @@ async function boot() {
     // 三种怪都要预载：投手（远程）第 11 回合登场，模型 655KB
     // 三位巫师共用 mage 模型（loadType 内部按 file 去重，不会解析三遍）
     await enemies.preload(
-      ['minion', 'warrior', 'archer', 'bowman', 'hexer', 'pyro', 'hierarch'],
+      ['minion', 'warrior', 'archer', 'bowman', 'hexer', 'pyro', 'hierarch',
+        'charger', 'shielder', 'brood'],
       (p) => setProgress(0.55 + p * 0.42),
     );
   } catch (err) {
@@ -804,6 +809,8 @@ async function boot() {
     }
     // 荆棘（第 21 块）：本局选了它就按比例加重；金钟罩在上面已经整下挡掉了，不吃这一项
     stats.damage(amount * (1 + runCurseDmg));
+    // 棘甲法器（第 29 块）：挨打时对身边一圈怪反伤（被动解场，不需要操作）
+    if (relics.thornsHit) relics.thornsHit(pos);
     iframe = IFRAME;
     shake = readSettings().shake ? 0.55 : 0;   // 设置里可以关掉抖屏
     audio.sfx('hurt');
@@ -1225,6 +1232,7 @@ async function boot() {
   const LEVELS = [
     { id: 1, name: LEVEL_1.name, playable: true },
     { id: 2, name: LEVEL_2.name, playable: true },
+    { id: 3, name: LEVEL_3.name, playable: true },
   ];
   // 选关面板点了哪一关 —— beginGame 时按它切关卡（点的时候还没进战斗）
   let pendingLevelId = 1;
@@ -2408,6 +2416,7 @@ async function boot() {
         {
           round: roundNo + 1, hasWeapon: weapon.granted, gold: coins,
           rep: reputation, hp: stats.hp.cur, luck: stats.get('luck'),
+          levelId: curLevelId,          // 第 29 块：第三关专属奇遇靠它筛
         },
         seenEvents,
         rngOf('event')
@@ -3585,6 +3594,9 @@ async function boot() {
         levels: () => relics.levels(),
         DEF: RELIC_DEFS,
         debugShow: (x, z) => relics.debugShow && relics.debugShow(x, z),
+        // 第 29 块：手动敲钟 / 手动触发棘甲反伤（截图与测试用）
+        ringBell: (at) => (relics.debugBell ? relics.debugBell(at || pos) : null),
+        thorns: (at) => relics.thornsHit(at || pos),
       },
       aegis: {
         get level() { return stats.get('aegis'); },

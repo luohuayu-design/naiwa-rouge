@@ -152,7 +152,76 @@ export const LEVEL_2 = {
   ],
 };
 
-export const LEVELS_BY_ID = { 1: LEVEL_1, 2: LEVEL_2 };
+// ============================================================
+// 第三关 · 焦土钟楼（第 29 块）
+//
+// 一关考「密度」，二关考「站位与技能躲避」，三关换成**打断与目标优先级**：
+// 场上永远有一只「放着不管就滚雪球」的怪，玩家得在怪堆里挑目标。
+//
+// 三只新怪（enemy.js 一人一套行为）：
+//   charger  骨骑冲锋兵 —— 蓄力 0.85 秒（地上画直线）→ 直线冲 6.5 格，撞上 2 伤，
+//                          撞完僵直 1.1 秒。**必须横向侧移**，这是三关唯一的硬走位要求。
+//   shielder 骸盾兵     —— 举盾 1.6 秒（减伤 70%、不动）↔ 放盾 1.6 秒（正常挨打）。
+//                          输出窗口是自己给的，急着打只会浪费伤害。
+//   brood    孵骨巫祝   —— 每 7 秒孵 2 只小兵（她名下最多 6 只存活）。
+//                          不点掉她，这回合永远清不完。
+//
+// 登场节奏：R4 骨骑 → R9 骸盾兵 → R13 孵骨巫祝，每次只放一位新面孔；
+// 第 16~20 回合三者混编的「钟楼残响」是毕业考。
+//
+// 数值比二关再硬一档（用户定案）：每回合 +24% 生命 / +14% 伤害（二关 20% / 12%），
+// 第 20 回合 ×5.56 血 / ×3.74 伤害；速度成长仍是 +3.5% —— 三关的威胁来自
+// 「冲锋 + 盾 + 孵兵」三件事，不该靠跑得比你快来制造压力。
+// 武器仍然第 4 回合给（骨骑第一次登场就有武器可用）。
+// ============================================================
+export const LEVEL_3 = {
+  id: 3,
+  name: '第三关 · 焦土钟楼',
+  theme: 'ash',
+  // 顺序：近身先来 → 远程 → 支援（骸盾/孵骨最后）—— 先清贴脸的，再决定先切谁
+  order: [
+    ['minion', 1], ['warrior', 1.6], ['charger', 1.8],
+    ['archer', 2.0], ['bowman', 2.2], ['shielder', 2.4], ['brood', 2.6],
+  ],
+  spawnRadius: 13.2,
+  spawnJitter: 0.5,
+  minPlayerDistance: 7.0,
+  minSpawnGap: 2.0,
+  gap: 2.6,
+  upgradeAfter: [1, 2, 3, 4, 5, 8, 10, 12, 15, 17, 19, 20],
+  shopAfter: [3, 6, 9, 12, 15, 18],
+  weaponAt: 4,
+  scale: { hp: 0.24, damage: 0.14, speed: 0.035 },
+  rounds: [
+    // ---- 第一幕（R1~R4）：焦土院子 ----
+    { minion: 3,  warrior: 0, charger: 0, archer: 0, bowman: 0, shielder: 0, brood: 0, gap: 0.90, tip: '钟楼的院子里全是灰，踩上去像雪' },
+    { minion: 4,  warrior: 1, charger: 0, archer: 0, bowman: 0, shielder: 0, brood: 0, gap: 0.80, tip: '还是老规矩：边走边拍' },
+    { minion: 4,  warrior: 1, charger: 0, archer: 1, bowman: 0, shielder: 0, brood: 0, gap: 0.80, tip: '这次一上来就有投手了' },
+    // ---- 第二幕（R4~R8）：骨骑登场 ----
+    { minion: 5,  warrior: 2, charger: 1, archer: 0, bowman: 0, shielder: 0, brood: 0, gap: 0.75, tip: '铁灰的那只会冲：地上出红线就往侧面走' },
+    { minion: 5,  warrior: 2, charger: 1, archer: 1, bowman: 0, shielder: 0, brood: 0, gap: 0.72, tip: '冲锋躲开之后它会僵一下 —— 那时候打' },
+    { minion: 5,  warrior: 2, charger: 2, archer: 1, bowman: 1, shielder: 0, brood: 0, gap: 0.70, tip: '两只骨骑：别站在它们和你的连线上' },
+    { minion: 6,  warrior: 3, charger: 2, archer: 1, bowman: 1, shielder: 0, brood: 0, gap: 0.66, tip: '新面孔：弓手的红圈，得挪出去' },
+    { minion: 6,  warrior: 3, charger: 2, archer: 2, bowman: 1, shielder: 0, brood: 0, gap: 0.62, tip: '红线 + 红圈一起出现时，先躲圈' },
+    // ---- 第三幕（R9~R12）：骸盾兵 ----
+    { minion: 6,  warrior: 3, charger: 2, archer: 2, bowman: 1, shielder: 1, brood: 0, gap: 0.60, tip: '举盾的那只打不动：等它放下盾再打' },
+    { minion: 7,  warrior: 3, charger: 3, archer: 2, bowman: 1, shielder: 1, brood: 0, gap: 0.58, tip: '盾放下的一瞬间，它反而走得更快' },
+    { minion: 7,  warrior: 4, charger: 3, archer: 2, bowman: 2, shielder: 2, brood: 0, gap: 0.55, tip: '两头盾兵：别把输出全花在盾上' },
+    { minion: 7,  warrior: 4, charger: 3, archer: 3, bowman: 2, shielder: 2, brood: 0, gap: 0.54, tip: '灰里已经有钟声了 —— 塔上有人' },
+    // ---- 第四幕（R13~R15）：孵骨巫祝 ----
+    { minion: 7,  warrior: 4, charger: 3, archer: 3, bowman: 2, shielder: 2, brood: 1, gap: 0.52, tip: '绿眼睛那个会孵小兵 —— 先冲过去砍她' },
+    { minion: 8,  warrior: 4, charger: 3, archer: 3, bowman: 2, shielder: 2, brood: 1, gap: 0.50, tip: '她孵出来的小兵会自己走，别追着打' },
+    { minion: 8,  warrior: 4, charger: 4, archer: 3, bowman: 2, shielder: 2, brood: 1, gap: 0.48, tip: '骨骑四只：留一条横向的空地' },
+    // ---- 第五幕（R16~R20）：钟楼残响。三者混编的毕业考 ----
+    { minion: 8,  warrior: 5, charger: 4, archer: 3, bowman: 2, shielder: 3, brood: 2, gap: 0.46, tip: '第 16 回合：钟楼残响，三样一起来了' },
+    { minion: 9,  warrior: 5, charger: 4, archer: 3, bowman: 3, shielder: 3, brood: 2, gap: 0.44, tip: '两只孵骨 = 十二只小兵上限，先拆一只' },
+    { minion: 9,  warrior: 5, charger: 4, archer: 4, bowman: 3, shielder: 3, brood: 2, gap: 0.42, tip: '盾兵打不动就先绕开，别在它身上耗' },
+    { minion: 9,  warrior: 6, charger: 5, archer: 4, bowman: 3, shielder: 3, brood: 2, gap: 0.40, tip: '还差两回合：横向走位不要停' },
+    { minion: 10, warrior: 6, charger: 5, archer: 4, bowman: 3, shielder: 4, brood: 2, gap: 0.38, tip: '最后一波：把钟楼里的人全拍碎' },
+  ],
+};
+
+export const LEVELS_BY_ID = { 1: LEVEL_1, 2: LEVEL_2, 3: LEVEL_3 };
 
 // 第 roundNo 回合（从 1 开始）的怪物属性倍率
 // 难度（第 18 块）：乘在每回合的成长倍率上。普通 = 原版数值，一局一选，
@@ -371,6 +440,7 @@ export function createLevel(level, { enemies, fx, getPlayerPos, onRound, onRound
 // ---- 兼容包装：老代码/老测试调 createLevel1(deps) 就是第一关 ----
 export function createLevel1(deps) { return createLevel(LEVEL_1, deps); }
 export function createLevel2(deps) { return createLevel(LEVEL_2, deps); }
+export function createLevel3(deps) { return createLevel(LEVEL_3, deps); }
 
 // 按关卡号创建（主流程用这个）。未知关卡回落到第一关。
 export function createLevelById(id, deps) {

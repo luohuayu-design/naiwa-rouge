@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <g transform="rotate(45 32 32)">
+    <polygon points="32,4 37.5,13 37.5,42 26.5,42 26.5,13" fill="#ffe0a8"/>
+    <polygon points="32,4 37.5,13 37.5,42 32,42" fill="#f2b45c"/>
+    <rect x="20" y="42" width="24" height="6" rx="2" fill="#fff3d0"/>
+    <rect x="29" y="48" width="6" height="9" fill="#ffe0a8"/>
+    <rect x="26.5" y="57" width="11" height="5" rx="2" fill="#fff3d0"/>
+    <!-- 剑身两侧的震波线：区别于铁剑 -->
+    <path d="M14 20 q4 6 0 12" stroke="#ffb03c" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+    <path d="M50 26 q-4 6 0 12" stroke="#ffb03c" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+  </g>
+</svg>

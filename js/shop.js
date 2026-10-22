@@ -147,6 +147,25 @@ export const SHOP_ITEMS = [
     glyph: '❄', name: '霜环图样',
     desc: '主角周围结一圈冰环：环内怪持续掉血并被减速。再买可升级（最多 3 级）。',
   },
+  // ---------------- 第三关新增（第 29 块）：打断 / 反伤 / 震退 ----------------
+  {
+    id: 'buyBell', type: 'relic', relic: 'bell', price: 34, needRound: 9,
+    rarity: 3,
+    glyph: '🔔', name: '震钟图样',
+    desc: '每几秒敲一圈钟波：打断蓄力与读条、把怪震退，还带一点伤害。再买可升级（最多 3 级）。',
+  },
+  {
+    id: 'buyThorns', type: 'relic', relic: 'thorns', price: 30, needRound: 7,
+    rarity: 3,
+    glyph: '🌵', name: '棘甲图样',
+    desc: '每次挨打，身边一圈的怪各吃一次反伤。被围住时的被动解场。再买可升级（最多 3 级）。',
+  },
+  {
+    id: 'buyQuake', type: 'sword', kind: 'quake', price: 36, needWeapon: true,
+    rarity: 3,
+    icon: 'assets/weapons/icon-quake.svg', name: '震剑',
+    desc: '环剑阵里 +1 把震剑。命中时 35% 概率震退目标并打断它的蓄力 / 读条。',
+  },
 ];
 
 // 商店里买不到 / 已卖光时给出原因（渲染禁用态用）

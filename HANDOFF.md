@@ -139,6 +139,45 @@ Three.js r160 的单摇杆幸存者肉鸽《奶蛙夜行》，纯静态站点（
 - 回归：level2 单测重写 67 + block20 CDP 36（D 段改环跟玩家 + 新 D2 卫队/石刺/主祭死卫队散架），
   全绿。注意：测试小兵必须放在玩家 2.0 距离（环 2.6 之内、自爆圈 ~1.1 之外），贴脸会自爆。
 
+第 29 块要点（第三关 · 焦土钟楼 + 三只新怪 + 三件新装备，2026-10-22，v=33）：
+- **关卡**：`wave.js` 加 `LEVEL_3`（20 回合 **363 只**，scale hp 0.24 / dmg 0.14 / speed 0.035，
+  R20 ×5.56 血 / ×3.66 伤；武器仍第 4 回合）。`LEVELS_BY_ID` 注册，`main.js` 的 `LEVELS` 加第三条
+  （解锁沿用「通关上一关」的通用逻辑，不用改代码）。theme `ash`。
+- **场景**：`scene.js` 第三主题 `ash`（暗红余烬 + 铁灰、边圈残火、火星群）+ `makeAshTexture()`
+  程序化焦土地面（复用枯土那套画法，配色走炭红）。
+- **三只新怪**（`enemy.js`，全部复用现有 glb + tint 重涂，遵守资产铁律）：
+  - `charger` 骨骑冲锋兵（warrior ×1.15，铁灰）：`charge` 状态机 attack(蓄力 0.85s) → dash(9 速 ×0.62s)
+    → recover(1.1s)。蓄力时 `showChargeLine(e)` 在玩家方向铺一条长 6.5 宽 1.15 的红色预警线
+    （每条怪一条 mesh，die/清理时 `disposeChargeLine`）。撞人只结算一次（`chargeHitDone`）。
+    **不设 ringColor**：5.4 的起手距离画成环会把半个战场染红。
+  - `shielder` 骸盾兵（warrior + 程序化骨盾 `attachShield`，挂左手骨骼）：`shield{up 1.6, down 1.6, reduce 0.70}`，
+    每帧翻计时；举盾 → 不改状态但 `takeDamage` 减伤 70%（和霜牢环的 auraArmor **乘法叠加**，
+    上限 0.95），同时近战分支里直接 return（不动、不打人）。
+  - `brood` 孵骨巫祝（mage + 短骨杖「骨篮」）：`spell{kind:'brood', count:2, cap:6, radius:1.25}`，
+    走巫师通用的「保持距离 + 读条」骨架，`spawnSpell` 里分派到 `spawnBroodlings`：
+    数的就是「`summonedBy === 她` 且没死」的存活数，到 cap 就停手。
+- **打断 / 击退基础设施**（三件新装备都靠它）：`enemies.knockback(e, fromX, fromZ, dist)`（沿远离来源
+  的方向推、贴边界停）与 `enemies.interrupt(e)`（attack/dash → chase，`hitDone=true` 防重复结算，
+  `attackCd` 至少 0.9 秒）。观测量：`shieldedCount() / chargingCount() / broodlingCount(parent)`。
+- **三件新装备**：
+  - `bell` 震钟（relics.js，34 币 / 第 9 回合，3 级）：每 6.0/5.4/4.8 秒 `ringBell`，
+    半径 3.2/3.4/3.6 内全部吃 0.5/0.75/1.0 伤（quiet 结算）+ `interrupt` + `knockback` 1.2/1.4/1.6。
+    音效用 `aegis`（素材包没有第二口钟）。
+  - `thorns` 棘甲（relics.js，30 币 / 第 7 回合，3 级）：`main.js hurtPlayer` 里调 `relics.thornsHit(pos)`，
+    对 2.2/2.4/2.6 内所有怪各结算 0.6/0.9/1.2 伤；脚下有一圈暗红棘环（触发时闪一下）。
+  - `quake` 震剑（swordKinds.js 第 6 种 + 自绘 `assets/weapons/icon-quake.svg`）：`weapon.js applyKind`
+    里 35% 概率 `interrupt` + `knockback(1.4)`，方向取 `_playerAt`（update 每帧记的主角位置）。
+  - 商店三件：`buyBell` 34 / `buyThorns` 30 / `buyQuake` 36（剑类 needWeapon）。
+- **奇遇/成就/图鉴**：`events.js` 加两条第三关专属（`bellRinger`、`ashChild`），靠 ctx 新增的
+  `levelId` 筛（`main.js pickEvent` 的 ctx 已带上 `curLevelId`）。成就 +3（charger_30 / shielder_30 / brood_10，
+  在 `onDeath` 里按 `codexCount` 判）。`codex.js` 的 `enemyDesc` 加 charge/shield/brood 三条文案。
+- **测试**：新 `.tmp-level3-test.mjs`（71 项）+ 新 `.tmp-block29-cdp.js`（38 项，A 解锁 / B 进关 /
+  C 骨骑蓄力-冲锋-撞人-僵直 / D 盾减伤 3 vs 10 / E 孵兵与上限 / F 震钟打断击退 / G 棘甲反伤 / H 震剑与图鉴）。
+  受影响旧断言：block18（图鉴 10/6/5、奇遇 69、成就 32）、econ（6 种剑）、event（69）、talk-skill（69）。
+- **测试坑**：CDP 里买过震钟之后它会**自动按 6 秒周期敲**，手动 `ringBell` 的怪可能已被震出半径 →
+  测「打断」要把怪放在 1.6 格内，并在**同一次 evaluate 里**量距离→敲钟→再量（帧间抖动会让断言飘）。
+  `__game.swordKinds` 是**数组** `[{kind,n}]`，不是对象。
+
 第 18 块那个 P0 的完整链路（已修，留作教训）：
 
   
@@ -242,7 +281,8 @@ node .tmp-econ-test.mjs       # 78  经济/商店/事件作用域
 node .tmp-event-test.mjs      # 105 事件表规模与文案
 node .tmp-rarity-test.mjs     # 71  品质/幸运
 node .tmp-camp-test.mjs       # 99  篝火/骨币（多级 + 阶梯 + 金币折算 + 关卡倍率）
-node .tmp-level2-test.mjs     # 59  第二关/巫师
+node .tmp-level2-test.mjs     # 67  第二关/巫师
+node .tmp-level3-test.mjs     # 71  第三关/三只新怪/三件新装备/专属奇遇
 node .tmp-curse-test.mjs      # 84  诅咒/种子/每日规则
 node .tmp-boon-test.mjs       # 146 永夜火种（层数/品质吃幸运/待领次数/克制）
 ```
@@ -271,6 +311,7 @@ node .tmp-boon-test.mjs       # 146 永夜火种（层数/品质吃幸运/待领
 .tmp-block23-cdp.js     63  金币吸附/无限级篝火/发火种（首通门槛）/火种面板/开局落账/标题页补选/重复通关不发
 .tmp-boonui-test.js      9  主菜单「永夜火种」一览面板（空态/层数/卡名）
 .tmp-live-block23.js    15  线上专项（篝火 / 火种面板 / 版本号）
+.tmp-block29-cdp.js     38  第三关（解锁/焦土/骨骑/骸盾/孵骨/震钟/棘甲/震剑）
 .tmp-curse-ui-test.js   14  诅咒可视化（芯片两行/明细行/开局血量/面板注记）
 .tmp-dbg-boot.js           抓启动期异常（改完代码先跑这个，比整套 CDP 快）
 ```
