@@ -5,68 +5,69 @@
 // 目标是把三件事调顺：摇杆输入 → 角色速度/朝向 → 相机跟随。
 // 后续叠战斗时，只需要在 tick() 里加敌人更新与自动攻击，不用动输入层。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=56';
-import { buildNightScene } from './scene.js?v=56';
-import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=56';
-import { createInput } from './input.js?v=56';
-import { createStats, STAT_DEFS } from './stats.js?v=56';
-import { createWeaponStats } from './weaponStats.js?v=56';
-import { createFx } from './fx.js?v=56';
-import { createEnemySystem } from './enemy.js?v=56';
+import * as THREE from '../lib/three.module.js?v=57';
+import { buildNightScene } from './scene.js?v=57';
+import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=57';
+import { createInput } from './input.js?v=57';
+import { createStats, STAT_DEFS } from './stats.js?v=57';
+import { createWeaponStats } from './weaponStats.js?v=57';
+import { createFx } from './fx.js?v=57';
+import { createEnemySystem } from './enemy.js?v=57';
 import {
   createLevel, LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVELS_BY_ID, DIFFS, setDifficulty, getDifficulty, roundScale, levelStats,
-} from './wave.js?v=56';
-import { createRangeRing } from './rangeRing.js?v=56';
-import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=56';
-import { createWeaponSystem } from './weapon.js?v=56';
-import { SWORD_KINDS } from './swordKinds.js?v=56';
-import { createGoldSystem } from './gold.js?v=56';
-import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW } from './shop.js?v=56';
-import { createTurretSystem, TURRET } from './turret.js?v=56';
-import { createRelicSystem, RELIC_DEFS } from './relics.js?v=56';
-import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=56';
-import audio from './audio.js?v=56';
-import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=56';
+} from './wave.js?v=57';
+import { createRangeRing } from './rangeRing.js?v=57';
+import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=57';
+import { createWeaponSystem } from './weapon.js?v=57';
+import { createArrowRainSystem } from './arrowRain.js?v=57';
+import { SWORD_KINDS } from './swordKinds.js?v=57';
+import { createGoldSystem } from './gold.js?v=57';
+import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW } from './shop.js?v=57';
+import { createTurretSystem, TURRET } from './turret.js?v=57';
+import { createRelicSystem, RELIC_DEFS } from './relics.js?v=57';
+import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=57';
+import audio from './audio.js?v=57';
+import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=57';
 import {
   settings as readSettings, setSetting, save as saveProfile, profile,
   bumpStat, setStatMax, codexAdd, codexCount, countCard, unlockAch, hasAch, addBones, bones, resetAll,
   storyProgress, markStorySeen, markStoryRead, addStoryMark, setStoryEnding,
   setSaveSuppressed, reloadFromStorage,
   giftLog, giftRedeemed, markGift,
-} from './profile.js?v=56';
+} from './profile.js?v=57';
 // 第 44 块：礼包兑换（码表只有哈希，明细在 gift.js 顶部注释）
-import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=56';
+import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=57';
 // 第 46 块：音效包（抽象奶蛙音效包 —— 4 段奶蛙叫声，通关第一关解锁）
-import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=56';
-import * as runSave from './runSave.js?v=56';
+import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=57';
+import * as runSave from './runSave.js?v=57';
 import {
   CAMPFIRE, CAMP_STEP, campBuy, campOwned, campLevel,
   campCost, campApply, bonesFor, diffBoneMul, levelBoneMul, coinBones, BONE,
-} from './campfire.js?v=56';
+} from './campfire.js?v=57';
 // 第 23 块：永夜火种（通关白给的 3 次永久三选一）
 import {
   BOONS, BOON_BY_ID, BOON_PICKS, boonOwned, boonStacks, boonPending, boonTotalStacks,
   grantBoons, rollBoons, takeBoon, applyBoons, boonStackText,
-} from './boons.js?v=56';
+} from './boons.js?v=57';
 // 第 21 块：夜行诅咒（自选 debuff 换骨币倍率）
-import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=56';
+import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=57';
 // 第 22 块：种子与每日挑战
 import {
   DAILY_RULES, dayKey, dayText, dailySeed, seedCode, pickDailyCurses,
   dailyRecord, saveDailyRecord, pruneDaily, makeRng,
-} from './seed.js?v=56';
-import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=56';
-import { achById, ACHS } from './achievements.js?v=56';
+} from './seed.js?v=57';
+import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=57';
+import { achById, ACHS } from './achievements.js?v=57';
 import {
   EVENTS, ALL_EVENTS, getEventById, pickEvent, effectLines,
   choiceHint, canAfford, costShort, REP_MIN, REP_MAX, REP_START,
   isTalk, eventChoices, resolveRoll, mergeEffects,
-} from './events.js?v=56';
+} from './events.js?v=57';
 // 第 32 块：主线《笑不出来的那一夜》（18 夜，一夜一关，前 3 夜已有关卡）
 import {
   STORY_ARC, STORY_CHAPTERS, STORY_ENDINGS, MARK_INFO,
   storyChapterAt, storyChapterById, storyEndingKey,
-} from './story.js?v=56';
+} from './story.js?v=57';
 
 // 标记模块已经跑起来了：index.html 的兜底自检靠它判断
 // 「模块根本没执行」还是「执行了但加载慢」。
@@ -514,6 +515,11 @@ async function boot() {
   // ---------------- 武器：环剑 ----------------
   // 模型很小（~20KB），跟着怪物一起在加载段拿；失败时 weapon.preload 内部会占位降级
   const weapon = createWeaponSystem({ scene, stats, wstats, fx, enemies });
+
+  // ---------------- 武器：箭雨（第 47 块） ----------------
+  // 第二关起随环剑一并解锁；伤害吃 wstats（剑油/磨剑石同样强化它）
+  const arrowRain = createArrowRainSystem({ scene, fx, enemies, wstats });
+
   try {
     await weapon.preload();
   } catch (err) {
@@ -1089,7 +1095,9 @@ async function boot() {
       img.draggable = false;
       const cd = document.createElement('i');
       cd.className = 'sk-cd';
-      btn.append(img, cd);
+      const num = document.createElement('b');    // 冷却倒计时数字（箭雨用，第 47 块）
+      num.className = 'sk-num';
+      btn.append(img, cd, num);
 
       // 技能键用 pointerdown 而不是 click：
       // 手机上一根手指正在推摇杆时，第二根手指点按钮，iOS Safari 不会派发 click。
@@ -1105,7 +1113,7 @@ async function boot() {
       if (!window.PointerEvent) btn.addEventListener('click', onPress);
 
       skillBar.appendChild(btn);
-      skillBtns.set(sk.id, { btn, cd, sk });
+      skillBtns.set(sk.id, { btn, cd, num, sk });
     }
     renderSkill();      // 先把该藏起来的藏起来（没环剑时第一格也不该露头）
   }
@@ -1113,14 +1121,14 @@ async function boot() {
   // 传给技能的条件/上下文（每帧现拼，技能自己决定看不看）
   function skillCtx() {
     // 'wtut'（武器教程）也算能操作：教程最后一步要玩家真的放一次万剑齐发
-    return { playing: gameState === 'playing' || gameState === 'wtut', weapon, playerPos: pos, stats, coins };
+    return { playing: gameState === 'playing' || gameState === 'wtut', weapon, arrowRain, playerPos: pos, stats, coins };
   }
 
   function renderSkill() {
     const ctx = skillCtx();
     const list = visibleSkills(ctx);
     skillBar.classList.toggle('on', list.length > 0);
-    for (const { btn, cd, sk } of skillBtns.values()) {
+    for (const { btn, cd, num, sk } of skillBtns.values()) {
       const shown = list.includes(sk);
       btn.style.display = shown ? '' : 'none';
       if (!shown) continue;
@@ -1129,6 +1137,12 @@ async function boot() {
       btn.classList.toggle('spent', !ready);
       const p = sk.progress ? Math.max(0, Math.min(1, sk.progress(ctx) || 0)) : 0;
       cd.style.height = (p * 100).toFixed(1) + '%';
+      // 冷却倒计时数字（第 47 块）：ready 时藏起来，冷却中显示剩余秒数
+      if (num) {
+        const txt = (!ready && sk.cdText) ? sk.cdText(ctx) : '';
+        num.textContent = txt;
+        num.style.display = txt ? '' : 'none';
+      }
     }
   }
 
@@ -2943,6 +2957,12 @@ async function boot() {
   // 第一次拿到环剑：武器卡 → 用法教程 → 接续回合链
   function grantRingThen(next) {
     weapon.grant();
+    // 第 47 块（用户定案）：第一关只允许出现剑；第二关起解锁箭雨
+    if (curLevelId >= 2) {
+      arrowRain.unlock();
+      renderSkill();
+      showToast('新武器 · 箭雨', '技能栏第 2 格：在最近的怪物头顶落一阵箭雨，冷却 8 秒');
+    }
     renderSkill();
     codexAdd('swords', 'ring');     // 图鉴（武器页签按种类也记，这里记首次获得）
     tryAch('first_sword');
@@ -3001,6 +3021,7 @@ async function boot() {
       hp: stats.hp.cur,
       playerMods: stats.dumpMods(),
       weapon: { granted: weapon.granted, owned: weapon.owned, mods: wstats.dumpMods() },
+      arrowRain: arrowRain.snapshot(),   // 第 47 块：箭雨解锁状态进档
       turrets: turrets.list(),
       relics: relics.levels(),
       bag: { ...bag },
@@ -3101,6 +3122,7 @@ async function boot() {
     shopSerial = saved.shopSerial || 0;
     stats.loadMods(saved.playerMods, saved.hp);
     weapon.restore(saved.weapon);
+    arrowRain.restore(saved.arrowRain);   // 第 47 块
     turrets.restore(saved.turrets);
     relics.restore(saved.relics);
     runRarities = new Set(saved.rarities || []);   // 本局品质集合一并恢复
@@ -4137,6 +4159,7 @@ async function boot() {
     wtAbort();                      // 武器教程也收掉（别盖在结算上）
     playerRing.setVisible(false);   // 倒下/通关后不再提示攻击范围
     weapon.setVisible(false);       // 环剑也一并收起
+    arrowRain.setVisible(false);    // 箭雨的落箭 / 警告圈同理（第 47 块）
     // 第 23 块：结算前把还躺在地上的金币全部收进兜里 ——
     // 「这一局没花完的钱」不该漏掉那些还没吸过来的
     gold.flush();
@@ -4475,6 +4498,28 @@ async function boot() {
         set: (k) => { profile().difficulty = k; setDifficulty(k); saveProfile(); },
         get: () => getDifficulty().name,
         scale: (n) => roundScale(n),
+      },
+      // 测试用：临时加一条主角属性（如 attackRange +12 让站桩也够得着远程怪）
+      buff: (stat, flat) => { stats.addMod({ stat, flat, src: 'dbg:test' }); return stats.get(stat); },
+      // 第 47 块：箭雨（测试钩子）
+      arrowRain: {
+        state: () => ({ unlocked: arrowRain.unlocked, ready: arrowRain.ready, cdLeft: +arrowRain.cdLeft.toFixed(2), strikes: arrowRain.strikeCount }),
+        unlock: () => { arrowRain.unlock(); renderSkill(); return true; },
+        fire: (px, pz) => arrowRain.fire(px != null ? { x: px, z: pz } : pos),
+        // 活怪数与总血量（验证箭雨真的造成伤害）；nearest 用于「远程目标」隔离验证
+        probe: () => {
+          const live = enemies.list.filter((e) => e.state !== 'dead' && e.state !== 'spawn');
+          let best = null, bestD = Infinity;
+          for (const e of live) {
+            const d = Math.hypot(e.pos.x - pos.x, e.pos.z - pos.z);
+            if (d < bestD) { bestD = d; best = e; }
+          }
+          return {
+            n: live.length,
+            hp: +live.reduce((s, e) => s + Math.max(0, e.hp), 0).toFixed(2),
+            nearest: best ? { d: +bestD.toFixed(2), hp: +best.hp.toFixed(2), max: best.maxHp } : null,
+          };
+        },
       },
       // 第 46 块：音效包（测试钩子）
       pack: {
@@ -4976,6 +5021,7 @@ async function boot() {
       if (!debugNoEnemies) enemies.update(dt, combatCtx);
       if (!debugNoWaves && gameState === 'playing') level.update(dt);
       weapon.update(dt, { playerPos: pos });
+      arrowRain.update(dt);
       turrets.update(dt, { playerPos: pos });
       relics.update(dt, { playerPos: pos });
       aegisUpdate(dt);

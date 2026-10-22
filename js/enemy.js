@@ -18,11 +18,11 @@
 //
 // 第五种（mage）只写好了配置，暂不生成。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=56';
-import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=56';
-import { clone as cloneSkinned } from '../lib/jsm/utils/SkeletonUtils.js?v=56';
-import { distance2D } from './stats.js?v=56';
-import { createRangeRing } from './rangeRing.js?v=56';
+import * as THREE from '../lib/three.module.js?v=57';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=57';
+import { clone as cloneSkinned } from '../lib/jsm/utils/SkeletonUtils.js?v=57';
+import { distance2D } from './stats.js?v=57';
+import { createRangeRing } from './rangeRing.js?v=57';
 
 // KayKit 模型正面朝 +Z；如果哪天换模型发现怪倒着走，把这里改成 Math.PI
 export const ENEMY_MODEL_YAW = 0;

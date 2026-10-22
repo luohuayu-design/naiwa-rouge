@@ -24,7 +24,7 @@
 //
 // ctx 由 main.js 每帧拼好传进来：{ playing, weapon, playerPos, stats, coins }
 // ============================================================
-import audio from './audio.js?v=56';
+import audio from './audio.js?v=57';
 
 export const SKILLS = [
   {
@@ -40,6 +40,26 @@ export const SKILLS = [
     press(ctx) {
       if (!ctx.weapon.fire(() => ctx.playerPos)) return false;
       audio.sfx('swordFire');
+      return true;
+    },
+  },
+
+  // ---- 新武器「箭雨」（第 47 块，用户定案：第二关起解锁） ----
+  // 没有普通攻击形态，只有这一个技能；冷却 8 秒，技能框上有倒计时数字。
+  {
+    id: 'arrowRain',
+    name: '箭雨',
+    icon: 'assets/skills/icon-arrow.svg',
+    hint: '在最近的怪物头顶标出一片区域，片刻后群箭落下（冷却 8 秒）',
+    key: '2',
+    // 只在解锁后出现（第二关起拿环剑时一并解锁；第一关永远只有剑）
+    visible: (ctx) => ctx.playing && !!ctx.arrowRain && ctx.arrowRain.unlocked,
+    ready: (ctx) => !!ctx.arrowRain && ctx.arrowRain.ready,
+    progress: (ctx) => (ctx.arrowRain ? ctx.arrowRain.progress : 0),
+    // 冷却倒计时数字：ready 时返回空串（不显示），冷却中显示「还差几秒」
+    cdText: (ctx) => (ctx.arrowRain && !ctx.arrowRain.ready ? Math.ceil(ctx.arrowRain.cdLeft) + '' : ''),
+    press(ctx) {
+      if (!ctx.arrowRain.fire(ctx.playerPos)) return false;
       return true;
     },
   },
