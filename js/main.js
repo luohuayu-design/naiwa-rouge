@@ -249,6 +249,7 @@ async function boot() {
   const hpFillEl = document.getElementById('hpFill');
   const hpBarEl = hpFillEl.parentElement;
   const hudKeyEl = document.getElementById('hudKey');
+  const exitBtn = document.getElementById('exitBtn');   // 第 40 块：游戏内「存档并退出」
   // 减速诅咒提示（第 20 块）：中咒才亮
   const curseChip = document.getElementById('curseChip');
   const curseNum = document.getElementById('curseNum');
@@ -290,10 +291,17 @@ async function boot() {
   const upTitle = document.getElementById('upTitle');
   const upSub = document.getElementById('upSub');
   const upFoot = document.getElementById('upFoot');
+  const upWarn = document.getElementById('upWarn');   // 永久提示条：只在永夜火种面板里露头
   // 开始界面 / 新手教程 / 武器获得卡
   const titleScr = document.getElementById('titleScr');
   const btnStart = document.getElementById('btnStart');
   const tutAsk = document.getElementById('tutAsk');
+  // 通用确认弹窗（第 41 块）：存档并退出 / 进篝火前的提醒都用它
+  const confirmAsk = document.getElementById('confirmAsk');
+  const caTitle = document.getElementById('caTitle');
+  const caSub = document.getElementById('caSub');
+  const caOk = document.getElementById('caOk');
+  const caCancel = document.getElementById('caCancel');
   // 主菜单子面板：关卡选择 / 我的记录（第 14 块）
   const levelSel = document.getElementById('levelSel');
   const lvList = document.getElementById('lvList');
@@ -1009,6 +1017,7 @@ async function boot() {
     gameState = 'upgrade';
     input.joystick.release();
     vel.set(0, 0, 0);
+    upWarn.setAttribute('aria-hidden', 'true');   // 局内升级不写永久存档，警示条收起来
     upPanel.classList.add('on');
     upPanel.setAttribute('aria-hidden', 'false');
   }
@@ -1130,6 +1139,45 @@ async function boot() {
 
   buildSkillButtons();
 
+  // ---------------- 通用确认弹窗（第 41 块）----------------
+  // 一套壳子三处复用：存档并退出、局外永久选择的提醒、以后别的事也能用。
+  // 语义：确定 → resolve(true)，取消/点外面 → resolve(false)。
+  // cancelText 传 null = 单按钮「我知道了」的告知型弹窗（不给人反悔的机会）。
+  let confirmResolve = null;
+  function askConfirm(title, sub, { okText = '确定', cancelText = '再想想' } = {}) {
+    if (!confirmAsk) return Promise.resolve(false);
+    caTitle.textContent = title;
+    caSub.textContent = sub;
+    caOk.textContent = okText;
+    caCancel.textContent = cancelText || '';
+    caCancel.hidden = !cancelText;
+    confirmAsk.classList.add('on');
+    confirmAsk.setAttribute('aria-hidden', 'false');
+    return new Promise((res) => { confirmResolve = res; });
+  }
+  function closeConfirm(ok) {
+    if (!confirmAsk) return;
+    confirmAsk.classList.remove('on');
+    confirmAsk.setAttribute('aria-hidden', 'true');
+    const r = confirmResolve;
+    confirmResolve = null;
+    if (r) r(!!ok);
+  }
+  caOk.addEventListener('click', () => closeConfirm(true));
+  caCancel.addEventListener('click', () => closeConfirm(false));
+  confirmAsk.addEventListener('click', (e) => { if (e.target === confirmAsk) closeConfirm(false); });
+
+  // 第 41 块：局外永久选择（篝火 / 永夜火种）的告知弹窗。
+  // 每个存档只看一次 —— 看完之后不再拦路，但界面上的常驻警示条一直在，
+  // 玩家任何时候都能看见「这一下会写进整个存档」。
+  function permNoticeOnce(kind, title, sub) {
+    const n = profile().notice || (profile().notice = {});
+    if (n[kind]) return;
+    n[kind] = true;
+    saveProfile();
+    askConfirm(title, sub, { okText: '我知道了', cancelText: null });
+  }
+
   // ---------------- 开始界面 / 新手教程 / 武器获得卡 ----------------
   function showTitle() {
     gameState = 'title';
@@ -1149,6 +1197,7 @@ async function boot() {
   function beginGame({ tutorial = false } = {}) {
     runUid = 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); // 每局一个存档身份
     audio.unlock();               // 这一下点击就是浏览器要的「用户手势」
+    if (ttSaved) ttSaved.hidden = true;   // 新开一局，标题页那句「刚存档」收掉
     audio.playBgm('battle');
     tutAsk.classList.remove('on');
     tutAsk.setAttribute('aria-hidden', 'true');
@@ -2924,6 +2973,7 @@ async function boot() {
     }
     runUid = saved.uid;                 // 读档后继续往同一张卡上写
     audio.unlock();
+    if (ttSaved) ttSaved.hidden = true; // 已经读档进去了，标题页那句「刚存档」收掉
     audio.playBgm('battle');
     tutAsk.classList.remove('on');
     tutAsk.setAttribute('aria-hidden', 'true');
@@ -2992,6 +3042,35 @@ async function boot() {
   }
   window.addEventListener('pagehide', saveRunOnExit);
   window.addEventListener('beforeunload', saveRunOnExit);
+
+  // ---------------- 游戏内「存档并退出」（第 40 块） ----------------
+  // 以前中途想停只能直接关网页：靠 pagehide 兜底落档，玩家根本不知道存没存上。
+  // 现在给一个明面上的出口：写一份存档 → 回主菜单 → 标题页写清「存到第几回合」。
+  const ttSaved = document.getElementById('ttSaved');
+  async function saveAndExit() {
+    if (gameState !== 'playing') return;       // 只在真正开打时可用
+    const ok = await askConfirm('存档并退出？',
+      '当前进度会存成一份存档，主菜单「读取存档」里能接着打。\n' +
+      '这一局不算失败，也不会结算骨币。',
+      { okText: '存档退出', cancelText: '继续游戏' });
+    if (!ok || gameState !== 'playing') return;   // 弹窗期间可能已经结算
+    audio.sfx('uiSwitch');
+    const roundNo = level.roundNo;
+    // 已通关待领火种的局不再建存档（那份档结算时已经删掉了，别让它复活）
+    const savedNow = roundNo >= 1 && pendingClearUid == null;
+    if (savedNow) saveRunAtRound(roundNo);
+    input.joystick.release();
+    vel.set(0, 0, 0);
+    gameState = 'title';                          // 主循环随之停摆，敌人定格在标题页后面
+    if (ttSaved) {
+      ttSaved.hidden = false;
+      ttSaved.textContent = savedNow
+        ? `已存档 · 第 ${roundNo} / ${level.totals.rounds} 回合 —— 点「读取存档」接着打`
+        : '已退出 · 这一局没有留下存档';
+    }
+    showTitle();
+  }
+  exitBtn.addEventListener('click', saveAndExit);
 
   // ---------------- 成就 / 图鉴 / 战绩（第 18 块） ----------------
   // 解锁即弹 toast（战斗中的提示条）；已解锁的重复调用是空操作。
@@ -3380,6 +3459,11 @@ async function boot() {
   function showCampfire() {
     renderCampfire();
     showSub(campScr);
+    // 第 41 块：第一次进篝火先把「这里买的东西是永久的」讲明白（每个存档只弹一次）
+    permNoticeOnce('campfire', '篝火是永久投资，不是这一局的装备',
+      '用夜行骨币点燃的每一簇火种，都会写进本机存档，' +
+      '之后每一关、每一局都带着它 —— 换关、重开、关掉网页再来，都还在。\n' +
+      '花掉的骨币不会退回，点下去就改不回来了，请谨慎选择。');
   }
 
   btnCamp.addEventListener('click', showCampfire);
@@ -3480,8 +3564,14 @@ async function boot() {
     boonOpen = true;
     renderBoonPanel();
     audio.sfx('card');
+    upWarn.setAttribute('aria-hidden', 'false');   // 第 41 块：这一张是永久的，先把话说清楚
     upPanel.classList.add('on', 'boon');
     upPanel.setAttribute('aria-hidden', 'false');
+    // 每个存档只拦一次：说完之后常驻警示条一直留着，不再每次弹窗
+    permNoticeOnce('boon', '这张火种会跟着你一辈子',
+      '永夜火种不是这一局的加成，它一选下去就写进本机存档，' +
+      '之后每一关、每一局、每一个新开局都带着它。\n' +
+      '选错了没有撤销，也洗不掉 —— 请看清楚再点。');
     return true;
   }
 
@@ -3504,6 +3594,7 @@ async function boot() {
     boonOpen = false;
     const after = boonSession ? boonSession.after : 'close';
     boonSession = null;
+    upWarn.setAttribute('aria-hidden', 'true');
     upPanel.classList.remove('on', 'boon');
     upPanel.setAttribute('aria-hidden', 'true');
     renderCampBadge();
@@ -3848,6 +3939,7 @@ async function boot() {
       // level 是可变引用（切关卡会整体重建），必须用 getter，否则测试盯着的是旧的回合机器
       get level() { return level; },
       get levelId() { return curLevelId; },
+      get state() { return gameState; },        // 'title' / 'playing' / 'upgrade' …（第 41 块测试要断言存档退出后回到 title）
       get arenaRadius() { return ARENA_R; },   // 可走半径随关卡变（第 35 块：四关 20）
       levels: LEVELS_BY_ID,
       setLevel: (id) => { setLevel(id); return curLevelId; },

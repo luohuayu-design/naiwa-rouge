@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#080f14">
 <link rel="icon" href="data:,">
 <title>蛙步 · 夜行</title>
-<link rel="stylesheet" href="style.css?v=46">
+<link rel="stylesheet" href="style.css?v=47">
 </head>
 <body>
 
@@ -25,7 +25,10 @@
 
 <!-- HUD -->
 <div id="hud">
-  <div class="hud-title">蛙步 · 夜行</div>
+  <div id="hudTop">
+    <div class="hud-title">蛙步 · 夜行</div>
+    <button class="hud-exit" id="exitBtn" type="button" aria-label="存档并退出">存档退出</button>
+  </div>
   <button class="hp-card" id="hpCard" type="button" aria-label="查看奶蛙属性">
     <div class="hp-top">
       <span class="hp-label">生命</span>
@@ -129,6 +132,7 @@
       <div class="up-title" id="upTitle">回合结束 · 三选一</div>
       <div class="up-sub" id="upSub">选一个带进下一回合</div>
     </div>
+    <div class="up-warn" id="upWarn" aria-hidden="true">这一张会永久写进本机存档 · 之后每一关、每一局都带着它 · 不可撤销</div>
     <div class="up-list" id="upList"></div>
     <div class="up-foot" id="upFoot">点一张卡片立即生效 · 同一项可以重复叠加</div>
   </div>
@@ -218,6 +222,7 @@
     <div class="tt-kicker">ROGUELIKE · 荒草地</div>
     <h1 class="tt-name">奶蛙夜行</h1>
     <p class="tt-sub">夜色里的草地不太平，骷髅从四面钻出来。<br>选一关，撑过所有回合。</p>
+    <div class="tt-notice" id="ttNotice" hidden></div>
     <div class="tt-menu">
       <button class="tt-start" id="btnStart" type="button">开始游戏</button>
       <button class="tt-resume" id="btnResume" type="button" hidden>读取存档</button>
@@ -243,6 +248,7 @@
       </div>
     </div>
     <div class="tt-tip">按住左半屏拖动移动 · 走到怪身边自动攻击</div>
+    <div class="tt-saved" id="ttSaved" hidden></div>
   </div>
 </div>
 
@@ -390,6 +396,7 @@
       </div>
       <i>每局结束按回合、击杀、难度、关卡结算 · 没花完的金币也会折成骨币 · 火里点过的东西永远留在这儿</i>
     </div>
+    <div class="cf-warn" id="cfWarn">这里的每一次点燃都会写进本机存档 · 之后每一关、每一局都带着它 · 写进去就改不回来了</div>
     <div class="cf-list" id="cfList"></div>
     <div class="lv-foot" id="cfFoot">火种没有等级上限，越点越贵 · 只在开局生效 · 不会把难走的路走成平地</div>
   </div>
@@ -453,6 +460,18 @@
   </div>
 </div>
 
+<!-- 通用确认弹窗（第 41 块）：存档并退出 / 篝火入口 / 永久选择提醒共用 -->
+<div id="confirmAsk" class="modal" aria-hidden="true">
+  <div class="md-card">
+    <div class="md-title" id="caTitle">确认</div>
+    <div class="md-sub" id="caSub"></div>
+    <div class="md-btns">
+      <button class="md-btn" id="caCancel" type="button">再想想</button>
+      <button class="md-btn primary" id="caOk" type="button">确定</button>
+    </div>
+  </div>
+</div>
+
 <!-- 是否进入新手教程 -->
 <div id="tutAsk" class="modal" aria-hidden="true">
   <div class="md-card">
@@ -492,7 +511,7 @@
 <!-- 不用 importmap：老手机浏览器（iOS 16.4 以下、旧版微信/安卓 WebView）
      不支持 import maps，会让整个模块解析失败、加载页永远停在 0%。
      项目内所有 import 都写成相对路径，直接靠原生 ES Module 解析。 -->
-<script type="module" src="js/main.js?v=46"></script>
+<script type="module" src="js/main.js?v=47"></script>
 
 <!-- 兜底自检：模块没跑起来时把原因写出来，别让用户对着 0% 干等 -->
 <script>

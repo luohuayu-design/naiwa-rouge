@@ -54,6 +54,11 @@ const DEFAULT_PROFILE = {
   //   marks  { laughter: 2, name: 1, memory: 0 }
   //   ending 第 18 夜读完后写下的结局 key（'' = 还没读终章）
   story: { seen: {}, read: {}, marks: {}, ending: '' },
+  // 第 41 块：局外永久选择的「已读提示」标记。
+  //   campfire 篝火首次进入前的那段说明看过了
+  //   boon     永夜火种首次三选一前的说明看过了
+  // 看过之后不再拦路，但界面上的常驻警示条一直在。
+  notice: { campfire: false, boon: false },
 };
 
 let cache = null;
