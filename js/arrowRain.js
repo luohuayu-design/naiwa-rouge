@@ -13,9 +13,9 @@
 // 数值：伤害吃武器属性表 wstats（swordDamage / 暴击），× ARROW_DMG_MUL ——
 //   商店的剑油 / 磨剑石同样强化箭雨，升级卡不白买。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=58';
-import { mitigate } from './stats.js?v=58';
-import audio from './audio.js?v=58';
+import * as THREE from '../lib/three.module.js?v=59';
+import { mitigate } from './stats.js?v=59';
+import audio from './audio.js?v=59';
 
 const AIM_TIME = 0.85;      // 警告圈亮起到第一支箭落地（给怪走位、给玩家预判）
 const SPREAD_TIME = 1.0;    // 全部箭落完的时间窗（每支箭在这个窗内错开）

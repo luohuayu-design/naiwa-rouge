@@ -14,7 +14,7 @@
 // camp   { id: 等级 } 已点燃的火种（数字等级，无限级，天然兼容老档案）
 // ============================================================
 
-import { profile, save, bones, addBones } from './profile.js?v=58';
+import { profile, save, bones, addBones } from './profile.js?v=59';
 
 // ---------------- 骨币产出 ----------------
 // 一局打完全程普通（20 回合 273 杀）：60 + 81 + 40 ≈ 181 骨币。

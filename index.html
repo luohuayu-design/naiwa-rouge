@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#080f14">
 <link rel="icon" href="data:,">
 <title>蛙步 · 夜行</title>
-<link rel="stylesheet" href="style.css?v=58">
+<link rel="stylesheet" href="style.css?v=59">
 </head>
 <body>
 
@@ -252,10 +252,11 @@
         <button class="tt-menu-btn" id="btnGift" type="button">礼包兑换</button>
         <button class="tt-menu-btn" id="btnSettings" type="button">设置</button>
       </div>
-      <!-- 公告（第 45 块）：开局自动弹一次，之后随时点这里回看 -->
-      <div class="tt-row tt-row-notice">
-        <button class="tt-menu-btn tt-notice-btn" id="btnNotice" type="button">📢 公告</button>
+      <div class="tt-row">
+        <button class="tt-menu-btn" id="btnStats" type="button">属性</button>
+        <button class="tt-menu-btn" id="btnNotice" type="button">📢 公告</button>
       </div>
+      <!-- 公告挪进上面的第四排（第 50 块：属性 + 公告同排） -->
     </div>
     <div class="tt-tip">按住左半屏拖动移动 · 走到怪身边自动攻击</div>
     <div class="tt-saved" id="ttSaved" hidden></div>
@@ -412,6 +413,22 @@
     <div class="dl-best" id="dlBest">今天还没有记录</div>
     <button class="dl-start" id="dlStart" type="button">开始今日挑战</button>
     <div class="lv-foot">固定关卡、难度与诅咒 · 结算额外 ×1.25 骨币 · 一天只记最好的一次</div>
+  </div>
+</div>
+
+<!-- 属性页（第 50 块）：3D 奶蛙可拖动旋转 + 经篝火/永夜加成后的属性总览 -->
+<div id="statScr" class="tt-sub-scr" aria-hidden="true">
+  <div class="lv-card" style="max-width:440px">
+    <div class="lv-head">
+      <div class="lv-title">奶蛙属性</div>
+      <button class="lv-back" id="stBack" type="button">‹ 返回</button>
+    </div>
+    <div class="st-stage">
+      <canvas id="statCanvas"></canvas>
+      <div class="st-hint">拖动旋转 · 它偶尔会自己动</div>
+    </div>
+    <div class="st-rows" id="statRows"></div>
+    <div class="lv-foot">已计入篝火与永夜火种的局外加成 · 局内升级/装备另算</div>
   </div>
 </div>
 
@@ -617,7 +634,7 @@
 <!-- 不用 importmap：老手机浏览器（iOS 16.4 以下、旧版微信/安卓 WebView）
      不支持 import maps，会让整个模块解析失败、加载页永远停在 0%。
      项目内所有 import 都写成相对路径，直接靠原生 ES Module 解析。 -->
-<script type="module" src="js/main.js?v=58"></script>
+<script type="module" src="js/main.js?v=59"></script>
 
 <!-- 兜底自检：模块没跑起来时把原因写出来，别让用户对着 0% 干等 -->
 <script>

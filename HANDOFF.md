@@ -63,6 +63,17 @@ Three.js r160 的单摇杆幸存者肉鸽《奶蛙夜行》，纯静态站点（
 | **47** | 新武器「箭雨」（`js/arrowRain.js`）：第二关起拿环剑时一并解锁（第一关只出剑，用户定案）；无普通攻击、单技能 8s CD（技能框有倒计时数字 `.sk-num`）；自动以最近的怪为心标警告圈（0.85s 瞄准 + 1s 散布），14 支箭错峰落下，每支 = 剑伤害 ×0.55（吃 wstats → 剑油/磨剑石同样强化）；存档 `arrowRain.unlocked`，钩子 `__game.arrowRain` / `__game.buff` | v=57 |
 | **48** | 加载页轮播：`LOAD_TIPS` 10 句 3.2s 淡入淡出（`.ld-tip`），loading 淡完 `clearInterval`；首屏评估=放弃压缩改造 | v=58 |
 | **49** | 种子挑战（`seed.js` 追加）：`seedFromText`（加盐 FNV-1a）/ `pickSeedRules(seed, records, curseTable)`（wins 0~1 普通·2~5 困难·≥6 噩梦；诅咒 0/1/2；过不了第一关不去第二关）/ `loadSeedRecords`/`saveSeedRecord`（一码一条取优）/ `pruneSeeds(40)`；UI `#seedScr`（输入+🎲+匹配文案+记录列表）；`customSeed` 进快照 `seedPlay`；结算 `rsTag` 与记录在 `endGame`；键 `naiwa_rouge_seeds_v1` | v=58 |
+| **50** | 主菜单「属性」页（`js/statView.js` + `#statScr`）：独立小渲染器把 `loadFrog('assets/rigged.glb')` 摆在带呼吸描边环的展台上，拖动转视角（`setPointerCapture` 包 try-catch）、松手回正、定时蹦跶/拍掌；属性用**临时实例** `createStats+createWeaponStats` 重算（基础+篝火 `campApply`+火种 `applyBoons`），14 项按 4 组列出、加成行标「（基础 X）」；钩子 `__game.statPage` | v=59 |
+
+第 50 块要点（主菜单属性页，2026-10-22，v=59；同批发版还有 47 箭雨 / 48 加载轮播 / 49 种子挑战）：
+
+- **用户要求**：主菜单加「属性」页——上半屏 3D 奶蛙**可拖动旋转**、**不时做个动作**（蹦/拍掌），下半屏显示**加上篝火和永夜火种之后**的属性。
+- **`js/statView.js`**：独立小渲染器（自己的 canvas + renderer，与 `scene.js` 主场景完全隔离；同一个 `rigged.glb` 走浏览器缓存只下载一次）。`PerspectiveCamera(38)` 在 `(0, 2.35, 5.1)` 看 `(0, 1.02, 0)`；半球光 + 月光 + 暖补光；圆形展台 + 呼吸描边环；模型走 `loadFrog('assets/rigged.glb')`（失败自动 `buildFallbackFrog`）。节拍：`hopT > 0` 时用 `frog.update(dt, 1)` 走步态、每次蹦 0.9s、间隔 3.2~6.2s；每 8~14s `playAttack()` 拍一掌。只有属性页开着时 `main.js` 的 `tick()` 才 `resize()/update(dt)`，关页即停。
+- **拖动**：`pointerdown` 记 `startX/lastX`，`pointermove` 把位移折成 `targetYaw`（每像素 0.011 rad，夹 ±2.6），松手 `targetYaw *= pow(0.25, dt)` 回正；`setPointerCapture` 必须包 try-catch（合成 PointerEvent 的 pointerId 抓不住会抛）。
+- **数值**：`renderStatRows()` 每次进页重算——`const s = createStats(STAT_DEFS); const w = createWeaponStats(); campApply(s, w); applyBoons(s, w);`（**临时实例**，绝不碰局内 stats）；按 `PLAYER_GROUPS` 分组；`val !== base` 的行补「（基础 X）」。别在这里用 `stats` 单例，否则打开属性页会污染正在跑的那局。
+- **测试**：`.tmp-block50-cdp.js` **10** 项全绿（4 组 14 行渲染 / 基础值 6.0 与防御 0.0 / 合成 PointerEvent 拖动 yaw 真变 / 松手回正 / 预置篝火铁壳×3 + 厚皮×2 后防御不再 0.0 且标注基础值 / 返回能关 / 零报错）。视觉核对 `.tmp-shot50.js`（390×844 → `%TEMP%/naiwa-shot-50/`）。
+- **截图坑**：`?debug=1&title` 的公告是 loading 淡完 +700ms 才弹，`__game.notice.hide()` 抢在前面白关一次 → 先 `sleep(2600)` 再 hide 再截图；`.st-hint` 压在展台光环上会糊，已改成半透明胶囊。
+- 同批测试：`.tmp-block47-cdp.js` 27、`.tmp-block49-cdp.js` 23、回归 block46 65 / block45 49 / block41 37 全绿。
 
 第 46 块要点（抽象奶蛙音效包，2026-10-22，v=52）：
 

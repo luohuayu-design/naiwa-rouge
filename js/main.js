@@ -5,70 +5,71 @@
 // 目标是把三件事调顺：摇杆输入 → 角色速度/朝向 → 相机跟随。
 // 后续叠战斗时，只需要在 tick() 里加敌人更新与自动攻击，不用动输入层。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=58';
-import { buildNightScene } from './scene.js?v=58';
-import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=58';
-import { createInput } from './input.js?v=58';
-import { createStats, STAT_DEFS } from './stats.js?v=58';
-import { createWeaponStats } from './weaponStats.js?v=58';
-import { createFx } from './fx.js?v=58';
-import { createEnemySystem } from './enemy.js?v=58';
+import * as THREE from '../lib/three.module.js?v=59';
+import { buildNightScene } from './scene.js?v=59';
+import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=59';
+import { createInput } from './input.js?v=59';
+import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=59';
+import { createStatView } from './statView.js?v=59';
+import { createWeaponStats } from './weaponStats.js?v=59';
+import { createFx } from './fx.js?v=59';
+import { createEnemySystem } from './enemy.js?v=59';
 import {
   createLevel, LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVELS_BY_ID, DIFFS, setDifficulty, getDifficulty, roundScale, levelStats,
-} from './wave.js?v=58';
-import { createRangeRing } from './rangeRing.js?v=58';
-import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=58';
-import { createWeaponSystem } from './weapon.js?v=58';
-import { createArrowRainSystem } from './arrowRain.js?v=58';
-import { SWORD_KINDS } from './swordKinds.js?v=58';
-import { createGoldSystem } from './gold.js?v=58';
-import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW } from './shop.js?v=58';
-import { createTurretSystem, TURRET } from './turret.js?v=58';
-import { createRelicSystem, RELIC_DEFS } from './relics.js?v=58';
-import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=58';
-import audio from './audio.js?v=58';
-import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=58';
+} from './wave.js?v=59';
+import { createRangeRing } from './rangeRing.js?v=59';
+import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=59';
+import { createWeaponSystem } from './weapon.js?v=59';
+import { createArrowRainSystem } from './arrowRain.js?v=59';
+import { SWORD_KINDS } from './swordKinds.js?v=59';
+import { createGoldSystem } from './gold.js?v=59';
+import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW } from './shop.js?v=59';
+import { createTurretSystem, TURRET } from './turret.js?v=59';
+import { createRelicSystem, RELIC_DEFS } from './relics.js?v=59';
+import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=59';
+import audio from './audio.js?v=59';
+import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=59';
 import {
   settings as readSettings, setSetting, save as saveProfile, profile,
   bumpStat, setStatMax, codexAdd, codexCount, countCard, unlockAch, hasAch, addBones, bones, resetAll,
   storyProgress, markStorySeen, markStoryRead, addStoryMark, setStoryEnding,
   setSaveSuppressed, reloadFromStorage,
   giftLog, giftRedeemed, markGift,
-} from './profile.js?v=58';
+} from './profile.js?v=59';
 // 第 44 块：礼包兑换（码表只有哈希，明细在 gift.js 顶部注释）
-import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=58';
+import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=59';
 // 第 46 块：音效包（抽象奶蛙音效包 —— 4 段奶蛙叫声，通关第一关解锁）
-import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=58';
-import * as runSave from './runSave.js?v=58';
+import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=59';
+import * as runSave from './runSave.js?v=59';
 import {
   CAMPFIRE, CAMP_STEP, campBuy, campOwned, campLevel,
   campCost, campApply, bonesFor, diffBoneMul, levelBoneMul, coinBones, BONE,
-} from './campfire.js?v=58';
+} from './campfire.js?v=59';
 // 第 23 块：永夜火种（通关白给的 3 次永久三选一）
 import {
   BOONS, BOON_BY_ID, BOON_PICKS, boonOwned, boonStacks, boonPending, boonTotalStacks,
   grantBoons, rollBoons, takeBoon, applyBoons, boonStackText,
-} from './boons.js?v=58';
+} from './boons.js?v=59';
 // 第 21 块：夜行诅咒（自选 debuff 换骨币倍率）
-import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=58';
+import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=59';
 // 第 22 块：种子与每日挑战
 import {
   DAILY_RULES, dayKey, dayText, dailySeed, seedCode, pickDailyCurses,
   seedFromText, pickSeedRules, loadSeedRecords, saveSeedRecord, pruneSeeds,
   dailyRecord, saveDailyRecord, pruneDaily, makeRng,
-} from './seed.js?v=58';
-import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=58';
-import { achById, ACHS } from './achievements.js?v=58';
+} from './seed.js?v=59';
+import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=59';
+import { achById, ACHS } from './achievements.js?v=59';
 import {
   EVENTS, ALL_EVENTS, getEventById, pickEvent, effectLines,
   choiceHint, canAfford, costShort, REP_MIN, REP_MAX, REP_START,
   isTalk, eventChoices, resolveRoll, mergeEffects,
-} from './events.js?v=58';
+} from './events.js?v=59';
 // 第 32 块：主线《笑不出来的那一夜》（18 夜，一夜一关，前 3 夜已有关卡）
 import {
   STORY_ARC, STORY_CHAPTERS, STORY_ENDINGS, MARK_INFO,
   storyChapterAt, storyChapterById, storyEndingKey,
-} from './story.js?v=58';
+} from './story.js?v=59';
 
 // 标记模块已经跑起来了：index.html 的兜底自检靠它判断
 // 「模块根本没执行」还是「执行了但加载慢」。
@@ -4247,6 +4248,57 @@ async function boot() {
   seedInput.addEventListener('input', renderSeedMatch);
   seedInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') startSeedRun(); });
 
+  // ---------------- 属性页（第 50 块） ----------------
+  // 3D 奶蛙展台 + 经篝火/永夜火种加成后的属性总览。
+  // 数值用一份**临时 stats 实例**算（base + camp + boon），不碰局内那份。
+  const statScr = document.getElementById('statScr');
+  const statCanvas = document.getElementById('statCanvas');
+  const statRows = document.getElementById('statRows');
+  const statView = createStatView(statCanvas);
+
+  function renderStatRows() {
+    const s = createStats(STAT_DEFS);            // 干净 base
+    const w = createWeaponStats();               // camp/boon 里的武器加成有处可去即可
+    campApply(s, w);
+    applyBoons(s, w);
+    statRows.textContent = '';
+    for (const group of PLAYER_GROUPS) {
+      const g = document.createElement('div');
+      g.className = 'st-group';
+      g.textContent = group;
+      statRows.appendChild(g);
+      for (const d of STAT_DEFS) {
+        if (d.group !== group) continue;
+        const row = document.createElement('div');
+        row.className = 'st-row';
+        const name = document.createElement('span');
+        name.className = 'st-name';
+        name.textContent = d.name;
+        const val = document.createElement('span');
+        val.className = 'st-val';
+        const final = s.get(d.key);
+        const boosted = Math.abs(final - d.base) > 1e-9;
+        val.textContent = d.fmt(final);
+        const base = document.createElement('span');
+        base.className = 'st-base';
+        base.textContent = boosted ? `（基础 ${d.fmt(d.base)}）` : '';
+        row.append(name, val, base);
+        statRows.appendChild(row);
+      }
+    }
+  }
+
+  function showStat() {
+    renderStatRows();         // 每次打开都重算（篝火/火种可能变过；十几行 DOM，开销可忽略）
+    showSub(statScr);
+    statView.load();          // 首次打开才开始拉模型（浏览器缓存，几乎不耗时）
+    statView.resize();
+  }
+
+  const btnStats = document.getElementById('btnStats');
+  btnStats.addEventListener('click', showStat);
+  document.getElementById('stBack').addEventListener('click', () => hideSub(statScr));
+
 
   // ---------------- 难度选择（关卡面板里，一局一选） ----------------
   const diffSeg = document.getElementById('diffSeg');
@@ -4640,6 +4692,13 @@ async function boot() {
       },
       // 测试用：临时加一条主角属性（如 attackRange +12 让站桩也够得着远程怪）
       buff: (stat, flat) => { stats.addMod({ stat, flat, src: 'dbg:test' }); return stats.get(stat); },
+      // 第 50 块：属性页（测试钩子）
+      statPage: {
+        show: () => showStat(),
+        ready: () => statView.ready,
+        yaw: () => statView.yawAngle,
+        rows: () => statRows.children.length,
+      },
       // 第 47 块：箭雨（测试钩子）
       arrowRain: {
         state: () => ({ unlocked: arrowRain.unlocked, ready: arrowRain.ready, cdLeft: +arrowRain.cdLeft.toFixed(2), strikes: arrowRain.strikeCount }),
@@ -5103,6 +5162,12 @@ async function boot() {
 
     const dt = Math.min(0.05, clock.getDelta());
     syncAudio();
+
+    // 属性页开着时驱动 3D 展台（第 50 块）：拖动旋转 / 待机蹦跶
+    if (statScr && statScr.classList.contains('on')) {
+      statView.resize();
+      statView.update(dt);
+    }
 
     let speed = 0;
     let speed01 = 0;
