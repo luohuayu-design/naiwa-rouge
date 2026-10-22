@@ -73,7 +73,7 @@ Three.js r160 的单摇杆幸存者肉鸽《奶蛙夜行》，纯静态站点（
 - **UI**：`#packGet`（z-index **20**：压住结算面板 18、比永夜火种三选一 22 低）→ 标题 / 说明 / 4 行素材（各带「试听」按钮，播完显示「♪」0.9 秒）/ 「先用原来的」「换上奶蛙叫」。设置面板第二行新增「音效包」，两段「正常 / 奶蛙」，未解锁时「奶蛙」`disabled` 且说明改成「通关第一关解锁『奶蛙』那一项」。
 - **顺手改的**：`#waveToast` 的 z-index 从 7 提到 **26** —— 不然结算面板（18）弹着时切换音效包的提示完全看不见。**坑**：正因为提到 26，设置面板里切包时弹 toast 会正好压住「音效包」那一行（截图核对才看出来），所以**设置里切换不弹 toast**，只靠按钮态 + 那一声。
 - **调试钩子**：`__game.pack = { state, get, set, unlock, show, yes, no, open, files, map, descs, preview, sfx, audio, reset }`。
-- **测试**：`.tmp-block46-cdp.js` **62** 项全绿（含真打通第一关：`setAdmin(true)` → `jumpRound(20)` → `skipRound()` → 点过武器卡/三选一 → 结算 → 弹卡；**第 20 回合是最后一回合也会先弹武器卡和三选一**，测试里必须一路点过去）。素材探测 `.tmp-voice-probe.js`（时长/峰值/首尾静音）。视觉核对 `.tmp-shot46.js`（390×844，输出 `%TEMP%/naiwa-shot-46/`）。回归 block45 49/0、block44 36/0、block41 37/0。
+- **测试**：`.tmp-block46-cdp.js` **62** 项全绿（含真打通第一关：`setAdmin(true)` → `jumpRound(20)` → `skipRound()` → 点过武器卡/三选一 → 结算 → 弹卡；**第 20 回合是最后一回合也会先弹武器卡和三选一**，测试里必须一路点过去）。素材探测 `.tmp-voice-probe.js`（时长/峰值/首尾静音）。视觉核对 `.tmp-shot46.js`（390×844，输出 `%TEMP%/naiwa-shot-46/`）。线上烟测 `.tmp-block46-live.js` **14** 项全绿（v=52 / 4 段素材 200 且解码时长与本地一致 / 未解锁时「奶蛙」disabled / 预置档案后线上真能切到 frog 并去拉素材 / 刷新后选择还在 / 零 console 报错）。回归 block45 49/0、block44 36/0、block41 37/0。
 - **测试坑**：① headless 里 `AudioContext` 要一次**真实鼠标手势**才 `running`（`Input.dispatchMouseEvent` 点一下），否则 `sfx()` 全返回 false；② **管理员沙盒期间一切不落盘**（第 38 块），所以在 admin 下通关解锁的音效包不会存档、退出沙盒就回滚 —— 验持久化要先 `setAdmin(false)` 再 `pack.unlock()`。
 
 第 45 块要点（公告，2026-10-22，v=51）：
