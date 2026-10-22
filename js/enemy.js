@@ -18,11 +18,11 @@
 //
 // 第五种（mage）只写好了配置，暂不生成。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=59';
-import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=59';
-import { clone as cloneSkinned } from '../lib/jsm/utils/SkeletonUtils.js?v=59';
-import { distance2D } from './stats.js?v=59';
-import { createRangeRing } from './rangeRing.js?v=59';
+import * as THREE from '../lib/three.module.js?v=60';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=60';
+import { clone as cloneSkinned } from '../lib/jsm/utils/SkeletonUtils.js?v=60';
+import { distance2D } from './stats.js?v=60';
+import { createRangeRing } from './rangeRing.js?v=60';
 
 // KayKit 模型正面朝 +Z；如果哪天换模型发现怪倒着走，把这里改成 Math.PI
 export const ENEMY_MODEL_YAW = 0;
@@ -763,6 +763,56 @@ function applyWizardSkin(model, skin) {
       }
     }
   }
+}
+
+// ------------------------------------------------------------
+// 图鉴缩略图（第 51 块）：给图鉴用的「跟局内长得一样」的静态模型
+// ------------------------------------------------------------
+// 图鉴不需要整只怪（血条 / 接触环 / AI 全用不上），只借 spawn() 里那套
+// 「克隆 → 按 sourceHeight 归一 → 换肤 / 染色 / 转半透明」的打扮流程，
+// 再摆一个 Idle 姿势。打扮走的是**同一段代码**，缩略图才不会和游戏里长得不一样。
+// 换模型后要重新生成缩略图：`node .tmp-codex-shots.js`。
+const previewGltf = new Map();   // file -> gltf（同一个 glb 只解析一次）
+export async function buildPreviewModel(type) {
+  const cfg = ENEMY_TYPES[type];
+  if (!cfg) return null;
+  let gltf = previewGltf.get(cfg.file);
+  if (!gltf) {
+    gltf = await new GLTFLoader().loadAsync(cfg.file);
+    previewGltf.set(cfg.file, gltf);
+  }
+  const model = cloneSkinned(gltf.scene);
+  model.scale.setScalar(cfg.height / cfg.sourceHeight);
+  model.traverse((o) => {
+    if (!o.isMesh) return;
+    o.castShadow = false;
+    o.receiveShadow = false;
+    o.frustumCulled = false;
+    o.material = o.material.clone();
+  });
+  if (cfg.skin) applyWizardSkin(model, cfg.skin);
+  if (cfg.tint) {
+    const tc = new THREE.Color(cfg.tint);
+    model.traverse((o) => {
+      if (o.isMesh && o.material && o.material.color) o.material.color.copy(tc);
+    });
+  }
+  // 雾魉：局内是「半透明 + 隐身淡出」，缩略图给个 0.75 让它在图鉴里也像一缕雾
+  if (cfg.ghost) {
+    model.traverse((o) => {
+      if (!o.isMesh || !o.material) return;
+      o.material.transparent = true;
+      o.material.opacity = 0.75;
+    });
+  }
+  // 绑定姿态是张牙舞爪的 T pose，不能直接用 —— 先推进 Idle 半拍再定格
+  const clip = gltf.animations.find((c) => c.name === ANIM.idle) || gltf.animations[0];
+  if (clip) {
+    const mixer = new THREE.AnimationMixer(model);
+    mixer.clipAction(clip).play();
+    mixer.update(0.45);
+  }
+  return { model, height: cfg.height };
 }
 
 function lerpAngle(a, b, t) {

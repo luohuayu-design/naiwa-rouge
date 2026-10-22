@@ -588,6 +588,13 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
 .cx-item.dim .cx-title,.cx-item.dim .cx-sub,.cx-item.dim .cx-desc{filter:blur(3px);user-select:none}
 .cx-item.dim{opacity:.6}
 .cx-item.dim .cx-sub{filter:none;opacity:.75}
+/* 怪物页签带缩略图（第 51 块）：左边一张渲染小图，右边照旧排文字 */
+.cx-item.has-thumb{display:flex;gap:11px;align-items:flex-start}
+.cx-thumb{flex:0 0 auto;width:66px;height:79px;border-radius:10px;display:block;
+  object-fit:cover;object-position:50% 46%;
+  border:1px solid rgba(126,235,196,.22);background:rgba(6,18,15,.9);
+  box-shadow:inset 0 0 18px rgba(126,235,196,.08)}
+.cx-body{flex:1;min-width:0}
 .cx-empty{padding:24px 0;text-align:center;font-size:12px;color:rgba(150,190,175,.5)}
 
 /* 关卡选择 / 我的记录（主页面上的子面板） */

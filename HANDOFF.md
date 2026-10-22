@@ -64,6 +64,19 @@ Three.js r160 的单摇杆幸存者肉鸽《奶蛙夜行》，纯静态站点（
 | **48** | 加载页轮播：`LOAD_TIPS` 10 句 3.2s 淡入淡出（`.ld-tip`），loading 淡完 `clearInterval`；首屏评估=放弃压缩改造 | v=58 |
 | **49** | 种子挑战（`seed.js` 追加）：`seedFromText`（加盐 FNV-1a）/ `pickSeedRules(seed, records, curseTable)`（wins 0~1 普通·2~5 困难·≥6 噩梦；诅咒 0/1/2；过不了第一关不去第二关）/ `loadSeedRecords`/`saveSeedRecord`（一码一条取优）/ `pruneSeeds(40)`；UI `#seedScr`（输入+🎲+匹配文案+记录列表）；`customSeed` 进快照 `seedPlay`；结算 `rsTag` 与记录在 `endGame`；键 `naiwa_rouge_seeds_v1` | v=58 |
 | **50** | 主菜单「属性」页（`js/statView.js` + `#statScr`）：独立小渲染器把 `loadFrog('assets/rigged.glb')` 摆在带呼吸描边环的展台上，拖动转视角（`setPointerCapture` 包 try-catch）、松手回正、定时蹦跶/拍掌；属性用**临时实例** `createStats+createWeaponStats` 重算（基础+篝火 `campApply`+火种 `applyBoons`），14 项按 4 组列出、加成行标「（基础 X）」；钩子 `__game.statPage` | v=59 |
+| **51** | 图鉴附怪物贴图：`enemy.js` 新增 `buildPreviewModel(type)`（克隆 + 按 sourceHeight 归一 + 换肤/染色/半透明 + Idle 定格），离线脚本 `.tmp-codex-shots.js` 按透明通道包围盒自动取景，输出 13 张 240×288 webp 到 `assets/codex/`（共 ~200KB）；`codex.js` 给怪物条目加 `thumb`，图鉴走「左图右文」（`.cx-item.has-thumb` / `.cx-thumb` / `.cx-body`）；运行时不加载模型 | v=60 |
+
+第 51 块要点（图鉴附怪物贴图，2026-10-22，v=60）：
+
+- **用户要求**：「图鉴附贴图」——怪物页签要能看见怪长什么样，不只是文字。
+- **为什么是离线 PNG/WebP 而不是运行时渲染**：图鉴一打开就临时拉 13 只怪（4 个 glb 共 2.7MB）＋再开一个 WebGL 上下文，手机上有风险也慢。改成构建时一次性渲染、产物进仓库：运行时只是 13 张 `<img loading="lazy">`，零额外模型请求、零额外上下文。
+- **`enemy.js` 的 `buildPreviewModel(type)`**：和 `spawn()` 走同一套打扮逻辑（`cloneSkinned` → `scale = height/sourceHeight` → `applyWizardSkin` / `tint` / ghost 半透明），只是不建血条/范围环/AI；最后用 `AnimationMixer` 把 Idle 推进 0.45s 定格（**绑定姿态是张牙舞爪的 T pose，不能用**）。换模型/改皮肤后要重跑 `.tmp-codex-shots.js` 重出图。
+- **自动取景（踩了两个坑）**：
+  ① `readPixels` 的缓冲**必须 `Uint8Array`**（配 `gl.UNSIGNED_BYTE`），用 `Float32Array` 会静默读到全 0 → 包围盒为 null → 取景循环直接 break，图就被裁掉头顶。
+  ② 不能按 `cfg.height` 算相机距离：模型 Idle 姿势下的真实渲染高度并不等于标定值，直接算会裁头。改成「先退到 12×h → 量 alpha 包围盒 → 若贴边就继续退 → 按 `bh/(H*0.84)` 缩距离、按中心偏差移 `aimX/aimY`」，最多 9 轮。
+- **UI**：`codex.js` 怪物条目加 `thumb: 'assets/codex/<id>.webp'`；`main.js` 的 `renderCodex` 遇到 `en.thumb` 就包一层 `.cx-item.has-thumb`（img + `.cx-body`），其它页签完全不变（测试里专门断言武器/奇遇页签没有 `.cx-thumb`）。
+- **测试**：`.tmp-block51-cdp.js` **20** 项全绿（13 条都有 thumb 且文件名=id / DOM 13 图 13 body / 全部解码成功 0 破图 / 尺寸 240×288 / lazy + alt / 66×79 且图在文字左侧 / 其它页签不受影响 / 13 个文件 HTTP 200 且是真 webp >5KB / 总体积 <400KB / 零报错）。截图 `.tmp-block51-cdp.js` 输出 `%TEMP%/naiwa-shot-51/`（codex-enemies / codex-swords）。
+- **截图坑（复踩）**：公告是 loading 淡完 **+700ms** 才弹，测试里 `sleep(2600)` 之后必须显式 `__game.notice.hide()`，否则截出来整屏都是公告。
 
 第 50 块要点（主菜单属性页，2026-10-22，v=59；同批发版还有 47 箭雨 / 48 加载轮播 / 49 种子挑战）：
 
@@ -438,6 +451,7 @@ Three.js r160 的单摇杆幸存者肉鸽《奶蛙夜行》，纯静态站点（
 | `runSave.js`                                                                                 | 读取存档（第 38 块：多存档列表），键 `naiwa_rouge_runs_v1`（数组，按 uid upsert；每回合开始写 + pagehide 补一次；通关选完永夜火种才清） |
 | `gift.js`                                                                                    | 礼包兑换（第 44 块）：`GIFT_TABLE` 只存 16 位哈希 + 骨币，`normalizeCode`/`codeHash`/`lookupGift`/`giftByHash`；明文码在 gitignore 的 `gift-codes.local.md` |
 | `voicepack.js`                                                                               | 音效包（第 46 块）：`FROG_FILES` 4 段奶蛙素材（含试听区间）、`FROG_SFX` 8 个位置的 `offset/dur/vol/rate/jitter`、`PACK_LIST`；**改裁切只改这张表** |
+| `assets/codex/*.webp` | 图鉴怪物缩略图（第 51 块）：13 张 240×288，`node .tmp-codex-shots.js` 生成；**换模型/皮肤后要重跑** |
 | `codex.js`                                                                                   | 图鉴五页签的数据整理（纯渲染数据，无状态）                                                                                      |
 | `achievements.js`                                                                            | 26 条成就定义（`{id,name,desc}`）                                                                                 |
 | `audio.js`                                                                                   | 程序化音效 + BGM；`setSfxVolume/setMusicVolume`（与静音独立）                                                           |
