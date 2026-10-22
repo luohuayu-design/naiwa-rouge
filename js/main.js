@@ -92,8 +92,24 @@ async function boot() {
   const BODY_R = 0.65;         // 角色自身半径（贴边留一点余量）
   const ACCEL = 14;            // 速度趋近系数，越大越「跟手」
   const TURN_SPEED = 13;       // 转身角速度系数
+  // ---------------- 相机（第 36 块重做：死区 + 平滑焦点 + 速度感视野） ----------------
+  // 之前是「相机跟着角色连续缓动 + 注视点用速度做超前预测」，两个问题：
+  //   ① 角色每一次细微挪动，整块屏幕都跟着动 —— 眼睛找不到静止参考，久了就晕；
+  //   ② vel×0.22 的超前注视点在急转弯 / 急停时是**瞬间**跳过去的，
+  //      镜头跟着甩一下（Unity Cinemachine 文档对 Lookahead 的警告就是这个：
+  //      "sensitive to noisy animation ... resulting in undesirable camera jitter"）。
+  // 现在照 Cinemachine Framing Transposer / Godot Phantom Camera「Framed」的做法：
+  //   死区（Dead Zone）内相机**完全不动** → 出死区才用阻尼把角色推回死区边缘（Soft Zone）。
+  //   注视点 = 平滑焦点本身，不再做速度预测，镜头旋转速度与焦点平移速度严格成正比，不会甩。
   const CAM_OFFSET = new THREE.Vector3(0, 10.6, 9.2);
-  const CAM_LERP = 7;
+  const CAM_DEADZONE = 1.0;    // 死区半径（世界单位，屏幕上约半格；想回到「随时贴着角色」就调成 0）
+  const CAM_FOLLOW = 6.0;      // 焦点追随阻尼系数（越大越跟手，越小越飘）
+  // 速度感：跑起来视野微微拉宽（用户建议）。幅度刻意压得很小 ——
+  // 赛车游戏里 FOV 拉宽是最有效的速度反馈，但也是对晕动症最敏感的一项
+  // （任天堂 Kirby Air Riders 的「速度效果」就是单独一个可关项），所以：小幅度 + 平滑 + 可关。
+  const CAM_FOV_BASE = 45;     // 站着不动的视野（原来的值）
+  const CAM_FOV_ADD = 3.0;     // 跑满时最多再放宽 3°
+  const CAM_FOV_LERP = 3.2;    // 视野变化也要缓（突变本身比变化更晕）
   const IFRAME = 0.9;          // 受击后的无敌时间（第 33 块 0.55→0.9：怪堆里不再被连环蹭血；
                                // 略短于大多数怪的攻击间隔，走位仍能被惩罚，但不会被同屏多只怪轮流点名）
   // 移动速度不在这里调了 —— 见 stats.js 的 STAT_DEFS 里 moveSpeed（属性面板实时生效）
@@ -123,8 +139,12 @@ async function boot() {
   // ---------------- 场景与相机 ----------------
   const { scene, update: updateScene, setTheme: setSceneTheme, setArena: setSceneArena } = buildNightScene({ arenaRadius: ARENA_R });
 
-  const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 220);
+  const camera = new THREE.PerspectiveCamera(CAM_FOV_BASE, window.innerWidth / window.innerHeight, 0.1, 220);
   const camOffset = CAM_OFFSET.clone();
+  // 相机焦点（第 36 块）：相机永远看向它，它也只在角色走出死区时才移动
+  const camFocus = new THREE.Vector3(0, 0, 0);
+  let camFov = CAM_FOV_BASE;                 // 当前视野（每帧向目标值缓动）
+  let speedFovOn = !!readSettings().speedFov;   // 设置项：速度感（applySettings 里同步）
 
   function applyViewport() {
     const w = window.innerWidth, h = window.innerHeight;
@@ -1140,6 +1160,12 @@ async function boot() {
     storyMarked.clear();              // 第 32 块：印记去重表一局一清（重打可以重新选，档案照样累计）
     setDifficulty(diffOverride || profile().difficulty || 'normal');   // 难度一局一选，开局生效
     setLevel(pendingLevelId);         // 第 20 块：按选关重建这一关（含场景皮肤）
+    // 第 36 块：开局把相机焦点贴到角色身上，别从上一局死的地方慢慢飞过来
+    camFocus.set(pos.x, 0, pos.z);
+    camFov = CAM_FOV_BASE;
+    camera.fov = CAM_FOV_BASE;
+    camera.position.set(camFocus.x + camOffset.x, camOffset.y, camFocus.z + camOffset.z);
+    camera.updateProjectionMatrix();
     clearCurse();                     // 上一局残留的减速不许带进来
     applyCampfire();                  // 篝火（第 19 块）：局外成长在开局一次性落账
     // 第 23 块：永夜火种（通关白给的永久属性）也在这里落账。
@@ -1537,9 +1563,13 @@ async function boot() {
     { key: 'joySize', name: '摇杆大小', type: 'seg', opts: [['small', '小'], ['mid', '中'], ['large', '大']] },
     { key: 'joyHand', name: '摇杆位置', type: 'seg', hint: '按住哪半边出摇杆', opts: [['left', '左手'], ['right', '右手']] },
     { key: 'shake', name: '屏幕震动', type: 'seg', hint: '受击时抖一下', opts: [['on', '开'], ['off', '关']] },
+    { key: 'speedFov', name: '速度感', type: 'seg', hint: '跑起来视野微微拉宽（晕的话关掉）', opts: [['on', '开'], ['off', '关']] },
     // 第 30 块：管理员模式（要密码，开完才有跳过回合按钮与无限钱）
     { key: 'admin', name: '管理员模式', type: 'admin', hint: '无限钱 · 可跳过/选择回合' },
   ];
+
+  // 布尔型设置项在面板上显示成「开/关」两段
+  const BOOL_SETTINGS = new Set(['shake', 'speedFov']);
 
   // 把设置真正作用到音频 / 渲染 / 摇杆 / 抖屏上
   function applySettings() {
@@ -1547,6 +1577,7 @@ async function boot() {
     audio.setSfxVolume(s.sfx);
     audio.setMusicVolume(s.music);
     applyQuality(s.quality);
+    speedFovOn = !!s.speedFov;
     const pre = JOY_PRESET[s.joySize] || JOY_PRESET.mid;
     if (input.joystick && input.joystick.setOpts) input.joystick.setOpts({ radius: pre.radius, hand: s.joyHand });
     const stickEl = document.getElementById('stick');
@@ -1615,7 +1646,7 @@ async function boot() {
         seg.append(bOn, bOff);
         wrap.append(label, seg);
       } else {
-        const cur = row.key === 'shake' ? (s.shake ? 'on' : 'off') : s[row.key];
+        const cur = BOOL_SETTINGS.has(row.key) ? (s[row.key] ? 'on' : 'off') : s[row.key];
         const seg = document.createElement('div');
         seg.className = 'set-seg';
         for (const [v, text] of row.opts) {
@@ -1625,7 +1656,7 @@ async function boot() {
           b.textContent = text;
           if (v === cur) b.classList.add('on');
           b.addEventListener('click', () => {
-            setSetting(row.key, row.key === 'shake' ? v === 'on' : v);
+            setSetting(row.key, BOOL_SETTINGS.has(row.key) ? v === 'on' : v);
             applySettings();
             renderSettings();
           });
@@ -3670,6 +3701,16 @@ async function boot() {
     window.__game = {
       stats, wstats, pos, vel, input, enemies, fx, playerRing, frog, camera, weapon, scene,
       renderer,
+      // 第 36 块：相机（死区 / 焦点 / 视野）—— 减晕改动全靠这几个数验证
+      cam: {
+        focus: () => ({ x: camFocus.x, z: camFocus.z }),
+        pos: () => ({ x: camera.position.x, y: camera.position.y, z: camera.position.z }),
+        fov: () => camera.fov,
+        deadzone: CAM_DEADZONE,
+        fovBase: CAM_FOV_BASE,
+        fovAdd: CAM_FOV_ADD,
+        speedFov: () => speedFovOn,
+      },
       // level 是可变引用（切关卡会整体重建），必须用 getter，否则测试盯着的是旧的回合机器
       get level() { return level; },
       get levelId() { return curLevelId; },
@@ -4350,19 +4391,35 @@ async function boot() {
     playerRing.mesh.position.z = pos.z;
     playerRing.update(dt);
 
-    // 6) 相机：位置缓动跟随，注视点略微超前于角色
-    const leadX = pos.x + vel.x * 0.22;
-    const leadZ = pos.z + vel.z * 0.22;
-    const desiredX = pos.x + camOffset.x;
-    const desiredY = camOffset.y;
-    const desiredZ = pos.z + camOffset.z;
-    const ck = 1 - Math.exp(-CAM_LERP * dt);
-    camera.position.x += (desiredX - camera.position.x) * ck;
-    camera.position.y += (desiredY - camera.position.y) * ck;
-    camera.position.z += (desiredZ - camera.position.z) * ck;
-    camera.lookAt(leadX, 0.95, leadZ);
+    // 6) 相机：死区 + 平滑焦点（第 36 块重做，详见文件顶部常量处的说明）
+    //    - 角色在死区内走动：焦点不动 → 画面一动不动（眼睛有静止参考）
+    //    - 走出死区：把焦点往「角色刚好落回死区边缘」的位置缓动 → 屏幕匀速平移
+    //    - 注视点就是焦点，不做速度预测 → 急停急转时镜头不会甩
+    {
+      const fdx = pos.x - camFocus.x;
+      const fdz = pos.z - camFocus.z;
+      const fd = Math.hypot(fdx, fdz);
+      if (fd > CAM_DEADZONE) {
+        // 目标焦点 = 角色位置往回收「死区半径」那么多（角色正好贴在死区边缘）
+        const tx = pos.x - (fdx / fd) * CAM_DEADZONE;
+        const tz = pos.z - (fdz / fd) * CAM_DEADZONE;
+        const ck = 1 - Math.exp(-CAM_FOLLOW * dt);
+        camFocus.x += (tx - camFocus.x) * ck;
+        camFocus.z += (tz - camFocus.z) * ck;
+      }
+      camera.position.set(camFocus.x + camOffset.x, camOffset.y, camFocus.z + camOffset.z);
+      camera.lookAt(camFocus.x, 0.95, camFocus.z);
 
-    // 受击震屏：只抖相机位置，注视点不变
+      // 速度感视野：跑满时 +CAM_FOV_ADD 度，停下慢慢回到原值；设置里可关
+      const fovTarget = CAM_FOV_BASE + (speedFovOn ? CAM_FOV_ADD * speed01 : 0);
+      camFov += (fovTarget - camFov) * (1 - Math.exp(-CAM_FOV_LERP * dt));
+      if (Math.abs(camFov - camera.fov) > 0.005) {
+        camera.fov = camFov;
+        camera.updateProjectionMatrix();
+      }
+    }
+
+    // 受击震屏：只抖相机位置，注视点不变（旋转不动，比「连镜头一起转」舒服得多）
     if (shake > 0) {
       shake = Math.max(0, shake - dt * 2.0);
       const s = shake * 0.16;
