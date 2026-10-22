@@ -47,6 +47,10 @@ export const ACHS = [
   { id: 'charger_30', name: '别站在直线上', desc: '累计击倒 30 只骨骑冲锋兵' },
   { id: 'shielder_30', name: '等盾放下来', desc: '累计击倒 30 只骸盾兵' },
   { id: 'brood_10', name: '断她的产房', desc: '累计击倒 10 只孵骨巫祝' },
+  // 第 32 块：主线十八夜
+  { id: 'story_first', name: '第一夜', desc: '在关卡里撞见主线《笑不出来的那一夜》' },
+  { id: 'story_all', name: '夜行人', desc: '在夜行记忆里读完十八夜' },
+  { id: 'story_finish', name: '齁', desc: '读到钟楼顶的结局' },
 ];
 
 const byId = new Map(ACHS.map((a) => [a.id, a]));

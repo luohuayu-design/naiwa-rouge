@@ -47,6 +47,12 @@ const DEFAULT_PROFILE = {
   camp: {},          // 篝火：各簇等级（第 19 块；第 23 块起 0~3）
   boons: {},         // 永夜火种：各卡层数（第 23 块）
   boonPending: 0,    // 待领的永久选择次数（第 23 块）
+  // 主线进度（第 32 块）：看过哪几夜、三次印记各交了几回、最后落在哪个结局
+  //   seen   { s01: true }  局内**亲历**过的夜（局内调度只看这个）
+  //   read   { s02: true }  在主菜单「夜行记忆」里读过的夜（只影响面板标记）
+  //   marks  { laughter: 2, name: 1, memory: 0 }
+  //   ending 第 18 夜读完后写下的结局 key（'' = 还没读终章）
+  story: { seen: {}, read: {}, marks: {}, ending: '' },
 };
 
 let cache = null;
@@ -161,6 +167,53 @@ export function addBones(n) {
   p.bones = Math.max(0, (p.bones || 0) + n);
   save();
   return p.bones;
+}
+
+// ---------------- 主线（第 32 块） ----------------
+// 只看不写「读过」，不存任何播放位置：章节是整章读的，没有中途状态。
+export function storyProgress() {
+  const p = profile();
+  if (!p.story) p.story = { seen: {}, read: {}, marks: {}, ending: '' };
+  if (!p.story.read) p.story.read = {};
+  if (!p.story.seen) p.story.seen = {};
+  if (!p.story.marks) p.story.marks = {};
+  return p.story;
+}
+
+export function storySeen(id) {
+  return !!storyProgress().seen[id];
+}
+
+export function markStorySeen(id) {
+  const s = storyProgress();
+  if (s.seen[id]) return false;
+  s.seen[id] = true;
+  save();
+  return true;
+}
+
+// 面板里读过（和局内亲历分开记：读档案不会让局内那夜消失）
+export function markStoryRead(id) {
+  const s = storyProgress();
+  if (s.read[id]) return false;
+  s.read[id] = true;
+  save();
+  return true;
+}
+
+// 印记：笑声 / 名字 / 记忆各记一次
+export function addStoryMark(kind) {
+  const s = storyProgress();
+  s.marks[kind] = (Number(s.marks[kind]) || 0) + 1;
+  save();
+  return s.marks[kind];
+}
+
+export function setStoryEnding(key) {
+  const s = storyProgress();
+  s.ending = key || '';
+  save();
+  return s.ending;
 }
 
 // ---------------- 清档 ----------------

@@ -30,6 +30,7 @@ import { SKILLS, visibleSkills, skillForKey } from './skills.js';
 import {
   settings as readSettings, setSetting, save as saveProfile, profile,
   bumpStat, setStatMax, codexAdd, codexCount, countCard, unlockAch, hasAch, addBones, bones, resetAll,
+  storyProgress, markStorySeen, markStoryRead, addStoryMark, setStoryEnding,
 } from './profile.js';
 import * as runSave from './runSave.js';
 import {
@@ -55,6 +56,11 @@ import {
   choiceHint, canAfford, costShort, REP_MIN, REP_MAX, REP_START,
   isTalk, eventChoices, resolveRoll, mergeEffects,
 } from './events.js';
+// 第 32 块：主线《笑不出来的那一夜》（18 夜，一夜一关，前 3 夜已有关卡）
+import {
+  STORY_ARC, STORY_CHAPTERS, STORY_ENDINGS, MARK_INFO,
+  storyChapterAt, storyChapterById, storyEndingKey,
+} from './story.js';
 
 // 标记模块已经跑起来了：index.html 的兜底自检靠它判断
 // 「模块根本没执行」还是「执行了但加载慢」。
@@ -1120,6 +1126,7 @@ async function boot() {
     hintDone = false;
     hintEl.classList.remove('off');
     runRarities = new Set();          // 本局品质集合重置（cards_all_kinds 用）
+    storyMarked.clear();              // 第 32 块：印记去重表一局一清（重打可以重新选，档案照样累计）
     setDifficulty(diffOverride || profile().difficulty || 'normal');   // 难度一局一选，开局生效
     setLevel(pendingLevelId);         // 第 20 块：按选关重建这一关（含场景皮肤）
     clearCurse();                     // 上一局残留的减速不许带进来
@@ -2172,6 +2179,45 @@ async function boot() {
   // 每一拍选的效果先累积（mergeEffects），全部聊完一次性结算成一张账单；
   // 金币、生命这种「当场就掏」的代价，选了就扣。
   let talk = null;     // { ev, beat, acc, paid[], chains[] }
+  // 本次会话里已经记过的印记（防止同一次游玩重复计数；跨局靠档案累计）
+  const storyMarked = new Set();
+
+  // ---------------- 主线（第 32 块） ----------------
+  // 章节的数据结构跟「对话式奇遇」一模一样（story/talk/beats/replies），
+  // 所以这里不另写一套渲染：把章节对象原样交给 openEvent，事件卡就是主线卡。
+  //
+  // 区别只有三点：
+  //   1) 调度不同 —— 主线是「到了就必须播」，随机奇遇是「抽签」；
+  //   2) 回话可以带 mark —— 选择会被记进档案（三次印记决定第 18 夜的结局）；
+  //   3) 终章带 endings —— 按印记累计把最后一拍换成四个结局之一。
+
+  // 把终章的结局预先挂到章节对象上（不改原数据，避免读档/重播串味）
+  function resolveStoryChapter(ch) {
+    if (!ch || !ch.endings) return ch;
+    const key = storyEndingKey(storyProgress().marks);
+    const end = ch.endings[key] || ch.endings.none;
+    return { ...ch, __ending: end, __endingKey: key };
+  }
+
+  // 局内撞到一夜：先记「亲历」，再走事件卡
+  function playStoryChapter(ch, endedRound, next) {
+    const ev = resolveStoryChapter(ch);
+    markStorySeen(ch.id);
+    markStoryRead(ch.id);
+    tryAch('story_first');
+    openEvent(ev, endedRound, next);
+    showToast(`第 ${ch.no} 夜 · ${ch.title}`, STORY_ARC.title);
+    return ev;
+  }
+
+  // 印记写档案（同一章只算一次：重打不会刷印记）
+  function recordStoryMark(kind, chapterId) {
+    if (!kind || !MARK_INFO[kind]) return;
+    const key = `mark:${chapterId}:${kind}`;
+    if (storyMarked.has(key)) return;
+    storyMarked.add(key);
+    addStoryMark(kind);
+  }
 
   function talkLine(cls, who, text) {
     if (!text) return;
@@ -2224,9 +2270,12 @@ async function boot() {
       talk.paid.push(`生命 -${cost.hp.toFixed(1)}（已付）`);
     }
 
-    if (reply.say) talkLine('me', '你', reply.say);
+    // 主线回话可以指定说话人（平时都是「你」；主线里是「奶蛙」）
+    if (reply.say && reply.say !== '__ENDING__') talkLine('me', reply.as || '你', reply.say);
     mergeEffects(talk.acc, resolveRoll(reply.effects, rngOf('talk')));
     if (reply.chain) talk.chains.push(reply.chain);
+    // 第 32 块：印记抉择（笑声 / 名字 / 记忆），记进档案，三次累计决定结局
+    if (reply.mark) recordStoryMark(reply.mark, talk.ev.id);
 
     if (reply.go != null) {           // 还有下一拍：把「反应」并到下一句里
       if (reply.close) talk.pendingClose = reply.close;
@@ -2234,7 +2283,7 @@ async function boot() {
       renderTalkBeat();
       return;
     }
-    if (reply.close) talkLine('npc', talk.ev.who || '', reply.close);
+    if (reply.close) talkLine('npc', reply.closeAs || talk.ev.who || '', reply.close);
     finishTalk();
   }
 
@@ -2247,6 +2296,24 @@ async function boot() {
     evChoices.textContent = '';
     evSay.textContent = '';
     evSay.style.display = 'none';     // 话都在记录里说完了，别留一条空竖线
+
+    // 第 32 块：终章 —— 把结局接在对话记录后面（四段气泡），结果页写结局名
+    const end = talk.ev && talk.ev.__ending;
+    if (end) {
+      for (const b of end.beats) talkLine('npc', b.who || '', b.say);
+      setStoryEnding(end.key);
+      tryAch('story_finish');
+      const marks = storyProgress().marks;
+      fillLines(evResultLines, [
+        `${end.icon || '🐸'} ${end.title}`,
+        `笑声 ×${marks.laughter || 0} · 名字 ×${marks.name || 0} · 记忆 ×${marks.memory || 0}`,
+        end.line || '—— 这一夜，到这里为止。',
+      ]);
+      evResult.classList.add('on');
+      evTalk.scrollTop = evTalk.scrollHeight;
+      return;
+    }
+
     const lines = talk.paid.concat(effectLines(talk.acc));
     fillLines(evResultLines, lines.length ? lines : ['这一夜，什么也没发生']);
     evResult.classList.add('on');
@@ -2524,6 +2591,10 @@ async function boot() {
 
     const runEvent = () => {
       if (isLast || DEBUG_SKIP_NARRATIVE) { runUpgrade(); return; }
+      // 0) 主线优先（第 32 块）：这一关走到该播的那一夜，就先播夜。
+      //    主线不占随机池、也不消耗「最近出过」的名额 —— 它是路，不是签。
+      const chap = storyChapterAt(curLevelId, roundNo, storyProgress().seen);
+      if (chap) { playStoryChapter(chap, roundNo, runUpgrade); return; }
       // 1) 到期的连锁优先兑现（剧情不能爽约）
       const dueIdx = laterQueue.findIndex((q) => q.due <= roundNo);
       if (dueIdx >= 0) {
@@ -2809,6 +2880,182 @@ async function boot() {
 
   document.getElementById('btnCodex').addEventListener('click', showCodex);
   document.getElementById('cxBack').addEventListener('click', () => hideSub(codexScr));
+
+  // ---------------- 夜行记忆（第 32 块） ----------------
+  // 十八夜，一夜一关。前 3 夜已经在关卡里走过；剩下 15 夜是给后面那些
+  // 还没做出来的关卡预留的剧本，现在先当档案读。
+  // 这里只读不写游戏状态（除了「已读」标记和终章结局），关掉面板不影响任何一局。
+  const storyScr = document.getElementById('storyScr');
+  const stArc = document.getElementById('stArc');
+  const stBar = document.getElementById('stBar');
+  const stProgNum = document.getElementById('stProgNum');
+  const stProgTag = document.getElementById('stProgTag');
+  const stMarks = document.getElementById('stMarks');
+  const stList = document.getElementById('stList');
+  const stFoot = document.getElementById('stFoot');
+  const storyReadEl = document.getElementById('storyRead');
+  const srNo = document.getElementById('srNo');
+  const srTitle = document.getElementById('srTitle');
+  const srBody = document.getElementById('srBody');
+  const srPos = document.getElementById('srPos');
+  const srPrev = document.getElementById('srPrev');
+  const srNext = document.getElementById('srNext');
+  let srIdx = 0;
+
+  function renderStoryLog() {
+    const p = storyProgress();
+    const seenN = STORY_CHAPTERS.filter((c) => p.seen[c.id]).length;
+    stArc.textContent = STORY_ARC.title;
+    stBar.style.width = `${Math.round((seenN / STORY_CHAPTERS.length) * 100)}%`;
+    stProgNum.textContent = String(seenN);
+    stProgTag.textContent = seenN === 0 ? '未启程'
+      : seenN >= STORY_CHAPTERS.length ? '走完了'
+        : `走完 ${Math.round((seenN / STORY_CHAPTERS.length) * 100)}%`;
+
+    // 三次印记 + 当前结局
+    stMarks.textContent = '';
+    for (const k of ['laughter', 'name', 'memory']) {
+      const info = MARK_INFO[k];
+      const cell = document.createElement('div');
+      cell.className = 'st-mark';
+      const ic = document.createElement('b'); ic.textContent = info.icon;
+      const nm = document.createElement('i'); nm.textContent = info.name;
+      const n = document.createElement('span'); n.textContent = `×${p.marks[k] || 0}`;
+      cell.append(ic, nm, n);
+      stMarks.appendChild(cell);
+    }
+
+    stList.textContent = '';
+    STORY_CHAPTERS.forEach((ch, i) => {
+      const live = !!p.seen[ch.id];
+      const read = live || !!p.read[ch.id];
+      const item = document.createElement('button');
+      item.type = 'button';
+      item.className = 'st-item' + (live ? ' cur' : '') + (read ? '' : ' unread');
+      item.dataset.id = ch.id;
+
+      const ico = document.createElement('div'); ico.className = 'st-ico'; ico.textContent = read ? ch.icon : '🌫';
+      const txt = document.createElement('div'); txt.className = 'st-txt';
+      const no = document.createElement('div'); no.className = 'st-no';
+      no.textContent = `第 ${ch.no} 夜 · ${read ? ch.place : '未知'}`;
+      const nm = document.createElement('div'); nm.className = 'st-name';
+      nm.textContent = read ? ch.title : '（还没走到）';
+      const who = document.createElement('div'); who.className = 'st-who';
+      who.textContent = read ? `—— ${ch.who}` : (ch.levelId ? `进入第 ${ch.levelId} 关带到第 ${ch.atRound} 回合` : '还没做出来的地方');
+      txt.append(no, nm, who);
+
+      const tag = document.createElement('div');
+      tag.className = 'st-tag' + (live ? ' done' : '');
+      tag.textContent = live ? '亲历' : (p.read[ch.id] ? '已读' : '档案');
+
+      item.append(ico, txt, tag);
+      item.addEventListener('click', () => openStoryReader(i));
+      stList.appendChild(item);
+    });
+
+    const unread = STORY_CHAPTERS.length - STORY_CHAPTERS.filter((c) => p.read[c.id] || p.seen[c.id]).length;
+    stFoot.textContent = unread > 0
+      ? `还有 ${unread} 夜没读过 · 读完第 18 夜会结算你的结局`
+      : '十八夜都读完了 · 点开任何一夜可以重读';
+  }
+
+  function openStoryReader(i) {
+    srIdx = Math.max(0, Math.min(STORY_CHAPTERS.length - 1, i));
+    renderStoryReader();
+    storyReadEl.classList.add('on');
+    storyReadEl.setAttribute('aria-hidden', 'false');
+    audio.sfx('event');
+  }
+
+  function closeStoryReader() {
+    storyReadEl.classList.remove('on');
+    storyReadEl.setAttribute('aria-hidden', 'true');
+    renderStoryLog();
+  }
+
+  function srLine(cls, who, text) {
+    const d = document.createElement('div');
+    d.className = 'sr-line ' + cls;
+    if (who) {
+      const b = document.createElement('b');
+      b.textContent = who;
+      d.appendChild(b);
+    }
+    const sp = document.createElement('span');
+    sp.textContent = text;
+    d.appendChild(sp);
+    srBody.appendChild(d);
+  }
+
+  function renderStoryReader() {
+    const ch = STORY_CHAPTERS[srIdx];
+    const p = storyProgress();
+    markStoryRead(ch.id);
+    srNo.textContent = `第 ${ch.no} 夜 · ${ch.place}`;
+    srTitle.textContent = ch.title;
+    srPos.textContent = `${ch.no} / ${STORY_CHAPTERS.length}`;
+    srPrev.disabled = srIdx === 0;
+    srNext.disabled = srIdx === STORY_CHAPTERS.length - 1;
+    srBody.textContent = '';
+
+    if (ch.story) {
+      const nar = document.createElement('div');
+      nar.className = 'sr-nar';
+      nar.textContent = ch.story;
+      srBody.appendChild(nar);
+    }
+
+    for (const beat of ch.talk) {
+      if (beat.say) srLine('', beat.who || ch.who, beat.say);
+      const reps = (beat.replies || []).filter((r) => r.say && r.say !== '__ENDING__');
+      if (!reps.length) continue;
+      // 主线按「第一条回话」当作真正发生的那一版，其余收在下面一行小字里
+      const main = reps[0];
+      srLine('me', main.as || '奶蛙', main.say);
+      if (reps.length > 1) {
+        const alt = document.createElement('div');
+        alt.className = 'sr-alt';
+        const parts = reps.slice(1).map((r) => `${r.label}：${r.say}`);
+        const b = document.createElement('b');
+        b.textContent = '若当时换一种说法 —— ';
+        alt.appendChild(b);
+        alt.appendChild(document.createTextNode(parts.join('\n')));
+        srBody.appendChild(alt);
+      }
+    }
+
+    // 终章：接上结局
+    if (ch.endings) {
+      const key = p.ending || storyEndingKey(p.marks);
+      const end = ch.endings[key] || ch.endings.none;
+      for (const b of end.beats) srLine('', b.who || '', b.say);
+      const box = document.createElement('div');
+      box.className = 'sr-end';
+      const t = document.createElement('div');
+      t.className = 'sr-end-t';
+      t.textContent = `${end.icon || '🐸'} ${end.title}`;
+      const l = document.createElement('div');
+      l.className = 'sr-end-l';
+      const m = p.marks;
+      l.textContent = `${end.line || ''}\n（这一局你交出去的东西：笑声 ×${m.laughter || 0} · 名字 ×${m.name || 0} · 记忆 ×${m.memory || 0}）`;
+      box.append(t, l);
+      srBody.appendChild(box);
+      // 第一次读到终章就把结局写进档案 + 发成就
+      if (!p.ending) setStoryEnding(key);
+      tryAch('story_finish');
+    }
+
+    srBody.scrollTop = 0;
+    // 十八夜读完（亲历或读档案都算）
+    const now = storyProgress();
+    if (STORY_CHAPTERS.every((c) => now.read[c.id] || now.seen[c.id])) tryAch('story_all');
+  }
+
+  srPrev.addEventListener('click', () => { if (srIdx > 0) { srIdx--; renderStoryReader(); } });
+  srNext.addEventListener('click', () => { if (srIdx < STORY_CHAPTERS.length - 1) { srIdx++; renderStoryReader(); } });
+  document.getElementById('srClose').addEventListener('click', closeStoryReader);
+  document.getElementById('btnStory').addEventListener('click', () => { renderStoryLog(); showSub(storyScr); });
+  document.getElementById('stBack').addEventListener('click', () => hideSub(storyScr));
 
   // ---------------- 篝火 · 夜行骨币（第 19 块） ----------------
   // 局外成长只在这里发生：主菜单进入，站着看，不打断任何一局。
@@ -3737,6 +3984,53 @@ async function boot() {
           });
         },
         get acc() { return talk ? JSON.parse(JSON.stringify(talk.acc)) : null; },
+      },
+      // 主线（第 32 块，测试用）
+      story: {
+        arc: STORY_ARC,
+        chapters: STORY_CHAPTERS,
+        endings: STORY_ENDINGS,
+        get progress() { return JSON.parse(JSON.stringify(storyProgress())); },
+        seenCount: () => STORY_CHAPTERS.filter((c) => storyProgress().seen[c.id]).length,
+        readCount: () => STORY_CHAPTERS.filter((c) => storyProgress().read[c.id]).length,
+        // 这一关、这个回合该播哪一夜（调度逻辑直接暴露，方便断言「不重复播」）
+        at: (levelId, round) => {
+          const ch = storyChapterAt(levelId, round, storyProgress().seen);
+          return ch ? ch.id : null;
+        },
+        // 局内直接播某一夜（跳过回合条件）
+        play: (id) => {
+          const ch = storyChapterById(id);
+          if (!ch) return null;
+          playStoryChapter(ch, level.roundNo, null);
+          return ch.id;
+        },
+        endingKey: () => storyEndingKey(storyProgress().marks),
+        // 手动记一次印记（测三结局结算用）
+        mark: (kind) => addStoryMark(kind),
+        clearMarks: () => {
+          const s = storyProgress();
+          s.marks = {};
+          saveProfile();
+          return s.marks;
+        },
+        // 清「亲历」记录（测同一夜能不能再播一次）
+        forget: () => {
+          const s = storyProgress();
+          s.seen = {};
+          saveProfile();
+          return true;
+        },
+        get transcript() {
+          return [...evTalk.querySelectorAll('.tl')].map((r) => {
+            const b = r.querySelector('b');
+            const sp = r.querySelector('span');
+            return { cls: (r.className || '').replace('tl ', ''), who: b ? b.textContent : '', text: sp ? sp.textContent : '' };
+          });
+        },
+        get endingShown() {
+          return [...evResultLines.querySelectorAll('span')].map((s) => s.textContent);
+        },
       },
       // 回合临时效果的生命周期（测试用：看它挂在第几回合、能手动撤）
       get roundBuffSrc() { return roundBuffSrc; },
