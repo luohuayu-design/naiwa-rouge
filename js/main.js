@@ -3373,8 +3373,8 @@ async function boot() {
     }
 
     cfFoot.textContent = lvSum > 0
-      ? `已点燃 ${gotCount} / ${CAMPFIRE.length} 簇 · 共 ${lvSum} 级 · 每升一级涨价 ${Math.round((CAMP_STEP - 1) * 100)}% · 火种没有上限，烧得越旺骨币要得越多`
-      : `九簇火种等你点燃 · 每升一级涨价 ${Math.round((CAMP_STEP - 1) * 100)}% · 没有上限，烧得越旺骨币要得越多`;
+      ? `已点燃 ${gotCount} / ${CAMPFIRE.length} 簇 · 共 ${lvSum} 级 · 每升一级加价 ${Math.round(CAMP_STEP * 100)}%（线性，和关卡难度一样） · 火种没有上限，烧得越旺骨币要得越多`
+      : `九簇火种等你点燃 · 每升一级加价 ${Math.round(CAMP_STEP * 100)}%（线性，和关卡难度一样） · 没有上限，烧得越旺骨币要得越多`;
   }
 
   function showCampfire() {

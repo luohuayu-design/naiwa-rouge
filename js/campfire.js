@@ -67,9 +67,10 @@ export function levelBoneMul(levelId = 1) {
 // coins / potion 是「开局补给」，由 main.js 在开局时发放。
 //
 // 第 27 块（用户定案）：取消等级上限 —— 火种**基本无限升级**，不显示「能升几级」。
-// 每级效果相同、价格阶梯上涨（CAMP_STEP 涨价），越点越贵，成长曲线自然放缓；
-// 第一档价格整体下调约 4 成，让局外成长更快起步、更好地支撑难度梯度。
-export const CAMP_STEP = 1.35;         // 每级涨价 35%（无限级，越点越贵）
+// 每级效果相同，价格**线性**上涨（CAMP_STEP 是每级加价的百分比，和关卡难度一样是线性的，
+// 不再是早期的指数翻倍），越点越贵但增速恒定；第一档价格整体下调约 4 成，
+// 让局外成长更快起步、更好地支撑难度梯度。
+export const CAMP_STEP = 0.35;         // 每级加价 35%（线性：price = base × (1 + 0.35 × 当前等级)）
 
 export const CAMPFIRE = [
   {
@@ -126,7 +127,7 @@ export function campCost(id, level = null) {
   const item = CAMP_BY_ID[id];
   if (!item) return 0;
   const cur = level == null ? campLevel(id) : Math.max(0, Math.floor(level));
-  return Math.round(item.cost * Math.pow(CAMP_STEP, cur));
+  return Math.round(item.cost * (1 + CAMP_STEP * cur));   // 线性：每级比上一档固定多 base×CAMP_STEP
 }
 
 // ---------------- 等级 ----------------

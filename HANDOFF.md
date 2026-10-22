@@ -86,7 +86,7 @@ Three.js r160 的单摇杆幸存者肉鸽《奶蛙夜行》，纯静态站点（
 第 23 块要点（局外成长重做 + 金币吸附）：
 
 - **金币进圈即拾**：`gold.update(dt, player, range)`，range = `stats.get('attackRange')`。进圈后 0.15 秒飞向奶蛙再入账（有动画）；**圈外仍然留 3 秒**。`gold.flush()` 在 `endGame` 开头把地上的钱全收进兜里（否则结算会少算），然后按 25% 折骨币。
-- **篝火改成无限级（第 27 块）**：`CAMP_STEP=1.35`，`campCost(id, level)` = 原价 × 1.35^level，**没有上限**。老档案里 `camp[id]=1` 天然读作 1 级，**不需要迁移**。
+- **篝火改成无限级（第 27 块）**：`CAMP_STEP` 是每级加价百分比，`campCost(id, level)` = 原价 × (1 + CAMP_STEP×level)，**线性、没有上限**（第 27 块原是指数 ×1.35^level，v=46 因关卡难度是线性、改回线性增长，第 1 级价格不变）。老档案里 `camp[id]=1` 天然读作 1 级，**不需要迁移**。
 - **骨币产出**加了两个维度：`coins`（没花完的金币 ×0.25）与 `levelId`（`BONE.levelMul`：1 关 ×1 / 2 关 ×1.4 / 3 关 ×1.8）。`bonesFor` 的签名向后兼容（老调用不传就是 0 金币 / 第 1 关）。
 - **永夜火种**（`boons.js`）：**本关首次通关**（第 27 块改，`wasFirstWin` 在 `saveRunRecord` 之前判定）→ `grantBoons(3)` 写 `profile().boonPending` → 结算按钮变「领取 3 次永夜火种」→ 复用三选一面板（`upPanel` + `.boon` 皮肤），抽签走 `rollBoons(rng, {luck})`，权重和局内卡同一套 `rarity.js`。主菜单 `#boonScr` 可看已选层数。
 - **待领次数必须落档案**：玩家很可能在结算界面直接关网页。`showTitle` 会检查 `boonPending()` 并自动补弹（500ms 后，等标题页动画）。
@@ -342,7 +342,7 @@ Three.js r160 的单摇杆幸存者肉鸽《奶蛙夜行》，纯静态站点（
 | `upgrade.js`                                                                                 | 28 张升级卡（含 rarity 0~4）                                                                                      |
 | `shop.js`                                                                                    | 18 件货、按品质加权摆 4 件、`itemLocked`                                                                              |
 | `events.js`                                                                                  | 57 事件 + 10 连锁（对话/条件/取舍）                                                                                    |
-| `campfire.js`                                                                                | 篝火/骨币（第 19 块建，第 27 块无限级）：`bonesFor`（回合/击杀/通关/金币/关卡）、九簇×无限级阶梯价（×1.35）、`campApply`                                   |
+| `campfire.js`                                                                                | 篝火/骨币（第 19 块建，第 27 块无限级）：`bonesFor`（回合/击杀/通关/金币/关卡）、九簇×无限级**线性**阶梯价（×(1+0.35×level)）、`campApply`                                   |
 | `boons.js`                                                                                   | 永夜火种（第 23 块，第 27 块加首通门槛）：16 张永久卡 + 层数上限 + 品质抽签（吃幸运）+ `boonPending` 待领次数                                                |
 | `curses.js`                                                                                  | 夜行诅咒（第 21 块）：六条自选 debuff、倍率叠加、`applyRunCurses` 落账/撤销                                                       |
 | `seed.js`                                                                                    | 种子与每日挑战（第 22 块）：`hashStr`/`makeRng`/`dailySeed`/`pickDailyCurses`/每日战绩存档                                   |
