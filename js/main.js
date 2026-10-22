@@ -2380,22 +2380,27 @@ async function boot() {
   // 金币、生命这种「当场就掏」的代价，选了就扣。
   let talk = null;     // { ev, beat, acc, paid[], chains[] }
 
-  // ---------------- 主线剧情的「读秒再推进」（第 42 块）----------------
-  // 主线每一拍都是一两百字，一句一句推进时玩家很容易连点把剧情跳过去。
-  // 规则：主线章节的每一拍显示之后，回话按钮先锁 3 秒、按钮上跑倒计时，
-  //       读完了才亮。随机奇遇不受影响（它们的 __readDelay 是 0）。
-  const STORY_READ_DELAY = 3;      // 秒
+  // ---------------- 对话的「读秒再推进」（第 42 块，第 43 块放开到奇遇）----------------
+  // 每一拍都是一两百字，一句一句推进时玩家很容易连点把剧情跳过去。
+  // 规则：每一拍显示之后，回话按钮先锁 3 秒、按钮上跑倒计时，读完了才亮。
+  //       主线（story.js）和随机奇遇（events*.js）都走这一套；
+  //       个别事件想在数据里写 readDelay: 0 就能单独关掉读秒。
+  const TALK_READ_DELAY = 3;       // 秒
   let talkCdTimer = null;
   let talkCdLeft = 0;             // 还在倒计时的秒数（测试要看这个）
   let talkCdBtns = [];
+  let talkCdGen = 0;              // 代次令牌：换代后上一轮的 tick 立刻失效（防旧定时器空转捣乱）
 
+  // 收尾一律按「DOM 现状」清，不依赖记住的那批按钮：
+  // 按钮被重建过（换拍、换事件）时，旧数组里的元素已经脱离文档，照着它清会漏掉真正在页面上的那些。
   function clearTalkCountdown() {
+    talkCdGen++;
     if (talkCdTimer) { clearInterval(talkCdTimer); talkCdTimer = null; }
-    for (const b of talkCdBtns) {
-      if (!b) continue;
+    for (const b of evChoices.querySelectorAll('.ev-btn')) {
       b.classList.remove('cd-wait');
       const cd = b.querySelector('.ev-cd');
       if (cd) cd.remove();
+      if (b.dataset.cdLock === '1') { delete b.dataset.cdLock; b.disabled = false; }
     }
     talkCdBtns = [];
     talkCdLeft = 0;
@@ -2406,18 +2411,24 @@ async function boot() {
     clearTalkCountdown();
     const list = (btns || []).filter((b) => b);
     if (!list.length || !(sec > 0)) return;
-    const affordable = list.filter((b) => !b.disabled);   // 付不起的一直是灰的，不参与解锁
+    const gen = talkCdGen;         // 本轮令牌
     const deadline = performance.now() + sec * 1000;
     for (const b of list) {
       b.classList.add('cd-wait');
+      // 付不起的本来就是灰的：只加角标，不动 disabled，也不在解锁时碰它
+      if (!b.disabled) { b.dataset.cdLock = '1'; b.disabled = true; }
       const cd = document.createElement('em');
       cd.className = 'ev-cd';
       cd.textContent = Math.ceil(sec) + 's';
       b.appendChild(cd);
     }
-    affordable.forEach((b) => { b.disabled = true; });
     talkCdBtns = list;
+    let myTimer = null;
     const tick = () => {
+      if (gen !== talkCdGen) {      // 已经换代（换拍/关窗），这轮自己退场
+        if (myTimer) clearInterval(myTimer);
+        return;
+      }
       const left = Math.max(0, deadline - performance.now());
       talkCdLeft = Math.ceil(left / 1000);
       for (const b of list) {
@@ -2425,20 +2436,13 @@ async function boot() {
         if (cd) cd.textContent = talkCdLeft > 0 ? talkCdLeft + 's' : '';
       }
       if (left <= 0) {
-        for (const b of list) {
-          b.classList.remove('cd-wait');
-          const cd = b.querySelector('.ev-cd');
-          if (cd) cd.remove();
-        }
-        affordable.forEach((b) => { b.disabled = false; });
-        talkCdTimer = null;
-        talkCdBtns = [];
-        talkCdLeft = 0;
-        return;
+        if (myTimer) clearInterval(myTimer);
+        clearTalkCountdown();      // 清角标 + 解锁（按 DOM 现状，代次也会 ++）
       }
     };
     tick();
-    talkCdTimer = setInterval(tick, 100);
+    myTimer = setInterval(tick, 100);
+    talkCdTimer = myTimer;
   }
 
   // 本次会话里已经记过的印记（防止同一次游玩重复计数；跨局靠档案累计）
@@ -2456,12 +2460,10 @@ async function boot() {
   // 把终章的结局预先挂到章节对象上（不改原数据，避免读档/重播串味）
   function resolveStoryChapter(ch) {
     if (!ch) return ch;
-    // 第 42 块：主线每一拍都要读秒再推进（随机奇遇没有这个标记）
-    const base = { ...ch, __readDelay: STORY_READ_DELAY };
-    if (!ch.endings) return base;
+    if (!ch.endings) return ch;
     const key = storyEndingKey(storyProgress().marks);
     const end = ch.endings[key] || ch.endings.none;
-    return { ...base, __ending: end, __endingKey: key };
+    return { ...ch, __ending: end, __endingKey: key };
   }
 
   // 局内撞到一夜：先记「亲历」，再走事件卡
@@ -2521,8 +2523,9 @@ async function boot() {
     for (const r of beat.replies || []) {
       evChoices.appendChild(makeChoiceBtn(r, (x) => chooseTalkReply(x)));
     }
-    // 第 42 块：主线读秒 —— 这一拍先读完，按钮才亮
-    armTalkCountdown([...evChoices.querySelectorAll('.ev-btn')], talk.ev.__readDelay || 0);
+    // 第 42/43 块：读秒 —— 这一拍先读完，按钮才亮（事件可写 readDelay 覆盖，0 = 不读秒）
+    const delay = talk.ev.readDelay != null ? talk.ev.readDelay : TALK_READ_DELAY;
+    armTalkCountdown([...evChoices.querySelectorAll('.ev-btn')], delay);
     evTalk.scrollTop = evTalk.scrollHeight;
   }
 
@@ -4413,11 +4416,12 @@ async function boot() {
         // 第 42 块：读秒还剩几秒 / 按钮是不是还锁着
         get cdLeft() { return talkCdLeft; },
         get cdLocked() { return talkCdBtns.length > 0; },
+        readDelay: TALK_READ_DELAY,       // 第 43 块：主线与奇遇共用的读秒秒数
       },
       // 主线（第 32 块，测试用）
       story: {
         arc: STORY_ARC,
-        readDelay: STORY_READ_DELAY,
+        readDelay: TALK_READ_DELAY,
         chapters: STORY_CHAPTERS,
         endings: STORY_ENDINGS,
         get progress() { return JSON.parse(JSON.stringify(storyProgress())); },

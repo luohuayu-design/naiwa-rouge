@@ -55,15 +55,25 @@ Three.js r160 的单摇杆幸存者肉鸽《奶蛙夜行》，纯静态站点（
 | **39** | 读取存档（多存档列表）：主菜单「读取存档」→ 卡片列表（按退出时间升序，显示时间/关卡/回合/难度）；中途退出全部留档（按 uid 区分不互相覆盖）；输/重刷即清，首次通关选完永夜火种才清 | 已上线（v=45） |
 | **40** | 局内「存档并退出」：HUD 顶部右角按钮 → 确认弹窗（继续游戏 / 存档退出）→ 写一份存档回主菜单，标题页写明「已存档 · 第 X / 总 回合」 | 已上线（v=47） |
 | **41** | 永久选择提示：篝火入口 + 永夜火种面板首次打开各弹一次告知（讲明写进存档、伴随每个开局、不可撤销），并各带一条常驻警示条（`.cf-warn` / `.up-warn`）；提示已读记在 `profile.notice` | 已上线（v=47） |
-| **42** | 主线剧情读秒：主线每一拍的回话按钮先锁 3 秒、按钮右上角跑倒计时，读完才亮（随机奇遇不受影响） | 已上线（v=48） |
+| **42** | 主线剧情读秒：主线每一拍的回话按钮先锁 3 秒、按钮右上角跑倒计时，读完才亮 | 已上线（v=48） |
+| **43** | 读秒放开到全部对话：随机奇遇同样读秒；顺手修掉「旧定时器空转把新一拍的按钮锁死」的真 bug（代次令牌 + 按 DOM 现状清理） | v=49 |
+
+第 43 块要点（读秒放开到奇遇 + 修锁死，2026-10-22，v=49）：
+- **用户要求**：「也套吧」——随机奇遇的文案也是一两百字，一起读秒。
+- **改动（`main.js`）**：`STORY_READ_DELAY` → `TALK_READ_DELAY = 3`；`resolveStoryChapter()` 不再挂 `__readDelay`；`renderTalkBeat()` 改成 `talk.ev.readDelay != null ? talk.ev.readDelay : TALK_READ_DELAY` —— **任何事件在数据里写 `readDelay: 0` 就能单独关掉读秒**。
+- **顺手修的真 bug（第 42 块埋的）**：旧实现倒计时归零时只写 `talkCdTimer = null`、**没有 `clearInterval`**，旧定时器继续每 100ms 空转；它持有上一拍的 `list`（已脱离 DOM）和过期 `deadline`，于是不断把**新一轮**的 `talkCdBtns` 清空 → 新一拍的按钮永远暗着、点不动（主线第二拍之后就会触发，奇遇一测就暴露）。
+  - 修法两条：①`talkCdGen` **代次令牌**，换代后旧 tick 自查立刻退场并清掉自己的 interval；②`clearTalkCountdown()` 一律**按 DOM 现状**（`evChoices.querySelectorAll('.ev-btn')`）清角标与暗态，解锁靠按钮自身的 `data-cd-lock` 标记，不再依赖记住的数组（按钮被重建也不会漏）。
+- **调试钩子**：`__game.event.readDelay` 新增；`cdLeft` / `cdLocked` 含义不变。
+- **测试**：`.tmp-block42-cdp.js` 扩到 **28** 项全绿（新增：第二拍也能正常解锁、奇遇读秒锁住/角标/点不动/归零后能推进）；回归 `.tmp-story-test.mjs` 76、`.tmp-block41-cdp.js` 37 全绿。
+- **测试坑**：`cdLocked` 是 `talkCdBtns.length > 0`，只反映"记着的那批"，**要验真实状态请看 DOM**（`.ev-btn.cd-wait` / `.ev-cd` 的数量）——这次就是靠 DOM 与钩子对不上才挖出 bug。
 
 第 42 块要点（主线读秒，2026-10-22，v=48）：
 - **用户要求**：「过 story 剧情时，为保证用户读完，3s 后再激活按钮进入下一句对话，按钮显示倒计时」。
-- **实现（`main.js`）**：常量 `STORY_READ_DELAY = 3`；`resolveStoryChapter()` 给主线章节挂 `__readDelay`（随机奇遇没有这个字段 → 0，不受影响）；`renderTalkBeat()` 渲染完这一拍的回话按钮后调 `armTalkCountdown(btns, sec)`。
-- **倒计时机制**：`armTalkCountdown()` 用 `performance.now()` 算截止时间（不受帧率/后台节流影响），`setInterval(100ms)` 刷新角标；只有**付得起**的按钮在读秒结束后解锁（`affordable` 快照），付不起的一直灰着；`clearTalkCountdown()` 在 `closeEvent` 与换拍时清理定时器与角标。
+- **实现（`main.js`）**：常量 `TALK_READ_DELAY = 3`（第 43 块由 `STORY_READ_DELAY` 改名，并对奇遇生效）；`renderTalkBeat()` 渲染完这一拍的回话按钮后调 `armTalkCountdown(btns, sec)`。
+- **倒计时机制**：`armTalkCountdown()` 用 `performance.now()` 算截止时间（不受帧率/后台节流影响），`setInterval(100ms)` 刷新角标；只有**付得起**的按钮在读秒结束后解锁，付不起的一直灰着；`clearTalkCountdown()` 在 `closeEvent` 与换拍时清理定时器与角标。（**第 43 块已重写这段机制，见上**）
 - **样式（`style.css`）**：`.ev-btn{position:relative}` + `.ev-cd`（右上角秒数角标）+ `.ev-btn.cd-wait`（读秒中的暗态，右侧留 52px 给角标）。
 - **调试钩子**：`__game.story.readDelay` / `__game.event.cdLeft` / `__game.event.cdLocked`（注意 talk 系列的钩子都挂在 `__game.event` 下，不是 `__game.talk`）。
-- **测试**：`.tmp-block42-cdp.js` **21** 项全绿（按钮锁住/角标秒数/倒计时递减/归零后解锁且角标收走/下一拍重新读秒/随机奇遇不读秒）。
+- **测试**：`.tmp-block42-cdp.js` 21 项（第 43 块扩到 28 项，含奇遇读秒与第二拍解锁）。
 
 第 41 块要点（永久选择提示 + 存档退出，2026-10-22，v=47）：
 - **两个「会写进存档」的界面都要说清楚**（用户点名「永夜篝火」，确认后选了「两处都加」）：主菜单篝火页（骨币点九簇火种）+ 通关后的永夜火种三选一。

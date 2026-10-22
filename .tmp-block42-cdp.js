@@ -130,16 +130,37 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
       "[...document.querySelectorAll('#evChoices .ev-btn')].every(b => b.disabled === true)"));
     ok('新一拍又跑起倒计时', await ev('window.__game.event.cdLeft') >= 1, String(await ev('window.__game.event.cdLeft')));
 
-    console.log('\n[6] 随机奇遇不受影响（没有读秒）');
+    console.log('\n[5b] 第二拍也能正常解锁（旧定时器不捣乱）');
+    await waitFor('window.__game.event.cdLeft === 0', 9000, '第二拍倒计时归零');
+    ok('第二拍角标收干净', await ev("document.querySelectorAll('#evChoices .ev-cd').length") === 0);
+    ok('第二拍没有残留暗态', await ev("document.querySelectorAll('#evChoices .ev-btn.cd-wait').length") === 0);
+    ok('锁定标记清了', await ev('window.__game.event.cdLocked') === false);
+
+    console.log('\n[6] 随机奇遇同样读秒（第 43 块放开）');
     await ev('window.__game.event.close()');
     await sleep(300);
     await ev("window.__game.event.trigger('envoy')");
     await sleep(400);
     ok('随机对话事件打开了', await ev('window.__game.event.isTalk') === true);
-    ok('按钮立刻可点', await ev(
+    ok('按钮也锁住了', await ev(
+      "[...document.querySelectorAll('#evChoices .ev-btn')].every(b => b.disabled === true)"));
+    ok('也有倒计时角标', await ev("!!document.querySelector('#evChoices .ev-btn .ev-cd')"));
+    const evCd0 = await ev("document.querySelector('#evChoices .ev-btn .ev-cd').textContent");
+    ok('角标显示秒数', /^[23]s$/.test(evCd0), evCd0);
+    ok('读秒期间点不动', await ev('window.__game.event.choose(0)') === false);
+    ok('读秒标记在跑', await ev('window.__game.event.cdLocked') === true,
+      'cdLeft=' + await ev('window.__game.event.cdLeft')
+      + ' cdEls=' + await ev("document.querySelectorAll('#evChoices .ev-cd').length")
+      + ' dis=' + await ev("[...document.querySelectorAll('#evChoices .ev-btn')].map(b=>b.disabled).join(',')")
+      + ' cls=' + await ev("[...document.querySelectorAll('#evChoices .ev-btn')].map(b=>b.className).join('|')")
+      + ' delay=' + await ev('window.__game.event.readDelay'));
+
+    console.log('\n[7] 奇遇读秒结束也能正常推进');
+    await waitFor('window.__game.event.cdLeft === 0', 8000, '奇遇倒计时归零');
+    ok('奇遇按钮解锁', await ev(
       "[...document.querySelectorAll('#evChoices .ev-btn')].every(b => b.disabled === false)"));
-    ok('没有倒计时角标', await ev("!document.querySelector('#evChoices .ev-btn .ev-cd')"));
-    ok('读秒标记是空的', await ev('window.__game.event.cdLocked') === false);
+    ok('奇遇这次点得下去了', await ev('window.__game.event.choose(0)') === true);
+    await sleep(400);
 
     console.log('\n-------------------------------');
     console.log(`通过 ${pass} / 失败 ${fail}`);
