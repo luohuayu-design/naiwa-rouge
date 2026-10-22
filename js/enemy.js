@@ -1821,12 +1821,15 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
     if (e.guard) {
       const m = e.guard.master;
       if (!m || m.state === 'dead') {
-        takeDamage(e, 99999, false, { quiet: true });
-        return;
+        // 主祭一倒，卫队当场散架。这里**不能直接 return**：
+        // 卫队已经死了之后再进来会一直卡在这个分支，走不到下面的消散计时，
+        // 于是 corpse 永远停在原地（deathT 不涨、回收循环也永远收不走）。
+        if (e.state !== 'dead') takeDamage(e, 99999, false, { quiet: true });
+      } else {
+        e.guard.angle += dt * 0.55;   // 慢慢公转，像仪仗队
+        e.pos.x = m.pos.x + Math.cos(e.guard.angle) * e.guard.radius;
+        e.pos.z = m.pos.z + Math.sin(e.guard.angle) * e.guard.radius;
       }
-      e.guard.angle += dt * 0.55;   // 慢慢公转，像仪仗队
-      e.pos.x = m.pos.x + Math.cos(e.guard.angle) * e.guard.radius;
-      e.pos.z = m.pos.z + Math.sin(e.guard.angle) * e.guard.radius;
     }
 
     if (e.state === 'dead') {

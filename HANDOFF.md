@@ -48,7 +48,7 @@ Three.js r160 的单摇杆幸存者肉鸽《奶蛙夜行》，纯静态站点（
 | **32** | 主线《笑不出来的那一夜》十八夜 2.3 万字 + 夜行记忆面板 + 印记四结局 | 已上线（v=36） |
 | **33** | 平衡性改版：夜行记忆按夜解锁 / 火种无上限加强 / 防御减法公式 / 无敌帧 0.9s / 第三关场地 19 + 生成放缓 | 已上线（dfcb6b3，v=37） |
 | **34** | 管理员选回合：局内 1~N 格子面板直接从该回合开打（走 startAt 普通路径） | 已上线（9139648，v=38） |
-| **35** | 第四关「雾堤服务区」：雾魉（隐身无敌）/ 跃行尸（落点跳劈）/ 缝合师（群体回血）+ 暖炉 + fog 主题；主线 s04 进关 | 已上线（3854167，v=39） |
+| **35** | 第四关「雾堤服务区」：雾魉（隐身无敌）/ 跃行尸（落点跳劈）/ 缝合师（群体回血）+ 暖炉 + fog 主题；主线 s04 进关；补丁：卫队尸体消散 | 已上线（v=40） |
 
 第 20 块要点（详见 README「第二关 · 骨塔庭院」段）：
 
@@ -154,6 +154,8 @@ Three.js r160 的单摇杆幸存者肉鸽《奶蛙夜行》，纯静态站点（
 - **接线**：main.js `LEVELS` +1 / preload 3 新怪 / onDeath 成就埋点 3 条；story.js s04 `levelId:4, atRound:2`；achievements 38 条；codex 13 怪（enemyDesc 加 ghost/leap/mend 三分支）。
 - **测试**：`.tmp-level4-test.mjs` 90 + `.tmp-block35-cdp.js` 49 全绿；回归 block18（图鉴 13/6、成就 38）/ block29（39）/ block30/32/34 / settings/eventui/econ-cdp / Node 全套（story 改成局内四夜 1/2/3/4）全绿。
 - **测试坑**：①隐身淡出是逐帧过渡，断言 opacity 要 `waitFor` 不能当场读；②跃行尸红圈 scale 带呼吸（1.7×1.04→1.7），断言留 ±0.1 容差；③`__game.arenaRadius` 是本块新加的 debug getter，旧测试别再用别的方式摸场地半径。
+- **🔧 上线后修的用户 bug（v=40）**：主祭死后**卫队尸体不消失**。原因：`updateOne` 里卫队块的 `if (!m || m.state === 'dead') { takeDamage(…); return; }` 是每帧都进的——卫队第一次被杀（state 已 dead）之后，仍然走这个分支 `return`，永远到不了下面的 `if (e.state === 'dead') { e.deathT += dt; … }`，deathT 不涨、回收循环（`deathT < deathTime`）永远收不走，尸体就原地定格。修法：只在 `e.state !== 'dead'` 时补刀，**不 return**，让死亡分支照常跑。（原 block20 的 `guardCount() === 0` 断言只数 `state !== 'dead'`，所以一直是绿的、掩盖了这个 bug；已补断言 `list.filter(e => e.guard).length === 0`。）
+- **通用教训**：任何「条件满足就 `takeDamage(…99999); return;`」的写法，都要确认自己不会在**已经 dead 之后**继续每帧进这个分支——否则死亡消散计时被跳过。
 
 第 33 块要点（平衡性改版，2026-10-22，v=37）：
 - **五项需求**：①夜行记忆一夜一章按顺序解锁（走完/读完上一夜才翻开，`chapterUnlocked(i)`，未解锁点击只弹 toast）；②永夜火种取消三级上限（`maxStack: Infinity`，仅「双拍/不灭」两张机制卡仍 1 层）且每层数值上调（利爪 6→8%、回春 0.12→0.15、吸血 3→4% 等，`boons.js`）；③防御改减法公式 `mitigate = max(1, raw − armor)`（`stats.js`，敌人侧的举盾/光环减伤仍走乘法不变）；④受击无敌帧 `IFRAME` 0.55→0.9 秒（`main.js`），受击期间 `frog.mesh` 按帧闪烁；⑤第三关 `LEVEL_3.arena: 19`（一/二关 15）—— `scene.js` 新增 `setArena(r)` 重摆边界圈/石头/草/萤火虫，`main.js` 的 `ARENA_R` 改 let 并随 `setLevel` 同步（`combatCtx.arenaRadius` 用 getter、`enemies.setArenaRadius(r)`），`spawnRadius 17.4 / minSpawnGap 2.4`，`gapScale: 1.35` 让 buildSpawns 段内间隔放慢 35%。
