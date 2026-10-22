@@ -62,6 +62,10 @@ const DEFAULT_PROFILE = {
   // 礼包兑换（第 44 块）：{ <兑换码哈希>: 兑换时间戳 }
   //   只存哈希，不存明文码；同一个哈希第二次进来就拦下 = 一码一次。
   gifts: {},
+  // 音效包（第 46 块）：{ unlocked 通关第一关后解锁, id 当前用的那套 }
+  //   id 是唯一真相源，audio.setPack() 只是把它推进音频引擎；
+  //   解锁前设置里那两项是锁着的，点不动。
+  voicePack: { unlocked: false, id: 'normal' },
 };
 
 let cache = null;

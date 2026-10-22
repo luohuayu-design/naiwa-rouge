@@ -163,7 +163,9 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
 .skip-round.on{display:block}
 
 /* ---------------- 波次提示 ---------------- */
-#waveToast{position:fixed;left:50%;top:21%;z-index:7;display:flex;flex-direction:column;
+/* 第 46 块：toast 提到 26 —— 结算面板（18）和音效包卡（20）弹着的时候
+   也得看得见（切音效包 / 成就解锁的提示会在这时出现） */
+#waveToast{position:fixed;left:50%;top:21%;z-index:26;display:flex;flex-direction:column;
   align-items:center;gap:5px;text-align:center;pointer-events:none;
   transform:translate(-50%,-8px);opacity:0;
   transition:opacity .26s ease,transform .26s ease}
@@ -1262,3 +1264,54 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
 .tt-row-notice .tt-notice-btn{flex:0 0 auto;max-width:none;padding:8px 26px;font-size:12px;
   letter-spacing:.16em;color:#ffe9a8;border-color:rgba(255,209,102,.3);background:rgba(52,42,16,.34)}
 .tt-row-notice .tt-notice-btn:hover{border-color:rgba(255,209,102,.68);background:rgba(70,56,20,.62)}
+
+/* ============================================================
+   获得新音效包（第 46 块）：第一关通关后弹在结算面板之上
+   z-index 20 —— 盖住结算 18，但比永夜火种三选一（22）低，
+   万一火种面板先开了，这张卡不会把火种选项挡掉
+   ============================================================ */
+.pack-get{position:fixed;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;
+  padding:16px;background:rgba(2,7,6,.82);
+  backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);
+  opacity:0;pointer-events:none;transition:opacity .22s ease}
+.pack-get.on{opacity:1;pointer-events:auto}
+.pg-card{position:relative;width:min(92vw,392px);max-height:92vh;overflow:auto;
+  display:flex;flex-direction:column;gap:9px;padding:18px 17px 15px;border-radius:18px;
+  border:1px solid rgba(255,209,102,.34);
+  background:linear-gradient(165deg,rgba(38,30,12,.99),rgba(11,22,18,1));
+  box-shadow:0 26px 60px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,226,170,.1);
+  transform:translateY(12px) scale(.98);transition:transform .24s cubic-bezier(.2,1.3,.4,1)}
+.pack-get.on .pg-card{transform:none}
+.pg-x{position:absolute;top:9px;right:10px;width:26px;height:26px;border-radius:50%;border:none;
+  cursor:pointer;line-height:26px;font-size:13px;font-weight:900;color:#ffd9a0;
+  background:rgba(255,209,102,.14);transition:.15s}
+.pg-x:hover{background:rgba(255,209,102,.32);color:#fff;transform:rotate(90deg)}
+.pg-tag{font-size:10px;letter-spacing:.2em;color:rgba(255,209,102,.72);padding-right:28px}
+.pg-title{margin-top:2px;font-size:21px;font-weight:800;letter-spacing:.1em;color:#ffe9a8;
+  text-shadow:0 0 22px rgba(255,190,90,.32);padding-right:28px}
+.pg-sub{font-size:11.5px;line-height:1.75;color:rgba(206,224,214,.78)}
+.pg-list{display:flex;flex-direction:column;gap:6px;margin-top:3px}
+.pg-row{display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:11px;
+  border:1px solid rgba(255,209,102,.18);background:rgba(12,24,20,.7)}
+.pg-meta{flex:1;min-width:0}
+.pg-name{font-size:12px;font-weight:700;color:#ffe9a8;letter-spacing:.06em}
+.pg-use{margin-top:2px;font-size:10px;color:rgba(170,204,190,.62)}
+.pg-play{flex-shrink:0;padding:5px 12px;border-radius:999px;font:inherit;font-size:11px;
+  font-weight:700;cursor:pointer;color:#ffe9a8;border:1px solid rgba(255,209,102,.44);
+  background:rgba(60,44,14,.6);-webkit-tap-highlight-color:transparent;transition:transform .1s,background .15s}
+.pg-play:hover{background:rgba(86,62,18,.82);border-color:rgba(255,209,102,.72)}
+.pg-play:active{transform:scale(.94)}
+.pg-note{font-size:10px;letter-spacing:.04em;color:rgba(160,196,180,.55);text-align:center}
+.pg-btns{display:flex;gap:9px;margin-top:4px}
+.pg-btn{flex:1;padding:11px 0;border-radius:12px;font:inherit;font-size:12.5px;font-weight:700;
+  letter-spacing:.06em;cursor:pointer;color:#cfeede;border:1px solid rgba(126,235,196,.24);
+  background:rgba(11,28,24,.9);-webkit-tap-highlight-color:transparent;transition:transform .1s,background .15s}
+.pg-btn:hover{background:rgba(126,235,196,.1);border-color:rgba(126,235,196,.5)}
+.pg-btn:active{transform:scale(.97)}
+.pg-btn.primary{color:#2a1606;border-color:rgba(255,226,170,.6);
+  background:linear-gradient(180deg,#ffe9a8,#f5b54e);box-shadow:0 8px 22px rgba(245,181,78,.26)}
+
+/* 设置面板里的音效包行（第 46 块）：两段按钮 + 未解锁时锁住 */
+.set-seg button:disabled{opacity:.4;cursor:not-allowed}
+.set-seg button:disabled:hover{background:transparent;border-color:inherit}
+.set-lock{margin-top:4px;font-size:9.5px;letter-spacing:.06em;color:rgba(255,209,102,.62)}

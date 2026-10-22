@@ -16,7 +16,13 @@
 //   处理：音效去首尾静音 + 峰值归一 -3dBFS；BGM 尾部 2s 与开头交叉淡化做无缝循环，
 //         RMS 归一 -18.5dBFS。脚本见 .tmp-audio-build.py（老 26 个）与
 //         .tmp-audio-build2.py（第 25 块追加 7 个），都留在项目根，改素材时重跑。
+//
+// 第 46 块：多了一套「抽象奶蛙音效包」（js/voicepack.js 定义参数）。
+//   包里不复制文件、不预裁切：同一段奶蛙叫声用 start(0, offset, dur) 现裁现播，
+//   所以 buffer 缓存按**实际文件**存（'s:音效名' / 'v:文件名'），换包只换取哪份。
 // ============================================================
+
+import { VOICE_BASE, FROG_SFX } from './voicepack.js';
 
 const BGM_BASE = 'assets/audio/bgm/';
 const SFX_BASE = 'assets/audio/sfx/';
@@ -82,9 +88,13 @@ let voiceCount = 0;
 // 玩家音量（设置面板调，0~1）：乘在各自的 MASTER 上，静音开关独立于它
 let sfxVol = 1.0;
 let musicVol = 1.0;
+// 第 46 块：当前音效包（'normal' | 'frog'）。只存内存 —— 真正的选择记在
+// 本机档案 profile().voicePack 里（和「解锁没解锁」放在一起），
+// main.js 的 applySettings() 每次启动/切包时把它推进来。
+let packId = 'normal';
 
-const buffers = new Map();    // name -> AudioBuffer
-const loading = new Map();    // name -> Promise
+const buffers = new Map();    // 缓存键 -> AudioBuffer（'s:音效名' 或 'v:奶蛙文件名'）
+const loading = new Map();    // 同上，按缓存键去重
 const failed = new Set();     // 加载失败的，别反复重试
 const lastAt = new Map();     // name -> 上次播放时间戳
 
@@ -155,32 +165,52 @@ export function unlock() {
 export function isUnlocked() { return unlocked; }
 
 // ---------------- 音效 ----------------
-function loadOne(name) {
-  if (buffers.has(name) || failed.has(name)) return Promise.resolve(buffers.get(name) || null);
-  if (loading.has(name)) return loading.get(name);
-  const def = SFX_DEFS[name];
-  if (!def) return Promise.resolve(null);
+// 当前包对某个音效的覆盖参数（奶蛙包里才有；null = 用原版素材）
+function packOverride(name) {
+  if (packId !== 'frog') return null;
+  return FROG_SFX[name] || null;
+}
+
+// 一个音效在当前包下该用哪个缓存键 / 哪个文件
+function voiceOf(name) {
+  const ov = packOverride(name);
+  return ov
+    ? { key: 'v:' + ov.file, url: VOICE_BASE + ov.file }
+    : { key: 's:' + name, url: SFX_BASE + SFX_DEFS[name].file };
+}
+
+// 按「文件」加载并缓存：普通音效和奶蛙素材走同一条路
+function loadFile(key, url) {
+  if (buffers.has(key)) return Promise.resolve(buffers.get(key));
+  if (failed.has(key)) return Promise.resolve(null);
+  if (loading.has(key)) return loading.get(key);
   const c = ensureCtx();
   if (!c) return Promise.resolve(null);
-  const p = fetch(SFX_BASE + def.file)
+  const p = fetch(url)
     .then((r) => {
       if (!r.ok) throw new Error('HTTP ' + r.status);
       return r.arrayBuffer();
     })
     .then((ab) => new Promise((res, rej) => c.decodeAudioData(ab, res, rej)))
     .then((buf) => {
-      buffers.set(name, buf);
-      loading.delete(name);
+      buffers.set(key, buf);
+      loading.delete(key);
       return buf;
     })
     .catch((err) => {
-      failed.add(name);
-      loading.delete(name);
-      console.warn(`[音频] 音效 ${name} 加载失败：`, err.message || err);
+      failed.add(key);
+      loading.delete(key);
+      console.warn(`[音频] ${url} 加载失败：`, err.message || err);
       return null;
     });
-  loading.set(name, p);
+  loading.set(key, p);
   return p;
+}
+
+function loadOne(name) {
+  if (!SFX_DEFS[name]) return Promise.resolve(null);
+  const { key, url } = voiceOf(name);
+  return loadFile(key, url);
 }
 
 export function preload(names = Object.keys(SFX_DEFS)) {
@@ -201,28 +231,66 @@ export function sfx(name, opts = {}) {
   if (now - (lastAt.get(name) || 0) < MIN_GAP_MS) return false;
   lastAt.set(name, now);
 
-  const buf = buffers.get(name);
+  const { key } = voiceOf(name);
+  const buf = buffers.get(key);
   if (!buf) { loadOne(name); return false; }   // 首次触发顺手加载，本次静默
 
+  // 第 46 块：奶蛙包里这个音效有自己的区间 / 音量 / 速率
+  const ov = packOverride(name);
   const src = c.createBufferSource();
   src.buffer = buf;
-  const j = opts.jitter != null ? opts.jitter : (def.jitter || 0);
-  const base = opts.rate != null ? opts.rate : 1;
+  const j = opts.jitter != null ? opts.jitter : (ov && ov.jitter != null ? ov.jitter : (def.jitter || 0));
+  const base = opts.rate != null ? opts.rate : (ov && ov.rate != null ? ov.rate : 1);
   src.playbackRate.value = Math.max(0.25, base * (1 + (Math.random() * 2 - 1) * j));
 
   const g = c.createGain();
-  g.gain.value = (opts.vol != null ? opts.vol : 1) * def.vol;
+  const selfVol = ov && ov.vol != null ? ov.vol : def.vol;
+  g.gain.value = (opts.vol != null ? opts.vol : 1) * selfVol;
   src.connect(g);
   g.connect(sfxGain);
 
   voiceCount++;
   src.onended = () => { voiceCount--; try { src.disconnect(); g.disconnect(); } catch (_) {} };
   try {
-    src.start();
+    // 裁切播放：offset 秒开始、只播 dur 秒（dur 是源时间，变速前）
+    if (ov) src.start(0, Math.max(0, ov.offset || 0), ov.dur || undefined);
+    else src.start();
   } catch (err) {
     voiceCount--;
     return false;
   }
+  return true;
+}
+
+// ---------------- 音效包（第 46 块） ----------------
+export function getPack() { return packId; }
+
+// 换包：只改内存标记 + 预热新包要用的素材（已在响的不打断）
+export function setPack(id) {
+  const next = id === 'frog' ? 'frog' : 'normal';
+  if (next === packId) return packId;
+  packId = next;
+  if (unlocked) preload(Object.keys(SFX_DEFS));   // 新包里的奶蛙素材这就开始下
+  return packId;
+}
+
+// 试听一段奶蛙素材（解锁卡与设置面板用）：从 offset 播 dur 秒
+export async function previewVoice(file, offset = 0, dur = 1.6) {
+  if (muted) return false;
+  const c = ensureCtx();
+  if (!c) return false;
+  if (c.state === 'suspended') c.resume().catch(() => {});
+  const buf = await loadFile('v:' + file, VOICE_BASE + file);
+  if (!buf || c.state !== 'running') return false;
+  const src = c.createBufferSource();
+  src.buffer = buf;
+  const g = c.createGain();
+  g.gain.value = 0.8 * MASTER_SFX * sfxVol;
+  src.connect(g);
+  g.connect(c.destination);
+  voiceCount++;
+  src.onended = () => { voiceCount--; try { src.disconnect(); g.disconnect(); } catch (_) {} };
+  try { src.start(0, Math.max(0, offset), Math.min(dur, buf.duration)); } catch (_) { voiceCount--; return false; }
   return true;
 }
 
@@ -332,10 +400,15 @@ export function volumes() {
 
 // ---------------- 测试用 ----------------
 export function stats() {
+  const keys = [...buffers.keys()];
   return {
     unlocked, muted, ducked, bgmName, wantBgm,
     ctxState: ctx ? ctx.state : 'none',
-    loaded: [...buffers.keys()].sort(),
+    pack: packId,
+    // 老字段：只列原版音效（去掉 's:' 前缀），换包后仍是同一批名字
+    loaded: keys.filter((k) => k.startsWith('s:')).map((k) => k.slice(2)).sort(),
+    // 奶蛙素材（'v:' 前缀去掉后是文件名）
+    voiceLoaded: keys.filter((k) => k.startsWith('v:')).map((k) => k.slice(2)).sort(),
     failed: [...failed],
     voices: voiceCount,
     bgmVolumes: bgmEls.map((e) => +e.volume.toFixed(3)),
@@ -349,6 +422,7 @@ export const audio = {
   init, unlock, isUnlocked, sfx, preload, playBgm, stopBgm, duck,
   isMuted, setMuted, toggleMute, stats,
   setSfxVolume, setMusicVolume, volumes,
+  getPack, setPack, previewVoice,
   BGM_DEFS, SFX_DEFS,
 };
 

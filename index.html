@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#080f14">
 <link rel="icon" href="data:,">
 <title>蛙步 · 夜行</title>
-<link rel="stylesheet" href="style.css?v=51">
+<link rel="stylesheet" href="style.css?v=52">
 </head>
 <body>
 
@@ -558,6 +558,23 @@
   </div>
 </div>
 
+<!-- 获得新音效包（第 46 块）：第一关通关后弹一次，问要不要换成奶蛙叫。
+     两个按钮都算「见过这张卡」，之后不再弹；设置里随时能改。 -->
+<div id="packGet" class="pack-get" aria-hidden="true">
+  <div class="pg-card">
+    <button class="pg-x" id="pgClose" type="button" aria-label="关闭">✕</button>
+    <div class="pg-tag">🎁 第一关 · 通关奖励</div>
+    <div class="pg-title">抽象奶蛙音效包</div>
+    <div class="pg-sub">奶蛙把自己那 4 段叫声也交了出来。<br>换上之后，拍击、暴击、受伤、倒下、通关，全换成它在叫。</div>
+    <div class="pg-list" id="pgList"></div>
+    <div class="pg-note">点「试听」先听听 · 之后在设置里随时能换回来</div>
+    <div class="pg-btns">
+      <button class="pg-btn" id="pgNo" type="button">先用原来的</button>
+      <button class="pg-btn primary" id="pgYes" type="button">换上奶蛙叫</button>
+    </div>
+  </div>
+</div>
+
 <!-- 加载遮罩 -->
 <div id="loading">
   <div class="ld-box">
@@ -570,7 +587,7 @@
 <!-- 不用 importmap：老手机浏览器（iOS 16.4 以下、旧版微信/安卓 WebView）
      不支持 import maps，会让整个模块解析失败、加载页永远停在 0%。
      项目内所有 import 都写成相对路径，直接靠原生 ES Module 解析。 -->
-<script type="module" src="js/main.js?v=51"></script>
+<script type="module" src="js/main.js?v=52"></script>
 
 <!-- 兜底自检：模块没跑起来时把原因写出来，别让用户对着 0% 干等 -->
 <script>

@@ -59,6 +59,22 @@ Three.js r160 的单摇杆幸存者肉鸽《奶蛙夜行》，纯静态站点（
 | **43** | 读秒放开到全部对话：随机奇遇同样读秒；顺手修掉「旧定时器空转把新一拍的按钮锁死」的真 bug（代次令牌 + 按 DOM 现状清理） | 已上线（v=49） |
 | **44** | 礼包兑换（主菜单 → 礼包兑换）：纯前端离线码表，源码只存 16 位哈希；输码换骨币（A 类 300 / B 类 100，各 10 个）；一码一机一次，记录在 `profile.gifts`；已兑换列表带时间与档位 | v=50 |
 | **45** | 公告：进主界面自动弹一次（「日期 + `NOTICE_VER`」记在 `naiwa_rouge_notice_v1`，勾「今日内不再弹出」当天不再打扰）；内容 = 提建议/报 bug 发礼包码 + QQ「落花雨 3829845261」+ 本站网址，后两个一键复制；主菜单第三排「📢 公告」随时强制回看 | v=51 |
+| **46** | 抽象奶蛙音效包：**打通第一关**后结算面板上弹「获得新音效包」（可逐段试听），选「换上奶蛙叫」则用 4 段奶蛙叫声（`voice-1/2/3` + `voice-end`，来自同作者音游《蛙步》）替换 8 个位置；裁切靠**播放区间**（`offset/dur/rate/vol`）不靠改文件；设置里「音效包」随时切回，没解锁时锁着 | v=52 |
+
+第 46 块要点（抽象奶蛙音效包，2026-10-22，v=52）：
+
+- **用户要求**：`naiwa-step/sounds/` 里的 voice-1/2/3 与 voice-end（**不含** `voice-end-rabbit`）都是奶蛙音效；**通关第一关后弹出「获得新音效包」界面**，问要不要从正常音效包切到「抽象奶蛙音效包」；选了就启用（4 个文件，位置自己挑、可以替换或新增，时长不合适可以裁切）；**设置里要能改**。
+- **素材**：`assets/audio/voice/voice-1.mp3 / voice-2.mp3 / voice-3.mp3 / voice-end.mp3`（48kHz 立体声，1.8~6.1 秒）。来源与静音位置记在 `assets/audio/LICENSE.md`。**这不是 CC0 第三方素材**，是同作者音游的原创音，跟着本仓库走。
+- **不做文件级裁切**（本项目没装 ffmpeg，也没必要装）：`js/voicepack.js` 给每个要替换的音效写 `offset / dur / vol / rate / jitter`，`audio.js` 播的时候用 `AudioBufferSourceNode.start(0, offset, dur)` 现场裁。改长度 = 改表里两个数字，不用重做音频。
+- **换哪 8 个位置**（`FROG_SFX`）：`hit`（voice-3 起 0.745 取 0.45s，加速 1.12 → 短促一呱）· `crit`（voice-1 起 0.334 取 0.9s）· `hurt`（voice-2 起 0.177 取 0.85s）· `die`（voice-2 同段取 0.7s，降速 0.80 → 闷）· `explode`（voice-2 降速 0.72 只取 0.55s）· `roundClear`（voice-1 取 1.1s，20 回合要听 20 次别太长）· `victory`（voice-end 整段 6s）· `defeat`（voice-end 前 3.4s 降速 0.80）。
+  **不换**：`swing`（每秒 1.2 次，长叫声会糊）、金币 / UI / 商店 / 图鉴这类非角色音。
+- **audio.js 的改法**：buffer 缓存键从「音效名」改成「实际文件」—— `'s:' + 名字`（原版）/ `'v:' + 文件名`（奶蛙），`loadFile(key, url)` 统一加载；`voiceOf(name)` 按当前包决定用哪份；`setPack(id)` 只改内存标记 + 预热新包素材（不打断正在响的）；`previewVoice(file, offset, dur)` 给试听用；`stats()` 新增 `pack` / `voiceLoaded`（`loaded` 仍只列原版名字，老断言不受影响）。
+- **解锁与开关**：`profile().voicePack = { unlocked, id }` 是唯一真相源，`audio.setPack()` 纯内存，`applySettings()` 每次启动/改设置时推一遍。解锁卡两个按钮（含 ✕）**都算看过** —— 都写 `unlocked: true`，只是 `id` 不同；此外 `#packGet` 只在 `isWin && 第一关 && !unlocked` 时延迟 **1.4 秒**弹出（先让通关的成就 toast 播完，弹之前还会 `clearTimeout(toastTimer)` 把残余 toast 收掉，否则会压住卡片标题）。
+- **UI**：`#packGet`（z-index **20**：压住结算面板 18、比永夜火种三选一 22 低）→ 标题 / 说明 / 4 行素材（各带「试听」按钮，播完显示「♪」0.9 秒）/ 「先用原来的」「换上奶蛙叫」。设置面板第二行新增「音效包」，两段「正常 / 奶蛙」，未解锁时「奶蛙」`disabled` 且说明改成「通关第一关解锁『奶蛙』那一项」。
+- **顺手改的**：`#waveToast` 的 z-index 从 7 提到 **26** —— 不然结算面板（18）弹着时切换音效包的提示完全看不见。**坑**：正因为提到 26，设置面板里切包时弹 toast 会正好压住「音效包」那一行（截图核对才看出来），所以**设置里切换不弹 toast**，只靠按钮态 + 那一声。
+- **调试钩子**：`__game.pack = { state, get, set, unlock, show, yes, no, open, files, map, descs, preview, sfx, audio, reset }`。
+- **测试**：`.tmp-block46-cdp.js` **62** 项全绿（含真打通第一关：`setAdmin(true)` → `jumpRound(20)` → `skipRound()` → 点过武器卡/三选一 → 结算 → 弹卡；**第 20 回合是最后一回合也会先弹武器卡和三选一**，测试里必须一路点过去）。素材探测 `.tmp-voice-probe.js`（时长/峰值/首尾静音）。视觉核对 `.tmp-shot46.js`（390×844，输出 `%TEMP%/naiwa-shot-46/`）。回归 block45 49/0、block44 36/0、block41 37/0。
+- **测试坑**：① headless 里 `AudioContext` 要一次**真实鼠标手势**才 `running`（`Input.dispatchMouseEvent` 点一下），否则 `sfx()` 全返回 false；② **管理员沙盒期间一切不落盘**（第 38 块），所以在 admin 下通关解锁的音效包不会存档、退出沙盒就回滚 —— 验持久化要先 `setAdmin(false)` 再 `pack.unlock()`。
 
 第 45 块要点（公告，2026-10-22，v=51）：
 
@@ -405,6 +421,7 @@ Three.js r160 的单摇杆幸存者肉鸽《奶蛙夜行》，纯静态站点（
 | `profile.js`                                                                                 | **本机档案**：settings / stats / codex / ach / bones / camp / boons / story / notice / gifts，键 `naiwa_rouge_profile_v1`；管理员沙盒靠 `setSaveSuppressed` 关掉落盘 |
 | `runSave.js`                                                                                 | 读取存档（第 38 块：多存档列表），键 `naiwa_rouge_runs_v1`（数组，按 uid upsert；每回合开始写 + pagehide 补一次；通关选完永夜火种才清） |
 | `gift.js`                                                                                    | 礼包兑换（第 44 块）：`GIFT_TABLE` 只存 16 位哈希 + 骨币，`normalizeCode`/`codeHash`/`lookupGift`/`giftByHash`；明文码在 gitignore 的 `gift-codes.local.md` |
+| `voicepack.js`                                                                               | 音效包（第 46 块）：`FROG_FILES` 4 段奶蛙素材（含试听区间）、`FROG_SFX` 8 个位置的 `offset/dur/vol/rate/jitter`、`PACK_LIST`；**改裁切只改这张表** |
 | `codex.js`                                                                                   | 图鉴五页签的数据整理（纯渲染数据，无状态）                                                                                      |
 | `achievements.js`                                                                            | 26 条成就定义（`{id,name,desc}`）                                                                                 |
 | `audio.js`                                                                                   | 程序化音效 + BGM；`setSfxVolume/setMusicVolume`（与静音独立）                                                           |

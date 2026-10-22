@@ -36,6 +36,8 @@ import {
 } from './profile.js';
 // 第 44 块：礼包兑换（码表只有哈希，明细在 gift.js 顶部注释）
 import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js';
+// 第 46 块：音效包（抽象奶蛙音效包 —— 4 段奶蛙叫声，通关第一关解锁）
+import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js';
 import * as runSave from './runSave.js';
 import {
   CAMPFIRE, CAMP_STEP, campBuy, campOwned, campLevel,
@@ -299,6 +301,9 @@ async function boot() {
   const titleScr = document.getElementById('titleScr');
   const btnStart = document.getElementById('btnStart');
   const tutAsk = document.getElementById('tutAsk');
+  // 获得新音效包（第 46 块）
+  const packGetEl = document.getElementById('packGet');
+  const pgList = document.getElementById('pgList');
   // 通用确认弹窗（第 41 块）：存档并退出 / 进篝火前的提醒都用它
   const confirmAsk = document.getElementById('confirmAsk');
   const caTitle = document.getElementById('caTitle');
@@ -1645,12 +1650,13 @@ async function boot() {
   const SET_ROWS = [
     { key: 'sfx', name: '音效音量', type: 'range', hint: '打斗、按钮' },
     { key: 'music', name: '音乐音量', type: 'range', hint: '夜里的小调' },
+    // 第 46 块：音效包（正常 / 抽象奶蛙，第一关通关后解锁）
+    { key: 'pack', name: '音效包', type: 'pack', hint: '局内所有打斗音' },
     { key: 'quality', name: '画质', type: 'seg', hint: '卡就切中或低', opts: [['high', '高'], ['mid', '中'], ['low', '低']] },
     { key: 'joySize', name: '摇杆大小', type: 'seg', opts: [['small', '小'], ['mid', '中'], ['large', '大']] },
     { key: 'joyHand', name: '摇杆位置', type: 'seg', hint: '按住哪半边出摇杆', opts: [['left', '左手'], ['right', '右手']] },
     { key: 'shake', name: '屏幕震动', type: 'seg', hint: '受击时抖一下', opts: [['on', '开'], ['off', '关']] },
     { key: 'speedFov', name: '速度感', type: 'seg', hint: '跑起来视野微微拉宽（晕的话关掉）', opts: [['on', '开'], ['off', '关']] },
-    // 第 30 块：管理员模式（要密码，开完才有跳过回合按钮与无限钱）
     { key: 'admin', name: '管理员模式', type: 'admin', hint: '金币/骨币/生命无限 · 沙盒不记录 · 退出即还原' },
   ];
 
@@ -1662,6 +1668,7 @@ async function boot() {
     const s = readSettings();
     audio.setSfxVolume(s.sfx);
     audio.setMusicVolume(s.music);
+    audio.setPack(packState().id);     // 第 46 块：启动 / 改设置时把音效包推进引擎
     applyQuality(s.quality);
     speedFovOn = !!s.speedFov;
     const pre = JOY_PRESET[s.joySize] || JOY_PRESET.mid;
@@ -1683,7 +1690,10 @@ async function boot() {
       name.textContent = row.name;
       if (row.hint) {
         const hint = document.createElement('i');
-        hint.textContent = row.hint;
+        // 音效包没解锁时，这一行的说明换成「怎么解锁」——比空着锁住更清楚
+        hint.textContent = row.key === 'pack' && !packState().unlocked
+          ? '通关第一关解锁「奶蛙」那一项'
+          : row.hint;
         name.appendChild(hint);
       }
       label.appendChild(name);
@@ -1705,6 +1715,30 @@ async function boot() {
         });
         box.append(inp, out);
         wrap.append(label, box);
+      } else if (row.type === 'pack') {
+        // 第 46 块：音效包两段。没解锁时「奶蛙」那项灰着点不动，
+        // 切换立刻生效（并播一声，让玩家立刻听出区别）。
+        const st = packState();
+        const seg = document.createElement('div');
+        seg.className = 'set-seg';
+        for (const p of PACK_LIST) {
+          const b = document.createElement('button');
+          b.type = 'button';
+          b.dataset.pack = p.id;
+          b.textContent = p.id === 'frog' ? '奶蛙' : '正常';
+          if (p.id === st.id) b.classList.add('on');
+          if (p.id === 'frog' && !st.unlocked) b.disabled = true;
+          b.addEventListener('click', () => {
+            if (b.disabled || st.id === p.id) return;
+            setPackId(p.id);
+            audio.sfx(p.id === 'frog' ? 'crit' : 'hit');   // 现切现听
+            // 这里不弹 toast：设置面板本身就在屏幕中间，toast 会正好压在
+            // 「音效包」这一行上（截图核对时发现的），按钮态 + 这一声已经够说明问题
+            renderSettings();
+          });
+          seg.appendChild(b);
+        }
+        wrap.append(label, seg);
       } else if (row.type === 'admin') {
         // 开要密码，关不用 —— 关掉是安全方向，别让人点错还得翻密码
         const seg = document.createElement('div');
@@ -3401,6 +3435,94 @@ async function boot() {
   document.getElementById('noticeX').addEventListener('click', closeNotice);
   document.getElementById('btnNotice').addEventListener('click', () => showNotice(true));
 
+  // ---------------- 音效包（第 46 块）----------------
+  // 打通第一关后，奶蛙「把自己那 4 段叫声交出来」：结算面板之上弹一张卡，
+  // 问要不要把角色音全换成它。两个按钮都算看过，之后不再弹；
+  // 真正的开关在设置里（没解锁时「奶蛙」那项是锁着的）。
+  // 选择存在 profile().voicePack = { unlocked, id }，audio.setPack() 只负责推进音频引擎。
+  function packState() {
+    const p = profile();
+    if (!p.voicePack || typeof p.voicePack !== 'object') p.voicePack = { unlocked: false, id: 'normal' };
+    if (p.voicePack.id !== 'frog') p.voicePack.id = 'normal';
+    return p.voicePack;
+  }
+
+  function setPackId(id, opts = {}) {
+    const st = packState();
+    st.id = id === 'frog' ? 'frog' : 'normal';
+    audio.setPack(st.id);
+    if (opts.save !== false) saveProfile();
+    return st.id;
+  }
+
+  // 解锁卡里的 4 段素材：一段一行，带试听
+  function renderPackRows() {
+    pgList.textContent = '';
+    for (const f of FROG_FILES) {
+      const row = document.createElement('div');
+      row.className = 'pg-row';
+      const meta = document.createElement('div');
+      meta.className = 'pg-meta';
+      const name = document.createElement('div');
+      name.className = 'pg-name';
+      name.textContent = f.name;
+      const use = document.createElement('div');
+      use.className = 'pg-use';
+      use.textContent = f.use;
+      meta.append(name, use);
+      const play = document.createElement('button');
+      play.type = 'button';
+      play.className = 'pg-play';
+      play.dataset.file = f.file;
+      play.textContent = '试听';
+      play.addEventListener('click', async () => {
+        play.textContent = '…';
+        const ok = await audio.previewVoice(f.file, f.offset, f.preview);
+        play.textContent = ok ? '♪' : '没声';
+        setTimeout(() => { play.textContent = '试听'; }, ok ? 900 : 1300);
+      });
+      row.append(meta, play);
+      pgList.appendChild(row);
+    }
+  }
+
+  function showPackGet() {
+    // 通关那一瞬会先弹成就 toast（「第一根骨头」之类），它和这张卡在同一片
+    // 空域（toast 在 21% 高、卡片从 22% 起）。延迟 1.4 秒让成就看完，这里再
+    // 把残余的 toast 收掉，卡片就不会压着字。
+    waveToast.classList.remove('on');
+    clearTimeout(toastTimer);
+    renderPackRows();
+    packGetEl.classList.add('on');
+    packGetEl.setAttribute('aria-hidden', 'false');
+    audio.sfx('boon');
+  }
+
+  // useFrog = 玩家点了「换上奶蛙叫」；false（先用原来的 / ✕）也照样记「已解锁」
+  function closePackGet(useFrog) {
+    const st = packState();
+    const first = !st.unlocked;
+    st.unlocked = true;
+    if (useFrog) setPackId('frog', { save: false });
+    saveProfile();
+    packGetEl.classList.remove('on');
+    packGetEl.setAttribute('aria-hidden', 'true');
+    if (first) {
+      if (st.id === 'frog') {
+        audio.sfx('crit');            // 换成奶蛙后这一声就是奶蛙叫，立刻能听见
+        showToast('已换上抽象奶蛙音效包', '拍击 / 暴击 / 受伤 / 倒下 / 通关 全换成奶蛙叫 · 设置里随时改');
+      } else {
+        showToast('音效包留着了', '设置 → 音效包 里随时能换成奶蛙那套');
+      }
+    }
+    renderSettings();
+    return st.id;
+  }
+
+  document.getElementById('pgYes').addEventListener('click', () => closePackGet(true));
+  document.getElementById('pgNo').addEventListener('click', () => closePackGet(false));
+  document.getElementById('pgClose').addEventListener('click', () => closePackGet(false));
+
   // ---------------- 夜行记忆（第 32 块） ----------------
   // 十八夜，一夜一关。前 3 夜已经在关卡里走过；剩下 15 夜是给后面那些
   // 还没做出来的关卡预留的剧本，现在先当档案读。
@@ -4132,6 +4254,12 @@ async function boot() {
       rsBtn.textContent = boonGain ? `领取 ${boonGain} 次永夜火种` : '再来一次';
       rsBtn.classList.toggle('boon', !!boonGain);
     }
+    // 第 46 块：第一关首通 → 结算面板之上弹「获得新音效包」（等结算淡完、成就 toast 看完再弹）
+    if (isWin && curLevelId === 1 && !packState().unlocked) {
+      setTimeout(() => {
+        if (gameState === 'over' && !boonOpen) showPackGet();
+      }, 1400);
+    }
   }
 
   document.getElementById('rsBtn').addEventListener('click', () => {
@@ -4337,6 +4465,29 @@ async function boot() {
         set: (k) => { profile().difficulty = k; setDifficulty(k); saveProfile(); },
         get: () => getDifficulty().name,
         scale: (n) => roundScale(n),
+      },
+      // 第 46 块：音效包（测试钩子）
+      pack: {
+        state: () => ({ ...packState() }),
+        get: () => packState().id,
+        set: (id) => { const r = setPackId(id); renderSettings(); return r; },
+        unlock: () => { packState().unlocked = true; saveProfile(); renderSettings(); return true; },
+        show: () => { showPackGet(); return packGetEl.classList.contains('on'); },
+        yes: () => closePackGet(true),
+        no: () => closePackGet(false),
+        open: () => packGetEl.classList.contains('on'),
+        files: () => FROG_FILES.map((f) => ({ file: f.file, offset: f.offset, preview: f.preview })),
+        map: () => ({ ...FROG_SFX }),
+        descs: () => PACK_LIST.map((p) => ({ ...p })),
+        preview: (file, off, dur) => audio.previewVoice(file, off, dur),
+        sfx: (name, vol) => audio.sfx(name, { vol: vol == null ? 1 : vol }),
+        audio: () => audio.stats(),
+        reset: () => {
+          profile().voicePack = { unlocked: false, id: 'normal' };
+          saveProfile();
+          audio.setPack('normal');
+          renderSettings();
+        },
       },
       // 第 45 块：公告（测试钩子）—— show(true) 强制打开，show(false) 走「今日不再弹」判断
       notice: {
