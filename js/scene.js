@@ -50,6 +50,19 @@ export const THEMES = {
     fly: 0xffb066, flyCount: 78,         // 飘着的火星
     ground: 'ash',
   },
+  // 第四关 · 雾堤服务区：青灰霜面 + 浓雾，边圈是路灯没关的那盏（第 35 块）
+  fog: {
+    bg: 0x0c1214,
+    fog: 0x1a2a30, fogDensity: 0.0205,    // 雾堤：四关里最浓的一层
+    hemiSky: 0x5a8a96, hemiGround: 0x0f1a1e, hemiIntensity: 1.02,
+    moon: 0xbfe4e8, moonIntensity: 2.45, moonBase: 2.25,
+    rim: 0x3f8a96, rimIntensity: 0.66,
+    edge: 0x6fd8e0, edgeOpacity: 0.32,
+    stone: 0x33474a,
+    tuft: 0x3a5a58, tuftVisible: true,    // 霜打过的枯草还立着
+    fly: 0x9fe8e0, flyCount: 110,         // 雾珠
+    ground: 'fog',
+  },
 };
 
 export function buildNightScene({ arenaRadius = 15, theme = 'meadow' } = {}) {
@@ -293,7 +306,81 @@ export function buildNightScene({ arenaRadius = 15, theme = 'meadow' } = {}) {
 function makeGroundTexture(kind) {
   if (kind === 'crypt') return makeCryptTexture();
   if (kind === 'ash') return makeAshTexture();
+  if (kind === 'fog') return makeFogTexture();
   return makeGrassTexture();
+}
+
+// 雾堤服务区的地面：青灰霜面 + 霜斑 + 老裂缝（第 35 块）。
+// 火烧过的地方霜来得最早：底色是冷的青灰，霜是一块块发白的补丁。
+function makeFogTexture() {
+  const S = 512;
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = S;
+  const g = cv.getContext('2d');
+
+  g.fillStyle = '#1e2a2c';
+  g.fillRect(0, 0, S, S);
+
+  let seed = 552019;
+  const rnd = () => {
+    seed = (seed * 1103515245 + 12345) % 2147483648;
+    return seed / 2147483648;
+  };
+
+  // 大块明暗：压实的沥青 / 霜厚的水泥面
+  for (let i = 0; i < 160; i++) {
+    const x = rnd() * S, y = rnd() * S, r = 24 + rnd() * 80;
+    const rad = g.createRadialGradient(x, y, 0, x, y, r);
+    const dark = rnd() > 0.42;
+    rad.addColorStop(0, dark ? 'rgba(8,14,16,0.44)' : 'rgba(120,168,172,0.22)');
+    rad.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = rad;
+    g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+  }
+
+  // 颗粒：霜屑 + 沥青渣
+  for (let i = 0; i < 2600; i++) {
+    const x = rnd() * S, y = rnd() * S;
+    const r = 0.7 + rnd() * 1.6;
+    const a = 0.10 + rnd() * 0.22;
+    if (rnd() > 0.90) {
+      g.fillStyle = `rgba(206,238,240,${0.16 + rnd() * 0.26})`;   // 霜屑
+    } else {
+      g.fillStyle = rnd() > 0.5 ? `rgba(96,120,124,${a})` : `rgba(8,12,14,${a + 0.10})`;
+    }
+    g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+  }
+
+  // 一块块发白的霜斑（服务区水泥地化霜化了一半的样子）
+  for (let i = 0; i < 46; i++) {
+    const x = rnd() * S, y = rnd() * S, r = 10 + rnd() * 34;
+    g.fillStyle = `rgba(190,226,230,${0.05 + rnd() * 0.09})`;
+    g.beginPath();
+    g.ellipse(x, y, r, r * (0.5 + rnd() * 0.5), rnd() * Math.PI, 0, Math.PI * 2);
+    g.fill();
+  }
+
+  // 老裂缝：比焦土细、发白（霜塞进缝里了）
+  g.lineCap = 'round';
+  for (let i = 0; i < 24; i++) {
+    let x = rnd() * S, y = rnd() * S;
+    g.strokeStyle = `rgba(150,190,196,${0.14 + rnd() * 0.18})`;
+    g.lineWidth = 0.8 + rnd() * 1.1;
+    g.beginPath();
+    g.moveTo(x, y);
+    const steps = 4 + (rnd() * 4 | 0);
+    for (let k = 0; k < steps; k++) {
+      x += (rnd() - 0.5) * 54;
+      y += (rnd() - 0.5) * 54;
+      g.lineTo(x, y);
+    }
+    g.stroke();
+  }
+
+  const tex = new THREE.CanvasTexture(cv);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
 }
 
 // 焦土钟楼的地面：暗红褐土 + 烧裂的缝 + 余烬亮点（第 29 块）。

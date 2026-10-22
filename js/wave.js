@@ -223,7 +223,64 @@ export const LEVEL_3 = {
   ],
 };
 
-export const LEVELS_BY_ID = { 1: LEVEL_1, 2: LEVEL_2, 3: LEVEL_3 };
+// ============================================================
+// 第四关 · 雾堤服务区（第 35 块）
+// 焦土公路尽头的废弃服务区，夜里起雾、地面积霜。
+// 难度与第三关持平（用户定案）：hp 0.26 / dmg 0.15，约 400 只，
+// 场地 19→20（怪多一点，摊得开一点）。
+// 新怪：雾魉（隐身）/ 跃行尸（跳劈）/ 缝合师（回血）。
+// ============================================================
+export const LEVEL_4 = {
+  id: 4,
+  name: '第四关 · 雾堤服务区',
+  theme: 'fog',
+  arena: 20,               // 第三关 19，这关怪略多、再摊开一点
+  // 顺序：近身 → 跳劈/远程 → 支援（盾/孵/缝合最后）——先清贴脸的
+  order: [
+    ['minion', 1], ['warrior', 1.6], ['charger', 1.8], ['leaper', 1.9],
+    ['archer', 2.0], ['bowman', 2.2], ['wraith', 2.2],
+    ['shielder', 2.4], ['brood', 2.6], ['mender', 2.6],
+  ],
+  spawnRadius: 18.2,
+  spawnJitter: 0.5,
+  minPlayerDistance: 8.0,
+  minSpawnGap: 2.4,
+  gapScale: 1.35,          // 与第三关同：生成放缓，雾里本来就看不清，别再扎堆
+  gap: 2.6,
+  upgradeAfter: [1, 2, 3, 4, 5, 8, 10, 12, 15, 17, 19, 20],
+  shopAfter: [3, 6, 9, 12, 15, 18],
+  weaponAt: 4,
+  scale: { hp: 0.26, damage: 0.15, speed: 0.035 },
+  rounds: [
+    // ---- 第一幕（R1~R3）：霜面停车场 ----
+    { minion: 3,  warrior: 0, charger: 0, leaper: 0, archer: 0, bowman: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, gap: 0.90, tip: '雾堤服务区：地上有霜，看脚下' },
+    { minion: 4,  warrior: 1, charger: 0, leaper: 0, archer: 0, bowman: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, gap: 0.80, tip: '还是老规矩：边走边拍' },
+    { minion: 4,  warrior: 1, charger: 0, leaper: 0, archer: 1, bowman: 0, wraith: 1, shielder: 0, brood: 0, mender: 0, gap: 0.80, tip: '半透明的那只是雾魉：隐身时打不着' },
+    // ---- 第二幕（R4~R7）：跳劈登场 ----
+    { minion: 5,  warrior: 1, charger: 0, leaper: 1, archer: 0, bowman: 0, wraith: 1, shielder: 0, brood: 0, mender: 0, gap: 0.75, tip: '跃行尸要跳了：地上出红圈就挪出去' },
+    { minion: 5,  warrior: 2, charger: 0, leaper: 1, archer: 1, bowman: 0, wraith: 1, shielder: 0, brood: 0, mender: 0, gap: 0.72, tip: '落地会震荡：它跳的是你刚才站的地方' },
+    { minion: 5,  warrior: 2, charger: 0, leaper: 1, archer: 1, bowman: 1, wraith: 2, shielder: 0, brood: 0, mender: 0, gap: 0.70, tip: '雾魉两只：别背对雾开怪' },
+    { minion: 5,  warrior: 3, charger: 0, leaper: 2, archer: 1, bowman: 1, wraith: 2, shielder: 0, brood: 0, mender: 0, gap: 0.66, tip: '两只跳劈：红圈别叠着站' },
+    // ---- 第三幕（R8~R11）：缝合师 ----
+    { minion: 6,  warrior: 3, charger: 0, leaper: 2, archer: 2, bowman: 1, wraith: 2, shielder: 0, brood: 0, mender: 1, gap: 0.62, tip: '拿骨针的那只会给怪回血：先冲它' },
+    { minion: 6,  warrior: 3, charger: 0, leaper: 2, archer: 2, bowman: 1, wraith: 2, shielder: 1, brood: 0, mender: 1, gap: 0.60, tip: '盾兵回来了：老规矩，等它放盾' },
+    { minion: 7,  warrior: 3, charger: 0, leaper: 2, archer: 2, bowman: 1, wraith: 3, shielder: 1, brood: 0, mender: 1, gap: 0.58, tip: '雾魉三只：显形的那一瞬最脆' },
+    { minion: 7,  warrior: 4, charger: 0, leaper: 2, archer: 2, bowman: 2, wraith: 3, shielder: 1, brood: 1, mender: 1, gap: 0.56, tip: '孵骨也来了：一边加人一边加血' },
+    // ---- 第四幕（R12~R15）：三新混编 ----
+    { minion: 7,  warrior: 4, charger: 0, leaper: 3, archer: 2, bowman: 2, wraith: 3, shielder: 2, brood: 1, mender: 1, gap: 0.54, tip: '跳劈三只：留一条没有红圈的路' },
+    { minion: 8,  warrior: 4, charger: 0, leaper: 3, archer: 3, bowman: 2, wraith: 3, shielder: 2, brood: 1, mender: 1, gap: 0.52, tip: '缝疖师不砍就一直奶：别恋战' },
+    { minion: 8,  warrior: 4, charger: 0, leaper: 3, archer: 3, bowman: 2, wraith: 4, shielder: 2, brood: 1, mender: 1, gap: 0.50, tip: '雾最浓的时候：贴着边圈走' },
+    { minion: 8,  warrior: 5, charger: 0, leaper: 3, archer: 3, bowman: 2, wraith: 4, shielder: 2, brood: 1, mender: 1, gap: 0.48, tip: '回血和孵兵一起上场：先拆绿的' },
+    // ---- 第五幕（R16~R20）：雾堤长夜。全家桶的雾中毕业考 ----
+    { minion: 7,  warrior: 4, charger: 0, leaper: 4, archer: 2, bowman: 2, wraith: 4, shielder: 2, brood: 2, mender: 1, gap: 0.46, tip: '第 16 回合：雾堤长夜，全来了' },
+    { minion: 7,  warrior: 4, charger: 0, leaper: 4, archer: 3, bowman: 2, wraith: 4, shielder: 3, brood: 2, mender: 1, gap: 0.44, tip: '盾厚雾浓：冰剑和暖炉该上场了' },
+    { minion: 7,  warrior: 4, charger: 0, leaper: 4, archer: 2, bowman: 2, wraith: 4, shielder: 3, brood: 2, mender: 1, gap: 0.42, tip: '还剩四回合：横着走，别停' },
+    { minion: 7,  warrior: 4, charger: 0, leaper: 4, archer: 3, bowman: 2, wraith: 4, shielder: 3, brood: 2, mender: 1, gap: 0.40, tip: '倒数第二波：缝疖师留到最后也行，先保命' },
+    { minion: 8,  warrior: 4, charger: 0, leaper: 4, archer: 4, bowman: 3, wraith: 4, shielder: 3, brood: 2, mender: 1, gap: 0.38, tip: '最后一波：把服务区里的雾全拍散' },
+  ],
+};
+
+export const LEVELS_BY_ID = { 1: LEVEL_1, 2: LEVEL_2, 3: LEVEL_3, 4: LEVEL_4 };
 
 // 第 roundNo 回合（从 1 开始）的怪物属性倍率
 // 难度（第 18 块）：乘在每回合的成长倍率上。普通 = 原版数值，一局一选，

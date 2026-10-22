@@ -14,7 +14,7 @@ import { createWeaponStats } from './weaponStats.js';
 import { createFx } from './fx.js';
 import { createEnemySystem } from './enemy.js';
 import {
-  createLevel, LEVEL_1, LEVEL_2, LEVEL_3, LEVELS_BY_ID, DIFFS, setDifficulty, getDifficulty, roundScale, levelStats,
+  createLevel, LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVELS_BY_ID, DIFFS, setDifficulty, getDifficulty, roundScale, levelStats,
 } from './wave.js';
 import { createRangeRing } from './rangeRing.js';
 import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js';
@@ -445,6 +445,10 @@ async function boot() {
       if (e.type === 'charger' && codexCount('enemies', 'charger') >= 30) tryAch('charger_30');
       if (e.type === 'shielder' && codexCount('enemies', 'shielder') >= 30) tryAch('shielder_30');
       if (e.type === 'brood' && codexCount('enemies', 'brood') >= 10) tryAch('brood_10');
+      // 第四关的三只新怪（第 35 块）
+      if (e.type === 'wraith' && codexCount('enemies', 'wraith') >= 30) tryAch('wraith_30');
+      if (e.type === 'leaper' && codexCount('enemies', 'leaper') >= 30) tryAch('leaper_30');
+      if (e.type === 'mender' && codexCount('enemies', 'mender') >= 10) tryAch('mender_10');
       // 小兵是自爆 → 爆炸声；其他怪是被打死 → 骨头散架声
       audio.sfx(e.cfg.selfDestruct ? 'explode' : 'die');
       // 金币掉落：按 goldRate 掷骰（概率属性，财运升级可提升）
@@ -458,7 +462,7 @@ async function boot() {
     // 三位巫师共用 mage 模型（loadType 内部按 file 去重，不会解析三遍）
     await enemies.preload(
       ['minion', 'warrior', 'archer', 'bowman', 'hexer', 'pyro', 'hierarch',
-        'charger', 'shielder', 'brood'],
+        'charger', 'shielder', 'brood', 'wraith', 'leaper', 'mender'],
       (p) => setProgress(0.55 + p * 0.42),
     );
   } catch (err) {
@@ -847,7 +851,7 @@ async function boot() {
     const want = 1 + Math.max(0, Math.round(stats.get('multiHit')));
     const hits = stats.findTargets(
       pos, enemies.list, want,
-      (e) => e.state !== 'dead' && e.state !== 'spawn'
+      (e) => e.state !== 'dead' && e.state !== 'spawn' && !e.ghostHidden   // 雾魉隐身时拍不着（第 35 块）
     );
     if (!hits.length) return false;
 
@@ -1254,6 +1258,7 @@ async function boot() {
     { id: 1, name: LEVEL_1.name, playable: true },
     { id: 2, name: LEVEL_2.name, playable: true },
     { id: 3, name: LEVEL_3.name, playable: true },
+    { id: 4, name: LEVEL_4.name, playable: true },   // 第 35 块：第四关 · 雾堤服务区
   ];
   // 选关面板点了哪一关 —— beginGame 时按它切关卡（点的时候还没进战斗）
   let pendingLevelId = 1;
@@ -3668,6 +3673,7 @@ async function boot() {
       // level 是可变引用（切关卡会整体重建），必须用 getter，否则测试盯着的是旧的回合机器
       get level() { return level; },
       get levelId() { return curLevelId; },
+      get arenaRadius() { return ARENA_R; },   // 可走半径随关卡变（第 35 块：四关 20）
       levels: LEVELS_BY_ID,
       setLevel: (id) => { setLevel(id); return curLevelId; },
       // 第 20 块：巫师的诅咒 / 法术现场（测试要能直接看）
@@ -4151,6 +4157,8 @@ async function boot() {
         // 第 29 块：手动敲钟 / 手动触发棘甲反伤（截图与测试用）
         ringBell: (at) => (relics.debugBell ? relics.debugBell(at || pos) : null),
         thorns: (at) => relics.thornsHit(at || pos),
+        // 第 35 块：手动烧一次暖炉
+        stove: (at) => (relics.debugStove ? relics.debugStove(at || pos) : 0),
       },
       aegis: {
         get level() { return stats.get('aegis'); },

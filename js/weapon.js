@@ -215,7 +215,8 @@ export function createWeaponSystem({ scene, stats, wstats, fx, enemies }) {
   const QUAKE_KNOCK = 1.4;
 
   function aliveEnemies() {
-    return enemies.list.filter((e) => e.state !== 'dead' && e.state !== 'spawn');
+    // 雾魉隐身时不进候选名单（第 35 块）—— 环剑不会对着空气空转
+    return enemies.list.filter((e) => e.state !== 'dead' && e.state !== 'spawn' && !e.ghostHidden);
   }
 
   // 元素附加效果（毒 / 冰 / 雷 / 血；铁剑无）—— 数值同样取武器表

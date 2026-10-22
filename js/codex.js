@@ -48,7 +48,10 @@ function enemySub(cfg) {
 // 怪物一句话说明：按「它给你什么压力」分类，第二关三个巫师各有专属文案
 function enemyDesc(cfg) {
   if (cfg.charge) return '机动压力：地上一道直线就是它的冲锋路线 —— 横向侧移能躲，撞完它会僵一下（那就是输出窗口）';
+  if (cfg.leap) return '空间压力：蓄力后跳向你**当时**站的那个点，地上的红圈就是落点 —— 离开那个点，它在僵直里等你打';
+  if (cfg.ghost) return '信息压力：平时半透明、隐身时无敌且打不着；显形 3 秒、隐身 2.5 秒，贴到它脸上能逼它现形';
   if (cfg.shield) return '节奏压力：举盾时减伤 70% 且不移动，放下盾才正常挨打 —— 挑窗口再打';
+  if (cfg.spell && cfg.spell.kind === 'mend') return '续航压力：定时给周围一圈怪回血（回合越往后奶得越多）—— 不先拆它，前面的血全白打';
   if (cfg.spell && cfg.spell.kind === 'brood') return '兵源压力：每几秒在脚下孵 2 只小兵（名下最多 6 只）—— 不点掉她，这回合永远清不完';
   if (cfg.selfDestruct) return '追到脚边就自爆 —— 别让它贴太近';
   if (cfg.contactRange != null) return '近战型，脚下的圈就是它的攻击范围';

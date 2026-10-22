@@ -561,7 +561,7 @@ export const STORY_CHAPTERS = [
 
   // ============================ 二 · 钟楼之下 ============================
   {
-    id: 's04', no: 4, act: 2, levelId: null, atRound: null,
+    id: 's04', no: 4, act: 2, levelId: 4, atRound: 2,
     icon: '🛵', title: '跑腿的', who: '阿速', place: '焦土边缘的驿站',
     story:
       '第四夜，你在焦土边缘的一间铁皮屋里过夜。\n'

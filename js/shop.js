@@ -166,6 +166,13 @@ export const SHOP_ITEMS = [
     icon: 'assets/weapons/icon-quake.svg', name: '震剑',
     desc: '环剑阵里 +1 把震剑。命中时 35% 概率震退目标并打断它的蓄力 / 读条。',
   },
+  // ---------------- 第四关新增（第 35 块）：暖炉 ----------------
+  {
+    id: 'buyStove', type: 'relic', relic: 'stove', price: 32, needRound: 8,
+    rarity: 3,
+    glyph: '🔥', name: '暖炉图样',
+    desc: '推着一只烧炭的油桶走：每秒灼烧身边一圈怪。高频低伤，专治雾里那种血少量大的小怪。再买可升级（最多 3 级）。',
+  },
 ];
 
 // 商店里买不到 / 已卖光时给出原因（渲染禁用态用）

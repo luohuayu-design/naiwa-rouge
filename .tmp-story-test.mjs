@@ -57,12 +57,12 @@ ok('每章正文 >= 700 字', CH.every((c) => {
   return n < 700;
 }).map((c) => c.id).join(','));
 
-// ---------------- 3. 局内三夜：章节 ←→ 关卡 一对一 ----------------
+// ---------------- 3. 局内四夜：章节 ←→ 关卡 一对一 ----------------
 const live = CH.filter((c) => c.levelId != null);
-ok('局内只有 3 夜', live.length === 3, `实际 ${live.length}`);
-ok('局内三夜分别绑 1/2/3 关', live.map((c) => c.levelId).sort().join() === '1,2,3');
-ok('局内三夜都在第 2 回合结束触发', live.every((c) => c.atRound === 2));
-ok('其余 15 夜 levelId 为 null', CH.filter((c) => c.levelId == null).length === 15);
+ok('局内只有 4 夜', live.length === 4, `实际 ${live.length}`);
+ok('局内四夜分别绑 1/2/3/4 关', live.map((c) => c.levelId).sort().join() === '1,2,3,4');
+ok('局内四夜都在第 2 回合结束触发', live.every((c) => c.atRound === 2));
+ok('其余 14 夜 levelId 为 null', CH.filter((c) => c.levelId == null).length === 14);
 
 // ---------------- 4. 调度：storyChapterAt ----------------
 ok('第 1 关第 1 回合不播（还没到 2 回合）', storyChapterAt(1, 1, {}) === null);
@@ -70,6 +70,7 @@ ok('第 1 关第 2 回合播 s01', storyChapterAt(1, 2, {})?.id === 's01');
 ok('已经看过就不再播', storyChapterAt(1, 2, { s01: true }) === null);
 ok('第 2 关第 2 回合播 s02', storyChapterAt(2, 2, {})?.id === 's02');
 ok('第 3 关第 2 回合播 s03', storyChapterAt(3, 2, {})?.id === 's03');
+ok('第 4 关第 2 回合播 s04', storyChapterAt(4, 2, {})?.id === 's04');
 ok('第 2 关不会播到第 1 关的夜', storyChapterAt(2, 2, {})?.levelId === 2);
 ok('第 4 回合补播漏掉的夜（读档跳过也能补）', storyChapterAt(1, 9, {})?.id === 's01');
 ok('不存在的关卡返回 null', storyChapterAt(99, 5, {}) === null);

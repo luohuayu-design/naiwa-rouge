@@ -46,7 +46,9 @@ Three.js r160 的单摇杆幸存者肉鸽《奶蛙夜行》，纯静态站点（
 | **25** | 诅咒可视化修补 + 商店买断售罄 | 已上线（3af2323，v=28~29） |
 | **26~31** | 环剑补满 / 篝火无限级 / 霜牢主祭重做 / 第三关焦土钟楼 / 管理员模式 / 事件大扩容 | 已上线（471d4ca…bf18e2c，v=31~35） |
 | **32** | 主线《笑不出来的那一夜》十八夜 2.3 万字 + 夜行记忆面板 + 印记四结局 | 已上线（v=36） |
-| **33** | 平衡性改版：夜行记忆按夜解锁 / 火种无上限加强 / 防御减法公式 / 无敌帧 0.9s / 第三关场地 19 + 生成放缓 | 本地完成（v=37） |
+| **33** | 平衡性改版：夜行记忆按夜解锁 / 火种无上限加强 / 防御减法公式 / 无敌帧 0.9s / 第三关场地 19 + 生成放缓 | 已上线（dfcb6b3，v=37） |
+| **34** | 管理员选回合：局内 1~N 格子面板直接从该回合开打（走 startAt 普通路径） | 已上线（9139648，v=38） |
+| **35** | 第四关「雾堤服务区」：雾魉（隐身无敌）/ 跃行尸（落点跳劈）/ 缝合师（群体回血）+ 暖炉 + fog 主题；主线 s04 进关 | 本地完成（v=39） |
 
 第 20 块要点（详见 README「第二关 · 骨塔庭院」段）：
 
@@ -141,6 +143,17 @@ Three.js r160 的单摇杆幸存者肉鸽《奶蛙夜行》，纯静态站点（
 - `wave.js` 142~144 回合提示与注释同步新机制；`codex.js` 主祭描述改「霜牢环钉在你脚下跟着你走……」。
 - 回归：level2 单测重写 67 + block20 CDP 36（D 段改环跟玩家 + 新 D2 卫队/石刺/主祭死卫队散架），
   全绿。注意：测试小兵必须放在玩家 2.0 距离（环 2.6 之内、自爆圈 ~1.1 之外），贴脸会自爆。
+
+第 35 块要点（第四关「雾堤服务区」，2026-10-22，v=39）：
+- **定案（AskUserQuestion 确认过）**：主题 = 雾堤服务区；三只新怪全做（wraith 隐身 / leaper 跳劈 / mender 回血）；难度与三关持平（原表 412 只，微调 R16~R20 旧怪数量拉回 **396**——只砍 minion/warrior/archer/bowman，新怪密度不动）。
+- **⚠️ 定案修正：「第 7 种剑霜剑」取消**——写的时候发现 frost（冰剑，命中减速）第一关就有、icon-frost.svg 也存在，定案时漏查了。用户拍板：不加新剑，本块只加暖炉。剑阵保持 6 种。R17 回合提示同步改成「冰剑和暖炉该上场了」。
+- **wraith 雾魉**（`enemy.js`，rogue glb 青灰重涂）：`cfg.ghost = { hidden:2.5, visible:3.0, revealDist:1.2, firstHidden:1.4, ghostOpacity:0.16 }`。隐身 = **无敌**（`takeDamage` 开头 `if (e.ghostHidden) return false`）+ **不可索敌**（main 近战 / weapon aliveEnemies / turret 三处 / enemy chainTargets 都加了 `!e.ghostHidden`）+ 材质透明度逐帧过渡（mats 在 spawn 时转 transparent）。贴脸（≤ revealDist+玩家半径）强制显形；攻击起手也强制显形（隐身时攻击距离够不着人，双保险）。隐身时脚下圈和血条一起藏。
+- **leaper 跃行尸**（rogue glb 尸绿重涂）：`cfg.leap = { jumpTime:0.55, arcH:1.7, landRadius:1.7, recover:1.0, color }` + windup 0.8。状态机 attack（落点红圈钉玩家**当时**位置，`leapRing` Group=disc+rim，按需创建/destroy）→ jump（抛物线，`root.position.y = sin(πk)×arcH`）→ recover → chase。落点夹在场地边界内；死亡时收圈 + 落回地面；**「随机休息」块要豁免 jump 状态**（否则滞空会被 restT 冻住）。
+- **mender 缝合师**（mage glb 绿眼摘帽提骨针 `STAFF_STYLES.mend`）：**不写 damage 字段**（图鉴显示「从不还手」）；`spell:{kind:'mend', radius:3.2, heal:1.2}`，`mendWounds` 给半径内掉血怪回 heal × 生成时 damageScale（满血不浪费、血条即时刷新、绿字 `fx.text`）；走巫师通用 keepDistance 读条骨架。
+- **暖炉 stove**（`relics.js`）：3 级，radius 2.2→2.6 / 每 1.0s / 0.5→0.9 伤（`dot:true` 静默结算防数字刷屏）。视觉纯程序化油桶炉（项目没有合适的炉子模型，「废服务区油桶改的」比硬凑 CC0 更贴题）；判定中心是**玩家**不是炉子；商店 `buyStove` 32 币 / 第 8 回合解锁。调试钩子 `__game.relics.stove(at)`（手动烧一次）+ `__game.arenaRadius`（新加的 debug getter）。
+- **接线**：main.js `LEVELS` +1 / preload 3 新怪 / onDeath 成就埋点 3 条；story.js s04 `levelId:4, atRound:2`；achievements 38 条；codex 13 怪（enemyDesc 加 ghost/leap/mend 三分支）。
+- **测试**：`.tmp-level4-test.mjs` 90 + `.tmp-block35-cdp.js` 49 全绿；回归 block18（图鉴 13/6、成就 38）/ block29（39）/ block30/32/34 / settings/eventui/econ-cdp / Node 全套（story 改成局内四夜 1/2/3/4）全绿。
+- **测试坑**：①隐身淡出是逐帧过渡，断言 opacity 要 `waitFor` 不能当场读；②跃行尸红圈 scale 带呼吸（1.7×1.04→1.7），断言留 ±0.1 容差；③`__game.arenaRadius` 是本块新加的 debug getter，旧测试别再用别的方式摸场地半径。
 
 第 33 块要点（平衡性改版，2026-10-22，v=37）：
 - **五项需求**：①夜行记忆一夜一章按顺序解锁（走完/读完上一夜才翻开，`chapterUnlocked(i)`，未解锁点击只弹 toast）；②永夜火种取消三级上限（`maxStack: Infinity`，仅「双拍/不灭」两张机制卡仍 1 层）且每层数值上调（利爪 6→8%、回春 0.12→0.15、吸血 3→4% 等，`boons.js`）；③防御改减法公式 `mitigate = max(1, raw − armor)`（`stats.js`，敌人侧的举盾/光环减伤仍走乘法不变）；④受击无敌帧 `IFRAME` 0.55→0.9 秒（`main.js`），受击期间 `frog.mesh` 按帧闪烁；⑤第三关 `LEVEL_3.arena: 19`（一/二关 15）—— `scene.js` 新增 `setArena(r)` 重摆边界圈/石头/草/萤火虫，`main.js` 的 `ARENA_R` 改 let 并随 `setLevel` 同步（`combatCtx.arenaRadius` 用 getter、`enemies.setArenaRadius(r)`），`spawnRadius 17.4 / minSpawnGap 2.4`，`gapScale: 1.35` 让 buildSpawns 段内间隔放慢 35%。
@@ -382,6 +395,7 @@ node .tmp-rarity-test.mjs     # 71  品质/幸运
 node .tmp-camp-test.mjs       # 99  篝火/骨币（多级 + 阶梯 + 金币折算 + 关卡倍率）
 node .tmp-level2-test.mjs     # 67  第二关/巫师
 node .tmp-level3-test.mjs     # 71  第三关/三只新怪/三件新装备/专属奇遇
+node .tmp-level4-test.mjs     # 90  第四关/雾魉/跃行尸/缝合师/暖炉/剑阵定案
 node .tmp-admin-test.mjs      # 28  管理员模式（设置键/免费点火/skipRound 四种走向）
 node .tmp-event-test.mjs      # 105 事件库结构/权衡/连锁/抽取/文案（112 条）
 node .tmp-eventui-test.js     # 37  事件 UI（长文案排版/多拍对话/随机性/条件事件/图鉴）
@@ -416,6 +430,7 @@ node .tmp-boon-test.mjs       # 146 永夜火种（层数/品质吃幸运/待领
 .tmp-block29-cdp.js     39  第三关（解锁/焦土/骨骑/骸盾/孵骨/震钟/棘甲/震剑）
 .tmp-block30-cdp.js     50  管理员模式（密码/无限钱/跳过回合/关闭回归）
 .tmp-block34-cdp.js     28  管理员选回合（面板/点格子跳转/夹回边界/守卫/换关重画）
+.tmp-block35-cdp.js     49  第四关（fog 主题/隐身无敌/贴脸显形/落点跳劈/缝合回血/暖炉灼烧）
 .tmp-eventui-test.js     37  奇遇扩容（排版/对话/抽签随机性/图鉴 112）
 .tmp-curse-ui-test.js   14  诅咒可视化（芯片两行/明细行/开局血量/面板注记）
 .tmp-dbg-boot.js           抓启动期异常（改完代码先跑这个，比整套 CDP 快）
@@ -459,9 +474,12 @@ node .tmp-boon-test.mjs       # 146 永夜火种（层数/品质吃幸运/待领
 - [x] 第 22 块：每日挑战 + 种子
 - [x] 第 23 块：金币自动拾取 + 局外成长重做（篝火多级 / 永夜火种 / 金币折骨币 / 关卡倍率）
 - [x] 第 24 块：道具外观升级（炮台=木箱+长弓+宝珠、地刺=KayKit 尖刺丛，均 CC0）
-- [x] 第 32 块：主线剧情《笑不出来的那一夜》十八夜（一夜一关；后 15 关做出来后把 `levelId` 接上即可）
+- [x] 第 32 块：主线剧情《笑不出来的那一夜》十八夜（一夜一关；后 14 关做出来后把 `levelId` 接上即可）
 - [x] 第 33 块：平衡性改版（按夜解锁 / 火种无上限 / 防御减法 / 无敌帧 / 第三关大场地）
+- [x] 第 34 块：管理员选回合
+- [x] 第 35 块：第四关 · 雾堤服务区（雾魉 / 跃行尸 / 缝合师 + 暖炉；主线 s04 已进关）
 - [ ] **第 25 块：主菜单 3D 背景**（场景和模型都在，只是没跑 render；奶蛙待机 + 远处骷髅剪影 + 萤火虫）
+- [ ] 第五关（主线 s05《一百只蛙的名单》蛙爷，`story.js` 里 `levelId:null` 等接）
 - [ ] 第二关 · 巫师（`skeleton-mage` 9 段动画已就位，`ENEMY_TYPES.mage` 是 planned）
 - [ ] 更多武器/技能（`skills.js` 的 SKILLS 表，技能栏还剩 5 格）
 - [ ] 性能优化（怪物合批/假阴影/视锥剔除）—— **等用户点头再动**

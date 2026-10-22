@@ -163,7 +163,7 @@ export function createTurretSystem({ scene, fx, enemies }) {
   // 射一发：目标 = 炮台射程内最近的活怪；弹道 = 出手瞬间目标的位置（直线）
   function fire(t, ctx) {
     const foes = enemies.list.filter((e) =>
-      e.state !== 'dead' && e.state !== 'spawn'
+      e.state !== 'dead' && e.state !== 'spawn' && !e.ghostHidden   // 雾魉隐身：炮台当它不存在（第 35 块）
       && distance2D(t, e.pos) <= TURRET.RANGE
     );
     if (!foes.length) return;
@@ -204,7 +204,7 @@ export function createTurretSystem({ scene, fx, enemies }) {
       let target = null;
       let bestD = Infinity;
       for (const e of enemies.list) {
-        if (e.state === 'dead' || e.state === 'spawn') continue;
+        if (e.state === 'dead' || e.state === 'spawn' || e.ghostHidden) continue;
         const d = distance2D(t, e.pos);
         if (d <= TURRET.RANGE && d < bestD) { bestD = d; target = e; }
       }
@@ -227,7 +227,7 @@ export function createTurretSystem({ scene, fx, enemies }) {
 
       let hit = null;
       for (const e of enemies.list) {
-        if (e.state === 'dead' || e.state === 'spawn') continue;
+        if (e.state === 'dead' || e.state === 'spawn' || e.ghostHidden) continue;
         if (distance2D(b, e.pos) <= TURRET.BOLT_HIT_R + 0.35) { hit = e; break; }
       }
       const gone = b.dist >= TURRET.BOLT_MAX_DIST;

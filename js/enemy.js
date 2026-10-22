@@ -12,6 +12,10 @@
 //   bowman  弓手   —— 远程（第 12 块）：站在远处拉弓，把**红圈钉在你脚下**，
 //                     1.15 秒后箭从天而降，圈里挨打、圈外没事（第 12 回合起登场）
 //
+// 第二关三只巫师（hexer/pyro/hierarch，第 14~17 块）、第三关三只（charger/
+// shielder/brood，第 29 块）各自在下面的 ENEMY_TYPES 里有详细注释，
+// 第四关三只（wraith/leaper/mender，第 35 块）同理。
+//
 // 第五种（mage）只写好了配置，暂不生成。
 // ============================================================
 import * as THREE from '../lib/three.module.js';
@@ -407,6 +411,124 @@ export const ENEMY_TYPES = {
       death: ANIM.death, spawn: ANIM.spawn,
     },
   },
+  // ============================================================
+  // 第四关：雾堤服务区的三只怪（第 35 块）
+  //
+  // 三关已经把「打断与目标优先级」用掉了，四关换一种压力：
+  //   **信息差与持续战**。浓雾里看不清、打不着、打不死：
+  //   wraith  雾魉     —— 信息差压力。周期隐身（隐身时无敌、打不着），
+  //                       贴到玩家 1.2 内强制显形。逼玩家留一手范围技。
+  //   leaper  跃行尸   —— 空间压力。蓄力后跳向玩家**当时**的位置，
+  //                       落点红圈预警，落地小范围震荡。和骨骑的「直线」
+  //                       区分：它跳的是点，必须离开那个点。
+  //   mender  缝合师   —— 续航压力。周期给周围怪回血（对立于孵骨的加人），
+  //                       不先拆它，前面打的血全白打。逼切后排。
+  //
+  // 外观依旧靠「模型重涂 + 程序化配件」区分（assets 铁律：不手写模型）：
+  //   wraith  投手骨架、青灰重涂 + 材质半透明呼吸（隐身时整体淡出）
+  //   leaper  投手骨架、尸绿重涂（跳起来的那一下最显眼）
+  //   mender  法师骨架、绿眼、摘帽、提一根骨针（缝合师的针）
+  // ============================================================
+  wraith: {
+    name: '雾魉',
+    file: 'assets/monsters/skeleton-rogue.glb',
+    sourceHeight: 1.10,    // 投手实测身高（同一把尺）
+    height: 1.30,
+    radius: 0.42,
+    hp: 2,
+    armor: 0,
+    speed: 1.45,
+    damage: 1,
+    attackRange: 1.5,      // 近战；显形半径 1.7 比它大，隐身时永远够不着人
+    attackInterval: 1.9,
+    windup: 0.4,
+    attackDuration: 0.75,
+    // 隐身循环：显 3 秒 → 隐 2.5 秒；隐身时无敌、不可被索敌。
+    // 玩家进入 revealDist + 玩家半径 内强制显形 —— 贴脸能逼它现出原形。
+    ghost: {
+      hidden: 2.5,         // 隐身时长
+      visible: 3.0,        // 显形时长
+      revealDist: 1.2,     // 玩家距它这么近就强制显形
+      firstHidden: 1.4,    // 出生后多久第一次隐身
+      ghostOpacity: 0.16,  // 隐身时的材质透明度（留一点影子，浓雾里若隐若现）
+    },
+    spawnTime: 1.0,
+    deathTime: 1.4,
+    selfDestruct: false,
+    color: 0x9fd8d0,
+    ringColor: 0x9fd8d0,   // 脚下近战圈（隐身时圈也一起藏）
+    tint: 0xa8cfc9,        // 投手骨架整体偏青灰，像裹了层雾
+    anim: {
+      walk: ANIM.walk, idle: ANIM.idle, death: ANIM.death, spawn: ANIM.spawn,
+      attack: ANIM.punch,
+    },
+  },
+
+  leaper: {
+    name: '跃行尸',
+    file: 'assets/monsters/skeleton-rogue.glb',
+    sourceHeight: 1.10,
+    height: 1.36,
+    radius: 0.48,
+    hp: 3,
+    armor: 0,
+    speed: 1.30,
+    damage: 2,             // 落地震荡 2 点（和骨骑冲锋同档）
+    attackRange: 5.8,      // 进入这个距离开始蓄力起跳
+    attackInterval: 4.2,
+    windup: 0.8,           // 蓄力 = 落点红圈的显示时间（走位窗口）
+    attackDuration: 0.8,   // 蓄力阶段总时长（和 windup 一致）
+    // 跳跃本体：跳向**蓄力那一刻**玩家的位置（落点不追人，红圈就是答案），
+    // 抛物线跳过去，落地对 landRadius 内结算一次震荡。
+    leap: {
+      jumpTime: 0.55,      // 滞空时间
+      arcH: 1.7,           // 跳多高（视觉抛物线）
+      landRadius: 1.7,     // 落地震荡半径
+      recover: 1.0,        // 落地后的僵直（输出窗口）
+      color: 0xd8a04a,     // 落点红圈 / 落地震荡的颜色
+    },
+    spawnTime: 1.0,
+    deathTime: 1.5,
+    selfDestruct: false,
+    color: 0xc8d89a,
+    // ⚠️ 不设 ringColor：起手距离画环会染半个战场，玩家要看的是落点红圈
+    tint: 0x9fae7a,        // 投手骨架偏尸绿
+    anim: {
+      walk: ANIM.walk, idle: ANIM.idle, death: ANIM.death, spawn: ANIM.spawn,
+      attack: ANIM.punch,
+    },
+  },
+
+  mender: {
+    name: '缝合师',
+    file: 'assets/monsters/skeleton-mage.glb',
+    sourceHeight: 1.20,   // 实测记录见 hexer 处
+    height: 1.30,
+    radius: 0.44,
+    hp: 4,                 // 血不厚：设计上就是「肯冲进去就能拆掉」
+    armor: 0,
+    speed: 1.10,
+    // 故意不写 damage：它一次都不伤人（图鉴会显示「从不还手」），
+    // 威胁全在那根骨针 —— 不拆它，前排的怪永远打不死。
+    attackRange: 7.0,
+    keepDistance: 5.0,
+    attackInterval: 4.8,
+    windup: 1.0,
+    attackDuration: 1.7,
+    castTime: 1.0,         // 有它就说明「这个远程不画脚下范围环」
+    // 回血：每读一次条给 radius 内所有掉血的怪回 heal × 本局伤害成长，
+    // 满血的怪不浪费。回合越往后奶量越大（跟着 damageScale 走）。
+    spell: { kind: 'mend', radius: 3.2, heal: 1.2 },
+    spawnTime: 1.0,
+    deathTime: 1.6,
+    selfDestruct: false,
+    color: 0x9ef0b8,
+    skin: { eye: 0x8ef0b8, hat: false, staff: 'mend', body: 0xbfe0c8 },
+    anim: {
+      walk: ANIM.walk, idle: ANIM.idle, cast: ANIM.cast,
+      death: ANIM.death, spawn: ANIM.spawn,
+    },
+  },
 };
 
 // ------------------------------------------------------------
@@ -480,6 +602,7 @@ const STAFF_STYLES = {
   torch:   { rod: 0x8a5a34, tip: 0xff7a2a, len: 0.82, orb: 0.062 },   // 火焚巫祝：短炬 + 橙火
   crystal: { rod: 0xa9d8ee, tip: 0x7ef0ff, len: 1.42, orb: 0.085 },   // 霜牢主祭：长杖 + 青晶
   brood:   { rod: 0x6b7a52, tip: 0x8ef07a, len: 0.66, orb: 0.055 },   // 孵骨巫祝：短骨篮 + 绿卵光（第 29 块）
+  mend:    { rod: 0xd8d2c0, tip: 0x8ef0b8, len: 0.74, orb: 0.045 },   // 缝合师：一根白骨针 + 针尖绿光（第 35 块）
 };
 
 function makeStaff(kind) {
@@ -792,6 +915,14 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
         if (o.isMesh && o.material && o.material.color) o.material.color.copy(tc);
       });
     }
+    // 雾魉（第 35 块）：整套材质转半透明，隐身时靠 opacity 淡出。
+    // 必须在 clone 之后做 —— 材质已经是独立的，改这里不影响别的怪。
+    if (cfg.ghost) {
+      for (const m of mats) {
+        m.transparent = true;
+        m.opacity = 1;
+      }
+    }
     root.add(model);
 
     // 脚下的范围环：只给「能近身伤到主角」的怪。
@@ -899,6 +1030,12 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
       chargeLine: null,                                    // 蓄力预警线（网格，按需创建）
       chargeDone: false, chargeHitDone: false,
       summonedBy: null,                                    // 孵出来的小兵记着「谁生的」
+      // ---- 第四关（第 35 块）----
+      ghostHidden: false,                                  // 雾魉此刻隐没没隐身
+      ghostT: cfg.ghost ? cfg.ghost.firstHidden : 0,        // 距离下次隐身/显形翻转的时间
+      leapRing: null,                                      // 跃行尸的落点红圈（按需创建）
+      leapFromX: 0, leapFromZ: 0, leapToX: 0, leapToZ: 0,   // 起跳点 / 锁定的落点
+      leapHitDone: false,
     };
 
     // 弓手：往右手塞一把弓（受击闪白要连弓一起，所以材质也进 mats）。
@@ -950,6 +1087,9 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
   //   quiet 只扣血不播命中碎屑（连锁闪电等批量伤害用）
   function takeDamage(e, amount, crit = false, opts = {}) {
     if (e.state === 'dead' || e.state === 'spawn') return false;
+    // 雾魉隐身（第 35 块）：无形之物不受击 —— 近战、剑、炮台、法器全部打空。
+    // 想打它只有两条路：等它显形，或者贴脸逼它显形。
+    if (e.ghostHidden) return false;
     // 减伤有两个来源，乘法叠加：
     //   auraArmor —— 主祭霜牢环（第 28 块）
     //   shieldUp  —— 骸盾兵举盾（第 29 块，举盾时减伤 70%）
@@ -989,6 +1129,8 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
     // 跟随玩家的霜牢环：主祭一倒环就消（不挂在它身上，得手动收）
     if (e.auraRing && e.cfg.aura && e.cfg.aura.followPlayer) e.auraRing.mesh.visible = false;
     hideChargeLine(e);   // 骨骑死在蓄力里：预警线立刻收掉（第 29 块）
+    hideLeapRing(e);     // 跃行尸死在蓄力里：落点红圈立刻收掉（第 35 块）
+    if (e.cfg.leap) e.root.position.y = 0;   // 滞空时被打死：尸体落回地面
     if (fx) fx.death(e.pos, e.cfg.color);
     if (onDeath) onDeath(e);
 
@@ -1040,6 +1182,73 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
     scene.remove(e.chargeLine);
     if (e.chargeLine.material) e.chargeLine.material.dispose();
     e.chargeLine = null;
+  }
+
+  // ---------------- 跃行尸的落点红圈（第 35 块） ----------------
+  // 蓄力时钉在「玩家当时站的位置」：红圈 + 一层淡红填充，跟弓手的红圈一个语言。
+  // 落点在起手那一刻就锁死 —— 红圈出现 → 走出去，就是这么直白的应对。
+  const leapRingGeo = new THREE.RingGeometry(0.9, 1, 48).rotateX(-Math.PI / 2);
+  const leapDiscGeo = new THREE.CircleGeometry(1, 48).rotateX(-Math.PI / 2);
+  let leapMatBase = null;
+  function showLeapRing(e, ctx) {
+    const lp = e.cfg.leap;
+    if (!leapMatBase) {
+      leapMatBase = {
+        rim: new THREE.MeshBasicMaterial({
+          color: lp.color, transparent: true, opacity: 0.8,
+          depthWrite: false, side: THREE.DoubleSide,
+        }),
+        disc: new THREE.MeshBasicMaterial({
+          color: lp.color, transparent: true, opacity: 0.17,
+          depthWrite: false, side: THREE.DoubleSide,
+        }),
+      };
+    }
+    if (!e.leapRing) {
+      const rim = new THREE.Mesh(leapRingGeo, leapMatBase.rim.clone());
+      const disc = new THREE.Mesh(leapDiscGeo, leapMatBase.disc.clone());
+      rim.renderOrder = disc.renderOrder = 2;
+      rim.frustumCulled = disc.frustumCulled = false;
+      e.leapRing = new THREE.Group();
+      e.leapRing.add(disc, rim);
+      scene.add(e.leapRing);
+    }
+    e.leapRing.visible = true;
+    e.leapRing.position.set(e.leapToX, 0.05, e.leapToZ);
+    e.leapRing.scale.setScalar(lp.landRadius);
+  }
+
+  function hideLeapRing(e) { if (e.leapRing) e.leapRing.visible = false; }
+
+  function disposeLeapRing(e) {
+    if (!e.leapRing) return;
+    scene.remove(e.leapRing);
+    for (const c of e.leapRing.children) {
+      if (c.material) c.material.dispose();
+    }
+    e.leapRing = null;
+  }
+
+  // ---------------- 雾魉的隐身 / 显形（第 35 块） ----------------
+  // 隐身 = 无敌 + 不可索敌 + 外观淡出（材质透明度过渡到 ghostOpacity）。
+  // 显形的三条路：等循环翻转、贴脸（revealDist）、（将来）特定装备强制显形。
+  function hideGhost(e) {
+    e.ghostHidden = true;
+    e.ghostT = e.cfg.ghost.hidden;
+    if (e.ring) e.ring.mesh.visible = false;
+    if (e.bar) e.bar.spr.visible = false;
+  }
+
+  function revealGhost(e) {
+    if (!e.ghostHidden) return;
+    e.ghostHidden = false;
+    e.ghostT = e.cfg.ghost.visible;
+    if (e.ring) e.ring.mesh.visible = true;
+    if (e.bar) e.bar.spr.visible = e.hp < e.maxHp;
+    if (fx) {
+      fx.ring(e.pos, { from: 0.25, to: 1.15, color: e.cfg.color, life: 0.3, opacity: 0.6, y: 0.06 });
+      fx.burst(e.pos, { color: 0xd8f0ea, count: 10, speed: 2.2, life: 0.4, size: 0.1, y: 0.6, up: 1.2 });
+    }
   }
 
   // 霜牢加成的发光色（第 28 块）：环里的怪泛青光，一眼认出「这只变凶了」
@@ -1240,6 +1449,8 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
     if (sp.kind === 'spikes') { spawnSpikes(e, ctx); return; }
     // 第 29 块：孵骨巫祝 —— 在脚下孵小兵（同一只名下存活上限 cap，否则会无限滚雪球）
     if (sp.kind === 'brood') { spawnBroodlings(e); return; }
+    // 第 35 块：缝合师 —— 给周围怪回血（不走「圈」系统，作用对象是怪不是地）
+    if (sp.kind === 'mend') { mendWounds(e); return; }
     makeZone(sp.kind, e, ctx, sp.radius, {
       color: sp.color,
       debuff: e.cfg.debuff || null,
@@ -1277,6 +1488,39 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
       fx.ring(e.pos, { from: 0.3, to: (sp.radius || 1.2) + 0.8, color: sp.color, life: 0.45, opacity: 0.55, y: 0.05 });
       fx.burst(e.pos, { color: sp.color, count: 14, speed: 2.6, life: 0.5, size: 0.13, y: 0.3, up: 1.6 });
     }
+  }
+
+  // ============================================================
+  // 缝合师 · 回血（第 35 块）
+  // 每读一次条，给半径内所有**掉血的**怪回 heal × 本局伤害成长
+  // （满血的怪不浪费，血条即时刷新）。对立于孵骨的「加人」：
+  //   孵骨逼你比谁清得快，缝合师逼你比谁拆得快 —— 不先拆它，血全白打。
+  // 奶量随回合成长（跟着生成时的 damageScale 走），后期一口奶小半管。
+  // ============================================================
+  function mendWounds(e) {
+    const sp = e.cfg.spell;
+    const amt = sp.heal * ((e.summonScale && e.summonScale.dmg) ?? 1);
+    let n = 0;
+    for (const o of list) {
+      if (o.state === 'dead' || o.state === 'spawn') continue;
+      if (o.hp >= o.maxHp) continue;
+      if (Math.hypot(o.pos.x - e.pos.x, o.pos.z - e.pos.z) > sp.radius) continue;
+      o.hp = Math.min(o.maxHp, o.hp + amt);
+      o.bar.draw(o.hp / o.maxHp, o.hp, o.maxHp);
+      o.bar.spr.visible = true;
+      n++;
+      if (fx) {
+        // 回血绿字（伤害数字是白/黄/绿字里的毒绿，这里用更亮的青绿区分）
+        fx.text({ x: o.pos.x, z: o.pos.z }, `+${amt.toFixed(1)}`, {
+          color: '#7df0b0', y: o.cfg.height * 0.95, size: 0.4,
+        });
+      }
+    }
+    if (fx && n) {
+      fx.ring(e.pos, { from: 0.3, to: sp.radius, color: sp.color, life: 0.4, opacity: 0.5, y: 0.06 });
+      fx.burst(e.pos, { color: sp.color, count: 10, speed: 2.0, life: 0.45, size: 0.1, y: 0.4, up: 1.4 });
+    }
+    return n;
   }
 
   // ============================================================
@@ -1619,6 +1863,24 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
       e.root.rotation.y = lerpAngle(e.root.rotation.y, Math.atan2(dx, dz), 1 - Math.exp(-9 * dt));
     }
 
+    // ---- 雾魉：隐身 / 显形循环（第 35 块）----
+    // 隐身时无敌且不可索敌；贴到玩家脸上强制显形（这是玩家的主动解法）。
+    // 材质透明度逐帧过渡，隐身不是「啪一下消失」而是慢慢淡进雾里。
+    if (e.cfg.ghost && e.state !== 'dead' && e.state !== 'spawn') {
+      const g = e.cfg.ghost;
+      if (e.ghostHidden && dist <= g.revealDist + ctx.playerRadius) revealGhost(e);
+      e.ghostT -= dt;
+      if (e.ghostT <= 0) {
+        if (e.ghostHidden) revealGhost(e);
+        else hideGhost(e);
+      }
+      const targetO = e.ghostHidden ? g.ghostOpacity : 1;
+      const k = Math.min(1, dt * 7);
+      for (const m of e.mats) {
+        if (m.transparent) m.opacity += (targetO - m.opacity) * k;
+      }
+    }
+
     // ---- 骸盾兵：举盾 ↔ 放盾 循环（第 29 块）----
     // 举盾 1.6 秒（减伤 70%、不移动、不打人）↔ 放盾 1.6 秒（正常挨打、追人）。
     // 出手（attack）期间不翻转 —— 打到一半突然举盾会显得很假。
@@ -1645,8 +1907,8 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
     // ---- 随机休息：走一阵子就站着喘口气（第 6 块）----
     // 作用：一群怪不会再像列队一样踩着同一个节拍压过来。
     // 正在出手（attack）的不歇；歇 0.7~1.5 秒，然后重新走 3~6 秒。
-    if (e.state === 'attack') {
-      e.restT = 0;                 // 打人的时候不算休息
+    if (e.state === 'attack' || e.state === 'jump') {
+      e.restT = 0;                 // 打人/滞空的时候不算休息
     } else if (e.guard) {
       // 卫队是傀儡：不会喘气、不会走神，只有站位和攻击
     } else if (e.restT > 0) {
@@ -1665,6 +1927,109 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
         e.play(e.cfg.anim.idle, { fade: 0.2 });
         return;
       }
+    }
+
+    // ---- 跃行尸（第四关，第 35 块）----
+    // 四种状态：attack（蓄力，落点红圈钉在玩家**当时**的位置）
+    //           → jump（抛物线跳过去，滞空期间不可打断）
+    //           → recover（落地僵直，就是输出窗口）→ chase
+    // 和骨骑的区别：骨骑冲一条线（侧移躲），跃行尸跳一个点（必须离开那个点）。
+    if (e.cfg.leap) {
+      const lp = e.cfg.leap;
+
+      if (e.state === 'attack') {
+        // 红圈呼吸：读条越接近尾声，圈越亮越实
+        if (e.leapRing && e.leapRing.visible) {
+          const k = Math.min(1, e.t / Math.max(0.01, e.cfg.windup));
+          const rim = e.leapRing.children[1];
+          const disc = e.leapRing.children[0];
+          if (rim && rim.material) rim.material.opacity = 0.55 + 0.4 * k;
+          if (disc && disc.material) disc.material.opacity = 0.12 + 0.16 * k;
+          e.leapRing.scale.setScalar(lp.landRadius * (1.04 - 0.04 * k));
+        }
+        if (e.t >= e.cfg.windup) {
+          e.state = 'jump';
+          e.t = 0;
+          hideLeapRing(e);
+          e.currentAnim = e.cfg.anim.walk;
+          e.play(e.cfg.anim.walk, { fade: 0.06 });
+          if (fx) {
+            fx.burst(e.pos, { color: lp.color, count: 8, speed: 1.8, life: 0.3, size: 0.1, y: 0.2, up: 1.0 });
+          }
+        }
+        return;
+      }
+
+      if (e.state === 'jump') {
+        const k = Math.min(1, e.t / lp.jumpTime);
+        e.pos.x = e.leapFromX + (e.leapToX - e.leapFromX) * k;
+        e.pos.z = e.leapFromZ + (e.leapToZ - e.leapFromZ) * k;
+        e.root.position.y = Math.sin(Math.PI * k) * lp.arcH;   // 抛物线：落地时正好 0
+        if (k >= 1) {
+          e.root.position.y = 0;
+          // 落地震荡：整段跳跃只结算一次，圈心不在你脚下就没事
+          if (!e.leapHitDone) {
+            e.leapHitDone = true;
+            const pd = Math.hypot(ctx.playerPos.x - e.pos.x, ctx.playerPos.z - e.pos.z);
+            if (pd <= lp.landRadius + ctx.playerRadius) ctx.hurtPlayer(e.damage, e);
+          }
+          if (fx) {
+            fx.ring(e.pos, { from: 0.3, to: lp.landRadius, color: lp.color, life: 0.3, opacity: 0.7, y: 0.06 });
+            fx.burst(e.pos, { color: 0xcfae7a, count: 16, speed: 3.2, life: 0.45, size: 0.14, y: 0.15, up: 1.2 });
+          }
+          e.state = 'recover';
+          e.t = 0;
+          e.currentAnim = e.cfg.anim.idle;
+          e.play(e.cfg.anim.idle, { fade: 0.18 });
+        }
+        return;
+      }
+
+      if (e.state === 'recover') {
+        if (e.currentAnim !== e.cfg.anim.idle) {
+          e.currentAnim = e.cfg.anim.idle;
+          e.play(e.cfg.anim.idle, { fade: 0.18 });
+        }
+        if (e.t >= lp.recover) {
+          e.state = 'chase';
+          e.t = 0;
+          e.attackCd = Math.max(0.6, e.cfg.attackInterval - lp.recover);
+        }
+        return;
+      }
+
+      // chase：进了起跳距离就锁点，否则慢慢逼近
+      e.attackCd -= dt;
+      if (dist <= e.cfg.attackRange && e.attackCd <= 0) {
+        e.state = 'attack';
+        e.t = 0;
+        e.leapHitDone = false;
+        e.leapFromX = e.pos.x;
+        e.leapFromZ = e.pos.z;
+        // 落点 = 玩家**此刻**的位置（不追人）；夹在场地边界内，别跳到界外
+        const lim = Math.max(0, ctx.arenaRadius - e.cfg.radius - 0.3);
+        let tx = ctx.playerPos.x;
+        let tz = ctx.playerPos.z;
+        const tr = Math.hypot(tx, tz);
+        if (tr > lim && tr > 0.001) { tx = (tx / tr) * lim; tz = (tz / tr) * lim; }
+        e.leapToX = tx;
+        e.leapToZ = tz;
+        e.currentAnim = e.cfg.anim.attack;
+        e.play(e.cfg.anim.attack, { once: true, fade: 0.08, duration: e.cfg.windup });
+        showLeapRing(e, ctx);
+        return;
+      }
+      if (dist > e.cfg.attackRange) {
+        moveToward(e, dx, dz, dist, dt, ctx);
+        if (e.currentAnim !== e.cfg.anim.walk) {
+          e.currentAnim = e.cfg.anim.walk;
+          e.play(e.cfg.anim.walk, { fade: 0.2 });
+        }
+      } else if (e.currentAnim !== e.cfg.anim.idle) {
+        e.currentAnim = e.cfg.anim.idle;
+        e.play(e.cfg.anim.idle, { fade: 0.2 });
+      }
+      return;
     }
 
     // ---- 骨骑冲锋兵（第三关，第 29 块）----
@@ -2008,6 +2373,8 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
 
       e.attackCd -= dt;
       if (dist <= e.cfg.attackRange + 0.15 && e.attackCd <= 0) {
+        // 雾魉要出手就必须露脸（第 35 块）：隐身的不可能打人
+        if (e.cfg.ghost && e.ghostHidden) revealGhost(e);
         e.state = 'attack';
         e.t = 0;
         e.hitDone = false;
@@ -2142,6 +2509,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
       if (e.ring) e.ring.dispose();
       if (e.auraRing) e.auraRing.dispose();
       disposeChargeLine(e);
+      disposeLeapRing(e);
       e.mixer.stopAllAction();
       e.mixer.uncacheRoot(e.model);
       list.splice(i, 1);
@@ -2169,7 +2537,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
   function chainTargets(e, count, maxDist = 4.5) {
     const out = [];
     for (const o of list) {
-      if (o === e || o.state === 'dead' || o.state === 'spawn') continue;
+      if (o === e || o.state === 'dead' || o.state === 'spawn' || o.ghostHidden) continue;
       const d = Math.hypot(o.pos.x - e.pos.x, o.pos.z - e.pos.z);
       if (d <= maxDist) out.push({ e: o, d });
     }
@@ -2251,6 +2619,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
       if (e.ring) e.ring.dispose();
       if (e.auraRing) e.auraRing.dispose();
       disposeChargeLine(e);
+      disposeLeapRing(e);
       e.mixer.stopAllAction();
       e.mixer.uncacheRoot(e.model);
     }
@@ -2297,6 +2666,12 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
     shieldedCount: () => list.filter((e) => e.shieldUp && e.state !== 'dead').length,
     chargingCount: () => list.filter((e) => e.cfg.charge && (e.state === 'attack' || e.state === 'dash')).length,
     broodlingCount: (parent) => list.filter((e) => e.summonedBy && (!parent || e.summonedBy === parent) && e.state !== 'dead').length,
+    // 第四关的观测口（第 35 块）
+    wraithCount: () => list.filter((e) => e.cfg.ghost && e.state !== 'dead').length,
+    hiddenCount: () => list.filter((e) => e.ghostHidden && e.state !== 'dead').length,
+    leaperCount: () => list.filter((e) => e.cfg.leap && e.state !== 'dead').length,
+    jumpingCount: () => list.filter((e) => e.cfg.leap && e.state === 'jump').length,
+    menderCount: () => list.filter((e) => e.cfg.spell && e.cfg.spell.kind === 'mend' && e.state !== 'dead').length,
     knockback, interrupt, killAll,
     get: (type) => ENEMY_TYPES[type],
     // 调试/测试用
