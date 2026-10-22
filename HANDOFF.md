@@ -69,7 +69,8 @@ Three.js r160 的单摇杆幸存者肉鸽《奶蛙夜行》，纯静态站点（
 - **入口**：主菜单**第三排单独一行**「📢 公告」（`.tt-row-notice` / `.tt-notice-btn`）——第二排已经是 3 个按钮，塞第 4 个会挤；这个走暖黄色、字号小一档，别抢「开始游戏」的眼。
 - **不挡自动化测试**：`AUTO_START`（`?debug=1` 且不带 `title`）时不自动弹；`?debug=1&title` 会弹（截图核对标题页时要先 `.classList.remove('on')` 收掉）。
 - **调试钩子**：`__game.notice = { show(force), hide(), open(), ver(), key(), clear(), copy(t) }`。
-- **测试**：`.tmp-block45-cdp.js` **49** 项全绿（含 headless 里先 `Browser.grantPermissions` 授 `clipboardReadWrite` 才能验剪贴板真值；`?debug=1` 验证钩子、**无 debug 页**验证「进主界面自动弹」）。视觉核对脚本 `.tmp-shot45.js`（`?debug=1&title` + 390×844，输出到 `%TEMP%/naiwa-shot-45/`）。回归 block41 37/0、block44 36/0。
+- **测试**：`.tmp-block45-cdp.js` **49** 项全绿（含 headless 里先 `Browser.grantPermissions` 授 `clipboardReadWrite` 才能验剪贴板真值；`?debug=1` 验证钩子、**无 debug 页**验证「进主界面自动弹」）。线上烟测 `.tmp-block45-live.js` **17** 项全绿（线上 v=51 / 自动弹 / 文案 / 两个复制按钮真写进剪贴板 / 勾「今日不再弹」后刷新不弹 / 主菜单按钮强制回看）。视觉核对脚本 `.tmp-shot45.js`（`?debug=1&title` + 390×844，输出到 `%TEMP%/naiwa-shot-45/`）。回归 block41 37/0、block44 36/0。
+  - **线上烟测的坑**：`/json/new?URL` 之后立刻 `Runtime.evaluate` 读到的是 **about:blank**（它也有 `body`，`readyState` 也不为 `loading`），所以开头两项（版本号 / 公告 DOM）会查空；必须等 `location.href.indexOf('naiwa-rouge') >= 0` 才算导航完。
 
 第 44 块要点（礼包兑换，2026-10-22，v=50）：
 
