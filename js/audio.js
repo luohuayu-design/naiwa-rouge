@@ -232,11 +232,21 @@ export function sfx(name, opts = {}) {
   lastAt.set(name, now);
 
   const { key } = voiceOf(name);
-  const buf = buffers.get(key);
-  if (!buf) { loadOne(name); return false; }   // 首次触发顺手加载，本次静默
+  let buf = buffers.get(key);
+  let ov = packOverride(name);        // 第 46 块：奶蛙包里这个音效有自己的区间 / 音量 / 速率
+  if (!buf) {
+    loadOne(name);
+    // 奶蛙包里那份还没下完（或者网络挂了）就先拿原版顶上，
+    // 别让玩家觉得「换了个包之后打击没声音了」；下一声自己就换成奶蛙。
+    // 注意这时候必须把 ov 丢掉 —— 原版素材只有零点几秒，套奶蛙的 offset 会直接播空。
+    const plainKey = 's:' + name;
+    if (key !== plainKey && buffers.has(plainKey)) {
+      buf = buffers.get(plainKey);
+      ov = null;
+    }
+    if (!buf) return false;   // 首次触发顺手加载，本次静默
+  }
 
-  // 第 46 块：奶蛙包里这个音效有自己的区间 / 音量 / 速率
-  const ov = packOverride(name);
   const src = c.createBufferSource();
   src.buffer = buf;
   const j = opts.jitter != null ? opts.jitter : (ov && ov.jitter != null ? ov.jitter : (def.jitter || 0));
