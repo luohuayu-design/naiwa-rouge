@@ -23,7 +23,7 @@ const KEY = 'naiwa_rouge_profile_v1';
 // 记录（分关卡战绩）与武器教程沿用各自的老键，不往这里搬：
 //   naiwa_rouge_records_v1 / naiwa_rouge_wtut_v1
 export const RESET_KEYS = [
-  KEY, 'naiwa_rouge_records_v1', 'naiwa_rouge_wtut_v1', 'naiwa_rouge_run_v1',
+  KEY, 'naiwa_rouge_records_v1', 'naiwa_rouge_wtut_v1', 'naiwa_rouge_runs_v1',
   'naiwa_rouge_notice_v1', 'naiwa_rouge_daily_v1',
 ];
 
@@ -35,7 +35,7 @@ export const DEFAULT_SETTINGS = {
   joyHand: 'left',   // left | right
   shake: true,       // 屏幕震动 / 受击抖屏
   speedFov: true,    // 速度感：跑起来视野微微拉宽（第 36 块；晕的人可以关掉）
-  admin: false,      // 管理员模式（第 30 块）：无限钱 + 每回合可跳过，要密码才开
+  admin: false,      // 历史遗留占位键（第 30 块）；实际开关已移到独立键 naiwa_rouge_admin_v1，见 main.js
 };
 
 const DEFAULT_PROFILE = {
@@ -57,6 +57,12 @@ const DEFAULT_PROFILE = {
 };
 
 let cache = null;
+
+// 管理员沙盒（第 37 块扩展）：开启期间所有 save() 都不落地，
+// 这样关卡进度 / 永夜火种 / 篝火 / 成就 / 记录全部留在内存里，
+// 退出时 reloadFromStorage() 把内存丢掉、重新读本地档 = 一切回到开之前。
+let suppressSave = false;
+export function setSaveSuppressed(b) { suppressSave = !!b; }
 
 function clone(o) {
   return JSON.parse(JSON.stringify(o));
@@ -80,8 +86,18 @@ export function profile() {
 }
 
 export function save() {
+  if (suppressSave) return profile();   // 管理员沙盒期：任何进度都不落地
   try { localStorage.setItem(KEY, JSON.stringify(profile())); } catch (_) { /* 写不进就算了 */ }
   return profile();
+}
+
+// 把内存里的缓存丢掉，从本地档（沙盒期从未被写过的那份）重新读回来。
+// 管理员退出时用它「回滚」整段沙盒内的改动。
+export function reloadFromStorage() {
+  let raw = null;
+  try { raw = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (_) { raw = null; }
+  cache = raw && typeof raw === 'object' ? fill(raw, clone(DEFAULT_PROFILE)) : clone(DEFAULT_PROFILE);
+  return cache;
 }
 
 export function settings() {

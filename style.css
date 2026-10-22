@@ -584,6 +584,30 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
   color:rgba(160,204,188,.6)}
 .lv-empty{padding:26px 10px;text-align:center;font-size:12px;line-height:1.9;color:rgba(160,204,188,.55)}
 .lv-foot{margin-top:12px;padding:0 4px;font-size:10.5px;letter-spacing:.06em;color:rgba(140,190,172,.42)}
+/* 选关分步（第 37 块）：每页底部的大按钮 + 标题里的第几步提示 */
+.lv-next{margin-top:16px;width:100%;padding:14px 0;border-radius:12px;font:inherit;
+  font-size:13px;font-weight:800;letter-spacing:.2em;color:#06231a;cursor:pointer;border:0;
+  background:linear-gradient(180deg,#7ef0c6,#2fbf8d)}
+.lv-next:hover{filter:brightness(1.06)}
+.lv-next:active{transform:scale(.985)}
+.lv-step{font-style:normal;font-size:10px;font-weight:600;letter-spacing:.1em;
+  color:rgba(140,200,178,.55);margin-left:8px;vertical-align:middle}
+/* 读取存档（第 38 块）：存档卡片列表 */
+.save-list{margin-top:14px;display:flex;flex-direction:column;gap:10px}
+.save-item{position:relative;text-align:left;padding:13px 14px;border-radius:14px;cursor:pointer;
+  display:flex;flex-direction:column;gap:6px;
+  border:1px solid rgba(126,235,196,.24);background:rgba(15,36,31,.7);
+  transition:border-color .15s,background .15s,transform .08s}
+.save-item:hover{border-color:rgba(126,235,196,.55);background:rgba(126,235,196,.08)}
+.save-item:active{transform:scale(.985)}
+.save-lv{font-size:14px;font-weight:800;letter-spacing:.08em;color:#e6fff5}
+.save-meta{display:flex;gap:10px;align-items:center}
+.save-round{font-size:12px;color:#8df0c6;font-weight:700;letter-spacing:.04em}
+.save-diff{font-size:11px;padding:2px 9px;border-radius:999px;
+  border:1px solid rgba(150,205,255,.3);color:#a6d7ff;letter-spacing:.06em}
+.save-time{font-size:11px;color:rgba(160,204,188,.6);letter-spacing:.04em}
+.save-empty{margin-top:18px;padding:20px 12px;text-align:center;font-size:12px;line-height:1.9;
+  color:rgba(160,204,188,.55)}
 /* 记录条目（我的记录面板） */
 .rc-item{padding:12px 14px;border-radius:14px;border:1px solid rgba(126,235,196,.2);
   background:rgba(15,36,31,.6)}

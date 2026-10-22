@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#080f14">
 <link rel="icon" href="data:,">
 <title>蛙步 · 夜行</title>
-<link rel="stylesheet" href="style.css?v=42">
+<link rel="stylesheet" href="style.css?v=45">
 </head>
 <body>
 
@@ -220,7 +220,7 @@
     <p class="tt-sub">夜色里的草地不太平，骷髅从四面钻出来。<br>选一关，撑过所有回合。</p>
     <div class="tt-menu">
       <button class="tt-start" id="btnStart" type="button">开始游戏</button>
-      <button class="tt-resume" id="btnResume" type="button" hidden>继续上次</button>
+      <button class="tt-resume" id="btnResume" type="button" hidden>读取存档</button>
       <!-- 今日挑战（第 22 块）：日期哈希出固定种子，同一天所有人抽到同一手牌 -->
       <button class="tt-daily" id="btnDaily" type="button">
         <span class="tt-daily-k">今日挑战</span>
@@ -246,20 +246,43 @@
   </div>
 </div>
 
-<!-- 关卡选择（从主页面「开始游戏」进入） -->
+<!-- 关卡选择：第一步 -->
 <div id="levelSel" class="tt-sub-scr" aria-hidden="true">
   <div class="lv-card">
     <div class="lv-head">
-      <div class="lv-title">选择关卡</div>
+      <div class="lv-title">选择关卡 <i class="lv-step">第 1 / 3 步</i></div>
       <button class="lv-back" id="lvBack" type="button">‹ 返回</button>
     </div>
     <div class="lv-list" id="lvList"></div>
+    <div class="lv-foot">通关上一关才会解锁下一关 · 进度自动保存在本机</div>
+  </div>
+</div>
+
+<!-- 难度选择：第二步 -->
+<div id="diffScr" class="tt-sub-scr" aria-hidden="true">
+  <div class="lv-card">
+    <div class="lv-head">
+      <div class="lv-title">选择难度 <i class="lv-step">第 2 / 3 步</i></div>
+      <button class="lv-back" id="diffBack" type="button">‹ 返回</button>
+    </div>
     <div class="set-row" style="margin-top:12px;padding:0 4px">
       <div class="set-label"><span>难度<i>这一局玩多狠 · 结算骨币有倍率</i></span></div>
       <div class="set-seg" id="diffSeg"></div>
     </div>
+    <div class="lv-foot">难度一局一选，开局生效</div>
+    <button class="lv-next" id="diffNext" type="button">下一步 ›</button>
+  </div>
+</div>
+
+<!-- 夜行诅咒：第三步 -->
+<div id="curseScr" class="tt-sub-scr" aria-hidden="true">
+  <div class="lv-card">
+    <div class="lv-head">
+      <div class="lv-title">夜行诅咒 <i class="lv-step">第 3 / 3 步</i></div>
+      <button class="lv-back" id="curseBack" type="button">‹ 返回</button>
+    </div>
     <!-- 夜行诅咒（第 21 块）：自己加负担，换更多骨币。只影响这一局 -->
-    <div class="rc-sec">
+    <div class="rc-sec" style="margin-top:12px">
       <div class="rc-head">
         <span>夜行诅咒 <i>自选</i></span>
         <b id="rcMulTop">×1.00</b>
@@ -268,7 +291,20 @@
       <div class="rc-list" id="rcPick"></div>
       <div class="rc-sum" id="rcSum"></div>
     </div>
-    <div class="lv-foot">通关上一关才会解锁下一关 · 进度自动保存在本机</div>
+    <div class="lv-foot">每一条都换骨币倍率 · 一条都不选就是普通局</div>
+    <button class="lv-next" id="curseStart" type="button">开始 ›</button>
+  </div>
+</div>
+
+<!-- 读取存档（第 38 块）：所有中途退出的存档，按退出时间先后列出来 -->
+<div id="saveList" class="tt-sub-scr" aria-hidden="true">
+  <div class="lv-card">
+    <div class="lv-head">
+      <div class="lv-title">读取存档 <i class="lv-step">按退出时间 · 早的在上</i></div>
+      <button class="lv-back" id="saveBack" type="button">‹ 返回</button>
+    </div>
+    <div class="save-list" id="saveListBox"></div>
+    <div class="lv-foot">中途退出的每一局都会留档 · 通关选完永夜火种后该存档自动消失</div>
   </div>
 </div>
 
@@ -456,7 +492,7 @@
 <!-- 不用 importmap：老手机浏览器（iOS 16.4 以下、旧版微信/安卓 WebView）
      不支持 import maps，会让整个模块解析失败、加载页永远停在 0%。
      项目内所有 import 都写成相对路径，直接靠原生 ES Module 解析。 -->
-<script type="module" src="js/main.js?v=42"></script>
+<script type="module" src="js/main.js?v=45"></script>
 
 <!-- 兜底自检：模块没跑起来时把原因写出来，别让用户对着 0% 干等 -->
 <script>

@@ -31,6 +31,7 @@ import {
   settings as readSettings, setSetting, save as saveProfile, profile,
   bumpStat, setStatMax, codexAdd, codexCount, countCard, unlockAch, hasAch, addBones, bones, resetAll,
   storyProgress, markStorySeen, markStoryRead, addStoryMark, setStoryEnding,
+  setSaveSuppressed, reloadFromStorage,
 } from './profile.js';
 import * as runSave from './runSave.js';
 import {
@@ -509,12 +510,18 @@ async function boot() {
   // 金币只在商店里花；本局内有效（结算不跨局保存）。
   const goldNumEl = document.getElementById('goldNum');
   let coins = 0;
-  // ---------------- 管理员模式（第 30 块）----------------
-  // 密码在设置里开启，只用来检查调试：无限金币 / 无限骨币 / 每回合可跳过。
+  // ---------------- 管理员模式（第 30 块 + 第 37 块沙盒化）----------------
+  // 密码在设置里开启，只用来检查调试：无限金币 / 无限骨币 / 生命无限 / 每回合可跳过。
   // 做法不是到处写 if —— 而是把余额钉在一个大数上、扣钱的地方不再扣，
   // 这样商店的价格判断、canAfford、事件付款全都不用改就自动通过。
+  // 第 37 块：管理员期变成「沙盒」—— 不落任何盘（关卡进度 / 永夜火种 / 篝火 /
+  // 成就 / 记录全不记），退出时把内存档案回滚到开启前的样子。开启开关单独存一把
+  // 键，否则会被 save() 的抑制一起吞掉，刷新页面就丢了沙盒状态。
   const ADMIN_GOLD = 999999;
-  let adminOn = !!readSettings().admin;
+  const ADMIN_KEY = 'naiwa_rouge_admin_v1';
+  const readAdminKey = () => { try { return !!localStorage.getItem(ADMIN_KEY); } catch { return false; } };
+  let adminOn = readAdminKey();
+  setSaveSuppressed(adminOn);   // 刷新页面仍处在沙盒里：继续不落盘
   let coinsBeforeAdmin = 0;     // 关掉时把开之前那笔钱还回去
   function renderGold() {
     goldNumEl.textContent = adminOn ? '∞' : String(coins);
@@ -841,6 +848,7 @@ async function boot() {
   // 受击：先看金钟罩（第 13 块，护体期间完全免疫），
   // 再过无敌帧，最后按防御减伤扣血；血量归零即结束
   function hurtPlayer(amount) {
+    if (adminOn) return;   // 管理员沙盒：生命无限，不吃任何伤害
     if (gameState !== 'playing' || iframe > 0) return;
     if (aegisActive) {
       // 罩子挡下这一下：金环提示，不掉血、不触发无敌帧（罩子本来就免伤）
@@ -1129,7 +1137,7 @@ async function boot() {
     titleScr.style.display = '';
     requestAnimationFrame(() => titleScr.classList.remove('off'));
     titleScr.setAttribute('aria-hidden', 'false');
-    refreshResume();              // 有存档就亮出「继续上次 · 第 N 回合」
+    refreshResume();              // 有存档就亮出「读取存档」入口
     renderCampBadge();            // 篝火按钮上的骨币数（第 19 块）
     renderDailyBadge();           // 今日挑战按钮上的「今天最好」（第 22 块）
     // 第 23 块：上次通关后直接关了网页，这 3 次永久选择还欠着 —— 回标题页补上
@@ -1139,6 +1147,7 @@ async function boot() {
   }
 
   function beginGame({ tutorial = false } = {}) {
+    runUid = 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); // 每局一个存档身份
     audio.unlock();               // 这一下点击就是浏览器要的「用户手势」
     audio.playBgm('battle');
     tutAsk.classList.remove('on');
@@ -1299,6 +1308,9 @@ async function boot() {
   // runSeed = 0 表示不固定：所有抽签退回 Math.random，和以前的普通局完全一样。
   // 种子局每个系统一条独立随机流，互不占用 —— 少抽一张卡不会让商店换货。
   let runSeed = 0;
+  // 第 38 块：本局唯一标识，区分不同的存档卡。普通局随机、每日也随机，
+  // 这样「重开第 5 关」不会覆盖「打到第 18 关退出」那张卡。
+  let runUid = 0;
   let rngStreams = null;
   let dailyMode = false;        // 这一局是今日挑战
   let dailyStamp = null;        // 开局那天的 key（跨零点结算也不串到第二天）
@@ -1329,6 +1341,7 @@ async function boot() {
     } catch { return {}; }
   }
   function saveRunRecord(levelId, { win, time, kills, roundShown }) {
+    if (adminOn) return {};   // 管理员沙盒：不记任何战绩
     const all = loadRecords();
     const r = all[levelId] || { wins: 0, bestTime: null, bestKills: 0, bestRound: 0 };
     if (win) {
@@ -1399,18 +1412,39 @@ async function boot() {
         item.addEventListener('click', () => {
           pendingLevelId = lv.id;      // 点了哪关，beginGame 就开哪关
           dailyMode = false;           // 手动选关 = 普通局（种子与固定规则都不生效）
-          hideSub(levelSel);
-          // 教程只在第一关问一次：能开第二关的人早就会玩了，别拿教程挡路
-          if (lv.id !== 1) { beginGame({ tutorial: false }); return; }
-          tutAsk.classList.add('on');
-          tutAsk.setAttribute('aria-hidden', 'false');
+          goToDiff();                  // 进了第二步：选难度
         });
       }
       lvList.appendChild(item);
     });
-    renderDiffSeg();      // 难度段控跟着上次的选择亮
-    renderCursePick();    // 诅咒勾选跟着上次的选择亮
     showSub(levelSel);
+  }
+
+  // ---------------- 选关分步（第 37 块） ----------------
+  // 原来关卡 / 难度 / 诅咒塞在同一页，太挤。现在拆成三页：
+  //   选关卡 → 选难度 → 选诅咒，每页只管一件事。选择都存在 pending* 里跨页保留。
+  const diffScr = document.getElementById('diffScr');
+  const curseScr = document.getElementById('curseScr');
+
+  function goToDiff() {
+    hideSub(levelSel);
+    renderDiffSeg();        // 难度段控跟着上次的选择亮
+    showSub(diffScr);
+  }
+  function goToCurse() {
+    hideSub(diffScr);
+    renderCursePick();      // 诅咒勾选跟着上次的选择亮
+    showSub(curseScr);
+  }
+  function startRun() {
+    hideSub(curseScr);
+    // 教程只在第一关问一次：能开第二关的人早就会玩了，别拿教程挡路
+    if (pendingLevelId === 1) {
+      tutAsk.classList.add('on');
+      tutAsk.setAttribute('aria-hidden', 'false');
+    } else {
+      beginGame({ tutorial: false });
+    }
   }
 
   function showRecords() {
@@ -1565,7 +1599,7 @@ async function boot() {
     { key: 'shake', name: '屏幕震动', type: 'seg', hint: '受击时抖一下', opts: [['on', '开'], ['off', '关']] },
     { key: 'speedFov', name: '速度感', type: 'seg', hint: '跑起来视野微微拉宽（晕的话关掉）', opts: [['on', '开'], ['off', '关']] },
     // 第 30 块：管理员模式（要密码，开完才有跳过回合按钮与无限钱）
-    { key: 'admin', name: '管理员模式', type: 'admin', hint: '无限钱 · 可跳过/选择回合' },
+    { key: 'admin', name: '管理员模式', type: 'admin', hint: '金币/骨币/生命无限 · 沙盒不记录 · 退出即还原' },
   ];
 
   // 布尔型设置项在面板上显示成「开/关」两段
@@ -1641,7 +1675,7 @@ async function boot() {
           if (!adminOn) return;
           applyAdmin(false);
           renderSettings();
-          showToast('管理员模式已关闭', '金币和骨币回到正常结算');
+          showToast('管理员模式已关闭', '本局进度 / 永夜火种 / 篝火 / 记录全部还原到开启前');
         });
         seg.append(bOn, bOff);
         wrap.append(label, seg);
@@ -1699,9 +1733,10 @@ async function boot() {
     showSub(setScr);
   }
 
-  // ---------------- 管理员模式（第 30 块） ----------------
-  // 设置里输对密码才开：局内金币无限、篝火骨币无限、每回合能直接跳过。
-  // 开关存在 profile.settings.admin 里，下次打开网页还记得 —— 调试不用每次输密码。
+  // ---------------- 管理员模式（第 30 块 + 第 37 块沙盒化） ----------------
+  // 设置里输对密码才开：局内金币 / 骨币 / 生命无限，每回合能直接跳过。
+  // 开关单独存在 ADMIN_KEY（naiwa_rouge_admin_v1），不被 save() 抑制吞掉，
+  // 刷新页面后仍处在沙盒里；沙盒期一切不落盘，退出即还原。
   const ADMIN_CODE = '615265';
   const adminAsk = document.getElementById('adminAsk');
   const adminPwd = document.getElementById('adminPwd');
@@ -1766,11 +1801,24 @@ async function boot() {
 
   function applyAdmin(on) {
     const next = !!on;
-    if (next && !adminOn) coinsBeforeAdmin = coins;   // 记下开之前身上那笔钱
-    adminOn = next;
-    setSetting('admin', adminOn);
-    coins = adminOn ? ADMIN_GOLD : Math.max(0, coinsBeforeAdmin);
-    coinsBeforeAdmin = 0;
+    if (next === adminOn) {            // 已处于目标状态（含刷新后 init 重调）：只确保金币钉上对
+      coins = adminOn ? ADMIN_GOLD : coins;
+      return;
+    }
+    if (next) {
+      coinsBeforeAdmin = coins;        // 记下开之前身上那笔钱
+      try { localStorage.setItem(ADMIN_KEY, '1'); } catch (_) {}
+      setSaveSuppressed(true);         // 沙盒期：profile / 记录 / 续玩存档一律不落地
+      adminOn = true;
+      coins = ADMIN_GOLD;
+    } else {
+      try { localStorage.removeItem(ADMIN_KEY); } catch (_) {}
+      setSaveSuppressed(false);
+      reloadFromStorage();             // 把沙盒里改过的档案丢掉，回到开之前那份
+      adminOn = false;
+      coins = Math.max(0, coinsBeforeAdmin);
+      coinsBeforeAdmin = 0;
+    }
     renderGold();
     renderSkipBtn();
     // 篝火的 DOM 变量在文件后半段才初始化，等这一轮跑完再刷角标
@@ -1807,7 +1855,7 @@ async function boot() {
     applyAdmin(true);
     renderSettings();
     audio.sfx('uiSwitch');
-    showToast('管理员模式已开启', '金币 / 骨币无限 · 可跳过或选择回合');
+    showToast('管理员模式已开启', '金币 / 骨币 / 生命无限 · 可跳过或选择回合 · 此间一切不记录，退出即还原');
   }
 
   if (adminAsk) {
@@ -1847,6 +1895,11 @@ async function boot() {
   document.getElementById('setBack').addEventListener('click', () => hideSub(setScr));
   applySettings();
   document.getElementById('lvBack').addEventListener('click', () => hideSub(levelSel));
+  // 选关分步（第 37 块）：三页之间来回切，选择都留在 pending* 里
+  document.getElementById('diffBack').addEventListener('click', () => { hideSub(diffScr); showSub(levelSel); });
+  document.getElementById('diffNext').addEventListener('click', goToCurse);
+  document.getElementById('curseBack').addEventListener('click', () => { hideSub(curseScr); showSub(diffScr); });
+  document.getElementById('curseStart').addEventListener('click', startRun);
   document.getElementById('btnRecords').addEventListener('click', showRecords);
   document.getElementById('rcBack').addEventListener('click', () => hideSub(recordsScr));
   document.getElementById('btnBoons').addEventListener('click', showBoonPanel);
@@ -2004,6 +2057,7 @@ async function boot() {
   }
 
   function wtMarkSeen(kind) {
+    if (adminOn) return;   // 管理员沙盒：武器教程「已看」也不落盘
     const list = wtSeen();
     if (list.includes(kind)) return;
     list.push(kind);
@@ -2772,9 +2826,12 @@ async function boot() {
   const btnResume = document.getElementById('btnResume');
   function saveRunAtRound(roundNo) {
     if (DEBUG && !params.has('keepsave')) return;   // 调试局不落档（测试互相覆盖）
+    if (adminOn) return;                            // 管理员沙盒：不写续玩存档
     runSave.saveRun({
+      uid: runUid,             // 第 38 块：按本局身份 upsert，不同存档互不覆盖
       level: curLevelId,        // 读档要回到同一关（第二关的回合表跟一关不一样）
       round: roundNo,
+      rounds: level.totals.rounds,  // 卡片上显示「第 X / 总 回合」
       roundMod: { ...level.roundMod },
       coins,
       rep: reputation,
@@ -2802,18 +2859,70 @@ async function boot() {
   }
 
   function refreshResume() {
-    const saved = runSave.loadRun();
-    if (!saved || saved.round < 1) {
-      btnResume.hidden = true;
-      return;
-    }
-    btnResume.hidden = false;
-    btnResume.textContent = `继续上次 · 第 ${saved.round} 回合`;
+    // 第 38 块：主菜单只亮一个「读取存档」入口，点进去看全部存档卡
+    btnResume.hidden = !runSave.hasRun();
+    btnResume.textContent = '读取存档';
   }
 
-  function resumeGame() {
-    const saved = runSave.loadRun();
-    if (!saved) return;
+  // 第 38 块：读取存档列表。按退出时间升序（早的在上，对应「时间先后 · 自上而下」）。
+  const saveList = document.getElementById('saveList');
+  const saveListBox = document.getElementById('saveListBox');
+  function fmtSaveTime(ts) {
+    const d = new Date(ts);
+    const p = (n) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()} ${p(d.getHours())}:${p(d.getMinutes())}`;
+  }
+  function renderSaveList() {
+    const all = runSave.loadRuns().slice().sort((a, b) => a.at - b.at);
+    saveListBox.textContent = '';
+    if (!all.length) {
+      const empty = document.createElement('div');
+      empty.className = 'save-empty';
+      empty.textContent = '还没有存档 —— 去打一关，中途退出会自动留在这里';
+      saveListBox.appendChild(empty);
+      return;
+    }
+    for (const rec of all) {
+      const item = document.createElement('button');
+      item.type = 'button';
+      item.className = 'save-item';
+      const lvName = (LEVELS_BY_ID[rec.level] && LEVELS_BY_ID[rec.level].name) || (`第 ${rec.level} 关`);
+      const roundTxt = rec.rounds ? `第 ${rec.round} / ${rec.rounds} 回合` : `第 ${rec.round} 回合`;
+      const diffName = (rec.diff && DIFFS[rec.diff] && DIFFS[rec.diff].name) ? DIFFS[rec.diff].name : '普通';
+      const name = document.createElement('div');
+      name.className = 'save-lv';
+      name.textContent = lvName;
+      const meta = document.createElement('div');
+      meta.className = 'save-meta';
+      const rEl = document.createElement('span');
+      rEl.className = 'save-round';
+      rEl.textContent = roundTxt;
+      const dEl = document.createElement('span');
+      dEl.className = 'save-diff';
+      dEl.textContent = diffName;
+      meta.append(rEl, dEl);
+      const tEl = document.createElement('div');
+      tEl.className = 'save-time';
+      tEl.textContent = '退出于 ' + fmtSaveTime(rec.at);
+      item.append(name, meta, tEl);
+      item.addEventListener('click', () => { hideSub(saveList); resumeGame(rec.uid); });
+      saveListBox.appendChild(item);
+    }
+  }
+  function openSaveList() {
+    renderSaveList();
+    showSub(saveList);
+  }
+
+  function resumeGame(uid) {
+    let saved = uid != null ? runSave.loadRunByUid(uid) : null;
+    if (!saved) {                       // 没指定 uid（调试入口）就取最近一次
+      const all = runSave.loadRuns();
+      if (!all.length) return;
+      all.sort((a, b) => b.at - a.at);
+      saved = all[0];
+    }
+    runUid = saved.uid;                 // 读档后继续往同一张卡上写
     audio.unlock();
     audio.playBgm('battle');
     tutAsk.classList.remove('on');
@@ -2871,7 +2980,18 @@ async function boot() {
     level.startAt(saved.round, saved.roundMod);   // 里面会触发 onRound → 立刻重写一次快照
   }
 
-  btnResume.addEventListener('click', resumeGame);
+  btnResume.addEventListener('click', openSaveList);
+  document.getElementById('saveBack').addEventListener('click', () => hideSub(saveList));
+
+  // 第 38 块：关网页/切后台时补一次最新快照，让「退出时间」落在真正离开的那一刻
+  // （onRound 每回合也写，但最后一回合到退出之间不会再触发）。
+  function saveRunOnExit() {
+    if (gameState !== 'playing') return;   // 已结算 / 标题页不写，避免覆盖或误建
+    if (level.roundNo < 1) return;         // 第一回合还没真正开始，不写退化存档
+    saveRunAtRound(level.roundNo);
+  }
+  window.addEventListener('pagehide', saveRunOnExit);
+  window.addEventListener('beforeunload', saveRunOnExit);
 
   // ---------------- 成就 / 图鉴 / 战绩（第 18 块） ----------------
   // 解锁即弹 toast（战斗中的提示条）；已解锁的重复调用是空操作。
@@ -3274,6 +3394,8 @@ async function boot() {
   let boonOpen = false;
   let boonPicks = [];           // 这一次摆出来的三张
   let boonSession = null;       // { total, done, after, luck }
+  // 第 38 块：首次通关后要等玩家在标题页把永夜火种选完，那张存档才能清掉
+  let pendingClearUid = null;
 
   function boonLuckNow() {
     // 结算时读的是「这一局最后的幸运」（含局内卡、事件、篝火、火种），
@@ -3385,6 +3507,12 @@ async function boot() {
     upPanel.classList.remove('on', 'boon');
     upPanel.setAttribute('aria-hidden', 'true');
     renderCampBadge();
+    // 第 38 块：通关选完永夜火种，这次的存档彻底结算 → 从读取列表移除
+    if (pendingClearUid != null) {
+      runSave.clearRun(pendingClearUid);
+      pendingClearUid = null;
+      refreshResume();
+    }
     if (after === 'reload') {
       location.reload();
     }
@@ -3625,12 +3753,14 @@ async function boot() {
     }
     // 今日挑战：一天只记最好的一次（胜负都记），再顺手裁掉 30 天以前的老账
     if (dailyMode) {
-      saveDailyRecord(
-        { win: isWin, round: roundShown, kills, time: elapsed, seed: runSeed },
-        dailyStamp || dayKey()
-      );
-      pruneDaily();
-      renderDailyBadge();
+      if (!adminOn) {   // 管理员沙盒：今日挑战也不落记录
+        saveDailyRecord(
+          { win: isWin, round: roundShown, kills, time: elapsed, seed: runSeed },
+          dailyStamp || dayKey()
+        );
+        pruneDaily();
+        renderDailyBadge();
+      }
       dailyMode = false;
     }
     // 第 21 / 22 块的新成就：打完今日挑战、带三条诅咒通关
@@ -3640,8 +3770,12 @@ async function boot() {
     }
     if (isWin && pendingCurses.length >= 3) tryAch('curse_3');
     clearCurse();                   // 这一局的诅咒不带到结算界面
-    runSave.clearRun();             // 一局结束（无论输赢），续玩存档就没有意义了
-    refreshResume();                // 主菜单上的「继续上次」随之消失
+    // 第 38 块：输 / 重刷已通关（无永夜火种可领） → 当场清档；
+    // 首次通关（boonGain>0，要回标题页领永夜火种）→ 延后到 closeBoons 再清，
+    // 这样「选完永夜火种之前还能读档」、选完就消失。
+    if (isWin && boonGain > 0) pendingClearUid = runUid;
+    else runSave.clearRun(runUid);
+    refreshResume();                // 主菜单上的「读取存档」随之更新
     const cells = [
       ['用时', elapsed.toFixed(1) + ' 秒'],
       ['击杀', kills + ' 只'],
@@ -3791,11 +3925,11 @@ async function boot() {
         bones: () => bones(),
         reset: () => { resetAll(); renderSettings(); applySettings(); },
       },
-      // 存档续玩（第 17 块）
+      // 存档续玩（第 38 块：多存档列表）
       run: {
         save: () => saveRunAtRound(level.roundNo),
-        load: () => runSave.loadRun(),
-        clear: () => runSave.clearRun(),
+        load: () => runSave.loadRuns(),
+        clear: () => runSave.clearRun(runUid),
         resume: () => resumeGame(),
       },
       // 金币只在函数里读（coins 是 let，暴露快照会过期）；测试与调试用
