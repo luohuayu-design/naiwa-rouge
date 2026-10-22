@@ -147,13 +147,14 @@ export function campHas(id) {
 }
 
 // 点火（升一级）：余额够就成功 —— 没有等级上限。返回 { ok, bones, item, level, reason }
-export function campBuy(id) {
+// free = true 时不查余额也不扣钱（第 30 块：管理员模式）
+export function campBuy(id, free = false) {
   const item = CAMP_BY_ID[id];
   if (!item) return { ok: false, reason: 'noitem', bones: bones() };
   const cur = campLevel(id);
   const price = campCost(id, cur);
-  if (bones() < price) return { ok: false, reason: 'poor', bones: bones(), item, price, level: cur };
-  addBones(-price);                      // 扣钱只在这里做，效果里不写负数
+  if (!free && bones() < price) return { ok: false, reason: 'poor', bones: bones(), item, price, level: cur };
+  if (!free) addBones(-price);           // 扣钱只在这里做，效果里不写负数
   const p = profile();
   if (!p.camp || typeof p.camp !== 'object') p.camp = {};
   p.camp[id] = cur + 1;

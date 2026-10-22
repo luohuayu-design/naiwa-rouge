@@ -34,6 +34,7 @@ export const DEFAULT_SETTINGS = {
   joySize: 'mid',    // small | mid | large
   joyHand: 'left',   // left | right
   shake: true,       // 屏幕震动 / 受击抖屏
+  admin: false,      // 管理员模式（第 30 块）：无限钱 + 每回合可跳过，要密码才开
 };
 
 const DEFAULT_PROFILE = {

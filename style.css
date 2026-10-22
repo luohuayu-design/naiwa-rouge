@@ -141,6 +141,15 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
 .wh-bar i{display:block;height:100%;width:0%;border-radius:99px;
   background:linear-gradient(90deg,#3fd39b,#8ef7c8);box-shadow:0 0 8px rgba(110,240,200,.5);
   transition:width .25s ease}
+/* 管理员模式的「跳过本回合」：默认藏起来，开了模式才显示（第 30 块） */
+.skip-round{display:none;margin-top:9px;width:100%;padding:7px 0;border-radius:9px;
+  font:inherit;font-size:11px;font-weight:700;letter-spacing:.1em;cursor:pointer;
+  color:#ffd9a0;pointer-events:auto;
+  border:1px solid rgba(255,206,150,.45);background:rgba(46,26,10,.72);
+  -webkit-tap-highlight-color:transparent;transition:background .15s,transform .1s}
+.skip-round:hover{background:rgba(72,40,14,.86)}
+.skip-round:active{transform:scale(.97)}
+.skip-round.on{display:block}
 
 /* ---------------- 波次提示 ---------------- */
 #waveToast{position:fixed;left:50%;top:21%;z-index:7;display:flex;flex-direction:column;
@@ -599,6 +608,14 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
 .modal.on .md-card{transform:none}
 .md-title{font-size:16px;font-weight:700;letter-spacing:.1em;color:#e2fff4}
 .md-sub{margin-top:10px;font-size:12px;line-height:1.8;color:rgba(160,204,188,.68)}
+/* 密码输入（第 30 块） */
+.md-input{margin-top:16px;width:100%;padding:12px 14px;border-radius:12px;box-sizing:border-box;
+  font:inherit;font-size:16px;font-weight:700;letter-spacing:.32em;text-align:center;
+  color:#eafff4;border:1px solid rgba(126,235,196,.28);background:rgba(8,22,19,.86);outline:none}
+.md-input:focus{border-color:rgba(126,235,196,.6);box-shadow:0 0 0 3px rgba(70,220,180,.12)}
+.md-err{margin-top:9px;font-size:11.5px;font-weight:700;letter-spacing:.06em;color:#ff9a9a;
+  opacity:0;transition:opacity .15s}
+.md-err.on{opacity:1}
 .md-btns{margin-top:20px;display:flex;gap:10px}
 .md-btn{flex:1;padding:12px 0;border-radius:12px;font:inherit;font-size:13px;font-weight:700;
   letter-spacing:.1em;cursor:pointer;color:#cfeee2;

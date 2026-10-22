@@ -139,6 +139,32 @@ Three.js r160 的单摇杆幸存者肉鸽《奶蛙夜行》，纯静态站点（
 - 回归：level2 单测重写 67 + block20 CDP 36（D 段改环跟玩家 + 新 D2 卫队/石刺/主祭死卫队散架），
   全绿。注意：测试小兵必须放在玩家 2.0 距离（环 2.6 之内、自爆圈 ~1.1 之外），贴脸会自爆。
 
+第 30 块要点（管理员模式，2026-10-22，v=34）：
+- **入口**：设置面板最下面一行「管理员模式」（`SET_ROWS` 里 `type:'admin'`），点「开启」弹
+  `#adminAsk` 密码框（`.md-input`，inputmode numeric），密码 `615265` 写在 `main.js` 的 `ADMIN_CODE`。
+  输错只亮 `#adminErr` + 清空输入；输对 → `applyAdmin(true)`。**关闭不需要密码**（关是安全方向）。
+- **状态**：存在 `profile.settings.admin`（`DEFAULT_SETTINGS` 加了布尔键，靠 `setSetting` 白名单自动持久化），
+  `main.js` 的 `let adminOn` 跟着它走；`applyAdmin()` 是唯一开关入口（debug 钩子 `__game.setAdmin`、
+  `__game.ui.set('admin', v)` 都走它）。
+- **无限金币**：不做「哪里能买」的特判 —— `addCoins` 与买完之后的扣款都把 `coins` 钉回 `ADMIN_GOLD=999999`，
+  于是商店的 `coins < price`、事件的 `canAfford` 全部自动通过；`renderGold()` 在 admin 时显示 `∞`。
+  开之前先记 `coinsBeforeAdmin`，关掉时还回去（不会把 99 万留在正常局里）。
+- **无限骨币**：`campfire.js` 的 `campBuy(id, free = false)` 加了个 free 参数（不查余额、不 `addBones(-price)`），
+  `main.js` 的篝火购买和 `__game.camp.buy` 都传 `adminOn`；`renderCampfire/renderCampBadge` 在 admin 时
+  显示 `∞`、`have = Infinity`（价格永不 `poor`）。
+- **跳过本回合**：`#waveHud` 里加 `#skipRound`（`.skip-round`，`pointer-events:auto` 因为父级是 `none`），
+  只在 `adminOn && gameState==='playing'` 时挂 `.on`（`renderSkipBtn()` 在主循环每帧调，带缓存不重排）。
+  点了做两件事：`enemies.killAll()` + `level.skipRound()`。
+  - `enemies.killAll()`（enemy.js 新增）：把每只活怪直接标 dead、`deathT = cfg.deathTime`、`root.visible=false`，
+    下一帧回收循环收走 —— **不调 onDeath**，所以不掉金币、不算击杀、不写图鉴、不触发成就。
+  - `wave.js` 的 `skipRound()`：`spawning` 阶段把 `spawnIdx` 推到 `spawns.length`（若还没展开就给个空表），
+    `gap` 阶段直接把 `gapT` 填满。**不另开路径** —— 下一帧 update 走普通清场判定，
+    三选一/商店/事件/通关结算与正常打完完全一致；最后一回合跳过就是直接通关。
+  - 副作用：跳过只划掉「还没出场的怪」，场上那几只靠 `killAll` 清，两者必须一起调（单测里验证过这个语义）。
+- **测试**：新 `.tmp-admin-test.mjs`（28 项：设置键 / 免费点火 / skipRound 的 spawning·gap·idle·通关四种走向）
+  + 新 `.tmp-block30-cdp.js`（50 项：密码错对 / ∞ 显示 / 篝火免费 / 跳两回合 / 商店不扣钱 / 关掉回归）。
+  旧断言只动了一处：`.tmp-settings-test.js` 的设置行 6 → 7（多了管理员模式那一行）。
+
 第 29 块要点（第三关 · 焦土钟楼 + 三只新怪 + 三件新装备，2026-10-22，v=33）：
 - **关卡**：`wave.js` 加 `LEVEL_3`（20 回合 **363 只**，scale hp 0.24 / dmg 0.14 / speed 0.035，
   R20 ×5.56 血 / ×3.66 伤；武器仍第 4 回合）。`LEVELS_BY_ID` 注册，`main.js` 的 `LEVELS` 加第三条
@@ -283,6 +309,7 @@ node .tmp-rarity-test.mjs     # 71  品质/幸运
 node .tmp-camp-test.mjs       # 99  篝火/骨币（多级 + 阶梯 + 金币折算 + 关卡倍率）
 node .tmp-level2-test.mjs     # 67  第二关/巫师
 node .tmp-level3-test.mjs     # 71  第三关/三只新怪/三件新装备/专属奇遇
+node .tmp-admin-test.mjs      # 28  管理员模式（设置键/免费点火/skipRound 四种走向）
 node .tmp-curse-test.mjs      # 84  诅咒/种子/每日规则
 node .tmp-boon-test.mjs       # 146 永夜火种（层数/品质吃幸运/待领次数/克制）
 ```
@@ -311,7 +338,8 @@ node .tmp-boon-test.mjs       # 146 永夜火种（层数/品质吃幸运/待领
 .tmp-block23-cdp.js     63  金币吸附/无限级篝火/发火种（首通门槛）/火种面板/开局落账/标题页补选/重复通关不发
 .tmp-boonui-test.js      9  主菜单「永夜火种」一览面板（空态/层数/卡名）
 .tmp-live-block23.js    15  线上专项（篝火 / 火种面板 / 版本号）
-.tmp-block29-cdp.js     38  第三关（解锁/焦土/骨骑/骸盾/孵骨/震钟/棘甲/震剑）
+.tmp-block29-cdp.js     39  第三关（解锁/焦土/骨骑/骸盾/孵骨/震钟/棘甲/震剑）
+.tmp-block30-cdp.js     50  管理员模式（密码/无限钱/跳过回合/关闭回归）
 .tmp-curse-ui-test.js   14  诅咒可视化（芯片两行/明细行/开局血量/面板注记）
 .tmp-dbg-boot.js           抓启动期异常（改完代码先跑这个，比整套 CDP 快）
 ```

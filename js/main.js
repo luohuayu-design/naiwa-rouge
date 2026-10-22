@@ -472,12 +472,19 @@ async function boot() {
   // 金币只在商店里花；本局内有效（结算不跨局保存）。
   const goldNumEl = document.getElementById('goldNum');
   let coins = 0;
+  // ---------------- 管理员模式（第 30 块）----------------
+  // 密码在设置里开启，只用来检查调试：无限金币 / 无限骨币 / 每回合可跳过。
+  // 做法不是到处写 if —— 而是把余额钉在一个大数上、扣钱的地方不再扣，
+  // 这样商店的价格判断、canAfford、事件付款全都不用改就自动通过。
+  const ADMIN_GOLD = 999999;
+  let adminOn = !!readSettings().admin;
+  let coinsBeforeAdmin = 0;     // 关掉时把开之前那笔钱还回去
   function renderGold() {
-    goldNumEl.textContent = String(coins);
+    goldNumEl.textContent = adminOn ? '∞' : String(coins);
   }
   function addCoins(n) {
     if (n > 0) audio.sfx('coin');
-    coins = Math.max(0, coins + n);
+    coins = adminOn ? ADMIN_GOLD : Math.max(0, coins + n);
     renderGold();
   }
   const gold = createGoldSystem({ scene, fx, stats, onGold: addCoins });
@@ -1511,6 +1518,8 @@ async function boot() {
     { key: 'joySize', name: '摇杆大小', type: 'seg', opts: [['small', '小'], ['mid', '中'], ['large', '大']] },
     { key: 'joyHand', name: '摇杆位置', type: 'seg', hint: '按住哪半边出摇杆', opts: [['left', '左手'], ['right', '右手']] },
     { key: 'shake', name: '屏幕震动', type: 'seg', hint: '受击时抖一下', opts: [['on', '开'], ['off', '关']] },
+    // 第 30 块：管理员模式（要密码，开完才有跳过回合按钮与无限钱）
+    { key: 'admin', name: '管理员模式', type: 'admin', hint: '无限钱 · 可跳回合' },
   ];
 
   // 把设置真正作用到音频 / 渲染 / 摇杆 / 抖屏上
@@ -1560,6 +1569,32 @@ async function boot() {
         });
         box.append(inp, out);
         wrap.append(label, box);
+      } else if (row.type === 'admin') {
+        // 开要密码，关不用 —— 关掉是安全方向，别让人点错还得翻密码
+        const seg = document.createElement('div');
+        seg.className = 'set-seg';
+        const bOn = document.createElement('button');
+        bOn.type = 'button';
+        bOn.id = 'adminOnBtn';
+        bOn.textContent = adminOn ? '已开启' : '开启';
+        if (adminOn) bOn.classList.add('on');
+        bOn.addEventListener('click', () => {
+          if (adminOn) return;
+          openAdminAsk();
+        });
+        const bOff = document.createElement('button');
+        bOff.type = 'button';
+        bOff.id = 'adminOffBtn';
+        bOff.textContent = '关闭';
+        if (!adminOn) bOff.classList.add('on');
+        bOff.addEventListener('click', () => {
+          if (!adminOn) return;
+          applyAdmin(false);
+          renderSettings();
+          showToast('管理员模式已关闭', '金币和骨币回到正常结算');
+        });
+        seg.append(bOn, bOff);
+        wrap.append(label, seg);
       } else {
         const cur = row.key === 'shake' ? (s.shake ? 'on' : 'off') : s[row.key];
         const seg = document.createElement('div');
@@ -1613,6 +1648,95 @@ async function boot() {
     renderSettings();
     showSub(setScr);
   }
+
+  // ---------------- 管理员模式（第 30 块） ----------------
+  // 设置里输对密码才开：局内金币无限、篝火骨币无限、每回合能直接跳过。
+  // 开关存在 profile.settings.admin 里，下次打开网页还记得 —— 调试不用每次输密码。
+  const ADMIN_CODE = '615265';
+  const adminAsk = document.getElementById('adminAsk');
+  const adminPwd = document.getElementById('adminPwd');
+  const adminErr = document.getElementById('adminErr');
+
+  // 跳过按钮只在「管理员 + 真在打」时露出来，别的界面（三选一/商店/标题）都收掉
+  let skipBtnShown = false;
+  function renderSkipBtn() {
+    const btn = document.getElementById('skipRound');
+    if (!btn) return;
+    const show = adminOn && gameState === 'playing';
+    if (show === skipBtnShown) return;
+    skipBtnShown = show;
+    btn.classList.toggle('on', show);
+    btn.setAttribute('aria-hidden', show ? 'false' : 'true');
+  }
+
+  function applyAdmin(on) {
+    const next = !!on;
+    if (next && !adminOn) coinsBeforeAdmin = coins;   // 记下开之前身上那笔钱
+    adminOn = next;
+    setSetting('admin', adminOn);
+    coins = adminOn ? ADMIN_GOLD : Math.max(0, coinsBeforeAdmin);
+    coinsBeforeAdmin = 0;
+    renderGold();
+    renderSkipBtn();
+    // 篝火的 DOM 变量在文件后半段才初始化，等这一轮跑完再刷角标
+    setTimeout(() => {
+      renderCampBadge();
+      const cs = document.getElementById('campScr');
+      if (cs && cs.classList.contains('on')) renderCampfire();
+    }, 0);
+  }
+
+  function openAdminAsk() {
+    if (!adminAsk) return;
+    adminPwd.value = '';
+    adminErr.classList.remove('on');
+    adminAsk.classList.add('on');
+    adminAsk.setAttribute('aria-hidden', 'false');
+    setTimeout(() => adminPwd.focus(), 60);
+  }
+  function closeAdminAsk() {
+    if (!adminAsk) return;
+    adminAsk.classList.remove('on');
+    adminAsk.setAttribute('aria-hidden', 'true');
+    adminPwd.blur();
+  }
+  function submitAdmin() {
+    if (adminPwd.value.trim() !== ADMIN_CODE) {
+      adminErr.classList.add('on');
+      adminPwd.value = '';
+      audio.sfx('soldout');
+      adminPwd.focus();
+      return;
+    }
+    closeAdminAsk();
+    applyAdmin(true);
+    renderSettings();
+    audio.sfx('uiSwitch');
+    showToast('管理员模式已开启', '金币 / 骨币无限 · 每回合可跳过');
+  }
+
+  if (adminAsk) {
+    document.getElementById('adminYes').addEventListener('click', submitAdmin);
+    document.getElementById('adminNo').addEventListener('click', closeAdminAsk);
+    adminPwd.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') submitAdmin();
+      else if (e.key === 'Escape') closeAdminAsk();
+    });
+    adminAsk.addEventListener('click', (e) => { if (e.target === adminAsk) closeAdminAsk(); });
+  }
+
+  // 跳过本回合：先把场上的怪静默清掉（不掉钱、不算击杀），再让波次系统
+  // 把没出场的怪划掉 —— 下一帧走的是普通清场流程，三选一/商店/事件照常弹。
+  document.getElementById('skipRound').addEventListener('click', () => {
+    if (!adminOn || gameState !== 'playing') return;
+    const cleared = enemies.killAll();
+    if (!level.skipRound || !level.skipRound()) return;
+    audio.sfx('uiSwitch');
+    showToast('管理员 · 跳过本回合', cleared > 0 ? `清掉 ${cleared} 只，直接进下一回合` : '剩下的怪不再出场');
+    renderSkipBtn();
+  });
+
+  applyAdmin(adminOn);   // 上次开着就接着开
 
   btnStart.addEventListener('click', showLevelSel);
   document.getElementById('btnSettings').addEventListener('click', showSettings);
@@ -2329,7 +2453,7 @@ async function boot() {
       return;
     }
     const price = priceOf(item);      // 民心影响售价
-    if (coins < price) { audio.sfx('soldout'); return; }
+    if (!adminOn && coins < price) { audio.sfx('soldout'); return; }
     const locked = itemLocked(item, {
       hasWeapon: weapon.granted,
       round: shopRound,
@@ -2337,7 +2461,7 @@ async function boot() {
       relicLevels: relics.levels(),
     });
     if (locked) return;
-    coins -= price;
+    if (adminOn) coins = ADMIN_GOLD; else coins -= price;
     renderGold();
     bumpStat('spent', price);         // 战绩：累计消费（shop_20 成就）
     // 炮台 / 法器 / 富裕相关的即时成就
@@ -2531,6 +2655,7 @@ async function boot() {
 
     // 数值回填（与 saveRunAtRound 一一对应）
     coins = saved.coins || 0;
+    if (adminOn) coins = ADMIN_GOLD;   // 管理员模式读档后照样无限
     reputation = saved.rep != null ? saved.rep : REP_START;
     nextShopDiscount = saved.discount || 0;
     kills = saved.kills || 0;
@@ -2697,14 +2822,14 @@ async function boot() {
 
   // 主菜单按钮上的骨币角标（每次回标题都会重刷）
   function renderCampBadge() {
-    if (campBoneNum) campBoneNum.textContent = String(bones());
+    if (campBoneNum) campBoneNum.textContent = adminOn ? '∞' : String(bones());
   }
 
   function renderCampfire() {
-    const have = bones();
+    const have = adminOn ? Infinity : bones();   // 管理员模式：买什么都不差钱
     const gotCount = CAMPFIRE.filter((c) => campLevel(c.id) > 0).length;
     const lvSum = CAMPFIRE.reduce((a, c) => a + campLevel(c.id), 0);
-    cfBones.textContent = String(have);
+    cfBones.textContent = adminOn ? '∞' : String(have);
     cfList.textContent = '';
 
     for (const item of CAMPFIRE) {
@@ -2751,7 +2876,7 @@ async function boot() {
         : (lv === 0 ? `点 燃 · ${price} 骨币` : `升到 Lv.${lv + 1} · ${price} 骨币`);
       if (!poor) {
         btn.addEventListener('click', () => {
-          const r = campBuy(item.id);
+          const r = campBuy(item.id, adminOn);
           if (!r.ok) return;
           audio.sfx('uiSwitch');
           renderCampfire();
@@ -3267,6 +3392,12 @@ async function boot() {
       ui: {
         settings: () => ({ ...readSettings() }),
         set: (k, v) => {
+          // 管理员模式不是普通设置项：要连带改金币 / 按钮显隐（第 30 块）
+          if (k === 'admin') {
+            applyAdmin(v);
+            if (setScr.classList.contains('on')) renderSettings();
+            return adminOn;
+          }
           const r = setSetting(k, v);
           applySettings();
           if (setScr.classList.contains('on')) renderSettings();
@@ -3293,6 +3424,19 @@ async function boot() {
       // 金币只在函数里读（coins 是 let，暴露快照会过期）；测试与调试用
       get coins() { return coins; },
       setCoins: (n) => { coins = Math.max(0, n | 0); renderHud(); },
+      // 管理员模式（第 30 块）：测试里直接开关，不用去点密码框
+      get admin() { return adminOn; },
+      setAdmin: (v) => {
+        applyAdmin(v);
+        if (setScr.classList.contains('on')) renderSettings();
+      },
+      skipRound: () => {
+        if (!adminOn || gameState !== 'playing') return false;
+        const n = enemies.killAll();
+        const ok = !!(level.skipRound && level.skipRound());
+        renderSkipBtn();
+        return ok ? n : -1;
+      },
       // 图鉴 / 成就 / 战绩 / 难度（第 18 块）
       codex: {
         add: (g, id, n) => codexAdd(g, id, n),
@@ -3319,7 +3463,7 @@ async function boot() {
           return bones();
         },
         owned: () => ({ ...campOwned() }),
-        buy: (id) => campBuy(id),
+        buy: (id) => campBuy(id, adminOn),
         apply: () => applyCampfire(),
         show: () => showCampfire(),
         hide: () => hideSub(campScr),
@@ -3774,6 +3918,9 @@ async function boot() {
     frog.root.position.z = pos.z;
     frog.yaw.rotation.y = yaw + MODEL_YAW;
     if (inGame) frog.update(dt, speed01);
+
+    // 管理员模式：跳过按钮跟着 gameState 自动显隐（不在打的时候收起来）
+    renderSkipBtn();
 
     // 脚下的攻击范围环：位置跟人走，半径跟属性走
     playerRing.setRadius(stats.get('attackRange'));

@@ -381,6 +381,18 @@ export function createLevel(level, { enemies, fx, getPlayerPos, onRound, onRound
     if (mod && typeof mod === 'object') roundMod = { ...roundMod, ...mod };
   }
 
+  // 跳过本回合（第 30 块，管理员模式）：
+  // 不另开一条路径 —— 把「还没生成的怪」全部划掉，下一帧 update 走的是
+  // 普通的清场判断，所以回合结算（三选一 / 商店 / 事件）和正常打完完全一致。
+  // 场上现存的怪由调用方（main.js）先 killAll 清掉。
+  function skipRound() {
+    if (phase === 'gap') { gapT = level.gap; return true; }   // 空档里点：直接催下一回合
+    if (phase !== 'spawning') return false;
+    if (spawns == null) spawns = [];   // 还停在延迟展开阶段：给个空表即可
+    spawnIdx = spawns.length;
+    return true;
+  }
+
   function update(dt) {
     if (phase === 'spawning') {
       if (spawns == null) spawns = buildSpawns(roundIndex + 1, roundMod, level);
@@ -421,6 +433,7 @@ export function createLevel(level, { enemies, fx, getPlayerPos, onRound, onRound
 
   return {
     start, startAt, update, reset,
+    skipRound,
     level,
     applyRoundMod,
     // waveIndex 是 0 基的历史名字，按「第几回合」用时读 roundNo

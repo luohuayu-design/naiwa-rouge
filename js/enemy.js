@@ -2221,6 +2221,26 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
     return n;
   }
 
+  // 一键清场（第 30 块，管理员模式跳回合用）：
+  // 和被打死不一样 —— 不掉金币、不算击杀、不进图鉴、不触发成就，
+  // 直接把死亡计时推满，下一帧的回收循环就把它们连模型一起清掉。
+  function killAll() {
+    let n = 0;
+    for (const e of list) {
+      if (e.state === 'dead') continue;
+      e.state = 'dead';
+      e.hp = 0;
+      e.t = 0;
+      e.deathT = e.cfg.deathTime;     // 已经「烂完」，回收循环立刻收走
+      e.bar.spr.visible = false;
+      if (e.auraRing && e.cfg.aura && e.cfg.aura.followPlayer) e.auraRing.mesh.visible = false;
+      hideChargeLine(e);
+      e.root.visible = false;
+      n++;
+    }
+    return n;
+  }
+
   function reset() {
     for (const e of list) {
       scene.remove(e.root);
@@ -2275,7 +2295,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
     shieldedCount: () => list.filter((e) => e.shieldUp && e.state !== 'dead').length,
     chargingCount: () => list.filter((e) => e.cfg.charge && (e.state === 'attack' || e.state === 'dash')).length,
     broodlingCount: (parent) => list.filter((e) => e.summonedBy && (!parent || e.summonedBy === parent) && e.state !== 'dead').length,
-    knockback, interrupt,
+    knockback, interrupt, killAll,
     get: (type) => ENEMY_TYPES[type],
     // 调试/测试用
     all: () => list,
