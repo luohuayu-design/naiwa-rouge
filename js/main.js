@@ -1533,7 +1533,7 @@ async function boot() {
     { key: 'joyHand', name: '摇杆位置', type: 'seg', hint: '按住哪半边出摇杆', opts: [['left', '左手'], ['right', '右手']] },
     { key: 'shake', name: '屏幕震动', type: 'seg', hint: '受击时抖一下', opts: [['on', '开'], ['off', '关']] },
     // 第 30 块：管理员模式（要密码，开完才有跳过回合按钮与无限钱）
-    { key: 'admin', name: '管理员模式', type: 'admin', hint: '无限钱 · 可跳回合' },
+    { key: 'admin', name: '管理员模式', type: 'admin', hint: '无限钱 · 可跳过/选择回合' },
   ];
 
   // 把设置真正作用到音频 / 渲染 / 摇杆 / 抖屏上
@@ -1677,10 +1677,55 @@ async function boot() {
     const btn = document.getElementById('skipRound');
     if (!btn) return;
     const show = adminOn && gameState === 'playing';
-    if (show === skipBtnShown) return;
-    skipBtnShown = show;
+    if (show !== skipBtnShown) {
+      skipBtnShown = show;
+      btn.classList.toggle('on', show);
+      btn.setAttribute('aria-hidden', show ? 'false' : 'true');
+    }
+    renderPickRound(show);
+  }
+
+  // 选回合（第 34 块）：跟跳过按钮同一显隐条件；面板开着时收起界面要一起收
+  function renderPickRound(show) {
+    const btn = document.getElementById('pickRound');
+    const panel = document.getElementById('roundPick');
+    if (!btn || !panel) return;
     btn.classList.toggle('on', show);
     btn.setAttribute('aria-hidden', show ? 'false' : 'true');
+    if (!show) panel.classList.remove('on');
+  }
+
+  // 每次展开面板都重画一遍：格子数跟当前关卡走，当前回合高亮
+  function buildRoundPicker() {
+    const grid = document.getElementById('rpGrid');
+    if (!grid) return;
+    grid.textContent = '';
+    const total = level.totals.rounds;
+    const cur = level.roundNo;
+    for (let n = 1; n <= total; n++) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = n;
+      if (n === cur) b.classList.add('cur');
+      b.addEventListener('click', () => jumpToRound(n));
+      grid.appendChild(b);
+    }
+  }
+
+  // 直接从第 n 回合开打：走存档续玩用的 startAt（普通路径，onRound/存档快照都一致）。
+  // 场上怪静默清掉、过期的连锁事件队列作废 —— 调试跳转不该带出一串旧事件卡。
+  function jumpToRound(n) {
+    if (!adminOn || gameState !== 'playing') return;
+    const total = level.totals.rounds;
+    const target = Math.max(1, Math.min(total, n | 0));
+    const cleared = enemies.killAll();
+    laterQueue.length = 0;
+    level.startAt(target);
+    const panel = document.getElementById('roundPick');
+    if (panel) panel.classList.remove('on');
+    audio.sfx('uiSwitch');
+    showToast(`管理员 · 跳到第 ${target} 回合`, cleared > 0 ? `清掉 ${cleared} 只，直接开打` : '直接开打');
+    renderSkipBtn();
   }
 
   function applyAdmin(on) {
@@ -1726,7 +1771,7 @@ async function boot() {
     applyAdmin(true);
     renderSettings();
     audio.sfx('uiSwitch');
-    showToast('管理员模式已开启', '金币 / 骨币无限 · 每回合可跳过');
+    showToast('管理员模式已开启', '金币 / 骨币无限 · 可跳过或选择回合');
   }
 
   if (adminAsk) {
@@ -1748,6 +1793,15 @@ async function boot() {
     audio.sfx('uiSwitch');
     showToast('管理员 · 跳过本回合', cleared > 0 ? `清掉 ${cleared} 只，直接进下一回合` : '剩下的怪不再出场');
     renderSkipBtn();
+  });
+
+  // 选回合面板：展开时按当前关卡重画格子
+  document.getElementById('pickRound').addEventListener('click', () => {
+    if (!adminOn || gameState !== 'playing') return;
+    const panel = document.getElementById('roundPick');
+    if (!panel) return;
+    if (!panel.classList.contains('on')) buildRoundPicker();
+    panel.classList.toggle('on');
   });
 
   applyAdmin(adminOn);   // 上次开着就接着开
@@ -3713,6 +3767,8 @@ async function boot() {
         renderSkipBtn();
         return ok ? n : -1;
       },
+      // 选回合（第 34 块）：测试直接跳，等价于点面板里的格子
+      jumpRound: (n) => { jumpToRound(n); return level.roundNo; },
       // 图鉴 / 成就 / 战绩 / 难度（第 18 块）
       codex: {
         add: (g, id, n) => codexAdd(g, id, n),

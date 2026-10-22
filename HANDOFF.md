@@ -204,7 +204,7 @@ Three.js r160 的单摇杆幸存者肉鸽《奶蛙夜行》，纯静态站点（
   rarity 99。**测试坑：教程询问弹窗会盖住事件卡（清 localStorage 后必弹），进关先点 `#tutNo`；
   带代价的按钮在渲染那一刻就按当时金币置灰，`setCoins` 要放在 `trigger` 之前。**
 
-第 30 块要点（管理员模式，2026-10-22，v=34）：
+第 30 块要点（管理员模式，2026-10-22，v=34；选回合是第 34 块 v=38 补的）：
 - **入口**：设置面板最下面一行「管理员模式」（`SET_ROWS` 里 `type:'admin'`），点「开启」弹
   `#adminAsk` 密码框（`.md-input`，inputmode numeric），密码 `615265` 写在 `main.js` 的 `ADMIN_CODE`。
   输错只亮 `#adminErr` + 清空输入；输对 → `applyAdmin(true)`。**关闭不需要密码**（关是安全方向）。
@@ -226,6 +226,14 @@ Three.js r160 的单摇杆幸存者肉鸽《奶蛙夜行》，纯静态站点（
     `gap` 阶段直接把 `gapT` 填满。**不另开路径** —— 下一帧 update 走普通清场判定，
     三选一/商店/事件/通关结算与正常打完完全一致；最后一回合跳过就是直接通关。
   - 副作用：跳过只划掉「还没出场的怪」，场上那几只靠 `killAll` 清，两者必须一起调（单测里验证过这个语义）。
+- **选择回合（第 34 块，v=38）**：`#waveHud` 里加 `#pickRound` + `#roundPick` 面板（`.rp-grid` 5 列格子），
+  显隐跟跳过按钮同一条件（`renderSkipBtn` 里顺带调 `renderPickRound`）。每次展开按当前关卡重画
+  `buildRoundPicker()`（1..`level.totals.rounds`，当前回合 `.cur` 高亮）。点格子 → `jumpToRound(n)`：
+  `enemies.killAll()` + 清空 `laterQueue`（过期的连锁事件作废，调试跳转不带出旧事件卡）+
+  `level.startAt(n)`（走存档续玩那条普通路径，onRound/存档快照/结算全部一致）。越界夹回 [1, 总回合]。
+  调试钩子 `__game.jumpRound(n)`（非管理员或非 playing 时 no-op）。测试 `.tmp-block34-cdp.js`（28 项）。
+  **测试坑**：全程跳回合从没清过场 → 第一次清场会触发首武器卡（`grantRingThen`）+ 武器教程，
+  把 gameState 堵在 'weapon'/'wtut' —— 测试里要先点 `#wcOk` + `#wtSkip`。
 - **测试**：新 `.tmp-admin-test.mjs`（28 项：设置键 / 免费点火 / skipRound 的 spawning·gap·idle·通关四种走向）
   + 新 `.tmp-block30-cdp.js`（50 项：密码错对 / ∞ 显示 / 篝火免费 / 跳两回合 / 商店不扣钱 / 关掉回归）。
   旧断言只动了一处：`.tmp-settings-test.js` 的设置行 6 → 7（多了管理员模式那一行）。
@@ -407,6 +415,7 @@ node .tmp-boon-test.mjs       # 146 永夜火种（层数/品质吃幸运/待领
 .tmp-live-block23.js    15  线上专项（篝火 / 火种面板 / 版本号）
 .tmp-block29-cdp.js     39  第三关（解锁/焦土/骨骑/骸盾/孵骨/震钟/棘甲/震剑）
 .tmp-block30-cdp.js     50  管理员模式（密码/无限钱/跳过回合/关闭回归）
+.tmp-block34-cdp.js     28  管理员选回合（面板/点格子跳转/夹回边界/守卫/换关重画）
 .tmp-eventui-test.js     37  奇遇扩容（排版/对话/抽签随机性/图鉴 112）
 .tmp-curse-ui-test.js   14  诅咒可视化（芯片两行/明细行/开局血量/面板注记）
 .tmp-dbg-boot.js           抓启动期异常（改完代码先跑这个，比整套 CDP 快）

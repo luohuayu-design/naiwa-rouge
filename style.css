@@ -1095,3 +1095,19 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
 .st-item.locked{opacity:.48;cursor:default}
 .st-item.locked:hover{border-color:rgba(126,235,196,.18);background:rgba(14,32,28,.55)}
 .st-item.locked:active{transform:none}
+
+/* ============================================================
+   管理员 · 选择回合（第 34 块）：跳过按钮下面展开一张回合格子
+   ============================================================ */
+.round-pick{display:none;margin-top:6px;padding:8px 8px 9px;border-radius:10px;
+  pointer-events:auto;border:1px solid rgba(255,206,150,.35);background:rgba(24,14,6,.9)}
+.round-pick.on{display:block}
+.rp-title{font-size:9.5px;letter-spacing:.16em;color:rgba(255,217,160,.75);margin-bottom:6px}
+.rp-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:5px}
+.rp-grid button{padding:6px 0;border-radius:7px;font:inherit;font-size:11px;font-weight:700;
+  cursor:pointer;color:#ffd9a0;-webkit-tap-highlight-color:transparent;
+  border:1px solid rgba(255,206,150,.3);background:rgba(46,26,10,.6);
+  transition:background .12s,transform .1s}
+.rp-grid button:hover{background:rgba(72,40,14,.86)}
+.rp-grid button:active{transform:scale(.94)}
+.rp-grid button.cur{color:#06231a;background:#ffd9a0;border-color:transparent}
