@@ -214,7 +214,7 @@ export const UPGRADES = [
     id: 'shell', tag: 'def', glyph: '⬢', name: '甲壳',
     rarity: 1,
     w0: 0.90, gw: +0.040,   // 权重 = w0 + gw × (回合-1)
-    title: '防御 +15', desc: '减伤 = 防 /(100+防)，+15 约等于少挨 13% 的伤害',
+    title: '防御 +15', desc: '每次受击实际伤害 = 攻击 − 防御，+15 等于每一下少掉 15 点伤害，可以一直叠（单次受击最少仍掉 1 点）',
     stat: 'armor', flat: 15,
   },
   {
