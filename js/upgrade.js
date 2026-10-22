@@ -7,7 +7,7 @@
 //      不会出现三张都是废牌（比如暴击率 0 时抽到暴伤）的尴尬。
 //   2. 数值都按「一次选择 ≈ 一次可感知的提升」定：
 //      攻击力 +1（前期最直观）、攻速 +18%、范围 +0.40、
-//      生命 +2、防御 +15、回复 +0.2/秒；越界的数值由 stats 的统一公式兜住。
+//      生命 +2、防御 +0.3、回复 +0.2/秒；越界的数值由 stats 的统一公式兜住。
 //   3. 同一项可以重复抽到、重复叠加（src 里带序号，便于测试与回滚）。
 //   4. **不同回合的概率不同**：每项的权重 = w0 + gw ×(回合-1)，逐回合线性变化。
 //      前期攻击力、生命上限更容易出；后期暴击、吸血、剑系抬权重，
@@ -31,9 +31,9 @@
 //   标了 scope:'weapon' 的项改的是武器表（剑系 / 元素系），其余改主角表。
 //   两块表都要传进来，没传 wstats 时武器项会退化到主角表（只为兼容老调用）。
 // ============================================================
-import { STAT_DEFS } from './stats.js?v=55';
-import { WEAPON_STAT_DEFS } from './weaponStats.js?v=55';
-import { RARITIES, rarityWeight, oddsOf } from './rarity.js?v=55';
+import { STAT_DEFS } from './stats.js?v=56';
+import { WEAPON_STAT_DEFS } from './weaponStats.js?v=56';
+import { RARITIES, rarityWeight, oddsOf } from './rarity.js?v=56';
 
 // 一张卡改的是哪块表
 function tableFor(scope, stats, wstats) {
@@ -214,8 +214,8 @@ export const UPGRADES = [
     id: 'shell', tag: 'def', glyph: '⬢', name: '甲壳',
     rarity: 1,
     w0: 0.90, gw: +0.040,   // 权重 = w0 + gw × (回合-1)
-    title: '防御 +15', desc: '每次受击实际伤害 = 攻击 − 防御，+15 等于每一下少掉 15 点伤害，可以一直叠（单次受击最少仍掉 1 点）',
-    stat: 'armor', flat: 15,
+    title: '防御 +0.3', desc: '每次受击实际伤害 = 攻击 − 防御，+0.3 等于每一下少掉 0.3 点伤害，可以一直叠（单次受击最少仍掉 1 点）',
+    stat: 'armor', flat: 0.3,
   },
   {
     id: 'regen', tag: 'def', glyph: '✚', name: '再生',

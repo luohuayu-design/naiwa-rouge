@@ -5,68 +5,68 @@
 // 目标是把三件事调顺：摇杆输入 → 角色速度/朝向 → 相机跟随。
 // 后续叠战斗时，只需要在 tick() 里加敌人更新与自动攻击，不用动输入层。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=55';
-import { buildNightScene } from './scene.js?v=55';
-import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=55';
-import { createInput } from './input.js?v=55';
-import { createStats, STAT_DEFS } from './stats.js?v=55';
-import { createWeaponStats } from './weaponStats.js?v=55';
-import { createFx } from './fx.js?v=55';
-import { createEnemySystem } from './enemy.js?v=55';
+import * as THREE from '../lib/three.module.js?v=56';
+import { buildNightScene } from './scene.js?v=56';
+import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=56';
+import { createInput } from './input.js?v=56';
+import { createStats, STAT_DEFS } from './stats.js?v=56';
+import { createWeaponStats } from './weaponStats.js?v=56';
+import { createFx } from './fx.js?v=56';
+import { createEnemySystem } from './enemy.js?v=56';
 import {
   createLevel, LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVELS_BY_ID, DIFFS, setDifficulty, getDifficulty, roundScale, levelStats,
-} from './wave.js?v=55';
-import { createRangeRing } from './rangeRing.js?v=55';
-import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=55';
-import { createWeaponSystem } from './weapon.js?v=55';
-import { SWORD_KINDS } from './swordKinds.js?v=55';
-import { createGoldSystem } from './gold.js?v=55';
-import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW } from './shop.js?v=55';
-import { createTurretSystem, TURRET } from './turret.js?v=55';
-import { createRelicSystem, RELIC_DEFS } from './relics.js?v=55';
-import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=55';
-import audio from './audio.js?v=55';
-import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=55';
+} from './wave.js?v=56';
+import { createRangeRing } from './rangeRing.js?v=56';
+import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=56';
+import { createWeaponSystem } from './weapon.js?v=56';
+import { SWORD_KINDS } from './swordKinds.js?v=56';
+import { createGoldSystem } from './gold.js?v=56';
+import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW } from './shop.js?v=56';
+import { createTurretSystem, TURRET } from './turret.js?v=56';
+import { createRelicSystem, RELIC_DEFS } from './relics.js?v=56';
+import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=56';
+import audio from './audio.js?v=56';
+import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=56';
 import {
   settings as readSettings, setSetting, save as saveProfile, profile,
   bumpStat, setStatMax, codexAdd, codexCount, countCard, unlockAch, hasAch, addBones, bones, resetAll,
   storyProgress, markStorySeen, markStoryRead, addStoryMark, setStoryEnding,
   setSaveSuppressed, reloadFromStorage,
   giftLog, giftRedeemed, markGift,
-} from './profile.js?v=55';
+} from './profile.js?v=56';
 // 第 44 块：礼包兑换（码表只有哈希，明细在 gift.js 顶部注释）
-import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=55';
+import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=56';
 // 第 46 块：音效包（抽象奶蛙音效包 —— 4 段奶蛙叫声，通关第一关解锁）
-import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=55';
-import * as runSave from './runSave.js?v=55';
+import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=56';
+import * as runSave from './runSave.js?v=56';
 import {
   CAMPFIRE, CAMP_STEP, campBuy, campOwned, campLevel,
   campCost, campApply, bonesFor, diffBoneMul, levelBoneMul, coinBones, BONE,
-} from './campfire.js?v=55';
+} from './campfire.js?v=56';
 // 第 23 块：永夜火种（通关白给的 3 次永久三选一）
 import {
   BOONS, BOON_BY_ID, BOON_PICKS, boonOwned, boonStacks, boonPending, boonTotalStacks,
   grantBoons, rollBoons, takeBoon, applyBoons, boonStackText,
-} from './boons.js?v=55';
+} from './boons.js?v=56';
 // 第 21 块：夜行诅咒（自选 debuff 换骨币倍率）
-import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=55';
+import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=56';
 // 第 22 块：种子与每日挑战
 import {
   DAILY_RULES, dayKey, dayText, dailySeed, seedCode, pickDailyCurses,
   dailyRecord, saveDailyRecord, pruneDaily, makeRng,
-} from './seed.js?v=55';
-import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=55';
-import { achById, ACHS } from './achievements.js?v=55';
+} from './seed.js?v=56';
+import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=56';
+import { achById, ACHS } from './achievements.js?v=56';
 import {
   EVENTS, ALL_EVENTS, getEventById, pickEvent, effectLines,
   choiceHint, canAfford, costShort, REP_MIN, REP_MAX, REP_START,
   isTalk, eventChoices, resolveRoll, mergeEffects,
-} from './events.js?v=55';
+} from './events.js?v=56';
 // 第 32 块：主线《笑不出来的那一夜》（18 夜，一夜一关，前 3 夜已有关卡）
 import {
   STORY_ARC, STORY_CHAPTERS, STORY_ENDINGS, MARK_INFO,
   storyChapterAt, storyChapterById, storyEndingKey,
-} from './story.js?v=55';
+} from './story.js?v=56';
 
 // 标记模块已经跑起来了：index.html 的兜底自检靠它判断
 // 「模块根本没执行」还是「执行了但加载慢」。
@@ -3372,7 +3372,7 @@ async function boot() {
   // 照搬 naiwa-step 那套：进主界面自动弹一次，「日期 + 公告版本」写在本机；
   // 勾了「今日内不再弹出」当天就不再自动弹。改了公告内容把 NOTICE_VER +1，
   // 之前勾过的人也会重新看到一次。主菜单「公告」按钮则永远能强制回看。
-  const NOTICE_VER = '1';
+  const NOTICE_VER = '2';   // v2：一人一AI / 新武器新怪创意 / 评估后发码
   const NOTICE_KEY = 'naiwa_rouge_notice_v1';   // 已在 profile.js 的 RESET_KEYS 里，重置进度会一起清掉
   const noticeOv = document.getElementById('noticeOv');
   const noticeHideToday = document.getElementById('noticeHideToday');

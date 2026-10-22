@@ -121,8 +121,15 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     ok('核心位置都在（拍击/暴击/受伤/怪死/自爆/清回合/通关/倒下）',
       ['hit', 'crit', 'hurt', 'die', 'explode', 'roundClear', 'victory', 'defeat'].every((k) => map[k]),
       Object.keys(map).join(','));
-    ok('每项都写了自己的播放区间', Object.values(map).every((v) => typeof v.dur === 'number' && v.dur > 0 && typeof v.offset === 'number'));
-    ok('每个音效都映射到 4 个文件之一', Object.values(map).every((v) => files.includes(v.file)));
+    ok('每项要么有播放区间，要么是静音/随机池（用户定案：hit 随机奶蛙二选一、die 静音）',
+      Object.values(map).every((v) =>
+        (typeof v.dur === 'number' && v.dur > 0 && typeof v.offset === 'number') ||
+        v.silent === true || Array.isArray(v.pool)));
+    ok('有区间的项都映射到 4 个文件之一', Object.values(map).every((v) => !v.file || files.includes(v.file)));
+    ok('hit 是随机池（奶蛙 voice-3 / voice-2 二选一）',
+      Array.isArray(map.hit.pool) && map.hit.pool.length === 2 &&
+      map.hit.pool.every((p) => files.includes(p.file) && typeof p.offset === 'number' && p.dur > 0));
+    ok('die 静音', map.die.silent === true);
 
     // 音频上下文要真实手势才 running，否则 sfx() 一律返回 false（测不出东西）
     await tap(200, 400);
@@ -172,7 +179,8 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     await sleep(1200);   // 等预热
     const vl2 = await ev('window.__game.pack.audio().voiceLoaded');
     ok('4 段奶蛙素材全加载', vl2.length === 4, String(vl2));
-    ok('打中一下走的是奶蛙素材（能播）', (await ev("window.__game.pack.sfx('hit', 0.01)")) === true);
+    ok('打中一下能播（随机池：奶蛙两声二选一）', (await ev("window.__game.pack.sfx('hit', 0.01)")) === true);
+    ok('怪死静音（die 不播）', (await ev("window.__game.pack.sfx('die', 0.01)")) === false);
     ok('通关音也能播（6 秒那段）', (await ev("window.__game.pack.sfx('victory', 0.01)")) === true);
     ok('没被替换的挥剑音照样能播', (await ev("window.__game.pack.sfx('swing', 0.01)")) === true);
     ok('加载没失败', (await ev('window.__game.pack.audio().failed.length')) === 0,

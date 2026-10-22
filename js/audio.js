@@ -22,7 +22,7 @@
 //   所以 buffer 缓存按**实际文件**存（'s:音效名' / 'v:文件名'），换包只换取哪份。
 // ============================================================
 
-import { VOICE_BASE, FROG_SFX } from './voicepack.js?v=55';
+import { VOICE_BASE, FROG_SFX } from './voicepack.js?v=56';
 
 const BGM_BASE = 'assets/audio/bgm/';
 const SFX_BASE = 'assets/audio/sfx/';
@@ -171,12 +171,13 @@ function packOverride(name) {
   return FROG_SFX[name] || null;
 }
 
-// 一个音效在当前包下该用哪个缓存键 / 哪个文件
+// 一个音效在当前包下该用哪个缓存键 / 哪个文件（pool 时预热第一个备选）
 function voiceOf(name) {
-  const ov = packOverride(name);
-  return ov
-    ? { key: 'v:' + ov.file, url: VOICE_BASE + ov.file }
-    : { key: 's:' + name, url: SFX_BASE + SFX_DEFS[name].file };
+  const ov0 = packOverride(name);
+  if (!ov0) return { key: 's:' + name, url: SFX_BASE + SFX_DEFS[name].file };
+  const ov = ov0.pool ? ov0.pool[0] : ov0;
+  if (!ov || !ov.file) return { key: 's:' + name, url: SFX_BASE + SFX_DEFS[name].file };
+  return { key: 'v:' + ov.file, url: VOICE_BASE + ov.file };
 }
 
 // 按「文件」加载并缓存：普通音效和奶蛙素材走同一条路
@@ -224,6 +225,13 @@ export function sfx(name, opts = {}) {
   const c = ensureCtx();
   if (!c || c.state !== 'running') return false;
   if (voiceCount >= MAX_VOICES) return false;
+
+  let ov = packOverride(name);
+  if (ov && ov.silent) return false;   // 奶蛙包里这个音效整段静音（怪死不播，用户定案 2026-10-22）
+  // 奶蛙包攻击音随机池：从包里两个奶蛙叫声（voice-3 短呱 / voice-2 闷呱）随机挑一个 ——
+  // 每次攻击音色有变化、又不糊（怪死已静音，不会叠）
+  if (ov && ov.pool) ov = ov.pool[(Math.random() * ov.pool.length) | 0];
+
   const def = SFX_DEFS[name];
   if (!def) { console.warn('[音频] 未知音效：', name); return false; }
 
@@ -231,11 +239,11 @@ export function sfx(name, opts = {}) {
   if (now - (lastAt.get(name) || 0) < MIN_GAP_MS) return false;
   lastAt.set(name, now);
 
-  const { key } = voiceOf(name);
+  // 选中的是奶蛙素材就用 v: 键（不能再走 voiceOf(name)，那里只会拿 pool[0]）
+  const key = ov && ov.file ? 'v:' + ov.file : 's:' + name;
   let buf = buffers.get(key);
-  let ov = packOverride(name);        // 第 46 块：奶蛙包里这个音效有自己的区间 / 音量 / 速率
   if (!buf) {
-    loadOne(name);
+    loadFile(key, ov && ov.file ? VOICE_BASE + ov.file : SFX_BASE + def.file);
     // 奶蛙包里那份还没下完（或者网络挂了）就先拿原版顶上，
     // 别让玩家觉得「换了个包之后打击没声音了」；下一声自己就换成奶蛙。
     // 注意这时候必须把 ov 丢掉 —— 原版素材只有零点几秒，套奶蛙的 offset 会直接播空。

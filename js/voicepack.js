@@ -20,9 +20,9 @@ export const VOICE_BASE = 'assets/audio/voice/';
 
 // 包里到底有哪 4 段（解锁界面按这个列表显示 + 试听）
 export const FROG_FILES = [
-  { file: 'voice-3.mp3', name: '短促一呱', use: '拍中目标', offset: 0.745, preview: 0.85 },
+  { file: 'voice-3.mp3', name: '短促一呱', use: '攻击（随机二选一）', offset: 0.745, preview: 0.85 },
   { file: 'voice-1.mp3', name: '用力一声', use: '暴击 · 清完一回', offset: 0.334, preview: 1.60 },
-  { file: 'voice-2.mp3', name: '挨打那种', use: '受伤 · 怪死 · 自爆', offset: 0.177, preview: 1.20 },
+  { file: 'voice-2.mp3', name: '挨打那种', use: '受伤 · 自爆 · 攻击（随机二选一）', offset: 0.177, preview: 1.20 },
   { file: 'voice-end.mp3', name: '收尾长鸣', use: '通关 · 倒下', offset: 0, preview: 2.20 },
 ];
 
@@ -32,17 +32,22 @@ export const FROG_FILES = [
 //   vol    这个音效在奶蛙包里的音量（覆盖 SFX_DEFS 的 vol）
 //   rate   基准播放速率（<1 更低沉、>1 更尖更短）
 export const FROG_SFX = {
-  // 打中一下：极高频，所以只要最前面 0.45 秒那声「呱」，并稍微加速
-  hit: { file: 'voice-3.mp3', offset: 0.745, dur: 0.45, vol: 0.50, rate: 1.12, jitter: 0.08 },
+  // 打中一下：用户定案（2026-10-22）—— 攻击时随机播「原版打击 / 原版怪死」其中之一。
+  // 攻击音随机池（用户定案 2026-10-22：攻击时随机播奶蛙包的两个叫声）——
+  //   A：voice-3 的短促一「呱」（原 hit 用的那段）
+  //   B：voice-2 的那声闷呱（原 die 用的那段，压低降速）
+  // 两个都是奶蛙素材，音色相近但一听是两声不同的叫，打起来不会单调
+  hit: { pool: [
+    { file: 'voice-3.mp3', offset: 0.745, dur: 0.45, vol: 0.50, rate: 1.12, jitter: 0.08 },
+    { file: 'voice-2.mp3', offset: 0.177, dur: 0.70, vol: 0.42, rate: 0.82, jitter: 0.10 },
+  ] },
   // 暴击：一记完整的用力叫声，比 hit 长、比 hit 响
   crit: { file: 'voice-1.mp3', offset: 0.334, dur: 0.90, vol: 0.60, rate: 1.00, jitter: 0.04 },
   // 自己挨打：完整一声
   hurt: { file: 'voice-2.mp3', offset: 0.177, dur: 0.85, vol: 0.72, rate: 1.00, jitter: 0 },
-  // 怪死：压低 + 缩短，听起来像远处闷闷一声。
-  //   delay 0.09：打中（hit）和怪死经常同帧触发，两声呱会叠成一团糊；
-  //   把死亡的呱推迟约一拍，变成「呱 →（一拍）→ 呱」的先后关系
-  die: { file: 'voice-2.mp3', offset: 0.177, dur: 0.70, vol: 0.40, rate: 0.80, jitter: 0.10, delay: 0.09 },
-  // 小兵自爆：更低更闷，和 die 拉开层次。die+explode 也常同帧，多让半拍
+  // 怪死：不播（用户定案 —— 攻击音已经随机借走了原版怪死声，死再响一声就是叠音）
+  die: { silent: true },
+  // 小兵自爆：更低更闷，和 die 拉开层次（自爆是特效事件音，保留）
   explode: { file: 'voice-2.mp3', offset: 0.177, dur: 0.55, vol: 0.55, rate: 0.72, jitter: 0.06, delay: 0.13 },
   // 清完一回合：一声完整的叫，别太长（20 个回合要听 20 次）
   roundClear: { file: 'voice-1.mp3', offset: 0.334, dur: 1.10, vol: 0.55, rate: 1.00, jitter: 0 },

@@ -14,7 +14,7 @@
 // camp   { id: 等级 } 已点燃的火种（数字等级，无限级，天然兼容老档案）
 // ============================================================
 
-import { profile, save, bones, addBones } from './profile.js?v=55';
+import { profile, save, bones, addBones } from './profile.js?v=56';
 
 // ---------------- 骨币产出 ----------------
 // 一局打完全程普通（20 回合 273 杀）：60 + 81 + 40 ≈ 181 骨币。
@@ -105,8 +105,8 @@ export const CAMPFIRE = [
   },
   {
     id: 'shell', name: '火种 · 铁壳', icon: '🛡', cost: 85,
-    desc: '每级护甲 +6。怪撞你一下，你少掉一点。',
-    mods: [{ stat: 'armor', flat: 6 }],
+    desc: '每级护甲 +0.12。怪撞你一下，你少掉一点。',
+    mods: [{ stat: 'armor', flat: 0.12 }],
   },
   {
     id: 'purse', name: '布袋 · 铜板', icon: '🪙', cost: 50,
