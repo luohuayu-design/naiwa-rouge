@@ -153,11 +153,12 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     ok('两个选择按钮都在', await ev("!!document.getElementById('pgYes') && !!document.getElementById('pgNo')"));
     // 试听第一段：真的解码并播放
     await ev("document.querySelectorAll('#pgList .pg-play')[0].click()");
-    await sleep(900);
+    await sleep(400);
     const vl = await ev('window.__game.pack.audio().voiceLoaded');
     ok('试听后素材真的解码了', vl.length >= 1, String(vl));
+    // 反馈窗口 900ms（成功）/1300ms（失败），在 400ms 取样稳定落在窗口内
     ok('试听按钮给了反馈（♪）', /♪|没声/.test(await ev("document.querySelectorAll('#pgList .pg-play')[0].textContent")));
-    await sleep(700);
+    await sleep(1100);
     ok('反馈会自己还原成「试听」', (await ev("document.querySelectorAll('#pgList .pg-play')[0].textContent")) === '试听');
 
     console.log('\n[4] 换上奶蛙叫');

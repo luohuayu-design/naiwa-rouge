@@ -22,7 +22,7 @@
 //   所以 buffer 缓存按**实际文件**存（'s:音效名' / 'v:文件名'），换包只换取哪份。
 // ============================================================
 
-import { VOICE_BASE, FROG_SFX } from './voicepack.js?v=54';
+import { VOICE_BASE, FROG_SFX } from './voicepack.js?v=55';
 
 const BGM_BASE = 'assets/audio/bgm/';
 const SFX_BASE = 'assets/audio/sfx/';
@@ -262,9 +262,13 @@ export function sfx(name, opts = {}) {
   voiceCount++;
   src.onended = () => { voiceCount--; try { src.disconnect(); g.disconnect(); } catch (_) {} };
   try {
-    // 裁切播放：offset 秒开始、只播 dur 秒（dur 是源时间，变速前）
-    if (ov) src.start(0, Math.max(0, ov.offset || 0), ov.dur || undefined);
-    else src.start();
+    // 裁切播放：offset 秒开始、只播 dur 秒（dur 是源时间，变速前）。
+    // delay（秒）：奶蛙包里 hit/die 常同帧触发，die/explode 错开一拍才不糊成一团；
+    // 用 AudioContext 的绝对时间调度（start 的第一个参数），比 setTimeout 精确
+    const delay = opts.delay != null ? opts.delay : (ov && ov.delay != null ? ov.delay : 0);
+    const at = c.currentTime + Math.max(0, delay);
+    if (ov) src.start(at, Math.max(0, ov.offset || 0), ov.dur || undefined);
+    else src.start(at);
   } catch (err) {
     voiceCount--;
     return false;

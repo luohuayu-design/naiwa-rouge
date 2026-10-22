@@ -38,10 +38,12 @@ export const FROG_SFX = {
   crit: { file: 'voice-1.mp3', offset: 0.334, dur: 0.90, vol: 0.60, rate: 1.00, jitter: 0.04 },
   // 自己挨打：完整一声
   hurt: { file: 'voice-2.mp3', offset: 0.177, dur: 0.85, vol: 0.72, rate: 1.00, jitter: 0 },
-  // 怪死：压低 + 缩短，听起来像远处闷闷一声
-  die: { file: 'voice-2.mp3', offset: 0.177, dur: 0.70, vol: 0.40, rate: 0.80, jitter: 0.10 },
-  // 小兵自爆：更低更闷，和 die 拉开层次
-  explode: { file: 'voice-2.mp3', offset: 0.177, dur: 0.55, vol: 0.55, rate: 0.72, jitter: 0.06 },
+  // 怪死：压低 + 缩短，听起来像远处闷闷一声。
+  //   delay 0.09：打中（hit）和怪死经常同帧触发，两声呱会叠成一团糊；
+  //   把死亡的呱推迟约一拍，变成「呱 →（一拍）→ 呱」的先后关系
+  die: { file: 'voice-2.mp3', offset: 0.177, dur: 0.70, vol: 0.40, rate: 0.80, jitter: 0.10, delay: 0.09 },
+  // 小兵自爆：更低更闷，和 die 拉开层次。die+explode 也常同帧，多让半拍
+  explode: { file: 'voice-2.mp3', offset: 0.177, dur: 0.55, vol: 0.55, rate: 0.72, jitter: 0.06, delay: 0.13 },
   // 清完一回合：一声完整的叫，别太长（20 个回合要听 20 次）
   roundClear: { file: 'voice-1.mp3', offset: 0.334, dur: 1.10, vol: 0.55, rate: 1.00, jitter: 0 },
   // 通关：整段 6 秒长鸣
