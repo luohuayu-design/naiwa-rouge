@@ -46,12 +46,16 @@
 // ============================================================
 import { STAT_DEFS } from './stats.js';
 import { WEAPON_STAT_DEFS } from './weaponStats.js';
+// 第 31 块：事件扩容（40 条随机事件 + 3 条连锁后续）单独放一个文件，
+// 不然这个文件会涨到 5000 行。抽取规则、effectLines 等工具函数仍在本文件。
+import { EXTRA_EVENTS, EXTRA_CHAIN_EVENTS } from './eventsExtra.js';
 
 export const REP_MIN = 0;
 export const REP_MAX = 100;
 export const REP_START = 50;
 
-export const EVENTS = [
+// 第 31 块：随机池 = 原来 57 条（CORE）+ eventsExtra.js 的 40 条
+const CORE_EVENTS = [
   // ============================================================
   // 一、天气与地形
   // ============================================================
@@ -2156,57 +2160,15 @@ const CHAIN_EVENTS = [
     ],
   },
 
-  // ============================================================
-  // 六、焦土钟楼专属（第 29 块）：只在第三关出现
-  // ============================================================
-  {
-    id: 'bellRinger', icon: '🔔', title: '敲钟的人', who: '钟楼里的守钟人',
-    story: '钟楼的影子横在焦土上，比楼本身还长。\n塔顶有人在敲钟，一下、一下，很慢 —— 每敲一下，地上的骨骑就抬起头。\n「它敲的是召集。」一个裹着灰袍的老人蹲在台阶下，「我敲不动了，你要是上去，把它敲停。」',
-    cond: (c) => c.levelId === 3,
-    choices: [
-      {
-        label: '上去把钟绳割断', hint: '下回合怪物数量 -25% · 生命 -1',
-        effects: { level: { countScale: 0.75 }, hp: -1 },
-        say: '钟声断在半空。整座楼安静下来的那一瞬，你听见自己的心跳。',
-      },
-      {
-        label: '扶老人上去，让他自己敲', hint: '民心 +8 · 下回合移速 -6%',
-        effects: { rep: 8, mods: [{ stat: 'moveSpeed', pct: -0.06 }] },
-        say: '他敲得很吃力，但节奏对了。骨骑在坡下停住，像忘了自己要做什么。',
-      },
-      {
-        label: '不进楼，先绕过去', hint: '下回合怪物伤害更高 · 金币 +12',
-        effects: { level: { countScale: 1.1 }, gold: 12 },
-        say: '你在钟声里往前跑。身后的鼓点越来越密，像有人在替你数步子。',
-      },
-    ],
-  },
-  {
-    id: 'ashChild', icon: '🔥', title: '灰里的孩子', who: '蹲在灰堆边的小孩',
-    story: '一个小孩子蹲在还热着的灰堆边，手里捧着一块烧黑的木牌。\n「这是塔上的名字，」她说，「每年都要烧一遍，不然他们就不认得路回来。」\n她把木牌递给你，掌心被烫得发红。',
-    cond: (c) => c.levelId === 3 && c.round >= 13,
-    choices: [
-      {
-        label: '替她把剩下的木牌都烧完', hint: '民心 +7 · 下回合攻速 +6%',
-        effects: { rep: 7, mods: [{ stat: 'attackSpeed', pct: 0.06 }] },
-        say: '火光在她脸上跳。她一直看着，直到最后一块变成灰。',
-      },
-      {
-        label: '把木牌收进背包', hint: '幸运 +0.5 · 民心 -4',
-        effects: { rep: -4, permanent: [{ stat: 'luck', flat: 0.5 }] },
-        say: '木牌贴着背，一直有点烫。你说不清这算不算带走了一个人。',
-      },
-      {
-        label: '给她一块饼，然后走', hint: '金币 -6 · 生命 +2 · 民心 +3',
-        effects: { gold: -6, hp: 2, rep: 3 },
-        say: '她咬了一口就收起来了，说要留着明天。你没敢问明天是什么时候。',
-      },
-    ],
-  },
+  // 第 31 块注：原来这里还放着第三关专属的 bellRinger / ashChild，
+  // 但那两条写错了表 —— 抽签只从 EVENTS 里取，放在「连锁表」等于永远抽不到。
+  // 现在它们（连同加长后的文本）挪到了 eventsExtra.js 的 EXTRA_EVENTS 里。
 ];
 
+// 随机事件池（进 pickEvent 抽签的那一批）
+export const EVENTS = [...CORE_EVENTS, ...EXTRA_EVENTS];
 // 全部事件（随机池 + 连锁），便于按 id 查找 / 文档生成
-export const ALL_EVENTS = [...EVENTS, ...CHAIN_EVENTS];
+export const ALL_EVENTS = [...EVENTS, ...CHAIN_EVENTS, ...EXTRA_CHAIN_EVENTS];
 // ---------------- 抽取 ----------------
 // ctx: { round, hasWeapon, gold, rep }；recentIds：最近出现过的（3 回合内不重复）
 export function pickEvent(ctx = {}, recentIds = [], rng = Math.random) {

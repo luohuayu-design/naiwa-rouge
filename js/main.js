@@ -3685,6 +3685,37 @@ async function boot() {
         },
         list: EVENTS,
         all: ALL_EVENTS,
+        // 第 31 块：按真实规则抽 n 次（含 cond 筛、权重、最近 3 次不重复），只返回 id
+        pick: (n = 1) => {
+          const ctx = {
+            round: level ? level.roundNo + 1 : 1, hasWeapon: weapon.granted, gold: coins,
+            rep: reputation, hp: stats.hp.cur, luck: stats.get('luck'), levelId: curLevelId,
+          };
+          const out = [];
+          const recent = [];
+          for (let i = 0; i < n; i++) {
+            const ev = pickEvent(ctx, recent, rngOf('event'));
+            if (!ev) break;
+            recent.push(ev.id);
+            out.push(ev.id);
+          }
+          return out;
+        },
+        // 指定关卡 id 抽 n 次（验证第三关专属事件）
+        pickAt: (lvId, n = 1) => {
+          const ctx = {
+            round: 14, hasWeapon: true, gold: 20, rep: 50, hp: 5, luck: 0, levelId: lvId,
+          };
+          const out = [];
+          const recent = [];
+          for (let i = 0; i < n; i++) {
+            const ev = pickEvent(ctx, recent, rngOf('event'));
+            if (!ev) break;
+            recent.push(ev.id);
+            out.push(ev.id);
+          }
+          return out;
+        },
         get queue() { return laterQueue.map((q) => ({ due: q.due, id: q.id })); },
         get currentRound() { return currentEventRound; },
         // 对话式事件（第 10 块）：现在拍到第几拍、说过哪些话、这一拍能回什么

@@ -139,6 +139,28 @@ Three.js r160 的单摇杆幸存者肉鸽《奶蛙夜行》，纯静态站点（
 - 回归：level2 单测重写 67 + block20 CDP 36（D 段改环跟玩家 + 新 D2 卫队/石刺/主祭死卫队散架），
   全绿。注意：测试小兵必须放在玩家 2.0 距离（环 2.6 之内、自爆圈 ~1.1 之外），贴脸会自爆。
 
+第 31 块要点（夜行奇遇大扩容，2026-10-22，v=35）：
+- **用户需求**：随机事件再加几十种、要有趣、随机性强、对话加长到一二百字。
+- **规模**：`js/eventsExtra.js` 新增 42 条（40 随机 + 2 条第三关专属挪回）+ 3 条 chainOnly 连锁。
+  `events.js` 里 `CORE_EVENTS`（原 57 条）+ `EXTRA_EVENTS` 组装成 `EVENTS`（99），`ALL_EVENTS` = 112，
+  选项总数 355+，talk 型 22 个 / 46 拍 / 128 句回话，新文案 say 平均 100 字、close 平均 103 字。
+- **顺带修了个真 bug**：第 29 块把 bellRinger / ashChild 写进了 `CHAIN_EVENTS`，
+  而 `pickEvent` 只从 `EVENTS` 抽 —— 两条第三关专属奇遇**从来没人遇到过**。已挪进 EXTRA_EVENTS
+  （文本顺便加长了）。
+- **结构**：`eventsExtra.js` 只放数据，抽签/文案工具仍在 `events.js`；`events.js` 顶部 import 它
+  （单向依赖，无循环）。文件太大不好维护是拆分的唯一原因。
+- **六个新取向**（和原有 57 条错开）：骷髅的怪日常 8 / 路边的人 8 / 不对劲的东西 8 / 赌一把 8 /
+  相处与奇景 5 / 处境事件 3（`richMan` cond gold>=40、`emptyPocket` gold<6、`lastBreath` hp<=2.5）。
+- **随机性**：十余个 roll 分支（55/45、60/40、45% 赌局）；3 条新连锁
+  skullLost→littleSpear（2 回合）/ doorInField→doorAgain（2）/ memoryPawn→memoryBack（3）。
+- **调试钩子**：`__game.event.pick(n)`（按真实规则连抽 n 次，内部维护 recent 模拟「3 次不重复」）、
+  `__game.event.pickAt(levelId, n)`（指定关卡抽，验第三关专属）、既有 `trigger/choose/next/isResultOpen`。
+- **测试**：新 `.tmp-eventui-test.js`（37 项：事件库 112 / talk 22 / 长文案排版不溢出不超一屏 /
+  多拍对话 beat 推进 / 400 次抽 87 种 / 条件事件按金币生命出现 / 图鉴 112 条全渲染）。
+  计数断言同步：event-test（99/112/13、talk≥18、拍≥40）、block18 奇遇 112、talk-skill（99/13/112）、
+  rarity 99。**测试坑：教程询问弹窗会盖住事件卡（清 localStorage 后必弹），进关先点 `#tutNo`；
+  带代价的按钮在渲染那一刻就按当时金币置灰，`setCoins` 要放在 `trigger` 之前。**
+
 第 30 块要点（管理员模式，2026-10-22，v=34）：
 - **入口**：设置面板最下面一行「管理员模式」（`SET_ROWS` 里 `type:'admin'`），点「开启」弹
   `#adminAsk` 密码框（`.md-input`，inputmode numeric），密码 `615265` 写在 `main.js` 的 `ADMIN_CODE`。
@@ -310,6 +332,8 @@ node .tmp-camp-test.mjs       # 99  篝火/骨币（多级 + 阶梯 + 金币折�
 node .tmp-level2-test.mjs     # 67  第二关/巫师
 node .tmp-level3-test.mjs     # 71  第三关/三只新怪/三件新装备/专属奇遇
 node .tmp-admin-test.mjs      # 28  管理员模式（设置键/免费点火/skipRound 四种走向）
+node .tmp-event-test.mjs      # 105 事件库结构/权衡/连锁/抽取/文案（112 条）
+node .tmp-eventui-test.js     # 37  事件 UI（长文案排版/多拍对话/随机性/条件事件/图鉴）
 node .tmp-curse-test.mjs      # 84  诅咒/种子/每日规则
 node .tmp-boon-test.mjs       # 146 永夜火种（层数/品质吃幸运/待领次数/克制）
 ```
@@ -340,6 +364,7 @@ node .tmp-boon-test.mjs       # 146 永夜火种（层数/品质吃幸运/待领
 .tmp-live-block23.js    15  线上专项（篝火 / 火种面板 / 版本号）
 .tmp-block29-cdp.js     39  第三关（解锁/焦土/骨骑/骸盾/孵骨/震钟/棘甲/震剑）
 .tmp-block30-cdp.js     50  管理员模式（密码/无限钱/跳过回合/关闭回归）
+.tmp-eventui-test.js     37  奇遇扩容（排版/对话/抽签随机性/图鉴 112）
 .tmp-curse-ui-test.js   14  诅咒可视化（芯片两行/明细行/开局血量/面板注记）
 .tmp-dbg-boot.js           抓启动期异常（改完代码先跑这个，比整套 CDP 快）
 ```
