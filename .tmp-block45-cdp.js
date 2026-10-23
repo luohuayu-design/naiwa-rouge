@@ -152,7 +152,7 @@ async function httpJson(url, method = 'GET') {
     await sleep(150);
     ok('「我知道了」能关掉', (await ev(isOn('noticeOv'))) === false);
     const keyStr = await ev('window.__game.notice.key()');
-    ok('写下了「日期|版本」记录', /^\d{4}-\d{1,2}-\d{1,2}\|1$/.test(keyStr || ''), String(keyStr));
+    ok('写下了「日期|版本」记录', /^\d{4}-\d{1,2}-\d{1,2}\|\d+$/.test(keyStr || ''), String(keyStr));   // 版本号写死会过期（v=61 教训：NOTICE_VER 已到 2）
     ok('当天再进不再弹', (await ev('window.__game.notice.show(false)')) === false);
     ok('确实没弹', (await ev(isOn('noticeOv'))) === false);
     ok('主菜单点「公告」仍能强制看', (await ev('window.__game.notice.show(true)')) === true);
@@ -162,7 +162,7 @@ async function httpJson(url, method = 'GET') {
 
     console.log('\n[6] 公告版本号一换，今天勾过的人也要重看');
     // 手动把记录改成旧版本号
-    await ev("localStorage.setItem('naiwa_rouge_notice_v1', localStorage.getItem('naiwa_rouge_notice_v1').replace(/\\|1$/, '|0'))");
+    await ev("localStorage.setItem('naiwa_rouge_notice_v1', localStorage.getItem('naiwa_rouge_notice_v1').replace(/\\|\\d+$/, '|0'))");
     ok('旧版本的记录不算数', (await ev('window.__game.notice.show(false)')) === true);
     ok('旧版本会重新弹', await ev(isOn('noticeOv')));
     await ev("document.getElementById('noticeX').click()");

@@ -1,8 +1,24 @@
 # 蛙步 · 夜行 —— 交接文档
 
-> 新对话从这里开始读，不要先翻聊天记录。
+> 新对话从这里开始读，不要先翻聊天记录。**先读 §0「给新对话的话」，再按需查后面章节。**
 >   
-> 最后更新：2026-10-21 晚 · 对应代码：第 24 块 + 诅咒可视化修补（见下方「当前状态」）
+> 最后更新：2026-10-23 凌晨 · 线上 **v=61** · 第 51 块（图鉴怪物贴图）+ 属性页返回按钮 hotfix 已全部上线，工作区干净，无未完成任务
+
+---
+
+## 0. 给新对话的话（2026-10-23 交接）
+
+1. **当前基线**：v=61（`01c7163`）已推送且线上生效，git 工作区干净。最近十块（44~51 + v=53~56 一串音效包 hotfix + v=61 hotfix）全部完结，**没有挂起的半成品**。用户新需求来了再开工，别主动找活。
+2. **节奏**：用户偏好**小步块状推进**——一块功能 = 一次提交 = 一个版本号（v=N）。铁律 12：**做完回归绿就立刻推送交给用户测**，用户的反馈比自测更快更准。
+3. **最容易翻车的五件事**（细节都在铁律和下文）：
+   ① 发版**两处版本号**都要 bump（index.html + js 内部所有 `import ...?v=N`），漏一处就是「本地好线上炸」；
+   ② **重复 id 假绿**（v=61 刚翻车）：复制面板 HTML 忘改 id，测试用全局 `getElementById` 点击会掩盖——block50 测试里已有「全页零重复 id」通用断言，新面板直接抄；
+   ③ **公告在 loading 淡完 +700ms 才弹**，测试截图要先 `sleep(2600)` 再 `__game.notice.hide()`；
+   ④ `jumpToRound/skipRound` **只在 adminOn 时生效**，不开管理员是静默 no-op；
+   ⑤ 本地服务器必须 `run_in_background`；CDP 截图路径**不能含中文**；推送走 `git -c http.proxy=http://127.0.0.1:7897 ...`（先 curl 探代理，挂了改直连）。
+4. **最新绿基线**（动到相关文件后要回归）：block50 **12**/0（含重复 id 断言）、block51 **20**/0、`.tmp-wtut-title-check.js` **4**/0、block47 27/0、block49 23/0。跑法见 §6，一次只跑一套。
+5. **用户规则**：全中文；有疑问先问、有疑问不写码；README 与实况同步；美术资产优先 GitHub 现成 CC0；不做多角色；局外对局内影响要小（篝火每级 +1 生命这种量级）。
+6. **改交互规则要回头跑老套件**（2026-10-23 的教训）：第 42/43 块给回话按钮加 3 秒读秒锁后，block32（读秒之前写的）静默挂了 9 项；公告升 `NOTICE_VER=2` 后 block45 写死 `|1` 也挂了。**横向特性（锁定/延迟/版本号）上线时，把受影响的老 CDP 套件重跑一遍**，别只跑新套件。本次两个都已修好（block32 60/0、block45 49/0）。
 
 ---
 
@@ -20,7 +36,7 @@ Three.js r160 的单摇杆幸存者肉鸽《奶蛙夜行》，纯静态站点（
 | 线上        | <https://luohuayu-design.github.io/naiwa-rouge/>                                                   |
 | 远端        | `luohuayu-design/naiwa-rouge`，main 分支，Pages = main / root                                          |
 | 本地服务器     | `cd naiwa-rouge && python -m http.server 8124`（**必须 run_in_background**，否则 shell 退出就死，报错看起来像游戏没启动） |
-| 测试脚本      | 在**上级**目录 `C:/Users/MECHREVO/Desktop/班级网站/.tmp-*.js`（回归资产，别删）                                      |
+| 测试脚本      | 老的在**上级**目录 `C:/Users/MECHREVO/Desktop/班级网站/.tmp-*.js`，第 41 块起的新套件在 `naiwa-rouge/.tmp-*.js`（回归资产，别删） |
 | node      | `C:/Users/MECHREVO/.workbuddy/binaries/node/versions/22.22.2-6/node.exe`                           |
 | 无头 Chrome | `C:/Program Files/Google/Chrome/Application/chrome.exe`                                            |
 
@@ -30,7 +46,7 @@ Three.js r160 的单摇杆幸存者肉鸽《奶蛙夜行》，纯静态站点（
 
 ---
 
-## 2. 当前状态（2026-10-22）
+## 2. 当前状态（2026-10-23，v=61）
 
 | 块      | 内容                                            | 状态                          |
 | ------ | --------------------------------------------- | --------------------------- |
@@ -441,7 +457,7 @@ Three.js r160 的单摇杆幸存者肉鸽《奶蛙夜行》，纯静态站点（
 
 | 文件                                                                                           | 职责                                                                                                         |
 | -------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| `main.js` (~2900 行)                                                                          | 主循环 + 所有 UI 面板（标题/选关/记录/设置/图鉴/商店/升级/事件/背包/结算/教程）+ 各系统接线。**改之前先 grep 定位**                                   |
+| `main.js` (~5400 行)                                                                          | 主循环 + 所有 UI 面板（标题/选关/种子/属性/记录/设置/图鉴/商店/升级/事件/背包/结算/教程/公告/礼包/读取存档）+ 各系统接线 + `__game` 钩子。**改之前先 grep 定位** |
 | `wave.js`                                                                                    | 20 回合编排、`roundScale`、**难度 DIFFS**、`startAt`（读档）、升级点/商店点                                                    |
 | `stats.js`                                                                                   | 通用属性引擎（`createStats(defs)`），主角 14 项 / 武器 11 项两套实例；`dumpMods/loadMods`（存档）                                  |
 | `enemy.js`                                                                                   | 7 种怪（minion/warrior/archer/bowman + 第二关巫师 hexer/pyro/hierarch）、红圈落箭、法术地阵（hex/burn）、光环、`takeDamage(无敌期打不动)` |
@@ -460,6 +476,10 @@ Three.js r160 的单摇杆幸存者肉鸽《奶蛙夜行》，纯静态站点（
 | `gift.js`                                                                                    | 礼包兑换（第 44 块）：`GIFT_TABLE` 只存 16 位哈希 + 骨币，`normalizeCode`/`codeHash`/`lookupGift`/`giftByHash`；明文码在 gitignore 的 `gift-codes.local.md` |
 | `voicepack.js`                                                                               | 音效包（第 46 块）：`FROG_FILES` 4 段奶蛙素材（含试听区间）、`FROG_SFX` 8 个位置的 `offset/dur/vol/rate/jitter`、`PACK_LIST`；**改裁切只改这张表** |
 | `assets/codex/*.webp` | 图鉴怪物缩略图（第 51 块）：13 张 240×288，`node .tmp-codex-shots.js` 生成；**换模型/皮肤后要重跑** |
+| `arrowRain.js`                                                                               | 箭雨（第 47 块）：单技能 8s CD、自动找最近怪标警告圈落群箭，伤害走 wstats（剑油/磨剑石可强化）；`unlock/reset/restore/snapshot`                    |
+| `statView.js`                                                                                | 属性页 3D 展台（第 50 块）：独立 canvas + renderer，拖动旋转/定时蹦跳拍掌；**与主场景隔离，只有属性页开着才 update**                              |
+| `eventsExtra.js`                                                                             | 事件扩容（第 31 块）：42 条新事件 + 3 条连锁，与 `events.js` 合并成 112 条                                                      |
+| `story.js`                                                                                   | 主线《笑不出来的那一夜》（第 32 块）：18 夜 2.3 万字；加新关只改对应夜的 `levelId` + `atRound`                                          |
 | `codex.js`                                                                                   | 图鉴五页签的数据整理（纯渲染数据，无状态）                                                                                      |
 | `achievements.js`                                                                            | 26 条成就定义（`{id,name,desc}`）                                                                                 |
 | `audio.js`                                                                                   | 程序化音效 + BGM；`setSfxVolume/setMusicVolume`（与静音独立）                                                           |
@@ -509,6 +529,15 @@ runCurses() / setCurses(ids) / curseMul() / curseDmg()        ← 第 21 块
 boons.list() / stacks(id) / pending() / grant(n) / roll(luck) / take(id) / apply() / show(after) / close() / totalStacks() / reset()   ← 第 23 块
 camp.level(id) / camp.maxed(id) / camp.list()[i].costAt(lv) / camp.list()[i].full   ← 第 23 块（多级篝火）
 seedInfo() / setSeed(n) / daily.{key,seed,code,curses,record,save,show,start}   ← 第 22 块
+adminOn() / setAdmin(b) / ADMIN_CODE='615265'                 ← 第 30/38 块（沙盒：不落盘、金币钉 ∞）
+jumpToRound(n) / skipRound()                                  ← 第 30 块，**仅 adminOn 时生效**（否则静默 no-op）
+gift.{state,open,redeem,list}                                 ← 第 44 块
+notice.{show,hide,seenReset}                                  ← 第 45 块（自动弹在 loading 淡完 +700ms）
+pack.{state,get,set,unlock,show,yes,no,files,map,preview,reset}   ← 第 46 块（音效包）
+arrowRain.{state,unlock,fire,probe}                           ← 第 47 块（probe 含最近怪距离/血量）
+buff(stat, flat)                                              ← 第 47 块通用：stats.addMod({src:'dbg:test'})，测试给主角加属性用
+seedRecords() / startSeedRun(text)                            ← 第 49 块（种子挑战）
+statPage.{show,ready,yaw,rows}                                ← 第 50 块（属性页；rows 是渲染后的数值行）
 ```
 
 常用：`__game.hurt(99)` 直接结算；`__game.enemies.all().forEach(e=>__game.enemies.takeDamage(e,999))` 清场（**注意：清光会弹三选一，挡住后续操作**）。
@@ -517,27 +546,26 @@ seedInfo() / setSeed(n) / daily.{key,seed,code,curses,record,save,show,start}   
 
 ## 6. 测试
 
-**Node 9 套（856 项，纯逻辑，秒级）**
+**Node 13 套（1090 项，纯逻辑，秒级）**
 
 ```
 cd C:/Users/MECHREVO/Desktop/班级网站
 node .tmp-stats-test.mjs      # 70  属性引擎
 node .tmp-rogue-unit.mjs      # 144 回合/升级/概率（含 roundScale 对拍）
 node .tmp-econ-test.mjs       # 78  经济/商店/事件作用域
-node .tmp-event-test.mjs      # 105 事件表规模与文案
+node .tmp-event-test.mjs      # 105 事件库结构/权衡/连锁/抽取/文案（112 条）
 node .tmp-rarity-test.mjs     # 71  品质/幸运
 node .tmp-camp-test.mjs       # 99  篝火/骨币（多级 + 阶梯 + 金币折算 + 关卡倍率）
 node .tmp-level2-test.mjs     # 67  第二关/巫师
 node .tmp-level3-test.mjs     # 71  第三关/三只新怪/三件新装备/专属奇遇
 node .tmp-level4-test.mjs     # 90  第四关/雾魉/跃行尸/缝合师/暖炉/剑阵定案
 node .tmp-admin-test.mjs      # 28  管理员模式（设置键/免费点火/skipRound 四种走向）
-node .tmp-event-test.mjs      # 105 事件库结构/权衡/连锁/抽取/文案（112 条）
 node .tmp-eventui-test.js     # 37  事件 UI（长文案排版/多拍对话/随机性/条件事件/图鉴）
 node .tmp-curse-test.mjs      # 84  诅咒/种子/每日规则
 node .tmp-boon-test.mjs       # 146 永夜火种（层数/品质吃幸运/待领次数/克制）
 ```
 
-**CDP 端到端（27 套 909 项，需先起 8124）**
+**CDP 端到端（39 套约 1280 项，需先起 8124；一次只跑一套，套间跑 `.tmp-cdp-clean.js`）**
 
 ```
 .tmp-start-test.js      48  开局→选关→教程→战斗→技能（含选卡关面板/技能键可点）
@@ -569,6 +597,29 @@ node .tmp-boon-test.mjs       # 146 永夜火种（层数/品质吃幸运/待领
 .tmp-eventui-test.js     37  奇遇扩容（排版/对话/抽签随机性/图鉴 112）
 .tmp-curse-ui-test.js   14  诅咒可视化（芯片两行/明细行/开局血量/面板注记）
 .tmp-dbg-boot.js           抓启动期异常（改完代码先跑这个，比整套 CDP 快）
+```
+
+**第 32 块起新增（⚠️ 老套件在上级目录，新的在 `naiwa-rouge/`）**
+
+```
+（上级目录）
+.tmp-block32-cdp.js    60  主线剧情（对话流/印记/四结局/夜行记忆面板/成就）
+.tmp-dupcheck.mjs          ——（若在）：重复 id 静态检查
+（naiwa-rouge/）
+.tmp-block41-cdp.js    37  选关分步三页
+.tmp-block42-cdp.js    28  主线读秒（回话按钮锁 3s + 倒计时）
+.tmp-block44-cdp.js    36  礼包兑换（哈希表/一码一机/已兑列表）
+.tmp-block45-cdp.js    49  公告（自动弹/今日不再/强制回看/复制；断言版本号要写成 \d+，别写死）
+.tmp-block46-cdp.js    65  音效包（解锁卡/试听/设置切换/8 位置替换）
+.tmp-block46b-cdp.js   14  音效包补充（读秒与 packGet z-index 干涉）
+.tmp-block47-cdp.js    27  箭雨 + 武器解锁原则（⚠️ jumpRound/skipRound 要 adminOn）
+.tmp-block49-cdp.js    23  种子挑战（同种子同关/难度匹配/记录取优/续玩）
+.tmp-block50-cdp.js    12  属性页（含「全页零重复 id」通用断言 + 面板内定位点击——新面板抄这个）
+.tmp-block51-cdp.js    20  图鉴贴图（13 图解码/lazy/尺寸/其它页签无 thumb）
+.tmp-wtut-title-check.js 4  武器教程卡标题随步骤变化（wtutTitle）
+.tmp-codex-shots.js        图鉴缩略图生成器（非测试；换模型/皮肤后重跑，先起 8124）
+.tmp-shot45/50.js          视觉截图脚本（390×844 → %TEMP%/naiwa-shot-XX/）
+.tmp-block45/46/46b-live.js  线上专项烟测
 ```
 
 写新 CDP 测试：抄 `.tmp-settings-test.js` 的骨架（CDP 连接 + goto + shot + 错误收集），
@@ -615,7 +666,6 @@ node .tmp-boon-test.mjs       # 146 永夜火种（层数/品质吃幸运/待领
 - [x] 第 35 块：第四关 · 雾堤服务区（雾魉 / 跃行尸 / 缝合师 + 暖炉；主线 s04 已进关）
 - [ ] **第 25 块：主菜单 3D 背景**（场景和模型都在，只是没跑 render；奶蛙待机 + 远处骷髅剪影 + 萤火虫）
 - [ ] 第五关（主线 s05《一百只蛙的名单》蛙爷，`story.js` 里 `levelId:null` 等接）
-- [ ] 第二关 · 巫师（`skeleton-mage` 9 段动画已就位，`ENEMY_TYPES.mage` 是 planned）
 - [ ] 更多武器/技能（`skills.js` 的 SKILLS 表，技能栏还剩 5 格）
 - [ ] 性能优化（怪物合批/假阴影/视锥剔除）—— **等用户点头再动**
 - [ ] 不做：主菜单排行榜（无后端）、商城/皮肤、广告位、多角色
