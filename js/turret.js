@@ -13,10 +13,10 @@
 // 做弩臂 + 上膛的箭 + 骨头点缀（均 CC0），加载失败时退回程序化炮台（外观稍简，
 // 逻辑完全一致）。深夜里靠自发光宝珠看清楚。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=67';
-import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=67';
-import { distance2D } from './stats.js?v=67';
-import audio from './audio.js?v=67';
+import * as THREE from '../lib/three.module.js?v=68';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=68';
+import { distance2D } from './stats.js?v=68';
+import audio from './audio.js?v=68';
 
 // ---------------- 可调参数（平衡都在这里） ----------------
 export const TURRET = {

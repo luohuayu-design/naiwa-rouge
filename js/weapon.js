@@ -30,11 +30,11 @@
 //       五种元素共用同一模型，克隆后改材质 color/emissive 染色区分；
 //       图标用 assets/weapons/icon-*.svg。加载失败时用双盒拼占位剑。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=67';
-import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=67';
-import { SWORD_KINDS, KIND_ORDER } from './swordKinds.js?v=67';
-import { rollSwordDamage } from './weaponStats.js?v=67';
-import audio from './audio.js?v=67';
+import * as THREE from '../lib/three.module.js?v=68';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=68';
+import { SWORD_KINDS, KIND_ORDER } from './swordKinds.js?v=68';
+import { rollSwordDamage } from './weaponStats.js?v=68';
+import audio from './audio.js?v=68';
 
 // 轨道半径（世界单位）：贴着主角攻击范围环内侧转，视觉上「护体剑气」
 const ORBIT_R = 1.7;
@@ -55,6 +55,7 @@ export function createWeaponSystem({ scene, stats, wstats, fx, enemies }) {
   let owned = [];              // 拥有的剑（kind 字符串数组，按获得顺序）
   let regenT = 0;              // 恢复计时器（按 swordRefill 总时长推进）
   let fireCd = 0;              // 万剑齐发冷却剩余秒数（第 56 块）
+  let cdMul = 1;              // 局外商店「技能CD缩短」倍率（第 58 块，默认 1）
   let orbitAngle = Math.random() * Math.PI * 2;
   let t = 0;                   // 总时间（浮动动画用）
 
@@ -206,7 +207,7 @@ export function createWeaponSystem({ scene, stats, wstats, fx, enemies }) {
       const a = orbitAngle + i * step;
       flyers.push({ kind: owned[i], holder: acquire(owned[i]), a, ox: p.x, oz: p.z, dist: 0, spin: -a });
     }
-    fireCd = FIRE_CD;
+    fireCd = FIRE_CD * cdMul;
     if (fx) {
       fx.ring(p, { from: 0.3, to: ORBIT_R + 1.2, color: 0x9fe8ff, life: 0.4, opacity: 0.9, y: 0.07 });
       fx.burst(p, { color: 0xbff2ff, count: 24, speed: 6.5, life: 0.5, size: 0.14, y: FLY_Y, up: 1.2, gravity: 3 });
@@ -457,8 +458,13 @@ export function createWeaponSystem({ scene, stats, wstats, fx, enemies }) {
     // 万剑齐发冷却（第 56 块）：ready = 冷却走完；cdLeft 剩余秒数；progress 0→1 填满
     get fireReady() { return granted && fireCd <= 0; },
     get fireCdLeft() { return fireCd; },
-    get fireCdTotal() { return FIRE_CD; },
-    get fireCdProgress() { return granted ? Math.max(0, Math.min(1, 1 - fireCd / FIRE_CD)) : 0; },
+    get fireCdTotal() { return FIRE_CD * cdMul; },
+    get fireCdProgress() { return granted ? Math.max(0, Math.min(1, 1 - fireCd / (FIRE_CD * cdMul))) : 0; },
+    // 第 58 块：局外商店技能CD缩短 —— 直接乘倍率（下限 0.1，防止 CD 被刷到 0）
+    setCdMul(m) {
+      cdMul = Math.max(0.1, Number(m) || 1);
+      if (fireCd > 0) fireCd = Math.min(fireCd, FIRE_CD * cdMul);
+    },
     // 技能栏恢复进度条：0（刚消耗）→ 1（下一把剑就绪）；满剑时恒为 0
     get regenProgress() {
       if (orbiting.length >= targetCount()) return 0;

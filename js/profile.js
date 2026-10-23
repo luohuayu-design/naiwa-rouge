@@ -75,6 +75,14 @@ const DEFAULT_PROFILE = {
   // 之后从第二关起（含读档新开一局直接选后面的关卡）开局就送 3 把铁剑，
   // 不用再等那一关的第 5 回合。第一关自己仍保留「第 5 回合获得」的仪式时刻。
   ringGot: false,
+  // 局外商店（第 58 块）：花骨币买宝箱，开箱直接随机给一次永久属性变化。
+  //   bought  { wood:n, silver:n, gold:n }  各档买过多少次
+  //   opened  累计开箱数
+  //   mods    [{ stat, flat, pct, scope }]  永久属性加成（每局开局注入，src='meta'）
+  //   relics  { spikes:1, ... }             永久拥有的法器（每局开局自动 Lv，不占店内购买）
+  //   skillCdMul  技能CD倍率（默认 1，越买越短，下限 0.3）
+  //   log     [{ box, boxName, cursed, kind, icon, name, effect, ts }]  最近 20 次开箱记录
+  metaShop: { bought: {}, opened: 0, mods: [], relics: {}, skillCdMul: 1, log: [] },
 };
 
 let cache = null;
@@ -308,6 +316,75 @@ export function setStoryEnding(key) {
   s.ending = key || '';
   save();
   return s.ending;
+}
+
+// ---------------- 局外商店（第 58 块） ----------------
+// 宝箱开出的永久效果都落在这张表，和篝火/火种一样是「本机存档级」的，
+// 每一局开局注入（src='meta'），换关/重开/关网页都还在。
+export function metaShopState() {
+  const p = profile();
+  if (!p.metaShop || typeof p.metaShop !== 'object') {
+    p.metaShop = { bought: {}, opened: 0, mods: [], relics: {}, skillCdMul: 1, log: [] };
+  }
+  // 老档案缺字段兜底
+  const s = p.metaShop;
+  if (typeof s.bought !== 'object' || !s.bought) s.bought = {};
+  if (typeof s.mods !== 'object' || !s.mods) s.mods = [];
+  if (typeof s.relics !== 'object' || !s.relics) s.relics = {};
+  if (typeof s.skillCdMul !== 'number' || !Number.isFinite(s.skillCdMul)) s.skillCdMul = 1;
+  if (typeof s.log !== 'object' || !s.log) s.log = [];
+  return s;
+}
+
+// 永久属性加成（一条 { stat, flat, pct, scope }）
+export function metaAddMod(m) {
+  const s = metaShopState();
+  s.mods.push({ stat: m.stat, flat: m.flat || 0, pct: m.pct || 0, scope: m.scope || null });
+  save();
+  return s;
+}
+
+// 永久法器（kind 同 RELIC_DEFS）：叠一级（不超 3 级，超了说明本机已顶满，返回 null）
+export function metaGrantRelic(kind, maxLevel = 3) {
+  const s = metaShopState();
+  const cur = Number(s.relics[kind]) || 0;
+  if (cur >= maxLevel) return null;
+  s.relics[kind] = cur + 1;
+  save();
+  return s.relics[kind];
+}
+
+// 技能CD缩短：把当前倍率再乘上 mul（如 0.88 = −12%），下限 0.3（最多 −70%）
+export function metaGrantSkillCd(mul) {
+  const s = metaShopState();
+  s.skillCdMul = Math.max(0.3, (Number(s.skillCdMul) || 1) * mul);
+  save();
+  return s.skillCdMul;
+}
+
+// 记一笔开箱记录（只留最近 20 条）
+export function metaLog(entry) {
+  const s = metaShopState();
+  s.log.unshift(entry);
+  if (s.log.length > 20) s.log.length = 20;
+  save();
+  return s;
+}
+
+// 买过一次（计数 + 累计开箱数）
+export function metaBought(id) {
+  const s = metaShopState();
+  s.bought[id] = (Number(s.bought[id]) || 0) + 1;
+  s.opened = (Number(s.opened) || 0) + 1;
+  save();
+  return s;
+}
+
+// 所有永久效果里「已经拥有的法器等级合计」与「属性加成条数」—— UI 概览用
+export function metaSummary() {
+  const s = metaShopState();
+  const relics = Object.values(s.relics || {}).reduce((a, n) => a + (Number(n) || 0), 0);
+  return { mods: (s.mods || []).length, relics, skillCdMul: s.skillCdMul, opened: s.opened };
 }
 
 // ---------------- 清档 ----------------

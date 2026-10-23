@@ -5,73 +5,78 @@
 // 目标是把三件事调顺：摇杆输入 → 角色速度/朝向 → 相机跟随。
 // 后续叠战斗时，只需要在 tick() 里加敌人更新与自动攻击，不用动输入层。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=67';
-import { buildNightScene } from './scene.js?v=67';
-import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=67';
-import { createInput } from './input.js?v=67';
-import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=67';
-import { createStatView } from './statView.js?v=67';
-import { createWeaponStats } from './weaponStats.js?v=67';
-import { createFx } from './fx.js?v=67';
-import { createEnemySystem } from './enemy.js?v=67';
+import * as THREE from '../lib/three.module.js?v=68';
+import { buildNightScene } from './scene.js?v=68';
+import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=68';
+import { createInput } from './input.js?v=68';
+import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=68';
+import { createStatView } from './statView.js?v=68';
+import { createWeaponStats } from './weaponStats.js?v=68';
+import { createFx } from './fx.js?v=68';
+import { createEnemySystem } from './enemy.js?v=68';
 import {
   createLevel, LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVELS_BY_ID, DIFFS, setDifficulty, getDifficulty, roundScale, levelStats,
-} from './wave.js?v=67';
-import { createRangeRing } from './rangeRing.js?v=67';
-import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=67';
-import { createWeaponSystem } from './weapon.js?v=67';
-import { createArrowRainSystem } from './arrowRain.js?v=67';
-import { SWORD_KINDS } from './swordKinds.js?v=67';
-import { createGoldSystem } from './gold.js?v=67';
-import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW } from './shop.js?v=67';
-import { createTurretSystem, TURRET } from './turret.js?v=67';
-import { createRelicSystem, RELIC_DEFS } from './relics.js?v=67';
-import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=67';
-import audio from './audio.js?v=67';
-import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=67';
+} from './wave.js?v=68';
+import { createRangeRing } from './rangeRing.js?v=68';
+import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=68';
+import { createWeaponSystem } from './weapon.js?v=68';
+import { createArrowRainSystem } from './arrowRain.js?v=68';
+import { SWORD_KINDS } from './swordKinds.js?v=68';
+import { createGoldSystem } from './gold.js?v=68';
+import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW } from './shop.js?v=68';
+import { createTurretSystem, TURRET } from './turret.js?v=68';
+import { createRelicSystem, RELIC_DEFS } from './relics.js?v=68';
+import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=68';
+import audio from './audio.js?v=68';
+import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=68';
 import {
   settings as readSettings, setSetting, save as saveProfile, profile,
   bumpStat, setStatMax, codexAdd, codexCount, countCard, unlockAch, hasAch, addBones, bones, resetAll,
+  metaShopState, metaSummary,
   storyProgress, markStorySeen, markStoryRead, addStoryMark, setStoryEnding,
   setSaveSuppressed, reloadFromStorage,
   giftLog, giftRedeemed, markGift,
   enemyMet, markEnemyMet,
   ringObtained, markRingObtained,
-} from './profile.js?v=67';
+} from './profile.js?v=68';
 // 第 44 块：礼包兑换（码表只有哈希，明细在 gift.js 顶部注释）
-import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=67';
+import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=68';
 // 第 46 块：音效包（抽象奶蛙音效包 —— 4 段奶蛙叫声，通关第一关解锁）
-import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=67';
-import * as runSave from './runSave.js?v=67';
+import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=68';
+import * as runSave from './runSave.js?v=68';
 import {
   CAMPFIRE, CAMP_STEP, campBuy, campOwned, campLevel,
   campCost, campApply, bonesFor, diffBoneMul, levelBoneMul, coinBones, BONE,
-} from './campfire.js?v=67';
+} from './campfire.js?v=68';
 // 第 23 块：永夜火种（通关白给的 3 次永久三选一）
 import {
   BOONS, BOON_BY_ID, BOON_PICKS, boonOwned, boonStacks, boonPending, boonTotalStacks,
   grantBoons, rollBoons, takeBoon, applyBoons, boonStackText,
-} from './boons.js?v=67';
+} from './boons.js?v=68';
 // 第 21 块：夜行诅咒（自选 debuff 换骨币倍率）
-import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=67';
+import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=68';
 // 第 22 块：种子与每日挑战
 import {
   DAILY_RULES, dayKey, dayText, dailySeed, seedCode, pickDailyCurses,
   seedFromText, pickSeedRules, loadSeedRecords, saveSeedRecord, pruneSeeds,
   dailyRecord, saveDailyRecord, pruneDaily, makeRng,
-} from './seed.js?v=67';
-import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=67';
-import { achById, ACHS } from './achievements.js?v=67';
+} from './seed.js?v=68';
+import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=68';
+// 第 58 块：局外商店 · 宝箱（花骨币买，开箱随机给永久属性 / 永久法器 / 技能CD缩短）
+import {
+  BOXES, BOX_BY_ID, buyBox, rollBox, metaApplyStats, applyMeta,
+} from './metaShop.js?v=68';
+import { achById, ACHS } from './achievements.js?v=68';
 import {
   EVENTS, ALL_EVENTS, getEventById, pickEvent, effectLines,
   choiceHint, canAfford, costShort, REP_MIN, REP_MAX, REP_START,
   isTalk, eventChoices, resolveRoll, mergeEffects,
-} from './events.js?v=67';
+} from './events.js?v=68';
 // 第 32 块：主线《笑不出来的那一夜》（18 夜，一夜一关，前 3 夜已有关卡）
 import {
   STORY_ARC, STORY_CHAPTERS, STORY_ENDINGS, MARK_INFO,
   storyChapterAt, storyChapterById, storyEndingKey,
-} from './story.js?v=67';
+} from './story.js?v=68';
 
 // 标记模块已经跑起来了：index.html 的兜底自检靠它判断
 // 「模块根本没执行」还是「执行了但加载慢」。
@@ -1316,6 +1321,7 @@ async function boot() {
     titleScr.setAttribute('aria-hidden', 'false');
     refreshResume();              // 有存档就亮出「读取存档」入口
     renderCampBadge();            // 篝火按钮上的骨币数（第 19 块）
+    renderMsBadge();              // 局外商店按钮上的骨币数（第 58 块）
     renderDailyBadge();           // 今日挑战按钮上的「今天最好」（第 22 块）
     // 第 57 块：在主界面停留一会儿 → 默默建图鉴缓存（用户建议的「自动缓存」）
     scheduleCodexPrewarm();
@@ -1366,6 +1372,7 @@ async function boot() {
     camera.updateProjectionMatrix();
     clearCurse();                     // 上一局残留的减速不许带进来
     applyCampfire();                  // 篝火（第 19 块）：局外成长在开局一次性落账
+    applyMeta(stats, wstats, { weapon, arrowRain, relics });  // 第 58 块：局外商店永久效果（属性+技能CD+永久法器）
     // 第 23 块：永夜火种（通关白给的永久属性）也在这里落账。
     // 局内的一切加成都不跨局 —— 新一局 stats 从 base 重建，这里只补局外那两份。
     const boonLv = applyBoons(stats, wstats);
@@ -3317,6 +3324,17 @@ async function boot() {
     arrowRain.restore(saved.arrowRain);   // 第 47 块
     turrets.restore(saved.turrets);
     relics.restore(saved.relics);
+    // 第 58 块：局外商店的永久法器叠在「本局店内买到的」之上（buy 自带 3 级封顶，安全），
+    // 技能CD倍率也要在续玩时一并生效。
+    {
+      const ms = metaShopState();
+      if (ms.relics && Object.keys(ms.relics).length) {
+        relics.restore({ ...saved.relics, ...ms.relics });
+      }
+      const m = Math.max(0.3, ms.skillCdMul || 1);
+      if (weapon.setCdMul) weapon.setCdMul(m);
+      if (arrowRain.setCdMul) arrowRain.setCdMul(m);
+    }
     runRarities = new Set(saved.rarities || []);   // 本局品质集合一并恢复
     // 注意顺序：diffOverride 在下面几行才赋值，这里直接读存档里的 prevDiff
     if (saved.diff && DIFFS[saved.diff]) {
@@ -4187,6 +4205,167 @@ async function boot() {
   btnCamp.addEventListener('click', showCampfire);
   document.getElementById('cfBack').addEventListener('click', () => hideSub(campScr));
 
+  // ---------------- 局外商店 · 宝箱（第 58 块） ----------------
+  // 花夜行骨币买三种品质的宝箱，开箱直接随机给一次永久属性变化
+  // （可能触发诅咒、强制负面；高品箱更不易踩雷，还能出永久法器 / 技能CD缩短）。
+  // 永久效果落进 profile().metaShop，由 applyMeta 在每局开局注入。
+  const msScr = document.getElementById('msScr');
+  const msList = document.getElementById('msList');
+  const msBones = document.getElementById('msBones');
+  const msFoot = document.getElementById('msFoot');
+  const msLog = document.getElementById('msLog');
+  const btnShop = document.getElementById('btnShop');
+  const msBadge = document.getElementById('msBadge');
+
+  function renderMsBadge() {
+    if (msBadge) msBadge.textContent = adminOn ? '∞' : String(bones());
+  }
+
+  function renderMetaShop() {
+    const have = adminOn ? Infinity : bones();
+    const ms = metaShopState();
+    msBones.textContent = adminOn ? '∞' : String(have);
+    msList.textContent = '';
+    for (const box of BOXES) {
+      const poor = have < box.cost;
+      const row = document.createElement('div');
+      row.className = 'ms-item' + (poor ? ' poor' : '');
+
+      const head = document.createElement('div');
+      head.className = 'ms-head';
+      const icon = document.createElement('span');
+      icon.className = 'ms-icon';
+      icon.textContent = box.icon;
+      const name = document.createElement('span');
+      name.className = 'ms-name';
+      name.textContent = box.name;
+      const cost = document.createElement('span');
+      cost.className = 'ms-cost' + (poor ? ' lack' : '');
+      cost.textContent = `${box.cost} 骨币`;
+      head.append(icon, name, cost);
+
+      const info = document.createElement('div');
+      info.className = 'ms-info';
+      const cursePct = Math.round(box.curse * 100);
+      let infoText = `${box.name}：诅咒率 ${cursePct}%`;
+      if (box.special) infoText += ` · 有概率出永久法器 / 技能CD缩短`;
+      infoText += ` · 强度 ×${box.mag}`;
+      info.textContent = infoText;
+
+      row.append(head, info);
+
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'ms-buy' + (poor ? ' poor' : '');
+      btn.textContent = poor ? `还差 ${box.cost - have} 骨币` : `开启 · ${box.cost} 骨币`;
+      if (!poor) {
+        btn.addEventListener('click', () => doBuyBox(box.id));
+      }
+      row.appendChild(btn);
+      msList.appendChild(row);
+    }
+
+    const sum = metaSummary();
+    msFoot.textContent = `累计开箱 ${ms.opened} 次 · 永久属性 ${sum.mods} 条 · 永久法器 ${sum.relics} 件 · 技能CD ×${Number(sum.skillCdMul).toFixed(2)}（越低越快）`;
+
+    msLog.textContent = '';
+    const log = ms.log || [];
+    if (!log.length) {
+      const empty = document.createElement('div');
+      empty.className = 'ms-log-empty';
+      empty.textContent = '还没有开过箱';
+      msLog.appendChild(empty);
+    } else {
+      for (const e of log) {
+        const li = document.createElement('div');
+        li.className = 'ms-log-item' + (e.cursed ? ' cursed' : (e.kind === 'stat' ? '' : ' rare'));
+        li.textContent = `${e.boxName}：${e.cursed ? '诅咒·' : ''}${e.icon} ${e.name} ${e.effect}`;
+        msLog.appendChild(li);
+      }
+    }
+  }
+
+  function doBuyBox(id) {
+    const r = buyBox(id, Math.random, adminOn);
+    if (!r.ok) {
+      if (r.reason === 'poor') showToast('骨币不足', `还差 ${r.cost - r.have} 骨币`);
+      return;
+    }
+    audio.sfx('uiSwitch');
+    renderMetaShop();
+    renderMsBadge();
+    showBoxReveal(r.box, r.res);
+  }
+
+  function showMetaShop() {
+    renderMetaShop();
+    showSub(msScr);
+  }
+
+  btnShop.addEventListener('click', showMetaShop);
+  document.getElementById('msBack').addEventListener('click', () => hideSub(msScr));
+
+  // 开箱揭示浮层（第 58 块）：宝箱抖动→打开→展示结果卡片（正面绿 / 稀有金 / 诅咒红）
+  const boxReveal = document.getElementById('boxReveal');
+  const brBox = document.getElementById('brBox');
+  const brResult = document.getElementById('brResult');
+  const brBtn = document.getElementById('brOk');
+  let brTimer = null;
+
+  function showBoxReveal(box, res) {
+    brResult.textContent = '';
+    const cls = res.cursed ? 'curse' : (res.kind === 'stat' ? 'good' : 'rare');
+    const card = document.createElement('div');
+    card.className = `br-card ${cls}`;
+
+    const ico = document.createElement('div');
+    ico.className = 'br-ico';
+    ico.textContent = res.icon || box.icon;
+    const title = document.createElement('div');
+    title.className = 'br-title';
+    title.textContent = res.cursed ? '诅咒降临' : (res.kind === 'stat' ? (box.name + ' · 属性变化') : '稀有收获');
+    const nm = document.createElement('div');
+    nm.className = 'br-name';
+    nm.textContent = res.name;
+    const ef = document.createElement('div');
+    ef.className = 'br-effect';
+    ef.textContent = res.effectText;
+
+    card.append(ico, title, nm, ef);
+    if (res.kind === 'relic') {
+      const d = document.createElement('div');
+      d.className = 'br-desc';
+      d.textContent = res.desc || '';
+      card.appendChild(d);
+    }
+    const note = document.createElement('div');
+    note.className = 'br-note';
+    note.textContent = '已永久生效（下一局开局带着它）';
+    card.appendChild(note);
+    brResult.appendChild(card);
+
+    boxReveal.classList.add('on');
+    boxReveal.setAttribute('aria-hidden', 'false');
+    brBox.textContent = box.icon;
+    brBox.classList.remove('open');
+    brResult.classList.remove('show');
+    // 宝箱抖动 → 打开 → 结果浮现
+    brBox.classList.add('shake');
+    if (brTimer) clearTimeout(brTimer);
+    brTimer = setTimeout(() => {
+      brBox.classList.remove('shake');
+      brBox.classList.add('open');
+    }, 620);
+    setTimeout(() => { brResult.classList.add('show'); }, 920);
+  }
+
+  brBtn.addEventListener('click', () => {
+    boxReveal.classList.remove('on');
+    boxReveal.setAttribute('aria-hidden', 'true');
+    brResult.classList.remove('show');
+    brBox.classList.remove('open');
+  });
+
   // ---------------- 永夜火种（第 23 块：通关白给的永久三选一） ----------------
   // 用户定案：**通关一大关**后触发 3 次，直接写进局外属性；品质照旧吃幸运。
   // 界面复用三选一那套 DOM（upPanel），只是换成永久卡、没有「带进下一回合」的措辞。
@@ -4566,6 +4745,7 @@ async function boot() {
     const w = createWeaponStats();               // camp/boon 里的武器加成有处可去即可
     campApply(s, w);
     applyBoons(s, w);
+    metaApplyStats(s, w);              // 第 58 块：属性页也把局外商店的永久加成算进去
     statRows.textContent = '';
     for (const group of PLAYER_GROUPS) {
       const g = document.createElement('div');
@@ -5608,6 +5788,16 @@ async function boot() {
         thorns: (at) => relics.thornsHit(at || pos),
         // 第 35 块：手动烧一次暖炉
         stove: (at) => (relics.debugStove ? relics.debugStove(at || pos) : 0),
+      },
+      // 第 58 块：局外商店 · 宝箱（测试 / 调试用）
+      meta: {
+        boxes: BOXES,
+        state: () => metaShopState(),
+        summary: () => metaSummary(),
+        roll: (id) => rollBox(id),
+        buy: (id, admin = false) => buyBox(id, Math.random, admin),
+        bones: () => bones(),
+        addBones: (n) => addBones(n),
       },
       aegis: {
         get level() { return stats.get('aegis'); },

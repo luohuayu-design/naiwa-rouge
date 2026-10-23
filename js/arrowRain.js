@@ -13,9 +13,9 @@
 // 数值：伤害吃武器属性表 wstats（swordDamage / 暴击），× ARROW_DMG_MUL ——
 //   商店的剑油 / 磨剑石同样强化箭雨，升级卡不白买。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=67';
-import { mitigate } from './stats.js?v=67';
-import audio from './audio.js?v=67';
+import * as THREE from '../lib/three.module.js?v=68';
+import { mitigate } from './stats.js?v=68';
+import audio from './audio.js?v=68';
 
 const AIM_TIME = 0.85;      // 警告圈亮起到第一支箭落地（给怪走位、给玩家预判）
 const SPREAD_TIME = 1.0;    // 全部箭落完的时间窗（每支箭在这个窗内错开）
@@ -32,6 +32,7 @@ const DROP_Y = 8.5;         // 箭出现的高度
 export function createArrowRainSystem({ scene, fx, enemies, wstats }) {
   let unlocked = false;
   let cd = 0;                  // 剩余冷却
+  let cdMul = 1;               // 局外商店「技能CD缩短」倍率（第 58 块，默认 1）
   let t = 0;
   const strikes = [];          // 进行中的箭雨：{ x, z, ring, mat, arrows: [{dx,dz,at,mesh,state}] }
   const arrowPool = [];        // 箭 mesh 对象池
@@ -100,7 +101,7 @@ export function createArrowRainSystem({ scene, fx, enemies, wstats }) {
     }
     strikes.push({ x, z, ring, mat, arrows, age: 0 });
 
-    cd = CD_MAX;
+    cd = CD_MAX * cdMul;
     audio.sfx('swordFire', { vol: 0.6 });
     if (fx) fx.ring({ x, z }, { from: ZONE_R * 0.4, to: ZONE_R + 0.3, color: 0xffc46a, life: 0.4, opacity: 0.7, y: 0.06 });
     return true;
@@ -212,8 +213,13 @@ export function createArrowRainSystem({ scene, fx, enemies, wstats }) {
     get unlocked() { return unlocked; },
     get ready() { return unlocked && cd <= 0; },
     get cdLeft() { return cd; },
-    get cdMax() { return CD_MAX; },
-    get progress() { return unlocked ? 1 - cd / CD_MAX : 0; },   // 技能键竖条
+    get cdMax() { return CD_MAX * cdMul; },
+    get progress() { return unlocked ? 1 - cd / (CD_MAX * cdMul) : 0; },   // 技能键竖条
+    // 第 58 块：局外商店技能CD缩短 —— 直接乘倍率（下限 0.1）
+    setCdMul(m) {
+      cdMul = Math.max(0.1, Number(m) || 1);
+      if (cd > 0) cd = Math.min(cd, CD_MAX * cdMul);
+    },
     get strikeCount() { return strikes.length; },
   };
 }

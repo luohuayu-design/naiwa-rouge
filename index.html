@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#080f14">
 <link rel="icon" href="data:,">
 <title>蛙步 · 夜行</title>
-<link rel="stylesheet" href="style.css?v=67">
+<link rel="stylesheet" href="style.css?v=68">
 </head>
 <body>
 
@@ -250,6 +250,12 @@
         <span class="tt-camp-name">篝火商店</span>
         <span class="tt-camp-bone"><i></i><b id="campBoneNum">0</b></span>
       </button>
+      <!-- 局外商店（第 58 块）：花骨币买宝箱，开箱随机给永久属性/法器/技能CD -->
+      <button class="tt-camp tt-shop" id="btnShop" type="button">
+        <span class="tt-camp-fire">🎁</span>
+        <span class="tt-camp-name">局外商店</span>
+        <span class="tt-camp-bone"><i></i><b id="msBadge">0</b></span>
+      </button>
       <div class="tt-row">
         <button class="tt-menu-btn" id="btnStory" type="button">夜行记忆</button>
         <button class="tt-menu-btn" id="btnBoons" type="button">永夜火种</button>
@@ -483,6 +489,38 @@
     <div class="cf-warn" id="cfWarn">这里的每一次点燃都会写进本机存档 · 之后每一关、每一局都带着它 · 写进去就改不回来了</div>
     <div class="cf-list" id="cfList"></div>
     <div class="lv-foot" id="cfFoot">火种没有等级上限，越点越贵 · 只在开局生效 · 不会把难走的路走成平地</div>
+  </div>
+</div>
+
+<!-- 局外商店（第 58 块）：花夜行骨币买宝箱，开箱随机给一次永久属性变化 -->
+<div id="msScr" class="tt-sub-scr" aria-hidden="true">
+  <div class="lv-card">
+    <div class="lv-head">
+      <div class="lv-title">局外商店</div>
+      <button class="lv-back" id="msBack" type="button">‹ 返回</button>
+    </div>
+    <div class="ms-purse">
+      <div class="ms-purse-top">
+        <span class="ms-purse-label">夜行骨币</span>
+        <b id="msBones">0</b>
+      </div>
+      <i>买宝箱，开箱随机给一次永久属性变化（可能触发诅咒·强制负面）。高品箱更不易踩雷，还能出永久法器 / 技能CD缩短。花掉不退回。</i>
+    </div>
+    <div class="ms-list" id="msList"></div>
+    <div class="lv-foot" id="msFoot"></div>
+    <div class="ms-log">
+      <h3>开箱记录</h3>
+      <div class="ms-log-list" id="msLog"></div>
+    </div>
+  </div>
+</div>
+
+<!-- 开箱揭示浮层（第 58 块） -->
+<div id="boxReveal" class="box-reveal" aria-hidden="true">
+  <div class="br-inner">
+    <div class="br-box" id="brBox">📦</div>
+    <div class="br-result" id="brResult"></div>
+    <button class="br-ok" id="brOk" type="button">收下</button>
   </div>
 </div>
 
@@ -724,7 +762,7 @@
 <!-- 不用 importmap：老手机浏览器（iOS 16.4 以下、旧版微信/安卓 WebView）
      不支持 import maps，会让整个模块解析失败、加载页永远停在 0%。
      项目内所有 import 都写成相对路径，直接靠原生 ES Module 解析。 -->
-<script type="module" src="js/main.js?v=67"></script>
+<script type="module" src="js/main.js?v=68"></script>
 
 <!-- 兜底自检：模块没跑起来时把原因写出来，别让用户对着 0% 干等 -->
 <script>

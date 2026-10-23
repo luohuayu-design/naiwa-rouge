@@ -557,6 +557,96 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
 .tt-camp-bone i{width:7px;height:7px;border-radius:50%;background:#ffb765;
   box-shadow:0 0 8px rgba(255,160,70,.85)}
 
+/* 局外商店按钮（第 58 块）：紫色调，和篝火橙色区分开 */
+.tt-shop{color:#e3d4ff;border-color:rgba(176,140,255,.34);
+  background:linear-gradient(180deg,rgba(52,32,82,.62),rgba(28,18,46,.66))}
+.tt-shop:hover{border-color:rgba(176,140,255,.7);background:rgba(70,46,108,.8)}
+.tt-shop .tt-camp-fire{filter:drop-shadow(0 0 7px rgba(176,140,255,.7))}
+.tt-shop .tt-camp-bone{color:#ecdcff;background:rgba(176,140,255,.14);border-color:rgba(176,140,255,.26)}
+.tt-shop .tt-camp-bone i{background:#c9a8ff;box-shadow:0 0 8px rgba(176,140,255,.85)}
+
+/* 局外商店面板（第 58 块） */
+.ms-purse{margin-top:14px;padding:12px 14px;border-radius:14px;
+  border:1px solid rgba(176,140,255,.26);
+  background:linear-gradient(180deg,rgba(52,32,82,.55),rgba(24,16,40,.6))}
+.ms-purse-top{display:flex;align-items:baseline;gap:8px}
+.ms-purse-label{font-size:12px;font-weight:800;letter-spacing:.16em;color:#d8c6ff}
+.ms-purse-top b{font-size:19px;font-weight:900;color:#f0e4ff;margin-left:auto}
+.ms-purse i{display:block;margin-top:6px;font-size:10.5px;line-height:1.7;
+  font-style:normal;letter-spacing:.04em;color:rgba(196,180,235,.72)}
+.ms-list{margin-top:12px;display:flex;flex-direction:column;gap:9px}
+.ms-item{padding:12px 13px;border-radius:13px;text-align:left;
+  border:1px solid rgba(176,140,255,.22);
+  background:rgba(30,20,48,.5)}
+.ms-item.poor{opacity:.78}
+.ms-head{display:flex;align-items:center;gap:8px}
+.ms-icon{font-size:20px;line-height:1;filter:drop-shadow(0 0 7px rgba(176,140,255,.5))}
+.ms-name{font-size:13px;font-weight:800;letter-spacing:.08em;color:#ecdcff}
+.ms-cost{margin-left:auto;font-size:11.5px;font-weight:800;letter-spacing:.02em;color:#d9c2ff}
+.ms-cost.lack{color:rgba(214,190,240,.7)}
+.ms-info{margin-top:6px;font-size:11px;line-height:1.7;color:rgba(196,180,235,.78)}
+.ms-buy{margin-top:9px;width:100%;padding:8px 0;border-radius:10px;font:inherit;font-size:12px;
+  font-weight:800;letter-spacing:.12em;cursor:pointer;color:#1c1030;
+  border:1px solid rgba(214,190,255,.55);
+  background:linear-gradient(180deg,#d6c2ff,#a982f0);
+  transition:filter .16s ease,transform .12s ease}
+.ms-buy:hover{filter:brightness(1.06)}
+.ms-buy:active{transform:scale(.985)}
+.ms-buy.poor{color:rgba(214,190,240,.7);cursor:default;
+  border-color:rgba(176,140,255,.2);background:rgba(46,32,70,.7)}
+.ms-buy.poor:hover{filter:none}
+.ms-log{margin-top:14px}
+.ms-log h3{font-size:11px;font-weight:800;letter-spacing:.16em;color:rgba(196,180,235,.6);margin:0 0 7px}
+.ms-log-list{display:flex;flex-direction:column;gap:5px;max-height:30vh;overflow:auto}
+.ms-log-item{font-size:11px;line-height:1.6;padding:5px 9px;border-radius:8px;
+  letter-spacing:.02em;color:rgba(206,192,240,.86);
+  border:1px solid rgba(176,140,255,.16);background:rgba(30,20,48,.4)}
+.ms-log-item.rare{color:#ffe6a8;border-color:rgba(255,214,160,.32);background:rgba(58,44,20,.4)}
+.ms-log-item.cursed{color:#ff9fb0;border-color:rgba(255,120,140,.32);background:rgba(64,24,32,.4)}
+.ms-log-empty{font-size:11px;color:rgba(196,180,235,.42);letter-spacing:.08em;padding:4px 2px}
+
+/* 开箱揭示浮层（第 58 块） */
+.box-reveal{position:fixed;inset:0;z-index:60;display:none;align-items:center;
+  justify-content:center;background:rgba(8,4,18,.72);backdrop-filter:blur(4px);
+  -webkit-backdrop-filter:blur(4px)}
+.box-reveal.on{display:flex;animation:brFade .25s ease}
+@keyframes brFade{from{opacity:0}to{opacity:1}}
+.br-inner{width:min(86vw,360px);display:flex;flex-direction:column;align-items:center;gap:18px;
+  padding:24px 18px}
+.br-box{font-size:74px;line-height:1;filter:drop-shadow(0 0 22px rgba(176,140,255,.6));transform-origin:50% 90%}
+.br-box.shake{animation:brShake .6s ease}
+@keyframes brShake{0%,100%{transform:rotate(0)}20%{transform:rotate(-9deg) translateY(2px)}
+  40%{transform:rotate(8deg) translateY(-2px)}60%{transform:rotate(-6deg)}80%{transform:rotate(5deg)}}
+.br-box.open{animation:brOpen .4s cubic-bezier(.2,1.4,.4,1)}
+@keyframes brOpen{0%{transform:scale(1) rotate(0)}45%{transform:scale(1.28) rotate(-7deg)}
+  100%{transform:scale(1) rotate(0)}}
+.br-result{opacity:0;transform:translateY(10px) scale(.96);transition:opacity .3s ease,transform .3s ease}
+.br-result.show{opacity:1;transform:none}
+.br-card{width:100%;padding:16px 16px 14px;border-radius:16px;text-align:center;
+  border:1px solid rgba(176,140,255,.4);background:rgba(30,20,48,.72);
+  box-shadow:0 0 30px rgba(176,140,255,.25)}
+.br-card.good{border-color:rgba(120,240,180,.5);box-shadow:0 0 30px rgba(120,240,180,.28)}
+.br-card.rare{border-color:rgba(255,214,160,.6);box-shadow:0 0 34px rgba(255,214,160,.3)}
+.br-card.curse{border-color:rgba(255,120,140,.6);box-shadow:0 0 30px rgba(255,120,140,.28)}
+.br-ico{font-size:42px;line-height:1;margin-bottom:6px}
+.br-title{font-size:11px;font-weight:800;letter-spacing:.2em;color:rgba(214,196,250,.7)}
+.br-card.good .br-title{color:rgba(150,245,195,.85)}
+.br-card.rare .br-title{color:rgba(255,222,170,.9)}
+.br-card.curse .br-title{color:rgba(255,150,165,.95)}
+.br-name{font-size:17px;font-weight:900;letter-spacing:.08em;color:#f0e4ff;margin-top:3px}
+.br-effect{font-size:14px;font-weight:800;letter-spacing:.04em;margin-top:7px;color:#d9c2ff}
+.br-card.good .br-effect{color:#aef0c8}
+.br-card.rare .br-effect{color:#ffdf9e}
+.br-card.curse .br-effect{color:#ffb0bd}
+.br-desc{font-size:11px;line-height:1.6;margin-top:8px;color:rgba(206,192,240,.78)}
+.br-note{font-size:10px;margin-top:10px;letter-spacing:.06em;color:rgba(196,180,235,.5)}
+.br-ok{margin-top:4px;padding:9px 30px;border-radius:999px;font:inherit;font-size:13px;font-weight:800;
+  letter-spacing:.14em;cursor:pointer;color:#1c1030;
+  border:1px solid rgba(214,190,255,.55);background:linear-gradient(180deg,#d6c2ff,#a982f0);
+  transition:filter .16s ease,transform .12s ease}
+.br-ok:hover{filter:brightness(1.06)}
+.br-ok:active{transform:scale(.97)}
+
 /* 篝火面板：钱袋 + 火种条目 */
 .cf-purse{margin-top:14px;padding:12px 14px;border-radius:14px;
   border:1px solid rgba(255,166,80,.26);
