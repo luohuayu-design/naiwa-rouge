@@ -84,7 +84,10 @@ for (const [k, t] of TYPES) {
 sec('四、身高 / 落地 / 自发光配置');
 for (const [k, t] of TYPES) {
   ok(t.sourceHeight > 0 && t.height > 0, `${k} sourceHeight/height 已标定`);
-  ok(t.height >= 0.8 && t.height <= 2.2, `${k} 归一后身高在 0.8~2.2（实际 ${t.height}）`);
+  // 上限 3.5：第 53 块用户要求把咒面图腾放大到 ×1.8（2.52）、孢冠菌王放大到 ×2（3.24），
+  // 所以「最矮 0.8、最高 2.2」这条当年的尺子得跟着松 —— 检查的是「别把模型缩成豆子或
+  // 放大成天柱」，不是钉死具体数值。
+  ok(t.height >= 0.8 && t.height <= 3.5, `${k} 归一后身高在 0.8~3.5（实际 ${t.height}）`);
   ok(t.radius > 0.2 && t.radius < 1.0, `${k} 碰撞半径合理（实际 ${t.radius}）`);
 }
 // 9 只换过模型的都给配了自发光（暗场景可见性靠它）

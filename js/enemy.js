@@ -25,11 +25,11 @@
 // 第四关三只（wraith/leaper/mender，第 35 块，第 52 块换模型），
 // 各自在下面 ENEMY_TYPES 里有详细注释。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=62';
-import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=62';
-import { clone as cloneSkinned } from '../lib/jsm/utils/SkeletonUtils.js?v=62';
-import { distance2D } from './stats.js?v=62';
-import { createRangeRing } from './rangeRing.js?v=62';
+import * as THREE from '../lib/three.module.js?v=63';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=63';
+import { clone as cloneSkinned } from '../lib/jsm/utils/SkeletonUtils.js?v=63';
+import { distance2D } from './stats.js?v=63';
+import { createRangeRing } from './rangeRing.js?v=63';
 
 // KayKit 模型正面朝 +Z；如果哪天换模型发现怪倒着走，把这里改成 Math.PI
 export const ENEMY_MODEL_YAW = 0;
@@ -274,8 +274,10 @@ export const ENEMY_TYPES = {
     file: 'assets/monsters/tribal.glb',
     // sourceHeight = 正交相机实测的 Idle 渲染身高（.tmp-mob-calib.js，单位同世界）
     sourceHeight: 4.238,
-    height: 1.40,          // 比原来高一点：图腾加羽冠本来就长
-    radius: 0.45,
+    // 第 53 块（用户反馈「图腾太小」）：1.40 → 2.52（×1.8）。
+    // 图腾是根柱子，站着比人高一截才对；原来的 1.40 在怪群里像个路标。
+    height: 2.52,
+    radius: 0.60,
     hp: 4,
     armor: 0,
     speed: 1.05,           // 慢，但站得远：想杀它得主动冲进去
@@ -306,8 +308,9 @@ export const ENEMY_TYPES = {
     name: '焚火魔',
     file: 'assets/monsters/demon.glb',
     sourceHeight: 2.352,   // 实测（含翅膀高度）
-    height: 1.22,
-    radius: 0.42,
+    // 第 53 块（用户反馈「蝙蝠有点小」）：1.22 → 1.464（×1.2）
+    height: 1.464,
+    radius: 0.48,
     hp: 3,
     armor: 0,
     speed: 1.35,           // 三个里最灵活，追它容易被灼地拖住
@@ -337,8 +340,12 @@ export const ENEMY_TYPES = {
     name: '孢冠菌王',
     file: 'assets/monsters/mushroom-king.glb',
     sourceHeight: 3.527,   // 实测（含菌盖）
-    height: 1.62,          // 最高的一只：一顶菌盖就是它的王冠
-    radius: 0.52,
+    // 第 53 块（用户要求「菌王放大两倍、周围四个卫队缩到 0.7」）：
+    // 1.62 → 3.24。它是这一关的「老大」，站在四个小卫队中间得像座塔。
+    // 卫队的缩放走 summon.scale（spawn 的 opts.scale），不改 warrior 本体 ——
+    // 第一关还在用同一个 warrior 配置。
+    height: 3.24,
+    radius: 0.78,          // 身子大了碰撞半径跟着放，不然会和主角/小怪穿模
     hp: 5,                 // 血最厚（第 20 回合 24 血，得专门冲一趟）
     armor: 0,
     speed: 0.95,           // 最慢，跑不掉
@@ -352,7 +359,9 @@ export const ENEMY_TYPES = {
     // 石刺：从菌王身前起，朝主角方向延伸 count 段、每段间隔 step，
     // 每段 eruption 半径 radius，尽头钻出一只骷髅小兵
     spell: { kind: 'spikes', count: 6, step: 1.15, radius: 1.0, gap: 0.16, color: 0x9ee8ff },
-    summon: { kind: 'warrior', count: 4, every: 9.0, first: 4.5, orbit: 1.45 },
+    // 卫队：菌王放大到 3.24 之后，四只战士缩到 0.7 才像「老大 + 跟班」。
+    // 轨道也跟着放大到 1.9（原来 1.45 现在会贴着菌王的腿）。
+    summon: { kind: 'warrior', count: 4, every: 9.0, first: 4.5, orbit: 1.9, scale: 0.7 },
     // 霜牢环（第 28 块）：不再以菌王为中心 —— followPlayer 让环钉在主角脚下，
     // 走到哪跟到哪；环里的怪吃加成且泛青光。环小了（4.6 → 2.6），压的是站位。
     aura: { radius: 2.6, haste: 0.35, armor: 0.25, followPlayer: true },
@@ -947,7 +956,7 @@ function lerpAngle(a, b, t) {
 // ------------------------------------------------------------
 // 怪物血条：一张 96×12 的 canvas 贴图 + Sprite，受伤才显示
 // ------------------------------------------------------------
-function createBar(cfg) {
+function createBar(cfg, scale = 1) {
   const W = 168, H = 42;
   const cv = document.createElement('canvas');
   cv.width = W; cv.height = H;
@@ -960,9 +969,11 @@ function createBar(cfg) {
   const spr = new THREE.Sprite(mat);
   // 头顶常驻血条：宽随身高、高固定。
   // ⚠️ 必须抬到头顶上方约 0.95 —— 相机是俯视 45°，贴得太近会被怪自己的头挡住。
-  const w = cfg.height * 1.18;
+  // 第 53 块：血条跟着 opts.scale 走（卫队缩到 0.7，血条还按原高挂会飘在半空）。
+  const hh = cfg.height * scale;
+  const w = hh * 1.18;
   spr.scale.set(w, w * (H / W), 1);
-  spr.position.y = cfg.height + 0.95;
+  spr.position.y = hh + 0.95 * Math.max(0.7, scale);
   spr.visible = true;
   spr.renderOrder = 5;
 
@@ -1065,7 +1076,10 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
     // 克隆蒙皮模型（SkeletonUtils 会重建骨骼绑定，普通 clone 会共享骨架）
     // 缩放按实测的 sourceHeight 归一（见 ENEMY_TYPES 顶部注释）
     const model = cloneSkinned(src.scene);
-    const s = cfg.height / cfg.sourceHeight;
+    // opts.scale：同一个模型可以按实例缩放（第 53 块，菌王的四个卫队用 0.7）——
+    // 只改这一只，不动 ENEMY_TYPES 里 warrior 本体的身高（第一关还在用）。
+    const scaleMul = opts.scale ?? 1;
+    const s = (cfg.height / cfg.sourceHeight) * scaleMul;
     model.scale.setScalar(s);
     model.rotation.y = ENEMY_MODEL_YAW;
     // 脚底对齐（第 52 块）：新模型的脚底不完全在原点（实测 -0.08 ~ +0.49），
@@ -1147,7 +1161,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
       else root.add(auraRing.mesh);
     }
 
-    const bar = createBar(cfg);
+    const bar = createBar(cfg, scaleMul);
     root.add(bar.spr);
     scene.add(root);
 
@@ -1181,6 +1195,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
     const e = {
       id: ++uid,
       type, cfg, root, model, mixer, actions, play,
+      height: cfg.height * scaleMul,   // 这一只的实际身高（卫队 0.7 倍，特效/文字按它定位）
       pos: root.position,
       hp: maxHp,
       maxHp,
@@ -1300,7 +1315,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
         fx.text({ x: e.pos.x, z: e.pos.z }, Math.max(0.1, dealt).toFixed(1), {
           color: opts.dot ? '#9dff6a' : crit ? '#ffe066' : '#eafff4',
           crit: crit && !opts.dot,
-          y: e.cfg.height * 0.95,
+          y: e.height * 0.95,
           size: opts.dot ? 0.40 : crit ? 0.85 : 0.62,
         });
       }
@@ -1704,7 +1719,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
       if (fx) {
         // 回血绿字（伤害数字是白/黄/绿字里的毒绿，这里用更亮的青绿区分）
         fx.text({ x: o.pos.x, z: o.pos.z }, `+${amt.toFixed(1)}`, {
-          color: '#7df0b0', y: o.cfg.height * 0.95, size: 0.4,
+          color: '#7df0b0', y: o.height * 0.95, size: 0.4,
         });
       }
     }
@@ -2352,6 +2367,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
               guard: { master: e, angle: a, radius: e.cfg.summon.orbit },
               hpScale: (e.summonScale && e.summonScale.hp) ?? 1,
               damageScale: (e.summonScale && e.summonScale.dmg) ?? 1,
+              scale: e.cfg.summon.scale ?? 1,   // 第 53 块：卫队 0.7 倍，衬出菌王的块头
             });
             if (fx) fx.spawnRing(e.pos, 0x9ee8ff);
           }

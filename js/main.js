@@ -5,71 +5,71 @@
 // 目标是把三件事调顺：摇杆输入 → 角色速度/朝向 → 相机跟随。
 // 后续叠战斗时，只需要在 tick() 里加敌人更新与自动攻击，不用动输入层。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=62';
-import { buildNightScene } from './scene.js?v=62';
-import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=62';
-import { createInput } from './input.js?v=62';
-import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=62';
-import { createStatView } from './statView.js?v=62';
-import { createWeaponStats } from './weaponStats.js?v=62';
-import { createFx } from './fx.js?v=62';
-import { createEnemySystem } from './enemy.js?v=62';
+import * as THREE from '../lib/three.module.js?v=63';
+import { buildNightScene } from './scene.js?v=63';
+import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=63';
+import { createInput } from './input.js?v=63';
+import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=63';
+import { createStatView } from './statView.js?v=63';
+import { createWeaponStats } from './weaponStats.js?v=63';
+import { createFx } from './fx.js?v=63';
+import { createEnemySystem } from './enemy.js?v=63';
 import {
   createLevel, LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVELS_BY_ID, DIFFS, setDifficulty, getDifficulty, roundScale, levelStats,
-} from './wave.js?v=62';
-import { createRangeRing } from './rangeRing.js?v=62';
-import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=62';
-import { createWeaponSystem } from './weapon.js?v=62';
-import { createArrowRainSystem } from './arrowRain.js?v=62';
-import { SWORD_KINDS } from './swordKinds.js?v=62';
-import { createGoldSystem } from './gold.js?v=62';
-import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW } from './shop.js?v=62';
-import { createTurretSystem, TURRET } from './turret.js?v=62';
-import { createRelicSystem, RELIC_DEFS } from './relics.js?v=62';
-import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=62';
-import audio from './audio.js?v=62';
-import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=62';
+} from './wave.js?v=63';
+import { createRangeRing } from './rangeRing.js?v=63';
+import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=63';
+import { createWeaponSystem } from './weapon.js?v=63';
+import { createArrowRainSystem } from './arrowRain.js?v=63';
+import { SWORD_KINDS } from './swordKinds.js?v=63';
+import { createGoldSystem } from './gold.js?v=63';
+import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW } from './shop.js?v=63';
+import { createTurretSystem, TURRET } from './turret.js?v=63';
+import { createRelicSystem, RELIC_DEFS } from './relics.js?v=63';
+import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=63';
+import audio from './audio.js?v=63';
+import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=63';
 import {
   settings as readSettings, setSetting, save as saveProfile, profile,
   bumpStat, setStatMax, codexAdd, codexCount, countCard, unlockAch, hasAch, addBones, bones, resetAll,
   storyProgress, markStorySeen, markStoryRead, addStoryMark, setStoryEnding,
   setSaveSuppressed, reloadFromStorage,
   giftLog, giftRedeemed, markGift,
-} from './profile.js?v=62';
+} from './profile.js?v=63';
 // 第 44 块：礼包兑换（码表只有哈希，明细在 gift.js 顶部注释）
-import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=62';
+import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=63';
 // 第 46 块：音效包（抽象奶蛙音效包 —— 4 段奶蛙叫声，通关第一关解锁）
-import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=62';
-import * as runSave from './runSave.js?v=62';
+import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=63';
+import * as runSave from './runSave.js?v=63';
 import {
   CAMPFIRE, CAMP_STEP, campBuy, campOwned, campLevel,
   campCost, campApply, bonesFor, diffBoneMul, levelBoneMul, coinBones, BONE,
-} from './campfire.js?v=62';
+} from './campfire.js?v=63';
 // 第 23 块：永夜火种（通关白给的 3 次永久三选一）
 import {
   BOONS, BOON_BY_ID, BOON_PICKS, boonOwned, boonStacks, boonPending, boonTotalStacks,
   grantBoons, rollBoons, takeBoon, applyBoons, boonStackText,
-} from './boons.js?v=62';
+} from './boons.js?v=63';
 // 第 21 块：夜行诅咒（自选 debuff 换骨币倍率）
-import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=62';
+import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=63';
 // 第 22 块：种子与每日挑战
 import {
   DAILY_RULES, dayKey, dayText, dailySeed, seedCode, pickDailyCurses,
   seedFromText, pickSeedRules, loadSeedRecords, saveSeedRecord, pruneSeeds,
   dailyRecord, saveDailyRecord, pruneDaily, makeRng,
-} from './seed.js?v=62';
-import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=62';
-import { achById, ACHS } from './achievements.js?v=62';
+} from './seed.js?v=63';
+import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=63';
+import { achById, ACHS } from './achievements.js?v=63';
 import {
   EVENTS, ALL_EVENTS, getEventById, pickEvent, effectLines,
   choiceHint, canAfford, costShort, REP_MIN, REP_MAX, REP_START,
   isTalk, eventChoices, resolveRoll, mergeEffects,
-} from './events.js?v=62';
+} from './events.js?v=63';
 // 第 32 块：主线《笑不出来的那一夜》（18 夜，一夜一关，前 3 夜已有关卡）
 import {
   STORY_ARC, STORY_CHAPTERS, STORY_ENDINGS, MARK_INFO,
   storyChapterAt, storyChapterById, storyEndingKey,
-} from './story.js?v=62';
+} from './story.js?v=63';
 
 // 标记模块已经跑起来了：index.html 的兜底自检靠它判断
 // 「模块根本没执行」还是「执行了但加载慢」。
@@ -202,7 +202,10 @@ async function boot() {
   }
 
   // ---------------- 加载页轮播介绍语（第 48 块） ----------------
-  // 首条 = 首次加载慢的提示；之后每 3.2 秒换一句游戏介绍，淡出淡入。
+  // 首条 = 首次加载慢的提示；之后每 1.78 秒换一句游戏介绍，淡出淡入。
+  // 第 53 块（用户反馈「切得太慢」）：3200ms → 1778ms（×1.8 速），淡出同步压到 250ms。
+  const LOAD_TIP_MS = 1778;
+  const LOAD_TIP_FADE = 200;   // 与 style.css 里 .ld-tip 的 transition 保持一致
   const LOAD_TIPS = [
     '首次加载较慢，请耐心等待……',
     '《蛙步 · 夜行》—— 奶蛙的深夜生存之旅',
@@ -226,8 +229,8 @@ async function boot() {
         tipIdx = (tipIdx + 1) % LOAD_TIPS.length;
         ldTip.textContent = LOAD_TIPS[tipIdx];
         ldTip.classList.remove('fade');
-      }, 450);
-    }, 3200);
+      }, LOAD_TIP_FADE);
+    }, LOAD_TIP_MS);
   }
 
   let frog;
@@ -2175,6 +2178,28 @@ async function boot() {
       name: '血 剑',
       steps: [{ title: '命中就回血', text: '按剑伤的一部分回血，和吸血属性叠乘。残血时别退，往怪身上蹭反而更安全。' }],
     },
+    // 第 53 块（用户反馈「箭雨拿到之后没提示、没教程」）：
+    // 技能也挂进这套卡片 —— key 是技能 id，不是剑种。和武器共用一个队列，
+    // 所以拿到环剑那一回合的顺序是：武器卡 → 环剑教程 → 箭雨教程 → 回合链。
+    arrowrain: {
+      label: '技能教程',
+      name: '箭 雨',
+      steps: [
+        {
+          title: '技能栏多了一格',
+          text: '第二关起拿到环剑时会一并解锁箭雨。屏幕右下角技能栏第 2 格（一支箭的图标），也可以按键盘 2 放。',
+        },
+        {
+          title: '它自己挑地方',
+          text: '不用瞄准：按下去就朝离你最近的那只怪头顶标一圈红环（半径 2.3，最多找 14 格内的怪），0.85 秒后 14 支箭一起落下。怪会走，圈不会追 —— 它跑出圈就白放了。',
+        },
+        {
+          title: '冷却 8 秒',
+          text: '放完格子上会显示剩余秒数，走完才能再放。每支箭的伤害吃你的剑伤和暴击（商店的剑油、磨剑石一样加成）。现在就按一次试试。',
+          wait: 'rain',
+        },
+      ],
+    },
   };
 
   let wtOpen = false;
@@ -2245,7 +2270,7 @@ async function boot() {
   function wtRender() {
     const t = WEAPON_TUT[wtKind];
     const s = t.steps[wtStepIdx];
-    wtStepEl.textContent = `武器教程 ${wtStepIdx + 1} / ${t.steps.length}`;
+    wtStepEl.textContent = `${t.label || '武器教程'} ${wtStepIdx + 1} / ${t.steps.length}`;
     wtNameEl.textContent = t.name;
     wtTitleEl.textContent = s.title;
     wtTextEl.textContent = s.text;
@@ -2287,12 +2312,16 @@ async function boot() {
   wtNextBtn.addEventListener('click', () => wtAdvance());
   wtSkipBtn.addEventListener('click', () => wtFinish());
 
-  // 每帧看万剑齐发有没有真的放出去（教程最后一步的过关条件）
+  // 每帧看万剑齐发 / 箭雨有没有真的放出去（教程最后一步的过关条件）
   function wtTick() {
     if (!wtOpen) return;
     const t = WEAPON_TUT[wtKind];
     const s = t && t.steps[wtStepIdx];
-    if (s && s.wait === 'fire' && !wtFired && weapon.flyingCount > 0) {
+    if (!s || wtFired) return;
+    if (s.wait === 'fire' && weapon.flyingCount > 0) {
+      wtFired = true;
+      wtAdvance();
+    } else if (s.wait === 'rain' && arrowRain.strikeCount > 0) {
       wtFired = true;
       wtAdvance();
     }
@@ -2699,7 +2728,13 @@ async function boot() {
     if (cost.hp) stats.hp.cur = Math.max(0.5, stats.hp.cur - cost.hp);
 
     const nextRound = currentEventRound + 1;
-    applyEffects(choice.effects, nextRound);
+    // 第 53 块（用户报「概率事件点了都是『这一夜什么都没发生』」）：
+    // 以前把 { roll: [...] } 原样丢给 applyEffects —— 它内部确实摇了、也确实生效了，
+    // 但摇出来的那一支**没往外传**，于是 resultLines 拿到的是一个只有 roll 键的对象，
+    // effectLines 认不出任何一项 → 结果页只能打兜底文案。满屏的「什么都没发生」。
+    // 现在改成先摇一次（用事件种子流，种子挑战也才可复现），再拿同一份结果去结算和显示。
+    const eff = resolveRoll(choice.effects || {}, rngOf('event'));
+    applyEffects(eff, nextRound);
     if (choice.chain) {
       laterQueue.push({
         due: currentEventRound + choice.chain.in,
@@ -2712,7 +2747,12 @@ async function boot() {
     evChoices.textContent = '';
     evSay.style.display = '';
     evSay.textContent = choice.say || '';
-    const lines = effectLines(choice.effects || {});
+    const lines = effectLines(eff);
+    // 概率分支摇到空手也是结果，得说出来 —— 玩家明明押了一把，
+    // 不能只回他一句「金币 -5（已付）」就完事（那是扣了钱却没说输赢）。
+    if (lines.length === 0 && choice.effects && choice.effects.roll) {
+      lines.push('这一把落空了，什么也没拿到');
+    }
     if (cost.gold) lines.unshift(`金币 -${cost.gold}（已付）`);
     if (cost.hp) lines.unshift(`生命 -${cost.hp.toFixed(1)}（已付）`);
     fillLines(evResultLines, lines.length ? lines : ['这一夜，什么也没发生']);
@@ -2993,7 +3033,8 @@ async function boot() {
   function grantRingThen(next) {
     weapon.grant();
     // 第 47 块（用户定案）：第一关只允许出现剑；第二关起解锁箭雨
-    if (curLevelId >= 2) {
+    const withRain = curLevelId >= 2;
+    if (withRain) {
       arrowRain.unlock();
       renderSkill();
       showToast('新武器 · 箭雨', '技能栏第 2 格：在最近的怪物头顶落一阵箭雨，冷却 8 秒');
@@ -3001,7 +3042,12 @@ async function boot() {
     renderSkill();
     codexAdd('swords', 'ring');     // 图鉴（武器页签按种类也记，这里记首次获得）
     tryAch('first_sword');
-    showWeaponCard(() => queueWeaponTut('ring', next));
+    // 第 53 块（用户报「箭雨拿到后没提示没教程」）：武器卡 → 环剑教程 → 箭雨教程 → 回合链。
+    // 必须用回调串，不能两个都塞进队列 —— 队列是先到先教，直接 push 会让箭雨抢在环剑前面。
+    showWeaponCard(() => queueWeaponTut(
+      'ring',
+      withRain ? () => queueWeaponTut('arrowrain', next) : next
+    ));
   }
 
 
@@ -4717,6 +4763,24 @@ async function boot() {
         yaw: () => statView.yawAngle,
         rows: () => statRows.children.length,
       },
+      // 第 53 块：教程卡（武器 + 技能共用一条队列），测试要能单独开一张
+      wtut: {
+        show: (kind) => { queueWeaponTut(kind); return true; },
+        all: () => Object.keys(WEAPON_TUT),
+        open: () => wtOpen,
+        kind: () => wtKind,
+        step: () => wtStepIdx,
+        steps: () => (WEAPON_TUT[wtKind] ? WEAPON_TUT[wtKind].steps.length : 0),
+        label: () => wtStepEl.textContent,
+        title: () => wtTitleEl.textContent,
+        text: () => wtTextEl.textContent,
+        nextBtn: () => wtNextBtn.textContent,
+        next: () => { wtAdvance(); return wtOpen; },
+        close: () => { wtFinish(); return wtOpen; },
+        seen: () => wtSeen(),
+        resetSeen: () => { try { localStorage.removeItem(WTUT_KEY); } catch (_) {} return []; },
+      },
+      // 第 53 块：场景亮度直接读 __game.scene（fog / 灯光都在里面），不另开钩子。
       // 第 47 块：箭雨（测试钩子）
       arrowRain: {
         state: () => ({ unlocked: arrowRain.unlocked, ready: arrowRain.ready, cdLeft: +arrowRain.cdLeft.toFixed(2), strikes: arrowRain.strikeCount }),

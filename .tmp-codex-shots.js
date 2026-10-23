@@ -12,7 +12,7 @@ const PORT = 9356;
 const PAGE = 'http://127.0.0.1:8124/?debug=1&title';
 const UD = path.join(os.tmpdir(), 'naiwa-cdp-51shot');
 const OUT = path.join(__dirname, 'assets', 'codex');
-const V = '62';
+const V = '63';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 (async () => {

@@ -8,7 +8,7 @@
 // 两套配色集中在 THEMES 里，buildNightScene({ theme }) 建哪套，
 // 局中要换就调返回的 setTheme('crypt')（不改几何，只改颜色和贴图）。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=62';
+import * as THREE from '../lib/three.module.js?v=63';
 
 export const THEMES = {
   // 第一关 · 荒草地：冷月光 + 青绿边圈 + 萤火虫
@@ -25,12 +25,14 @@ export const THEMES = {
     ground: 'grass',
   },
   // 第二关 · 骨塔庭院：紫雾 + 枯土 + 游魂火星，边圈是咒术的紫色
+  // 第 53 块（用户反馈「二关太暗」）：底色、雾色、天光、月光整条提亮，
+  // 雾也放淡了一档 —— 之前紫雾压到 0.0152，远处石头和怪几乎糊进背景里。
   crypt: {
-    bg: 0x110c19,
-    fog: 0x1c1230, fogDensity: 0.0152,
-    hemiSky: 0x6a4a96, hemiGround: 0x181022, hemiIntensity: 1.05,
-    moon: 0xc9b4ff, moonIntensity: 2.55, moonBase: 2.35,
-    rim: 0x7a3fa0, rimIntensity: 0.70,
+    bg: 0x191327,
+    fog: 0x2a1c46, fogDensity: 0.0122,
+    hemiSky: 0x8f6cc4, hemiGround: 0x2a2040, hemiIntensity: 1.55,
+    moon: 0xdcc9ff, moonIntensity: 3.30, moonBase: 3.10,
+    rim: 0x7a3fa0, rimIntensity: 0.95,
     edge: 0xa96bff, edgeOpacity: 0.34,
     stone: 0x39324a,
     tuft: 0x3a3050, tuftVisible: false,   // 骨塔的院子不长草
@@ -38,12 +40,13 @@ export const THEMES = {
     ground: 'crypt',
   },
   // 第三关 · 焦土钟楼：暗红余烬 + 铁灰，边圈是没灭的残火（第 29 块）
+  // 第 53 块：和 crypt 一起提亮（炭红本来就吃光，不提的话整屏是黑的）。
   ash: {
-    bg: 0x140d0d,
-    fog: 0x2a1410, fogDensity: 0.0168,
-    hemiSky: 0x8a4a3a, hemiGround: 0x241210, hemiIntensity: 1.05,
-    moon: 0xffb48a, moonIntensity: 2.60, moonBase: 2.40,
-    rim: 0x9a4a24, rimIntensity: 0.72,
+    bg: 0x1d1311,
+    fog: 0x3d2118, fogDensity: 0.0132,
+    hemiSky: 0xb06a52, hemiGround: 0x3a201a, hemiIntensity: 1.55,
+    moon: 0xffc9a8, moonIntensity: 3.30, moonBase: 3.10,
+    rim: 0x9a4a24, rimIntensity: 0.95,
     edge: 0xff8a3c, edgeOpacity: 0.34,
     stone: 0x4a3a34,
     tuft: 0x4a3630, tuftVisible: false,   // 焦土上不长草
@@ -391,7 +394,8 @@ function makeAshTexture() {
   cv.width = cv.height = S;
   const g = cv.getContext('2d');
 
-  g.fillStyle = '#2a1c18';
+  // 第 53 块：炭红底色提一档（#2a1c18 → #3b2822），不然整屏只有边圈是亮的
+  g.fillStyle = '#3b2822';
   g.fillRect(0, 0, S, S);
 
   let seed = 771203;
@@ -456,7 +460,8 @@ function makeCryptTexture() {
   cv.width = cv.height = S;
   const g = cv.getContext('2d');
 
-  g.fillStyle = '#2b2338';
+  // 第 53 块：底色提一档（#2b2338 → #3a3050），配合天光提亮，枯土不再糊成一片
+  g.fillStyle = '#3a3050';
   g.fillRect(0, 0, S, S);
 
   let seed = 424271;
