@@ -26,6 +26,14 @@ export const FROG_FILES = [
   { file: 'voice-end.mp3', name: '收尾长鸣', use: '通关 · 倒下', offset: 0, preview: 2.20 },
 ];
 
+// 第 61 块（用户反馈「奶蛙包比别的音效小声很多」）：总增益。
+// 实测（.tmp-audio-probe.js，浏览器 decodeAudioData 算 RMS）：
+//   voice-1/2/3 的 RMS 是 0.15~0.20，原版 hit/crit 只有 0.077~0.096 ——
+//   数字上奶蛙并不小，但它是**低频 + 慢起音**，A 计权下听感比一记清脆的打击闷得多。
+// 所以不按 RMS 对齐，按听感补一档：所有奶蛙音在各自 vol 之上再 ×VOICE_GAIN。
+// 只改这一个数就能整体收放（记得别超过削顶：最高峰 0.77×0.72×1.8≈1.0）。
+export const VOICE_GAIN = 1.8;
+
 // 音效名 → 奶蛙素材的播放参数
 //   offset 从素材第几秒开始（已经减掉开头静音）
 //   dur    播多长（源时间，变速前）；不写 = 一直播到结束

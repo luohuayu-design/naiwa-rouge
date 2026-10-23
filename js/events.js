@@ -44,14 +44,18 @@
 // ctx: { round, hasWeapon, gold, rep, hp, maxHp, luck }
 //   luck 用来写 cond（幸运够高才遇得到的吉兆事件，第 11 块）。
 // ============================================================
-import { STAT_DEFS } from './stats.js?v=71';
-import { WEAPON_STAT_DEFS } from './weaponStats.js?v=71';
+import { STAT_DEFS } from './stats.js?v=72';
+import { WEAPON_STAT_DEFS } from './weaponStats.js?v=72';
 // 第 31 块：事件扩容（40 条随机事件 + 3 条连锁后续）单独放一个文件，
 // 不然这个文件会涨到 5000 行。抽取规则、effectLines 等工具函数仍在本文件。
-import { EXTRA_EVENTS, EXTRA_CHAIN_EVENTS } from './eventsExtra.js?v=71';
+import { EXTRA_EVENTS, EXTRA_CHAIN_EVENTS } from './eventsExtra.js?v=72';
 
 export const REP_MIN = 0;
-export const REP_MAX = 100;
+// 第 61 块（用户报「民心到 100 之后不会继续提升」）：上限 100 → 120。
+// 100 是旧设计的上限，事件一直在给加分，涨到头之后数字不动，看起来像 bug。
+// 现在多留出 20 点空间，并新增 100 这一档（见 main.js 的 repTier）：
+// 60 好感 / 80 敬重 / 100 拥戴，40 冷淡 / 20 敌视。
+export const REP_MAX = 120;
 export const REP_START = 50;
 
 // 第 31 块：随机池 = 原来 57 条（CORE）+ eventsExtra.js 的 40 条

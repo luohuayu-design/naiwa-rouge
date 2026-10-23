@@ -13,13 +13,13 @@
 // （击杀 / 弹事件卡 / 选升级卡）。
 // ============================================================
 
-import { ENEMY_TYPES } from './enemy.js?v=71';
-import { SWORD_KINDS } from './swordKinds.js?v=71';
-import { RELIC_DEFS } from './relics.js?v=71';
-import { UPGRADES } from './upgrade.js?v=71';
-import { ALL_EVENTS } from './events.js?v=71';
-import { RARITIES } from './rarity.js?v=71';
-import { codexAll, codexCount } from './profile.js?v=71';
+import { ENEMY_TYPES } from './enemy.js?v=72';
+import { SWORD_KINDS } from './swordKinds.js?v=72';
+import { RELIC_DEFS } from './relics.js?v=72';
+import { UPGRADES } from './upgrade.js?v=72';
+import { ALL_EVENTS } from './events.js?v=72';
+import { RARITIES } from './rarity.js?v=72';
+import { codexAll, codexCount } from './profile.js?v=72';
 
 export const CODEX_TABS = [
   { id: 'enemies', name: '怪物' },
@@ -49,9 +49,9 @@ function enemySub(cfg) {
 function enemyDesc(cfg) {
   if (cfg.charge) return '机动压力：地上一道直线就是它的冲锋路线 —— 横向侧移能躲，撞完它会僵一下（那就是输出窗口）';
   if (cfg.leap) return '空间压力：蓄力后跳向你**当时**站的那个点，地上的红圈就是落点 —— 离开那个点，它在僵直里等你打';
-  if (cfg.ghost) return '信息压力：平时半透明、隐身时无敌且打不着；显形 3 秒、隐身 2.5 秒，贴到它脸上能逼它现形';
+  if (cfg.ghost) return '信息压力：显形 3 秒、隐身 2.5 秒轮着来；隐身时打不着它，但它照样能咬你（第 61 块取消了「贴脸逼它现形」）—— 只能等它自己露头';
   if (cfg.shield) return '节奏压力：举盾时减伤 70% 且不移动，放下盾才正常挨打 —— 挑窗口再打';
-  if (cfg.spell && cfg.spell.kind === 'mend') return '续航压力：定时给周围一圈怪回血（回合越往后奶得越多）—— 不先拆它，前面的血全白打';
+  if (cfg.spell && cfg.spell.kind === 'mend') return '续航压力：定时给半场内的怪回血（回合越往后奶得越多）；它不画范围圈，但被治的怪身上会冒绿光 —— 顺着绿光找过去先拆它';
   if (cfg.spell && cfg.spell.kind === 'brood') return '兵源压力：每几秒在脚下孵 2 只小兵（名下最多 6 只）—— 不点掉她，这回合永远清不完';
   if (cfg.selfDestruct) return '追到脚边就自爆 —— 别让它贴太近';
   if (cfg.contactRange != null) return '近战型，脚下的圈就是它的攻击范围';

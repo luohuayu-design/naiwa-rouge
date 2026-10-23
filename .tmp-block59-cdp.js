@@ -6,7 +6,7 @@
 //   E 重复签到不重复发
 //   F 关掉签到 → 宣传有礼接上
 //   G 帧率自适应：fps<40 连压两秒降一档，fps>52 连稳五秒升回（不写存档）
-//   H 盾斧兽人 / 孢生菇 放大：身高 3.80 / 3.28，半径 0.83 / 0.63
+//   H 盾斧兽人 / 孢生菇 尺寸：身高 1.90 / 1.90，半径 0.62 / 0.55（第 62 块再调）
 //   I 夜行记忆：一章能读完、世界渲染闸门停住
 //   J 火种面板：传说卡只有一次性入场动画（不再是无限呼吸）
 // 跑法：先 `python -m http.server 8124`（cwd=naiwa-rouge），再 `node .tmp-block59-cdp.js`
@@ -227,7 +227,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     ok(await ev('__game.ui.quality()') === 'high', 'ui.quality() 仍报玩家选的 high');
 
     // ============================================================
-    console.log('\n[H] 盾斧兽人 / 孢生菇 放大');
+    console.log('\n[H] 盾斧兽人 / 孢生菇 尺寸');
     // ============================================================
     const sizes = JSON.parse(await ev(`(() => {
       const a = __game.enemies.spawn('shielder', { x: 4, z: 0 }, {});
@@ -237,10 +237,11 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
         br: b ? { h: +b.height.toFixed(2), r: +b.cfg.radius.toFixed(2) } : null,
       });
     })()`));
-    ok(sizes.sh && Math.abs(sizes.sh.h - 3.80) < 0.02, '盾斧兽人身高 3.80（原 1.46 × 2.6）', JSON.stringify(sizes.sh));
-    ok(sizes.sh && Math.abs(sizes.sh.r - 0.83) < 0.02, '盾斧兽人半径只 ×1.5 → 0.83', JSON.stringify(sizes.sh));
-    ok(sizes.br && Math.abs(sizes.br.h - 3.28) < 0.02, '孢生菇身高 3.28（原 1.26 × 2.6）', JSON.stringify(sizes.br));
-    ok(sizes.br && Math.abs(sizes.br.r - 0.63) < 0.02, '孢生菇半径 0.63', JSON.stringify(sizes.br));
+    // 第 62 块（用户再调）：3.80 / 3.28 被判定「太大」，收敛到战士的 1.4 倍 = 1.90
+    ok(sizes.sh && Math.abs(sizes.sh.h - 1.90) < 0.02, '盾斧兽人身高 1.90', JSON.stringify(sizes.sh));
+    ok(sizes.sh && Math.abs(sizes.sh.r - 0.62) < 0.02, '盾斧兽人半径 0.62', JSON.stringify(sizes.sh));
+    ok(sizes.br && Math.abs(sizes.br.h - 1.90) < 0.02, '孢生菇身高 1.90', JSON.stringify(sizes.br));
+    ok(sizes.br && Math.abs(sizes.br.r - 0.55) < 0.02, '孢生菇半径 0.55', JSON.stringify(sizes.br));
 
     // ============================================================
     console.log('\n[H2] 局外商店诅咒：负向真的扣属性 + 注入合并');

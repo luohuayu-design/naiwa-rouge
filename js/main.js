@@ -5,30 +5,30 @@
 // 目标是把三件事调顺：摇杆输入 → 角色速度/朝向 → 相机跟随。
 // 后续叠战斗时，只需要在 tick() 里加敌人更新与自动攻击，不用动输入层。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=71';
-import { buildNightScene } from './scene.js?v=71';
-import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=71';
-import { createInput } from './input.js?v=71';
-import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=71';
-import { createStatView } from './statView.js?v=71';
-import { createWeaponStats } from './weaponStats.js?v=71';
-import { createFx } from './fx.js?v=71';
-import { createEnemySystem } from './enemy.js?v=71';
+import * as THREE from '../lib/three.module.js?v=72';
+import { buildNightScene } from './scene.js?v=72';
+import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=72';
+import { createInput } from './input.js?v=72';
+import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=72';
+import { createStatView } from './statView.js?v=72';
+import { createWeaponStats } from './weaponStats.js?v=72';
+import { createFx } from './fx.js?v=72';
+import { createEnemySystem } from './enemy.js?v=72';
 import {
   createLevel, LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVELS_BY_ID, DIFFS, setDifficulty, getDifficulty, roundScale, levelStats,
-} from './wave.js?v=71';
-import { createRangeRing } from './rangeRing.js?v=71';
-import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=71';
-import { createWeaponSystem } from './weapon.js?v=71';
-import { createArrowRainSystem } from './arrowRain.js?v=71';
-import { SWORD_KINDS } from './swordKinds.js?v=71';
-import { createGoldSystem } from './gold.js?v=71';
-import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW } from './shop.js?v=71';
-import { createTurretSystem, TURRET } from './turret.js?v=71';
-import { createRelicSystem, RELIC_DEFS } from './relics.js?v=71';
-import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=71';
-import audio from './audio.js?v=71';
-import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=71';
+} from './wave.js?v=72';
+import { createRangeRing } from './rangeRing.js?v=72';
+import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=72';
+import { createWeaponSystem } from './weapon.js?v=72';
+import { createArrowRainSystem } from './arrowRain.js?v=72';
+import { SWORD_KINDS } from './swordKinds.js?v=72';
+import { createGoldSystem } from './gold.js?v=72';
+import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW } from './shop.js?v=72';
+import { createTurretSystem, TURRET } from './turret.js?v=72';
+import { createRelicSystem, RELIC_DEFS } from './relics.js?v=72';
+import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=72';
+import audio from './audio.js?v=72';
+import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=72';
 import {
   settings as readSettings, setSetting, save as saveProfile, profile,
   bumpStat, setStatMax, codexAdd, codexCount, countCard, unlockAch, hasAch, addBones, bones, resetAll,
@@ -38,49 +38,49 @@ import {
   giftLog, giftRedeemed, markGift,
   enemyMet, markEnemyMet,
   ringObtained, markRingObtained,
-} from './profile.js?v=71';
+} from './profile.js?v=72';
 // 第 44 块：礼包兑换（码表只有哈希，明细在 gift.js 顶部注释）
-import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=71';
+import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=72';
 // 第 46 块：音效包（抽象奶蛙音效包 —— 4 段奶蛙叫声，通关第一关解锁）
-import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=71';
-import * as runSave from './runSave.js?v=71';
+import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=72';
+import * as runSave from './runSave.js?v=72';
 import {
   CAMPFIRE, CAMP_STEP, campBuy, campOwned, campLevel,
   campCost, campApply, bonesFor, diffBoneMul, levelBoneMul, coinBones, BONE,
-} from './campfire.js?v=71';
+} from './campfire.js?v=72';
 // 第 23 块：永夜火种（通关白给的 3 次永久三选一）
 import {
   BOONS, BOON_BY_ID, BOON_PICKS, boonOwned, boonStacks, boonPending, boonTotalStacks,
   grantBoons, rollBoons, takeBoon, applyBoons, boonStackText,
-} from './boons.js?v=71';
+} from './boons.js?v=72';
 // 第 21 块：夜行诅咒（自选 debuff 换骨币倍率）
-import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=71';
+import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=72';
 // 第 22 块：种子与每日挑战
 import {
   DAILY_RULES, dayKey, dayText, dailySeed, seedCode, pickDailyCurses,
   seedFromText, pickSeedRules, loadSeedRecords, saveSeedRecord, pruneSeeds,
   dailyRecord, saveDailyRecord, pruneDaily, makeRng,
-} from './seed.js?v=71';
-import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=71';
+} from './seed.js?v=72';
+import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=72';
 // 第 58 块：局外商店 · 宝箱（花骨币买，开箱随机给永久属性 / 永久法器 / 技能CD缩短）
 import {
   BOXES, BOX_BY_ID, buyBox, rollBox, metaApplyStats, applyMeta,
-} from './metaShop.js?v=71';
+} from './metaShop.js?v=72';
 // 第 59 块：每日签到（以周为单位，周一 00:00 重置）
 import {
   WEEK_TIERS, SIGN_BONES, weekCells, signSummary, signToday, signedToday,
-} from './signin.js?v=71';
-import { achById, ACHS } from './achievements.js?v=71';
+} from './signin.js?v=72';
+import { achById, ACHS } from './achievements.js?v=72';
 import {
   EVENTS, ALL_EVENTS, getEventById, pickEvent, effectLines,
   choiceHint, canAfford, costShort, REP_MIN, REP_MAX, REP_START,
   isTalk, eventChoices, resolveRoll, mergeEffects,
-} from './events.js?v=71';
+} from './events.js?v=72';
 // 第 32 块：主线《笑不出来的那一夜》（18 夜，一夜一关，前 3 夜已有关卡）
 import {
   STORY_ARC, STORY_CHAPTERS, STORY_ENDINGS, MARK_INFO,
   storyChapterAt, storyChapterById, storyEndingKey,
-} from './story.js?v=71';
+} from './story.js?v=72';
 
 // 标记模块已经跑起来了：index.html 的兜底自检靠它判断
 // 「模块根本没执行」还是「执行了但加载慢」。
@@ -705,19 +705,18 @@ async function boot() {
   let lastRepTier = 0;          // 民心档位（用于提示"村民对你改观了"）
 
   function repPriceMul() {
-    // 50 → 1.00，100 → 0.75，0 → 1.25
-    return Math.max(0.75, Math.min(1.25, 1 - (reputation - 50) / 200));
+    // 50 → 1.00，120 → 0.65，0 → 1.25（第 61 块上限提到 120 后跟着放宽到底价 0.65）
+    return Math.max(0.65, Math.min(1.25, 1 - (reputation - 50) / 200));
   }
   function priceOf(item) {
     // 民心 × 事件折扣，两个都是乘数；最低 1 金币，别出现 0 元购
     return Math.max(1, Math.round(item.price * repPriceMul() * (1 - nextShopDiscount)));
   }
+  // 民心档位（第 61 块加了最高一档「拥戴」100）：
+  //   3 拥戴 100 / 2 敬重 80 / 1 好感 60 / 0 平常 / -1 冷淡 40 / -2 敌视 20
+  // 跨档会触发「民心专属事件」（良性池 / 恶性池），见 js/repEvents.js。
   function repTier() {
-    if (reputation >= 80) return 2;   // 敬重
-    if (reputation >= 60) return 1;   // 好感
-    if (reputation <= 20) return -2;  // 敌视
-    if (reputation <= 40) return -1;  // 冷淡
-    return 0;
+    return repTierAt(reputation);
   }
   function renderRep() {
     if (!repNumEl) return;
@@ -744,6 +743,7 @@ async function boot() {
     const t0 = repTierAt(before), t1 = repTier();
     if (t1 !== t0) {
       const msg = {
+        3: '整个草原都知道你的名字了，孩子们在夜里喊「奶蛙来了」',
         2: '草原上开始有人喊你「守夜的先生」了',
         1: '村里人见了你会点头了',
         0: '',
@@ -755,10 +755,11 @@ async function boot() {
     lastRepTier = t1;
   }
   function repTierAt(v) {
-    if (v >= 80) return 2;
-    if (v >= 60) return 1;
-    if (v <= 20) return -2;
-    if (v <= 40) return -1;
+    if (v >= 100) return 3;   // 拥戴
+    if (v >= 80) return 2;    // 敬重
+    if (v >= 60) return 1;    // 好感
+    if (v <= 20) return -2;   // 敌视
+    if (v <= 40) return -1;   // 冷淡
     return 0;
   }
   renderRep();

@@ -22,7 +22,7 @@
 //   所以 buffer 缓存按**实际文件**存（'s:音效名' / 'v:文件名'），换包只换取哪份。
 // ============================================================
 
-import { VOICE_BASE, FROG_SFX } from './voicepack.js?v=71';
+import { VOICE_BASE, VOICE_GAIN, FROG_SFX } from './voicepack.js?v=72';
 
 const BGM_BASE = 'assets/audio/bgm/';
 const SFX_BASE = 'assets/audio/sfx/';
@@ -262,8 +262,10 @@ export function sfx(name, opts = {}) {
   src.playbackRate.value = Math.max(0.25, base * (1 + (Math.random() * 2 - 1) * j));
 
   const g = c.createGain();
-  const selfVol = ov && ov.vol != null ? ov.vol : def.vol;
-  g.gain.value = (opts.vol != null ? opts.vol : 1) * selfVol;
+  // 奶蛙包走 VOICE_GAIN（第 61 块：低频慢起音听感偏小，按听感补一档），
+  // 原版音不乘。最高钳到 0.98，避免叠加后削顶失真。
+  const selfVol = (ov && ov.vol != null ? ov.vol : def.vol) * (ov && ov.file ? VOICE_GAIN : 1);
+  g.gain.value = Math.min(0.98, (opts.vol != null ? opts.vol : 1) * selfVol);
   src.connect(g);
   g.connect(sfxGain);
 

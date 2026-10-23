@@ -25,11 +25,11 @@
 // 第四关三只（wraith/leaper/mender，第 35 块，第 52 块换模型），
 // 各自在下面 ENEMY_TYPES 里有详细注释。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=71';
-import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=71';
-import { clone as cloneSkinned } from '../lib/jsm/utils/SkeletonUtils.js?v=71';
-import { distance2D } from './stats.js?v=71';
-import { createRangeRing } from './rangeRing.js?v=71';
+import * as THREE from '../lib/three.module.js?v=72';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=72';
+import { clone as cloneSkinned } from '../lib/jsm/utils/SkeletonUtils.js?v=72';
+import { distance2D } from './stats.js?v=72';
+import { createRangeRing } from './rangeRing.js?v=72';
 
 // KayKit 模型正面朝 +Z；如果哪天换模型发现怪倒着走，把这里改成 Math.PI
 export const ENEMY_MODEL_YAW = 0;
@@ -440,17 +440,18 @@ export const ENEMY_TYPES = {
     name: '盾斧兽人',
     file: 'assets/monsters/orc.glb',
     sourceHeight: 3.117,   // 实测
-    // 第 59 块（用户实测）：模型太小 → 视觉身高 ×2.6（1.46 → 3.80）。
-    // 碰撞半径只 ×1.5（0.55 → 0.83）：看着是大块头，但不能变成一面堵路的墙。
-    height: 3.80,
-    radius: 0.83,
+    // 尺寸来回调过两轮：1.46（太小）→ 3.80（太大）→ 现在 1.90。
+    // 2026-10-24 用户定案：**战士的 1.4 倍**，看着是壮汉，但不再是 boss 块头。
+    // 碰撞半径跟着 1.9/3.8 缩回（0.83 → 0.62），不堵路。
+    height: 1.90,
+    radius: 0.62,
     hp: 5,                 // 比同期的战士厚一点，逼玩家挑窗口打
     armor: 0,
     speed: 1.18,
     damage: 1,
-    // 近战距离按视觉边缘对齐：模型水平半径约 1.33 + 主角 0.65 ≈ 2.0。
-    // 还留 1.6 的话玩家会被迫站进它身体里才挨打，穿模很明显。
-    attackRange: 2.00,
+    // 近战距离按视觉边缘对齐：模型水平半径 1.33×(1.9/3.8)≈0.67 + 主角 0.65 ≈ 1.32，
+    // 留一点余量到 1.45（贴脸打得到，但不会隔着空气挨揍）。
+    attackRange: 1.45,
     attackInterval: 1.9,
     windup: 0.5,
     attackDuration: 0.78,
@@ -473,10 +474,10 @@ export const ENEMY_TYPES = {
     name: '孢生菇',
     file: 'assets/monsters/mushnub-evolved.glb',
     sourceHeight: 4.457,   // 实测（含头顶一圈尖刺）
-    // 第 59 块（用户实测）：模型太小 → 视觉身高 ×2.6（1.26 → 3.28），
-    // 碰撞半径只 ×1.5（0.42 → 0.63）。远程召唤型，射程不变。
-    height: 3.28,
-    radius: 0.63,
+    // 和盾斧兽人同一条线：1.26（太小）→ 3.28（太大）→ 现在 1.90。
+    // 2026-10-24 用户定案：和战士比「壮一圈」但不压屏。远程召唤型，射程不变。
+    height: 1.90,
+    radius: 0.55,
     hp: 4,                 // 血不厚：设计上就是「你肯冲进去就能拆掉」
     armor: 0,
     speed: 1.12,
@@ -524,22 +525,27 @@ export const ENEMY_TYPES = {
     name: '雾鬼',
     file: 'assets/monsters/ghost.glb',
     sourceHeight: 3.145,   // 实测（含两只耳朵）
-    height: 1.34,
-    radius: 0.42,
+    // 2026-10-24 用户定案：太小 → 1.85（和另外两只四关怪同档）。
+    height: 1.85,
+    radius: 0.52,
     hp: 2,
     armor: 0,
     speed: 1.45,
     damage: 1,
-    attackRange: 1.5,      // 近战；显形半径 1.2 比它小，隐身时永远够不着人
+    attackRange: 1.55,     // 近战（第 61 块起隐身也能打人，见下面 ghost 注释）
     attackInterval: 1.9,
     windup: 0.4,
     attackDuration: 0.75,
-    // 隐身循环：显 3 秒 → 隐 2.5 秒；隐身时无敌、不可被索敌。
-    // 玩家进入 revealDist + 玩家半径 内强制显形 —— 贴脸能逼它现出原形。
+    // 隐身循环：显 3 秒 → 隐 2.5 秒。
+    // 2026-10-24 用户定案（第 62 块）：
+    //   ① **取消「贴到脸上强制显形」** —— 那条规则等于给玩家一个免费的破解手段，
+    //      把隐身这套机制削没了；
+    //   ② **隐身时照样能打人**（原来一出手就露脸，等于隐身只敢不打）；
+    //   ③ 隐身时玩家打不到它（takeDamage 里直接 return false），只能等它自己显形。
+    //   于是它的定位变成「会咬人的雾」：血月数着秒数躲，别硬站。
     ghost: {
       hidden: 2.5,         // 隐身时长
       visible: 3.0,        // 显形时长
-      revealDist: 1.2,     // 玩家距它这么近就强制显形
       firstHidden: 1.4,    // 出生后多久第一次隐身
       ghostOpacity: 0.16,  // 隐身时的材质透明度（留一点影子，浓雾里若隐若现）
     },
@@ -561,8 +567,9 @@ export const ENEMY_TYPES = {
     name: '雾猎狼',
     file: 'assets/monsters/wolf.glb',
     sourceHeight: 2.707,   // 实测（站立时头顶高度）
-    height: 1.30,
-    radius: 0.54,          // 狼身长，碰撞半径宽一些
+    // 2026-10-24 用户定案：太小 → 1.85。
+    height: 1.85,
+    radius: 0.62,          // 狼身长，碰撞半径宽一些
     hp: 3,
     armor: 0,
     speed: 1.30,
@@ -597,8 +604,9 @@ export const ENEMY_TYPES = {
     name: '缝补小巫',
     file: 'assets/monsters/wizard.glb',
     sourceHeight: 2.625,   // 实测（含尖帽）
-    height: 1.12,          // 团块小怪，比其它怪矮一截
-    radius: 0.40,
+    // 2026-10-24 用户定案：太小 → 1.85（和另外两只四关怪同档）。
+    height: 1.85,
+    radius: 0.52,
     hp: 4,                 // 血不厚：设计上就是「肯冲进去就能拆掉」
     armor: 0,
     speed: 1.10,
@@ -612,7 +620,10 @@ export const ENEMY_TYPES = {
     castTime: 1.0,         // 有它就说明「这个远程不画脚下范围环」
     // 回血：每读一次条给 radius 内所有掉血的怪回 heal × 本局伤害成长，
     // 满血的怪不浪费。回合越往后奶量越大（跟着 damageScale 走）。
-    spell: { kind: 'mend', radius: 3.2, heal: 1.2 },
+    // 2026-10-24 用户反馈「范围是不是很小」→ 3.2 确实只够照顾脚边几只，
+    // 改成 8.0（跨半场奶）。**不画判定圈**（那么大一个圈会把战场糊满），
+    // 改为在每一只被治疗的怪身上冒绿色治疗特效 —— 玩家一眼看出哪儿在回血。
+    spell: { kind: 'mend', radius: 8.0, heal: 1.2 },
     spawnTime: 1.0,
     deathTime: 1.6,
     selfDestruct: false,
@@ -1455,7 +1466,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
 
   // ---------------- 雾鬼的隐身 / 显形（第 35 块） ----------------
   // 隐身 = 无敌 + 不可索敌 + 外观淡出（材质透明度过渡到 ghostOpacity）。
-  // 显形的三条路：等循环翻转、贴脸（revealDist）、（将来）特定装备强制显形。
+  // 显形只有一条路：等它自己的循环翻转（第 61 块删掉了「贴脸强制显形」）。
   function hideGhost(e) {
     e.ghostHidden = true;
     e.ghostT = e.cfg.ghost.hidden;
@@ -1738,11 +1749,18 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
         fx.text({ x: o.pos.x, z: o.pos.z }, `+${amt.toFixed(1)}`, {
           color: '#7df0b0', y: o.height * 0.95, size: 0.4,
         });
+        // 2026-10-24（用户要求）：范围放到 8.0 之后**不再画判定圈** ——
+        // 那么大一个圈横在战场上比什么都乱。改为「谁被治，谁身上冒绿光」：
+        // 脚下一圈收束的绿环 + 几点上浮的绿孢子，玩家一眼看出哪儿在回血。
+        fx.ring(o.pos, { from: 0.1, to: 0.85, color: 0x7df0b0, life: 0.42, opacity: 0.75, y: 0.05 });
+        fx.burst({ x: o.pos.x, z: o.pos.z }, {
+          color: 0x8ef0b8, count: 6, speed: 1.2, life: 0.5, size: 0.09, y: 0.25, up: 1.5,
+        });
       }
     }
+    // 施法者自己身上只冒一点点（表示「它在施法」，不要大圈）
     if (fx && n) {
-      fx.ring(e.pos, { from: 0.3, to: sp.radius, color: sp.color, life: 0.4, opacity: 0.5, y: 0.06 });
-      fx.burst(e.pos, { color: sp.color, count: 10, speed: 2.0, life: 0.45, size: 0.1, y: 0.4, up: 1.4 });
+      fx.burst(e.pos, { color: sp.color, count: 8, speed: 1.6, life: 0.45, size: 0.1, y: 0.4, up: 1.4 });
     }
     return n;
   }
@@ -2113,12 +2131,11 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
       e.root.rotation.y = lerpAngle(e.root.rotation.y, Math.atan2(dx, dz), 1 - Math.exp(-9 * dt));
     }
 
-    // ---- 雾鬼：隐身 / 显形循环（第 35 块）----
-    // 隐身时无敌且不可索敌；贴到玩家脸上强制显形（这是玩家的主动解法）。
+    // ---- 雾鬼：隐身 / 显形循环（第 35 块；第 61 块改规则）----
+    // 隐身时不可被索敌、打不着；**但贴脸不再强制显形**，只能等它自己露头。
     // 材质透明度逐帧过渡，隐身不是「啪一下消失」而是慢慢淡进雾里。
     if (e.cfg.ghost && e.state !== 'dead' && e.state !== 'spawn') {
       const g = e.cfg.ghost;
-      if (e.ghostHidden && dist <= g.revealDist + ctx.playerRadius) revealGhost(e);
       e.ghostT -= dt;
       if (e.ghostT <= 0) {
         if (e.ghostHidden) revealGhost(e);
@@ -2627,8 +2644,9 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
 
       e.attackCd -= dt;
       if (dist <= e.cfg.attackRange + 0.15 && e.attackCd <= 0) {
-        // 雾鬼要出手就必须露脸（第 35 块）：隐身的不可能打人
-        if (e.cfg.ghost && e.ghostHidden) revealGhost(e);
+        // 第 61 块（用户定案）：**隐身也能打人**。原来一出手就强制露脸，
+        // 等于「隐身只敢不打」，把它的威胁削掉了。现在它藏在雾里咬人，
+        // 只有脚下那圈前摇红环会透出来一点，躲不躲看反应。
         e.state = 'attack';
         e.t = 0;
         e.hitDone = false;
