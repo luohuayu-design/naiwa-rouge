@@ -24,8 +24,8 @@
 import {
   profile, bones, addBones, metaShopState, metaAddMod, metaGrantRelic,
   metaGrantSkillCd, metaLog, metaBought, save,
-} from './profile.js?v=68';
-import { RELIC_DEFS } from './relics.js?v=68';
+} from './profile.js?v=69';
+import { RELIC_DEFS } from './relics.js?v=69';
 
 // ---------------- 三档宝箱 ----------------
 // tier 0/1/2 对应「最低可出现的池子档位」；mag 是木匣基准的强度倍率；
@@ -108,7 +108,12 @@ function scaleMod(e, mag) {
 function effectText(e, mag, positive) {
   const s = scaleMod(e, mag);
   const sign = positive ? '+' : '−';
-  return { ...s, effectText: `${e.desc} ${sign}${s.text}`, icon: e.icon, name: e.name, stat: e.stat, scope: e.scope || null };
+  // ⚠️ 第 59 块修的真 bug：负面项的 flat/pct 以前存的是**正数**（只有文案带减号），
+  // 结果 metaApplyStats 把「诅咒」当正加成注入 —— 开箱踩雷反而变强。
+  // 这里按正负落账，文案照旧用绝对值。
+  const flat = positive ? s.flat : -s.flat;
+  const pct = positive ? s.pct : -s.pct;
+  return { flat, pct, effectText: `${e.desc} ${sign}${s.text}`, icon: e.icon, name: e.name, stat: e.stat, scope: e.scope || null };
 }
 
 // 挑一个还没满级的永久法器（都满级了返回 null，调用方回退到普通属性）
@@ -181,15 +186,43 @@ export function buyBox(boxId, rng = Math.random, admin = false) {
 
 // ---------------- 开局注入（纯属性，不碰任何实例） ----------------
 // stat 页预览与每局开局都用它；不触发 weapon/arrowRain/relics，避免污染临时实例。
+//
+// 第 59 块两处加固：
+//   1) **合并同项**：开箱记录是一条一条存的（开 500 次箱 = 500 条 mod），
+//      以前一条一条 addMod，stats.get() 每帧要遍历 500 次 × 十几个属性 ——
+//      开得越多战斗越卡。这里按「属性 + 作用域」求和，最多注入二十几条。
+//   2) **生命上限兜底**：木匣诅咒率 35%，长期踩雷能把 maxHp 扣到 0（开局即死）。
+//      负向 maxHp 最多扣到「不含局外商店加成时剩 1 点」。
 export function metaApplyStats(stats, wstats) {
   const s = metaShopState();
   stats.removeBySource('meta');
   wstats.removeBySource('meta');
+
+  const baseMaxHp = stats.get('maxHp');     // 此刻还没注入 meta，量到的是篝火/火种的底
+  let hpLeft = Math.max(0, baseMaxHp - 1);  // 还能往下扣多少
+
+  const agg = new Map();   // 'weapon|attack' -> { stat, scope, flat, pct }
   for (const m of (s.mods || [])) {
-    const target = m.scope === 'weapon' ? wstats : stats;
-    target.addMod({ stat: m.stat, flat: m.flat || 0, pct: m.pct || 0, src: 'meta' });
+    if (!m || !m.stat) continue;
+    const scope = m.scope === 'weapon' ? 'weapon' : '';
+    let flat = Number(m.flat) || 0;
+    const pct = Number(m.pct) || 0;
+    if (scope === '' && m.stat === 'maxHp' && flat < 0) {
+      if (hpLeft <= 0) continue;
+      flat = -Math.min(-flat, hpLeft);
+      hpLeft += flat;
+    }
+    const key = scope + '|' + m.stat;
+    const cur = agg.get(key);
+    if (cur) { cur.flat += flat; cur.pct += pct; }
+    else agg.set(key, { stat: m.stat, scope, flat, pct });
   }
-  return (s.mods || []).length;
+  for (const a of agg.values()) {
+    if (!a.flat && !a.pct) continue;
+    const target = a.scope === 'weapon' ? wstats : stats;
+    target.addMod({ stat: a.stat, flat: a.flat, pct: a.pct, src: 'meta' });
+  }
+  return agg.size;
 }
 
 // ---------------- 开局注入（含实例：技能CD + 永久法器） ----------------

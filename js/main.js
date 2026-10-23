@@ -5,30 +5,30 @@
 // 目标是把三件事调顺：摇杆输入 → 角色速度/朝向 → 相机跟随。
 // 后续叠战斗时，只需要在 tick() 里加敌人更新与自动攻击，不用动输入层。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=68';
-import { buildNightScene } from './scene.js?v=68';
-import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=68';
-import { createInput } from './input.js?v=68';
-import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=68';
-import { createStatView } from './statView.js?v=68';
-import { createWeaponStats } from './weaponStats.js?v=68';
-import { createFx } from './fx.js?v=68';
-import { createEnemySystem } from './enemy.js?v=68';
+import * as THREE from '../lib/three.module.js?v=69';
+import { buildNightScene } from './scene.js?v=69';
+import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=69';
+import { createInput } from './input.js?v=69';
+import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=69';
+import { createStatView } from './statView.js?v=69';
+import { createWeaponStats } from './weaponStats.js?v=69';
+import { createFx } from './fx.js?v=69';
+import { createEnemySystem } from './enemy.js?v=69';
 import {
   createLevel, LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVELS_BY_ID, DIFFS, setDifficulty, getDifficulty, roundScale, levelStats,
-} from './wave.js?v=68';
-import { createRangeRing } from './rangeRing.js?v=68';
-import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=68';
-import { createWeaponSystem } from './weapon.js?v=68';
-import { createArrowRainSystem } from './arrowRain.js?v=68';
-import { SWORD_KINDS } from './swordKinds.js?v=68';
-import { createGoldSystem } from './gold.js?v=68';
-import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW } from './shop.js?v=68';
-import { createTurretSystem, TURRET } from './turret.js?v=68';
-import { createRelicSystem, RELIC_DEFS } from './relics.js?v=68';
-import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=68';
-import audio from './audio.js?v=68';
-import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=68';
+} from './wave.js?v=69';
+import { createRangeRing } from './rangeRing.js?v=69';
+import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=69';
+import { createWeaponSystem } from './weapon.js?v=69';
+import { createArrowRainSystem } from './arrowRain.js?v=69';
+import { SWORD_KINDS } from './swordKinds.js?v=69';
+import { createGoldSystem } from './gold.js?v=69';
+import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW } from './shop.js?v=69';
+import { createTurretSystem, TURRET } from './turret.js?v=69';
+import { createRelicSystem, RELIC_DEFS } from './relics.js?v=69';
+import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=69';
+import audio from './audio.js?v=69';
+import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=69';
 import {
   settings as readSettings, setSetting, save as saveProfile, profile,
   bumpStat, setStatMax, codexAdd, codexCount, countCard, unlockAch, hasAch, addBones, bones, resetAll,
@@ -38,45 +38,49 @@ import {
   giftLog, giftRedeemed, markGift,
   enemyMet, markEnemyMet,
   ringObtained, markRingObtained,
-} from './profile.js?v=68';
+} from './profile.js?v=69';
 // 第 44 块：礼包兑换（码表只有哈希，明细在 gift.js 顶部注释）
-import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=68';
+import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=69';
 // 第 46 块：音效包（抽象奶蛙音效包 —— 4 段奶蛙叫声，通关第一关解锁）
-import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=68';
-import * as runSave from './runSave.js?v=68';
+import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=69';
+import * as runSave from './runSave.js?v=69';
 import {
   CAMPFIRE, CAMP_STEP, campBuy, campOwned, campLevel,
   campCost, campApply, bonesFor, diffBoneMul, levelBoneMul, coinBones, BONE,
-} from './campfire.js?v=68';
+} from './campfire.js?v=69';
 // 第 23 块：永夜火种（通关白给的 3 次永久三选一）
 import {
   BOONS, BOON_BY_ID, BOON_PICKS, boonOwned, boonStacks, boonPending, boonTotalStacks,
   grantBoons, rollBoons, takeBoon, applyBoons, boonStackText,
-} from './boons.js?v=68';
+} from './boons.js?v=69';
 // 第 21 块：夜行诅咒（自选 debuff 换骨币倍率）
-import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=68';
+import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=69';
 // 第 22 块：种子与每日挑战
 import {
   DAILY_RULES, dayKey, dayText, dailySeed, seedCode, pickDailyCurses,
   seedFromText, pickSeedRules, loadSeedRecords, saveSeedRecord, pruneSeeds,
   dailyRecord, saveDailyRecord, pruneDaily, makeRng,
-} from './seed.js?v=68';
-import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=68';
+} from './seed.js?v=69';
+import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=69';
 // 第 58 块：局外商店 · 宝箱（花骨币买，开箱随机给永久属性 / 永久法器 / 技能CD缩短）
 import {
   BOXES, BOX_BY_ID, buyBox, rollBox, metaApplyStats, applyMeta,
-} from './metaShop.js?v=68';
-import { achById, ACHS } from './achievements.js?v=68';
+} from './metaShop.js?v=69';
+// 第 59 块：每日签到（以周为单位，周一 00:00 重置）
+import {
+  WEEK_TIERS, SIGN_BONES, weekCells, signSummary, signToday, signedToday,
+} from './signin.js?v=69';
+import { achById, ACHS } from './achievements.js?v=69';
 import {
   EVENTS, ALL_EVENTS, getEventById, pickEvent, effectLines,
   choiceHint, canAfford, costShort, REP_MIN, REP_MAX, REP_START,
   isTalk, eventChoices, resolveRoll, mergeEffects,
-} from './events.js?v=68';
+} from './events.js?v=69';
 // 第 32 块：主线《笑不出来的那一夜》（18 夜，一夜一关，前 3 夜已有关卡）
 import {
   STORY_ARC, STORY_CHAPTERS, STORY_ENDINGS, MARK_INFO,
   storyChapterAt, storyChapterById, storyEndingKey,
-} from './story.js?v=68';
+} from './story.js?v=69';
 
 // 标记模块已经跑起来了：index.html 的兜底自检靠它判断
 // 「模块根本没执行」还是「执行了但加载慢」。
@@ -197,23 +201,78 @@ async function boot() {
   window.addEventListener('resize', applyViewport);
   window.addEventListener('orientationchange', () => setTimeout(applyViewport, 120));
 
-  // ---------------- 画质（设置面板） ----------------
+  // ---------------- 画质（设置面板 + 自动降档） ----------------
   // 高：2x 像素比 + 阴影；中：1.25x + 阴影；低：1x + 关阴影（老手机发热时用）
-  const QUALITY = {
-    high: { dpr: 2, shadow: true },
-    mid: { dpr: 1.25, shadow: true },
-    low: { dpr: 1, shadow: false },
-  };
-  let qualityNow = 'high';
-  function applyQuality(q) {
-    const cfg = QUALITY[q] || QUALITY.high;
-    qualityNow = q in QUALITY ? q : 'high';
+  //
+  // 第 59 块（用户要求「战斗中帧率低于 40 自动降低画质」）：
+  // 设置里的三档是**基准档**，实际生效档 = 基准档 + 自动降档层数（autoDrop）。
+  // 掉帧时一层一层往下压，压到 QUALITY_STEPS 最后一档（min）为止；
+  // 帧率稳回来再一层一层升回基准档。**全程不写存档**，设置里那个值始终是玩家选的。
+  // 只在「真的在打」的帧里判定（菜单/结算里的帧率说明不了什么）。
+  const QUALITY_STEPS = [
+    { id: 'high', dpr: 2, shadow: true },
+    { id: 'mid', dpr: 1.25, shadow: true },
+    { id: 'low', dpr: 1, shadow: false },
+    { id: 'min', dpr: 0.75, shadow: false },   // 只有自动降档才会走到这里
+  ];
+  const QUALITY_BASE = { high: 0, mid: 1, low: 2 };
+  let qualityBaseIdx = 0;     // 玩家在设置里选的档（0 高 / 1 中 / 2 低）
+  let autoDrop = 0;           // 自动往下压了几层（0~3）
+  let qualityNow = 'high';    // 玩家选的档名（不是实际生效档）
+  function applyQualityStep() {
+    const idx = Math.max(0, Math.min(QUALITY_STEPS.length - 1, qualityBaseIdx + autoDrop));
+    const cfg = QUALITY_STEPS[idx];
+    qualityNow = QUALITY_STEPS[qualityBaseIdx].id;
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, cfg.dpr));
     // 关掉 shadowMap 后渲染器不再跑阴影 pass，性能立刻回来；
     // 不用逐个改 castShadow，恢复时也是这样（省得改坏场景里的标记）
     renderer.shadowMap.enabled = cfg.shadow;
     renderer.setSize(window.innerWidth, window.innerHeight);
+    return idx;
+  }
+  function applyQuality(q) {
+    qualityBaseIdx = QUALITY_BASE[q] != null ? QUALITY_BASE[q] : 0;
+    autoDrop = 0;               // 玩家手动改画质 = 从基准档重新开始
+    applyQualityStep();
     return qualityNow;
+  }
+
+  // 帧率自适应（第 59 块）：1 秒采样一次
+  //   · 连续 2 秒低于 40 → 降一层（最多降到 min），第一次降档弹一次提示
+  //   · 连续 5 秒高于 52 → 升一层，回到基准档就停
+  //   为什么升档门槛比降档高（52 vs 40）：来回抖在 40 上下会反复改 pixelRatio，
+  //   每次都要 setSize 重建缓冲，比一直低画质还伤。
+  const PERF_AUTO = !DEBUG || params.has('autoperf');   // debug 下默认关（截图/回归别被降档干扰）
+  const PERF_DROP_FPS = 40;
+  const PERF_UP_FPS = 52;
+  const PERF_DROP_SEC = 2;
+  const PERF_UP_SEC = 5;
+  let perfAcc = 0, perfLow = 0, perfOk = 0, perfTold = false;
+  function perfReset() { perfAcc = 0; perfLow = 0; perfOk = 0; autoDrop = 0; applyQualityStep(); }
+  function perfSample(dtSec) {
+    if (!PERF_AUTO) return null;
+    const live = worldLiveNow && (gameState === 'playing' || gameState === 'tutorial' || gameState === 'wtut');
+    if (!live) { perfLow = 0; perfOk = 0; return null; }
+    if (fps < PERF_DROP_FPS) { perfLow += dtSec; perfOk = 0; }
+    else if (fps >= PERF_UP_FPS) { perfOk += dtSec; perfLow = Math.max(0, perfLow - dtSec * 0.5); }
+    else { perfLow = Math.max(0, perfLow - dtSec * 0.5); perfOk = 0; }
+    if (perfLow >= PERF_DROP_SEC && autoDrop < QUALITY_STEPS.length - 1 - qualityBaseIdx) {
+      autoDrop++;
+      applyQualityStep();
+      perfLow = 0; perfOk = 0;
+      if (!perfTold) {
+        perfTold = true;
+        showToast('画质已自动下调', '帧率偏低，先降一档保流畅 · 设置里可以改回');
+      }
+      return 'down';
+    }
+    if (perfOk >= PERF_UP_SEC && autoDrop > 0) {
+      autoDrop--;
+      applyQualityStep();
+      perfOk = 0; perfLow = 0;
+      return 'up';
+    }
+    return null;
   }
 
   camera.position.copy(camOffset);
@@ -1322,6 +1381,7 @@ async function boot() {
     refreshResume();              // 有存档就亮出「读取存档」入口
     renderCampBadge();            // 篝火按钮上的骨币数（第 19 块）
     renderMsBadge();              // 局外商店按钮上的骨币数（第 58 块）
+    renderSignBtn();              // 每日签到入口的红点与本周进度（第 59 块）
     renderDailyBadge();           // 今日挑战按钮上的「今天最好」（第 22 块）
     // 第 57 块：在主界面停留一会儿 → 默默建图鉴缓存（用户建议的「自动缓存」）
     scheduleCodexPrewarm();
@@ -1387,6 +1447,7 @@ async function boot() {
       showToast('夜行诅咒生效', `${curseNames(pendingCurses)} —— 属性已扣 · 骨币 ×${rc.mul.toFixed(2)}`);
     }
     level.start();
+    perfReset();                      // 第 59 块：新一局从玩家选的画质档重新开始（清掉上一局的自动降档）
   }
 
   // 篝火：把已点燃的火种加进这一局。先按来源撤一次，保证重复开局不会叠加；
@@ -3732,10 +3793,9 @@ async function boot() {
     noticeOv.classList.remove('on');
     noticeOv.setAttribute('aria-hidden', 'true');
     // 第 57 块：公告关掉 → 350ms 后「宣传有礼」接着上场（艺术字特效 → 公告二）。
-    // 它自己也有「今日不再弹」挡着；只在标题页链，调试直开 / 游戏中都不走这。
-    setTimeout(() => {
-      if (gameState === 'title' && !promoOv.classList.contains('on')) showPromo(false, true);
-    }, 350);
+    // 第 59 块：中间插入每日签到 —— 公告 → 签到（今天没签才拦）→ 宣传有礼。
+    // 只在标题页链，调试直开 / 游戏中都不走这条。
+    setTimeout(() => { afterNoticeChain(); }, 350);
   }
 
   // force=true = 从主菜单点「📢 公告」强制打开（忽略「今日不再弹出」）
@@ -3815,6 +3875,145 @@ async function boot() {
   document.getElementById('promoOk').addEventListener('click', closePromo);
   document.getElementById('promoX').addEventListener('click', closePromo);
   document.getElementById('btnPromo').addEventListener('click', () => showPromo(true, false));
+
+  // ---------------- 每日签到（第 59 块）----------------
+  // 用户定案：以周为大单位、日为小单位。周一 00:00 开新的一周（进度清零），
+  // 每天签到 +20 骨币，一周内累计 3 天 +100、6 天 +200（不要求连续）。
+  // 触发链路：公告关掉 → 今天没签就弹签到 → 关掉签到再弹宣传有礼（各每天一次）。
+  // 主菜单「今日挑战」那一排有常驻入口，没签的那天按钮上有个红点。
+  // 数据与日期计算全在 js/signin.js，这里只管画和发。
+  const signOv = document.getElementById('signOv');
+  const signWeekEl = document.getElementById('signWeek');
+  const signTiersEl = document.getElementById('signTiers');
+  const signSubEl = document.getElementById('signSub');
+  const signGainEl = document.getElementById('signGain');
+  const signBtn = document.getElementById('signBtn');
+  const btnSign = document.getElementById('btnSign');
+  const btnSignSub = document.getElementById('btnSignSub');
+  const signDot = document.getElementById('signDot');
+  let signAuto = false;      // 这次是「公告后面自动接上来的」→ 关掉后接着宣传有礼
+
+  function renderSignin() {
+    const s = signSummary();
+    signSubEl.textContent = `本周已签 ${s.days} / 7 天 · 每天 +${SIGN_BONES} 骨币 · 周一 00:00 重新开始`;
+
+    // 七格：周一 → 周日，已签打勾，今天描金边
+    signWeekEl.textContent = '';
+    for (const c of weekCells()) {
+      const cell = document.createElement('div');
+      cell.className = 'sign-day'
+        + (c.signed ? ' signed' : '')
+        + (c.today ? ' today' : '')
+        + (c.future && !c.today ? ' future' : '');
+      const n = document.createElement('div');
+      n.className = 'sd-n';
+      n.textContent = c.name;
+      const d = document.createElement('div');
+      d.className = 'sd-d';
+      d.textContent = String(c.day);
+      const b = document.createElement('div');
+      b.className = 'sd-b';
+      b.textContent = c.signed ? '✓' : '';
+      cell.append(n, d, b);
+      signWeekEl.appendChild(cell);
+    }
+
+    // 两个里程碑条
+    signTiersEl.textContent = '';
+    for (const t of WEEK_TIERS) {
+      const done = t.days === 3 ? s.got3 : s.got6;
+      const left = Math.max(0, t.days - s.days);
+      const el = document.createElement('div');
+      el.className = 'sign-tier' + (done ? ' done' : '');
+      const k = document.createElement('div');
+      k.className = 'st-k';
+      k.textContent = `累计 ${t.days} 天`;
+      const v = document.createElement('div');
+      v.className = 'st-v';
+      v.textContent = done ? `+${t.bones} 已领` : `+${t.bones} 骨币`;
+      const p = document.createElement('div');
+      p.className = 'st-p';
+      p.textContent = done ? '本周这一档到手了' : (left > 0 ? `还差 ${left} 天` : '今天就能领');
+      el.append(k, v, p);
+      signTiersEl.appendChild(el);
+    }
+
+    signBtn.disabled = s.signedToday;
+    signBtn.textContent = s.signedToday ? '今天已签到 · 明天再来' : `签到 · +${SIGN_BONES} 骨币`;
+  }
+
+  // 主菜单入口的副标题与红点（和签到面板同一份状态）
+  function renderSignBtn() {
+    const s = signSummary();
+    btnSign.classList.toggle('done', s.signedToday);
+    btnSignSub.textContent = s.signedToday ? `本周 ${s.days} / 7 天 · 今天已签` : `本周 ${s.days} / 7 天`;
+    signDot.hidden = s.signedToday;
+  }
+
+  function showSignin(auto) {
+    signAuto = !!auto;
+    signGainEl.textContent = '';
+    renderSignin();
+    signOv.classList.add('on');
+    signOv.setAttribute('aria-hidden', 'false');
+    if (!signedToday()) audio.sfx('event');
+    return true;
+  }
+
+  function closeSignin() {
+    signOv.classList.remove('on');
+    signOv.setAttribute('aria-hidden', 'true');
+    const wasAuto = signAuto;
+    signAuto = false;
+    renderSignBtn();
+    if (wasAuto) {
+      // 签到关掉 → 350ms 后轮到宣传有礼（它自己有「今日不再弹」挡着）
+      setTimeout(() => {
+        if (titleIdle() && !promoOv.classList.contains('on')) showPromo(false, true);
+      }, 350);
+    }
+  }
+
+  function doSignin() {
+    const r = signToday();
+    if (!r.ok) { renderSignin(); return false; }
+    audio.sfx('ach');
+    renderSignin();
+    renderSignBtn();
+    // 逐条写拿到什么（签到 20 / 达标补 100、200）
+    signGainEl.textContent = '';
+    let sum = 0;
+    for (const g of r.gained) {
+      const line = document.createElement('div');
+      line.textContent = `${g.label}：+${g.bones} 骨币`;
+      signGainEl.appendChild(line);
+      sum += g.bones;
+    }
+    showToast('签到成功', `本周已签 ${r.days} 天 · 骨币 +${sum}`);
+    renderCampBadge();
+    renderMsBadge();
+    return true;
+  }
+
+  signBtn.addEventListener('click', doSignin);
+  document.getElementById('signX').addEventListener('click', closeSignin);
+  document.getElementById('signClose').addEventListener('click', closeSignin);
+  btnSign.addEventListener('click', () => showSignin(false));
+
+  // 公告关掉之后的三连：签到（今天没签才弹）→ 宣传有礼
+  // ⚠️ 只在「标题页且没开任何子面板」时才弹：玩家关掉公告立刻点「开始游戏」，
+  // 350ms 后（那时已经在选关界面，gameState 还是 title）签到会啪一下盖在选关卡上。
+  // 遇到这种情况就先不弹 —— 主菜单那个红点还在，玩家想签自己点。
+  function titleIdle() {
+    if (gameState !== 'title') return false;
+    return !document.querySelector('.tt-sub-scr.on, .modal.on, .upgrade.on, .lv-card.on');
+  }
+  function afterNoticeChain() {
+    if (!titleIdle()) return;
+    if (!signedToday()) { showSignin(true); return; }
+    if (!promoOv.classList.contains('on')) showPromo(false, true);
+  }
+
 
   // ---------------- 音效包（第 46 块）----------------
   // 打通第一关后，奶蛙「把自己那 4 段叫声交出来」：结算面板之上弹一张卡，
@@ -5210,6 +5409,19 @@ async function boot() {
         },
         quality: () => qualityNow,
         renderCfg: () => ({ pixelRatio: renderer.getPixelRatio(), shadow: renderer.shadowMap.enabled }),
+        // 第 59 块：帧率自适应（测试钩子）。tick(sec) 直接灌一段采样，setFps 伪造帧率
+        perf: {
+          auto: () => PERF_AUTO,
+          state: () => ({
+            fps: +fps.toFixed(1), drop: autoDrop, base: QUALITY_STEPS[qualityBaseIdx].id,
+            eff: QUALITY_STEPS[Math.min(QUALITY_STEPS.length - 1, qualityBaseIdx + autoDrop)].id,
+            dpr: renderer.getPixelRatio(), shadow: renderer.shadowMap.enabled, told: perfTold,
+            low: +perfLow.toFixed(2), ok: +perfOk.toFixed(2),
+          }),
+          setFps: (v) => { fps = Number(v) || 0; },
+          tick: (sec = 1) => { perfSample(Math.max(0.1, Number(sec) || 1)); return autoDrop; },
+          reset: () => { perfReset(); return perfTold; },
+        },
         joy: () => (input.joystick.getOpts ? input.joystick.getOpts() : null),
         joyScale: () => document.getElementById('stick').style.getPropertyValue('--joy-s'),
         shake: () => shake,
@@ -5450,6 +5662,17 @@ async function boot() {
         ver: () => PROMO_VER,
         key: () => { try { return localStorage.getItem(PROMO_KEY) || ''; } catch (_) { return ''; } },
         clear: () => { try { localStorage.removeItem(PROMO_KEY); } catch (_) { /* 忽略 */ } },
+      },
+      // 第 59 块：每日签到（测试钩子）
+      sign: {
+        show: (auto) => showSignin(auto === true),
+        hide: () => { closeSignin(); return signOv.classList.contains('on'); },
+        open: () => signOv.classList.contains('on'),
+        state: () => signSummary(),
+        cells: () => weekCells(),
+        signed: () => signedToday(),
+        do: () => doSignin(),
+        btn: () => ({ sub: btnSignSub.textContent, dot: !signDot.hidden, done: btnSign.classList.contains('done') }),
       },
       // 第 57 块：世界渲染闸门（测试钩子）—— 菜单期间 live()=false 且 frames 不再增长
       render: {
@@ -5798,6 +6021,8 @@ async function boot() {
         buy: (id, admin = false) => buyBox(id, Math.random, admin),
         bones: () => bones(),
         addBones: (n) => addBones(n),
+        // 第 59 块：把永久效果注入当前 stats/wstats（测「负向真的扣属性、合并后条数很少」）
+        apply: () => metaApplyStats(stats, wstats),
       },
       aegis: {
         get level() { return stats.get('aegis'); },
@@ -6063,6 +6288,9 @@ async function boot() {
       fps = frames / acc;
       frames = 0; acc = 0;
     }
+    // 第 59 块：帧率自适应 —— 每满 1 秒拿当前 fps 判一次要不要降/升档
+    perfAcc += dt;
+    if (perfAcc >= 1) { const perfDt = perfAcc; perfAcc = 0; perfSample(perfDt); }
     if (hudAcc >= 0.25) {
       hudAcc = 0;
       renderHud();
@@ -6101,8 +6329,9 @@ async function boot() {
     } else {
       // 第 45 块：进主界面后弹一次公告 —— 等遮罩淡完再弹，不然像加载卡住了
       // 第 57 块：公告今天已经关过（勾了不再弹）→ 宣传有礼自己接着上场
+      // 第 59 块：这条链变成 公告 → 签到 → 宣传有礼（见 afterNoticeChain）
       setTimeout(() => {
-        if (!showNotice(false)) setTimeout(() => showPromo(false, true), 350);
+        if (!showNotice(false)) setTimeout(() => afterNoticeChain(), 350);
       }, 700);
       // 第 46 块补丁：老玩家追溯解锁（公告 z-index 46 盖着音效包卡 20，
       // 推到 1.6s 后弹，公告关掉后它正好还在）

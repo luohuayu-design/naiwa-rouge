@@ -139,7 +139,13 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     await waitFor("document.getElementById('noticeOv').classList.contains('on')", 20000, '公告自动弹出');
     ok(true, '进主界面公告先弹（老行为没坏）');
     await ev("document.getElementById('noticeOk').click()");
-    await waitFor("document.getElementById('promoOv').classList.contains('on')", 5000, '宣传有礼自动跟上');
+    // 第 59 块：公告后面先接「每日签到」（今天没签的话），签完才轮到宣传有礼。
+    // 这里把签到收掉再等宣传 —— 不是宣传坏了，是链路中间多了一站。
+    try {
+      await waitFor("document.getElementById('signOv').classList.contains('on')", 4000, '签到先跟上（第 59 块）');
+      await ev("document.getElementById('signClose').click()");
+    } catch (_) { /* 今天已经签过就不弹，直接等宣传 */ }
+    await waitFor("document.getElementById('promoOv').classList.contains('on')", 6000, '宣传有礼自动跟上');
     ok(true, '公告关掉 → 宣传有礼自动弹出（链条通）');
     ok(await ev("document.getElementById('promoOv').classList.contains('art')") === true, '自动弹带艺术字特效');
     const artTxt = await ev("document.getElementById('promoArt').textContent");

@@ -40,7 +40,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
   margin-top:3px;padding:6px 13px;border-radius:9px;cursor:pointer;font:inherit;
   font-size:12px;font-weight:600;letter-spacing:.08em;color:#cfeede;
   background:rgba(16,34,42,.62);border:1px solid rgba(126,235,196,.34);
-  -webkit-tap-highlight-color:transparent;backdrop-filter:blur(3px)}
+  -webkit-tap-highlight-color:transparent}
 .hud-exit:hover{border-color:rgba(126,235,196,.6);background:rgba(20,44,54,.8)}
 .hud-exit:active{transform:scale(.94)}
 .hud-exit:focus-visible{outline:2px solid rgba(126,235,196,.6);outline-offset:2px}
@@ -95,7 +95,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
 /* ---------------- 属性面板 ---------------- */
 .attr-panel{position:fixed;inset:0;z-index:14;display:flex;align-items:center;justify-content:center;
   padding:calc(18px + env(safe-area-inset-top)) 16px calc(18px + env(safe-area-inset-bottom));
-  background:rgba(4,10,9,.6);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);
+  background:rgba(4,10,9,.86);
   opacity:0;pointer-events:none;transition:opacity .18s ease}
 .attr-panel.on{opacity:1;pointer-events:auto}
 .ap-card{width:min(92vw,430px);max-height:84vh;display:flex;flex-direction:column;
@@ -212,7 +212,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
 /* ---------------- 结算面板 ---------------- */
 .result{position:fixed;inset:0;z-index:18;display:flex;align-items:center;justify-content:center;
   padding:calc(24px + env(safe-area-inset-top)) 18px calc(24px + env(safe-area-inset-bottom));
-  background:rgba(3,8,7,.72);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);
+  background:rgba(3,8,7,.88);
   opacity:0;pointer-events:none;transition:opacity .25s ease}
 .result.on{opacity:1;pointer-events:auto}
 .rs-card{width:min(90vw,380px);padding:22px 20px 18px;border-radius:18px;text-align:center;
@@ -249,7 +249,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
    ============================================================ */
 #failTip{position:fixed;inset:0;z-index:19;display:flex;align-items:center;justify-content:center;
   padding:calc(24px + env(safe-area-inset-top)) 18px calc(24px + env(safe-area-inset-bottom));
-  background:rgba(3,8,7,.78);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);
+  background:rgba(3,8,7,.90);
   opacity:0;pointer-events:none;transition:opacity .28s ease}
 #failTip.on{opacity:1;pointer-events:auto}
 .ft-card{width:min(88vw,340px);padding:22px 20px 16px;border-radius:18px;text-align:center;
@@ -282,7 +282,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
    万一同一帧里既冒新怪又结算，先让玩家看结算。 */
 #meetCard{position:fixed;inset:0;z-index:17;display:flex;align-items:center;justify-content:center;
   padding:calc(22px + env(safe-area-inset-top)) 18px calc(22px + env(safe-area-inset-bottom));
-  background:rgba(4,7,9,.80);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+  background:rgba(4,7,9,.90);
   opacity:0;pointer-events:none;transition:opacity .26s ease}
 #meetCard.on{opacity:1;pointer-events:auto}
 .mt-card{width:min(90vw,382px);padding:18px 18px 14px;border-radius:18px;text-align:left;
@@ -329,9 +329,12 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
 /* ---------------- 回合结束：三选一升级 ---------------- */
 .upgrade{position:fixed;inset:0;z-index:16;display:flex;align-items:center;justify-content:center;
   padding:calc(18px + env(safe-area-inset-top)) 16px calc(18px + env(safe-area-inset-bottom));
-  background:rgba(3,9,8,.62);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);
-  opacity:0;pointer-events:none;transition:opacity .2s ease}
-.upgrade.on{opacity:1;pointer-events:auto}
+  background:rgba(3,9,8,.86);
+  opacity:0;pointer-events:none;visibility:hidden;
+  transition:opacity .2s ease,visibility 0s linear .2s}
+/* 关掉的时候整层彻底不进合成（opacity:0 也还在维护一个全屏层，老手机上白扔一份开销） */
+.upgrade.on{opacity:1;pointer-events:auto;visibility:visible;
+  transition:opacity .2s ease,visibility 0s linear 0s}
 .up-card{width:min(94vw,560px);display:flex;flex-direction:column;border-radius:18px;
   border:1px solid rgba(126,235,196,.22);
   background:linear-gradient(180deg,rgba(19,42,36,.98),rgba(7,18,16,.99));
@@ -405,10 +408,14 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
 .up-item[data-rarity]:hover{box-shadow:0 6px 20px rgba(0,0,0,.28),inset 0 0 26px -12px var(--rc)}
 .up-item[data-rarity="epic"]{box-shadow:inset 0 0 30px -12px var(--rc),0 0 14px -9px var(--rc)}
 .up-item[data-rarity="legend"]{box-shadow:inset 0 0 34px -12px var(--rc),0 0 18px -7px var(--rc);
-  animation:legendPulse 2.6s ease-in-out infinite}
-@keyframes legendPulse{
-  0%,100%{box-shadow:inset 0 0 34px -12px #f0554e,0 0 16px -9px #f0554e}
-  50%    {box-shadow:inset 0 0 34px -8px  #f0554e,0 0 24px -5px #f0554e}
+  /* 第 59 块（用户报「选火种的界面一直闪」）：原来是 2.6s 无限循环的 box-shadow
+     呼吸。三张卡里只要有一张传说，整块面板就一直在明暗跳 —— 手机上还叠着
+     全屏模糊，看起来就是「整个界面在闪」。现在改成入场亮一下然后定住。 */
+  animation:legendIn 1.1s cubic-bezier(.2,.8,.3,1) 1 both}
+@keyframes legendIn{
+  0%  {box-shadow:inset 0 0 34px -14px #f0554e,0 0 0 0 rgba(240,85,78,0)}
+  40% {box-shadow:inset 0 0 44px -6px  #f0554e,0 0 30px -2px rgba(240,85,78,.85)}
+  100%{box-shadow:inset 0 0 34px -12px #f0554e,0 0 18px -7px #f0554e}
 }
 /* 品质角标：三选一卡片和商店货共用 */
 .up-rank{display:inline-block;margin-left:7px;padding:1px 6px;border-radius:6px;vertical-align:2px;
@@ -442,8 +449,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
 #hint{position:fixed;left:50%;bottom:calc(58px + env(safe-area-inset-bottom));z-index:6;
   transform:translateX(-50%);padding:8px 16px;border-radius:999px;
   background:rgba(8,20,18,.62);border:1px solid rgba(126,235,196,.26);
-  font-size:12px;letter-spacing:.06em;color:rgba(214,245,233,.82);
-  backdrop-filter:blur(6px);pointer-events:none;
+  font-size:12px;letter-spacing:.06em;color:rgba(214,245,233,.82);pointer-events:none;
   transition:opacity .5s ease,transform .5s ease}
 #hint.off{opacity:0;transform:translate(-50%,6px)}
 
@@ -607,8 +613,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
 
 /* 开箱揭示浮层（第 58 块） */
 .box-reveal{position:fixed;inset:0;z-index:60;display:none;align-items:center;
-  justify-content:center;background:rgba(8,4,18,.72);backdrop-filter:blur(4px);
-  -webkit-backdrop-filter:blur(4px)}
+  justify-content:center;background:rgba(8,4,18,.88)}
 .box-reveal.on{display:flex;animation:brFade .25s ease}
 @keyframes brFade{from{opacity:0}to{opacity:1}}
 .br-inner{width:min(86vw,360px);display:flex;flex-direction:column;align-items:center;gap:18px;
@@ -774,7 +779,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
 
 /* 关卡选择 / 我的记录（主页面上的子面板） */
 .tt-sub-scr{position:fixed;inset:0;z-index:21;display:none;align-items:center;justify-content:center;
-  padding:24px;background:rgba(3,9,8,.62);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px)}
+  padding:24px;background:rgba(3,9,8,.88)}
 .tt-sub-scr.on{display:flex}
 .lv-card{width:min(92vw,430px);max-height:86vh;overflow:auto;border-radius:18px;padding:18px 16px 14px;
   border:1px solid rgba(126,235,196,.22);background:rgba(8,20,17,.94);
@@ -873,8 +878,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
 
 /* ---------------- 通用模态（是否进入教程） ---------------- */
 .modal{position:fixed;inset:0;z-index:19;display:flex;align-items:center;justify-content:center;
-  padding:24px;background:rgba(3,9,8,.76);
-  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+  padding:24px;background:rgba(3,9,8,.88);
   opacity:0;pointer-events:none;transition:opacity .2s ease}
 /* 通用确认弹窗（第 41 块）：要盖过篝火页（21）和永夜火种面板（22） */
 #confirmAsk{z-index:40}
@@ -933,7 +937,6 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
 /* ---------------- 武器获得卡 ---------------- */
 .wcard{position:fixed;inset:0;z-index:17;display:flex;align-items:center;justify-content:center;
   padding:24px;background:rgba(3,9,8,.7);
-  backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);
   opacity:0;pointer-events:none;transition:opacity .22s ease}
 .wcard.on{opacity:1;pointer-events:auto}
 .wc-card{width:min(90vw,360px);padding:20px 20px 16px;border-radius:20px;text-align:center;
@@ -1074,8 +1077,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
 
 /* ---------------- 随机事件卡 ---------------- */
 .event-card{position:fixed;inset:0;z-index:17;display:flex;align-items:center;justify-content:center;
-  padding:24px;background:rgba(2,7,6,.7);
-  backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);
+  padding:24px;background:rgba(2,7,6,.86);
   opacity:0;pointer-events:none;transition:opacity .22s ease}
 .event-card.on{opacity:1;pointer-events:auto}
 .ev-box{width:min(92vw,430px);max-height:calc(100dvh - 36px);overflow-y:auto;
@@ -1163,7 +1165,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
 /* ---------------- 商店 ---------------- */
 .shop{position:fixed;inset:0;z-index:16;display:flex;align-items:center;justify-content:center;
   padding:calc(18px + env(safe-area-inset-top)) 16px calc(18px + env(safe-area-inset-bottom));
-  background:rgba(3,9,8,.62);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);
+  background:rgba(3,9,8,.86);
   opacity:0;pointer-events:none;transition:opacity .2s ease}
 .shop.on{opacity:1;pointer-events:auto}
 .sh-card{width:min(94vw,560px);max-height:86vh;display:flex;flex-direction:column;border-radius:18px;
@@ -1344,7 +1346,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
 
 /* 阅读器 */
 .story-read{position:fixed;inset:0;z-index:32;display:none;align-items:center;justify-content:center;
-  padding:20px;background:rgba(2,7,6,.78);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+  padding:20px;background:rgba(2,7,6,.90)}
 .story-read.on{display:flex}
 .sr-box{width:min(94vw,470px);max-height:88vh;display:flex;flex-direction:column;
   border-radius:18px;padding:16px 14px 12px;
@@ -1406,8 +1408,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
    照搬 naiwa-step 的那套：日期 + 版本号 决定要不要弹
    ============================================================ */
 #noticeOv{position:fixed;inset:0;z-index:46;display:none;align-items:center;justify-content:center;
-  padding:12px;background:rgba(2,7,6,.78);
-  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+  padding:12px;background:rgba(2,7,6,.90)}
 #noticeOv.on{display:flex}
 .notice-box{position:relative;width:min(440px,95vw);max-height:90vh;overflow:auto;
   display:flex;flex-direction:column;gap:9px;padding:14px 15px 12px;border-radius:18px;
@@ -1456,8 +1457,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
    万一火种面板先开了，这张卡不会把火种选项挡掉
    ============================================================ */
 .pack-get{position:fixed;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;
-  padding:16px;background:rgba(2,7,6,.82);
-  backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);
+  padding:16px;background:rgba(2,7,6,.90);
   opacity:0;pointer-events:none;transition:opacity .22s ease}
 .pack-get.on{opacity:1;pointer-events:auto}
 .pg-card{position:relative;width:min(92vw,392px);max-height:92vh;overflow:auto;
@@ -1563,8 +1563,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
 
 /* ---------- 宣传有礼：公告二，先艺术字特效后正文 ---------- */
 #promoOv{position:fixed;inset:0;z-index:47;display:none;align-items:center;justify-content:center;
-  padding:12px;background:rgba(2,7,6,.8);overflow:auto;
-  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+  padding:12px;background:rgba(2,7,6,.90);overflow:auto}
 #promoOv.on{display:flex}
 .promo-box{position:relative;width:min(440px,95vw);max-height:90vh;overflow:auto;margin:auto;
   display:flex;flex-direction:column;gap:9px;padding:14px 15px 12px;border-radius:18px;
@@ -1596,7 +1595,9 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
 .promo-art b{font-size:clamp(40px,11vw,58px);font-weight:900;letter-spacing:.1em;line-height:1.1;
   background:linear-gradient(180deg,#fff7dc 8%,#ffd873 46%,#f0a72c 88%);
   -webkit-background-clip:text;background-clip:text;color:transparent;
-  filter:drop-shadow(0 0 22px rgba(255,205,96,.5))}
+  /* 第 59 块：原来是 filter:drop-shadow(...) —— 滤镜要先把文字栅格化再整层模糊，
+     大字号 + 缩放动画在手机上是整屏掉帧的主因之一。text-shadow 便宜得多。 */
+  text-shadow:0 0 22px rgba(255,205,96,.45)}
 .promo-art i{font-size:11.5px;letter-spacing:.26em;color:rgba(255,224,150,.72);font-style:normal}
 @keyframes promoArtIn{
   0%{opacity:0;transform:scale(.55)}
@@ -1654,3 +1655,91 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
 .cx-list{max-height:calc(var(--app-h,100vh) * .52)}
 .st-list{max-height:calc(var(--app-h,100vh) * .44)}
 .ev-say{max-height:min(calc(var(--app-h,100vh) * .4),290px)}
+
+/* ============================================================
+   第 59 块 · 每日签到（以周为大单位、日为小单位）
+   规则：周一 00:00 重置；每天 +20 骨币；周内累计 3 天 +100、6 天 +200。
+   视觉走「骨币暖金 + 暗绿底」，和公告/火种一挂，不抢主色。
+   ============================================================ */
+#signOv{position:fixed;inset:0;z-index:46;display:none;align-items:center;justify-content:center;
+  padding:12px;background:rgba(2,7,6,.92);overflow:auto}
+#signOv.on{display:flex}
+.sign-box{position:relative;width:min(430px,95vw);margin:auto;display:flex;flex-direction:column;gap:10px;
+  padding:16px 15px 13px;border-radius:18px;border:1px solid rgba(255,209,102,.32);
+  background:linear-gradient(160deg,rgba(30,44,30,.995),rgba(10,16,12,1));
+  box-shadow:0 26px 60px rgba(0,0,0,.62),inset 0 1px 0 rgba(255,232,170,.09);
+  animation:noticePop .3s cubic-bezier(.2,1.4,.4,1);
+  max-height:calc(var(--app-h,100vh) - 24px);overflow:auto}
+.sign-hd{padding-right:32px;font-size:16px;font-weight:800;letter-spacing:.12em;color:#ffe9a8}
+.sign-sub{font-size:11px;line-height:1.7;letter-spacing:.02em;color:rgba(168,206,190,.72)}
+.sign-sub b{color:#ffd9a0}
+
+/* 一周七格：周一到周日，格子只读（不能补签、不能漏签） */
+.sign-week{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-top:2px}
+.sign-day{display:flex;flex-direction:column;align-items:center;gap:2px;padding:7px 1px 6px;
+  border-radius:10px;border:1px solid rgba(126,235,196,.14);background:rgba(255,255,255,.03)}
+.sign-day .sd-n{font-size:9px;letter-spacing:.02em;color:rgba(150,196,180,.7)}
+.sign-day .sd-d{font-size:13px;font-weight:800;color:rgba(210,236,222,.9);line-height:1.2}
+.sign-day .sd-b{height:12px;font-size:8.5px;font-weight:800;letter-spacing:0;color:rgba(126,235,196,.55)}
+.sign-day.signed{border-color:rgba(126,235,196,.52);background:rgba(126,235,196,.13)}
+.sign-day.signed .sd-b{color:#7ef0c6}
+.sign-day.today{border-color:rgba(255,209,102,.72);background:rgba(255,196,110,.13);
+  box-shadow:0 0 0 1px rgba(255,209,102,.22) inset}
+.sign-day.today .sd-n{color:#ffe9a8}
+.sign-day.today .sd-d{color:#fff3d2}
+.sign-day.today.signed{border-color:rgba(126,235,196,.8);background:rgba(126,235,196,.18)}
+.sign-day.future{opacity:.42}
+
+/* 两个里程碑条：3 天 100 / 6 天 200 */
+.sign-tiers{display:flex;gap:8px}
+.sign-tier{flex:1;padding:8px 10px;border-radius:11px;border:1px solid rgba(255,209,102,.2);
+  background:rgba(46,34,12,.5);display:flex;flex-direction:column;gap:3px}
+.sign-tier .st-k{font-size:10px;letter-spacing:.08em;color:rgba(214,226,206,.7)}
+.sign-tier .st-v{font-size:12.5px;font-weight:800;color:#ffd9a0}
+.sign-tier .st-p{font-size:9.5px;letter-spacing:.04em;color:rgba(150,196,180,.6)}
+.sign-tier.done{border-color:rgba(126,235,196,.5);background:rgba(24,54,46,.55)}
+.sign-tier.done .st-v{color:#7ef0c6}
+.sign-tier.done .st-p{color:rgba(126,235,196,.72)}
+
+/* 刚才这一下拿了什么（签到后即时反馈） */
+.sign-gain{min-height:0;font-size:12px;font-weight:700;letter-spacing:.02em;color:#7ef0c6}
+.sign-gain:empty{display:none}
+.sign-gain b{color:#ffe9a8}
+
+.sign-btn{margin-top:2px;padding:12px 0;border-radius:14px;font:inherit;font-size:14px;font-weight:800;
+  letter-spacing:.14em;color:#231604;cursor:pointer;border:1px solid rgba(255,214,160,.6);
+  background:linear-gradient(180deg,#ffe6b0,#eaa94f);
+  transition:transform .12s ease,filter .18s ease;-webkit-tap-highlight-color:transparent}
+.sign-btn:hover{filter:brightness(1.06)}
+.sign-btn:active{transform:scale(.985)}
+.sign-btn[disabled]{cursor:default;color:rgba(214,226,206,.55);border-color:rgba(126,235,196,.18);
+  background:rgba(255,255,255,.04);filter:none}
+.sign-later{padding:9px 0;border-radius:12px;font:inherit;font-size:11.5px;letter-spacing:.12em;
+  color:rgba(168,206,190,.72);cursor:pointer;border:1px solid transparent;background:none}
+.sign-later:hover{color:#d9f5e8;border-color:rgba(126,235,196,.28)}
+
+/* 主菜单「今日挑战」那一排的签到入口（第三个） */
+.tt-signbtn{border-color:rgba(255,209,102,.34);
+  background:linear-gradient(180deg,rgba(58,46,18,.86),rgba(28,22,12,.88));color:#ffe9a8}
+.tt-signbtn:hover{border-color:rgba(255,209,102,.7);background:rgba(70,56,20,.9)}
+.tt-signbtn .tt-daily-s{color:rgba(255,224,150,.7)}
+.tt-signbtn.done{border-color:rgba(126,235,196,.4)}
+.tt-signbtn.done .tt-daily-s{color:rgba(150,232,190,.85)}
+.tt-dot{display:inline-block;width:6px;height:6px;margin-left:3px;border-radius:50%;
+  vertical-align:1px;background:#ff6f5e;box-shadow:0 0 7px rgba(255,90,70,.9);
+  animation:signDot 1.6s ease-in-out infinite}
+@keyframes signDot{0%,100%{opacity:1}50%{opacity:.35}}
+
+/* ============================================================
+   第 59 块 · 夜行记忆 / 长列表滚动
+   用户报：「划到下面，上面的缓存自动没了，再划上去要重新加载」。
+   这是滚动容器没有自己的图层：内容一变长，浏览器就把离屏部分的栅格化结果
+   扔掉，滚回来要整段重绘（两万字正文最明显）。给滚动容器保留滚动图层，
+   并把里面的昂贵属性（阴影 / 渐变）压到最少。
+   ============================================================ */
+/* ⚠️ 只给**真正会滚**的容器加：will-change:scroll-position 在非滚动元素上会白建一个合成层 */
+.sr-body,.st-list,.cx-list,.sign-box,.ms-log{
+  overscroll-behavior:contain;-webkit-overflow-scrolling:touch;
+  will-change:scroll-position}
+/* 滚动区里的排版卡片别再各带一层 box-shadow：滚一屏就要重画几十个阴影 */
+.sr-body .sr-line,.sr-body .sr-end{box-shadow:none}

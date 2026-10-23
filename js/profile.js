@@ -83,6 +83,11 @@ const DEFAULT_PROFILE = {
   //   skillCdMul  技能CD倍率（默认 1，越买越短，下限 0.3）
   //   log     [{ box, boxName, cursed, kind, icon, name, effect, ts }]  最近 20 次开箱记录
   metaShop: { bought: {}, opened: 0, mods: [], relics: {}, skillCdMul: 1, log: [] },
+  // 每日签到（第 59 块）：以周为单位，周一 00:00 重置。
+  //   week  本周一的日期（YYYY-MM-DD），不是这一周就整条清零
+  //   days  本周已签到的日期数组（一天一条，去重后就是「本周签了几天」）
+  //   got3 / got6  本周 3 天 / 6 天里程碑的 100 / 200 骨币领过没有
+  signin: { week: '', days: [], got3: false, got6: false },
 };
 
 let cache = null;

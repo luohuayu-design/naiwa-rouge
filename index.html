@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#080f14">
 <link rel="icon" href="data:,">
 <title>蛙步 · 夜行</title>
-<link rel="stylesheet" href="style.css?v=68">
+<link rel="stylesheet" href="style.css?v=69">
 </head>
 <body>
 
@@ -242,6 +242,11 @@
         <button class="tt-daily tt-seedbtn" id="btnSeed" type="button">
           <span class="tt-daily-k">种子挑战</span>
           <span class="tt-daily-s">输入种子开一局</span>
+        </button>
+        <!-- 每日签到（第 59 块）：没签到的那天按钮上会亮一个红点 -->
+        <button class="tt-daily tt-signbtn" id="btnSign" type="button">
+          <span class="tt-daily-k">每日签到<i class="tt-dot" id="signDot" hidden></i></span>
+          <span class="tt-daily-s" id="btnSignSub">本周 0 / 7 天</span>
         </button>
       </div>
       <!-- 篝火商店（第 19 块，第 54 块改名）：局外成长。骨币只在结算发，只在这里花 -->
@@ -685,6 +690,22 @@
   </div>
 </div>
 
+<!-- 每日签到（第 59 块）：公告关掉之后自动上场（今天签过就不再弹）。
+     以周为单位，周一 00:00 重置；每天 +20 骨币，周内累计 3 天 +100、6 天 +200。
+     主菜单「今日挑战」那排也有入口，随时能看本周进度。 -->
+<div id="signOv" aria-hidden="true">
+  <div class="sign-box">
+    <button class="notice-x" id="signX" type="button" aria-label="关闭签到">✕</button>
+    <div class="sign-hd">📅 每日签到</div>
+    <div class="sign-sub" id="signSub">周一 00:00 开新的一周 · 每天签到 +20 骨币</div>
+    <div class="sign-week" id="signWeek"></div>
+    <div class="sign-tiers" id="signTiers"></div>
+    <div class="sign-gain" id="signGain" aria-live="polite"></div>
+    <button class="sign-btn" id="signBtn" type="button">签到 · +20 骨币</button>
+    <button class="sign-later" id="signClose" type="button">以后再说</button>
+  </div>
+</div>
+
 <!-- 宣传有礼（第 57 块）：公告关掉后接着弹 —— 先来一记「宣传有礼」艺术字特效，
      特效消散变成公告标题，再展开正文。规则同公告：「日期 + 版本」写本机，
      勾「今日内不再弹出」当天不自动弹；主菜单「🎁 宣传有礼」随时回看。
@@ -762,7 +783,7 @@
 <!-- 不用 importmap：老手机浏览器（iOS 16.4 以下、旧版微信/安卓 WebView）
      不支持 import maps，会让整个模块解析失败、加载页永远停在 0%。
      项目内所有 import 都写成相对路径，直接靠原生 ES Module 解析。 -->
-<script type="module" src="js/main.js?v=68"></script>
+<script type="module" src="js/main.js?v=69"></script>
 
 <!-- 兜底自检：模块没跑起来时把原因写出来，别让用户对着 0% 干等 -->
 <script>

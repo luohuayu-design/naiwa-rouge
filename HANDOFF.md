@@ -2,13 +2,13 @@
 
 > 新对话从这里开始读，不要先翻聊天记录。**先读 §0「给新对话的话」，再按需查后面章节。**
 >
-> 最后更新：2026-10-23 晚 · 线上 **v=68** · 第 58 块（局外商店 · 宝箱）已完成并推送。
+> 最后更新：2026-10-23 深夜 · 线上 **v=69** · 第 59 块（用户六条：怪物放大 / 每日签到 / 卡顿 / 帧率自适应 / 火种闪烁 / 宣传有礼卡）已完成并推送。
 
 ---
 
 ## 0. 给新对话的话（2026-10-23 交接）
 
-1. **当前基线**：v=68（第 58 块）已推送，git 工作区干净，**没有挂起的半成品**。用户新需求来了再开工，别主动找活。
+1. **当前基线**：v=69（第 59 块）已推送，git 工作区干净，**没有挂起的半成品**。用户新需求来了再开工，别主动找活。
 2. **节奏**：用户偏好**小步块状推进**——一块功能 = 一次提交 = 一个版本号（v=N）。**做完回归绿就立刻推送交给用户测**，用户反馈比自测更快更准。
 3. **最容易翻车的五件事**：
    ① 发版**两处版本号**都要 bump（index.html 的 `main.js?v=N` / `style.css?v=N` + `js/*.js` 里所有 `import ...?v=N`）——漏一处就是「本地好线上炸」；
@@ -20,7 +20,10 @@
 5. **已知既有失败（过期断言，别浪费时间查）**：`.tmp-camp-test.mjs` 84/22、`.tmp-boon-test.mjs` 133/13（偶发抖动）、`.tmp-eventui-test.js` 35/2、`.tmp-block18-test.js` 34/1、`.tmp-start-test.js` 33/15、`.tmp-block30-cdp.js` 42/8、`.tmp-ui-test.js` 15/7；`.tmp-event-test.mjs` 主跑 105/0 偶发 104/1。
 6. **用户规则**：全中文；有疑问先问、有疑问不写码；README 与实况同步；美术资产优先 GitHub 现成 CC0；不做多角色；局外对局内影响要小（篝火每级 +1 生命这种量级）。
 7. **新怪信息卡在 `?debug=1` 下默认关**（第 55 块）：它会冻结世界，老 CDP 一开局被拦。测这张卡的套件加 **`&meet`**（或 `__game.meetCard.setAuto(true)`）；正常游玩永远开。同类「首次提示型」弹窗以后照这个办：**生产默认开、测试显式开**。
-8. **改横向特性要回头跑老套件**（2026-10-23 教训）：读秒锁让 block32 静默挂；公告升 `NOTICE_VER` 让 block45 挂；**技能键常驻 DOM**（`renderSkill` 只切 `display`）让 weapon/talk-skill/econ-cdp 数技能格假绿（必须 `filter(b => b.style.display !== 'none')`）；乞丐/商队两拍对话 + 3s 读秒让 `choose` 点 disabled 静默失败（加 `sleep(3500)`）。
+8. **浮层别再上 backdrop-filter**（第 59 块）：全屏 blur 压着 WebGL 画布 → 手机上公告要几十秒才画出来、滚动像是「缓存被清空」。已经全站拆完，换成 .86~.90 的纯色遮罩；想要「玻璃感」用半透明底，不要用模糊。
+9. **帧率自适应在 `?debug=1` 下默认关**（第 59 块）：要测得加 `&autoperf`。否则无头 SwiftShader 的低帧会把画质一路压到 min，截图测试全变样。UI 钩子在 `__game.ui.perf`。
+10. **加设置项 / 主菜单按钮之后，回头跑 `.tmp-settings-test.js`**：它原来用**下标**点设置行，第 46 块插了「音效包」之后一直点在错行上（24/12 假失败了一整轮没人发现）。第 59 块改成按标题找行才修好，主菜单入口断言也从「排除法」改成了白名单——以后别再写排除法。
+11. **改横向特性要回头跑老套件**（2026-10-23 教训）：读秒锁让 block32 静默挂；公告升 `NOTICE_VER` 让 block45 挂；**技能键常驻 DOM**（`renderSkill` 只切 `display`）让 weapon/talk-skill/econ-cdp 数技能格假绿（必须 `filter(b => b.style.display !== 'none')`）；乞丐/商队两拍对话 + 3s 读秒让 `choose` 点 disabled 静默失败（加 `sleep(3500)`）。
 
 ---
 
@@ -87,6 +90,7 @@ Three.js r160 的单摇杆幸存者肉鸽《奶蛙夜行》，纯静态站点（
 | 55 | v=65 | 兑换码大全 txt / 新怪物信息卡 / 只记打斗时长 |
 | 56 | v=66 | 用户五条（生命条统一 / 后续关卡带环剑 / 万剑齐发 CD 制 / 冰雷加强 / 技能栏上移） |
 | **57** | **v=67** | **宣传有礼活动 / 新增 20 兑换码 / 图鉴夜行记忆卡顿优化 / sr-alt 字号 / boot 闪屏与浮层修复** |
+| **59** | **v=69** | **用户六条：盾斧兽人/孢生菇视觉 ×2.6（碰撞 ×1.5）/ 每日签到（周单位，20 一天 + 3 天 100 + 6 天 200）/ 全站拆掉 backdrop-filter + 滚动图层 + legendPulse 收成一次性 / 帧率自适应自动降档 / 修第 58 块诅咒记成正数的真 bug + mods 注入合并** |
 | **58** | **v=68** | **局外商店 · 宝箱：花骨币买木/银/金三档，开箱直接随机给一次永久属性（诅咒=强制负面）；高品箱低诅咒率且能出永久法器 / 技能CD缩短；效果落 metaShop，每局开局经 applyMeta 注入（属性走 src='meta'，法器经 relics.restore，技能CD经 weapon/arrowRain.setCdMul）** |
 
 > 每个块的实现细节、测试坑、真 bug 教训已沉淀进上面的铁律 / 调试钩子 / 文件地图与代码注释，不再单列。
@@ -117,6 +121,7 @@ Three.js r160 的单摇杆幸存者肉鸽《奶蛙夜行》，纯静态站点（
 | `voicepack.js` | 音效包（4 段奶蛙素材区间 + 8 个位置 + 裁切表） |
 | `arrowRain.js` | 箭雨（单技能 8s CD、自动落群箭，伤害走 wstats） |
 | `statView.js` | 属性页 3D 展台（独立 canvas，只有开着才 update） |
+| `signin.js` | 每日签到（第 59 块）：周一起算的 7 天进度、20/100/200 三档奖励、跨周清零、脏数据过滤 |
 | `story.js` | 主线 18 夜数据 + 印记/结局 + 调度（加新关只改对应夜的 `levelId`+`atRound`） |
 | `codex.js` / `achievements.js` / `audio.js` / `joystick.js` / `scene.js` / `frog.js` / `fx.js` / `gold.js` / `skills.js` / `input.js` / `rangeRing.js` / `swordKinds.js` | 图鉴渲染数据 / 26 条成就 / 音频引擎 / 摇杆 / 场景 / 角色 / 特效 / 金币 / 技能注册 / 输入 / 范围环 / 剑种 |
 | `assets/` | `rigged.glb`（奶蛙）、`weapons/`、`monsters/`（13 个 glb，共 5.0MB，boot 全量预载）、`props/`（CC0 道具）、`codex/*.webp`（13 张图鉴缩略图）、`audio/` |
@@ -163,6 +168,7 @@ adminOn() / setAdmin(b) / ADMIN_CODE='615265'   ← 沙盒：金币/骨币钉 �
 jumpToRound(n) / skipRound()   ← 仅 adminOn 时生效
 gift.{state,open,redeem,list} / notice.{show,hide,seenReset} / pack.{...} / arrowRain.{...}
 statPage.{show,ready,yaw,rows} / promo.{show,hide,open,art,ver,key,clear} / render{live,frames,appH,appHpx}
+sign.{show,hide,open,state,cells,signed,do,btn} / ui.perf{auto,state,setFps,tick,reset} / meta.apply
 ```
 
 常用：`__game.hurt(99)` 直接结算；`__game.enemies.all().forEach(e=>__game.enemies.takeDamage(e,999))` 清场（**注意：清光会弹三选一，挡住后续操作**）。

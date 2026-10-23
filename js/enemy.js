@@ -25,11 +25,11 @@
 // 第四关三只（wraith/leaper/mender，第 35 块，第 52 块换模型），
 // 各自在下面 ENEMY_TYPES 里有详细注释。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=68';
-import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=68';
-import { clone as cloneSkinned } from '../lib/jsm/utils/SkeletonUtils.js?v=68';
-import { distance2D } from './stats.js?v=68';
-import { createRangeRing } from './rangeRing.js?v=68';
+import * as THREE from '../lib/three.module.js?v=69';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=69';
+import { clone as cloneSkinned } from '../lib/jsm/utils/SkeletonUtils.js?v=69';
+import { distance2D } from './stats.js?v=69';
+import { createRangeRing } from './rangeRing.js?v=69';
 
 // KayKit 模型正面朝 +Z；如果哪天换模型发现怪倒着走，把这里改成 Math.PI
 export const ENEMY_MODEL_YAW = 0;
@@ -440,13 +440,17 @@ export const ENEMY_TYPES = {
     name: '盾斧兽人',
     file: 'assets/monsters/orc.glb',
     sourceHeight: 3.117,   // 实测
-    height: 1.46,
-    radius: 0.55,
+    // 第 59 块（用户实测）：模型太小 → 视觉身高 ×2.6（1.46 → 3.80）。
+    // 碰撞半径只 ×1.5（0.55 → 0.83）：看着是大块头，但不能变成一面堵路的墙。
+    height: 3.80,
+    radius: 0.83,
     hp: 5,                 // 比同期的战士厚一点，逼玩家挑窗口打
     armor: 0,
     speed: 1.18,
     damage: 1,
-    attackRange: 1.6,
+    // 近战距离按视觉边缘对齐：模型水平半径约 1.33 + 主角 0.65 ≈ 2.0。
+    // 还留 1.6 的话玩家会被迫站进它身体里才挨打，穿模很明显。
+    attackRange: 2.00,
     attackInterval: 1.9,
     windup: 0.5,
     attackDuration: 0.78,
@@ -469,8 +473,10 @@ export const ENEMY_TYPES = {
     name: '孢生菇',
     file: 'assets/monsters/mushnub-evolved.glb',
     sourceHeight: 4.457,   // 实测（含头顶一圈尖刺）
-    height: 1.26,
-    radius: 0.42,
+    // 第 59 块（用户实测）：模型太小 → 视觉身高 ×2.6（1.26 → 3.28），
+    // 碰撞半径只 ×1.5（0.42 → 0.63）。远程召唤型，射程不变。
+    height: 3.28,
+    radius: 0.63,
     hp: 4,                 // 血不厚：设计上就是「你肯冲进去就能拆掉」
     armor: 0,
     speed: 1.12,
