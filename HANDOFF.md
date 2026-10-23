@@ -2,13 +2,13 @@
 
 > 新对话从这里开始读，不要先翻聊天记录。**先读 §0「给新对话的话」，再按需查后面章节。**
 >   
-> 最后更新：2026-10-23 凌晨 · 线上 **v=61** · 第 51 块（图鉴怪物贴图）+ 属性页返回按钮 hotfix 已全部上线，工作区干净，无未完成任务
+> 最后更新：2026-10-23 凌晨 · 线上 **v=62** · 第 52 块（13 只怪一只一个模型 + 后 9 只换模型改名）已上线，工作区干净，无未完成任务
 
 ---
 
 ## 0. 给新对话的话（2026-10-23 交接）
 
-1. **当前基线**：v=61（`01c7163`）已推送且线上生效，git 工作区干净。最近十块（44~51 + v=53~56 一串音效包 hotfix + v=61 hotfix）全部完结，**没有挂起的半成品**。用户新需求来了再开工，别主动找活。
+1. **当前基线**：v=62（第 52 块）已推送且线上生效，git 工作区干净。最近十一块（44~52 + v=53~56 一串音效包 hotfix + v=61 hotfix）全部完结，**没有挂起的半成品**。用户新需求来了再开工，别主动找活。
 2. **节奏**：用户偏好**小步块状推进**——一块功能 = 一次提交 = 一个版本号（v=N）。铁律 12：**做完回归绿就立刻推送交给用户测**，用户的反馈比自测更快更准。
 3. **最容易翻车的五件事**（细节都在铁律和下文）：
    ① 发版**两处版本号**都要 bump（index.html + js 内部所有 `import ...?v=N`），漏一处就是「本地好线上炸」；
@@ -16,7 +16,8 @@
    ③ **公告在 loading 淡完 +700ms 才弹**，测试截图要先 `sleep(2600)` 再 `__game.notice.hide()`；
    ④ `jumpToRound/skipRound` **只在 adminOn 时生效**，不开管理员是静默 no-op；
    ⑤ 本地服务器必须 `run_in_background`；CDP 截图路径**不能含中文**；推送走 `git -c http.proxy=http://127.0.0.1:7897 ...`（先 curl 探代理，挂了改直连）。
-4. **最新绿基线**（动到相关文件后要回归）：block50 **12**/0（含重复 id 断言）、block51 **20**/0、`.tmp-wtut-title-check.js` **4**/0、block47 27/0、block49 23/0。跑法见 §6，一次只跑一套。
+4. **最新绿基线**（动到相关文件后要回归）：block52 **125**/0（模型去重 + 动画名对拍）、block51 **20**/0、block50 **12**/0（含重复 id 断言）、block29 **39**/0、block35 **49**/0、`.tmp-wtut-title-check.js` **4**/0、block47 27/0、block49 23/0。跑法见 §6，一次只跑一套。
+   已知**既有**失败（不是新代码弄坏的，别浪费时间去查）：`.tmp-rogue-unit.mjs` 142/2、`.tmp-camp-test.mjs` 84/22、`.tmp-boon-test.mjs` 133/13、`.tmp-eventui-test.js` 35/2、`.tmp-block18-test.js` 34/1 —— 都是第 27/33/41/43 块改过数值或 UI 后没回填的过期断言（2026-10-23 用 git stash 对拍确认过基线一致）。
 5. **用户规则**：全中文；有疑问先问、有疑问不写码；README 与实况同步；美术资产优先 GitHub 现成 CC0；不做多角色；局外对局内影响要小（篝火每级 +1 生命这种量级）。
 6. **改交互规则要回头跑老套件**（2026-10-23 的教训）：第 42/43 块给回话按钮加 3 秒读秒锁后，block32（读秒之前写的）静默挂了 9 项；公告升 `NOTICE_VER=2` 后 block45 写死 `|1` 也挂了。**横向特性（锁定/延迟/版本号）上线时，把受影响的老 CDP 套件重跑一遍**，别只跑新套件。本次两个都已修好（block32 60/0、block45 49/0）。
 
@@ -81,6 +82,7 @@ Three.js r160 的单摇杆幸存者肉鸽《奶蛙夜行》，纯静态站点（
 | **49** | 种子挑战（`seed.js` 追加）：`seedFromText`（加盐 FNV-1a）/ `pickSeedRules(seed, records, curseTable)`（wins 0~1 普通·2~5 困难·≥6 噩梦；诅咒 0/1/2；过不了第一关不去第二关）/ `loadSeedRecords`/`saveSeedRecord`（一码一条取优）/ `pruneSeeds(40)`；UI `#seedScr`（输入+🎲+匹配文案+记录列表）；`customSeed` 进快照 `seedPlay`；结算 `rsTag` 与记录在 `endGame`；键 `naiwa_rouge_seeds_v1` | v=58 |
 | **50** | 主菜单「属性」页（`js/statView.js` + `#statScr`）：独立小渲染器把 `loadFrog('assets/rigged.glb')` 摆在带呼吸描边环的展台上，拖动转视角（`setPointerCapture` 包 try-catch）、松手回正、定时蹦跶/拍掌；属性用**临时实例** `createStats+createWeaponStats` 重算（基础+篝火 `campApply`+火种 `applyBoons`），14 项按 4 组列出、加成行标「（基础 X）」；钩子 `__game.statPage` | v=59 |
 | **51** | 图鉴附怪物贴图：`enemy.js` 新增 `buildPreviewModel(type)`（克隆 + 按 sourceHeight 归一 + 换肤/染色/半透明 + Idle 定格），离线脚本 `.tmp-codex-shots.js` 按透明通道包围盒自动取景，输出 13 张 240×288 webp 到 `assets/codex/`（共 ~200KB）；`codex.js` 给怪物条目加 `thumb`，图鉴走「左图右文」（`.cx-item.has-thumb` / `.cx-thumb` / `.cx-body`）；运行时不加载模型 | v=60 |
+| **52** | **13 只怪一只一个模型**（用户立项：之前 13 只其实只用了 4 个 glb，法师骨架被 6 只共用）。后 9 只换 Quaternius《Ultimate Monsters》并改名：骨咒师→咒面图腾（tribal）/ 火焚巫祝→焚火魔（demon）/ 霜牢主祭→孢冠菌王（mushroom-king）/ 骨骑冲锋兵→冲锋蛮牛（bull）/ 骸盾兵→盾斧兽人（orc）/ 孵骨巫祝→孢生菇（mushnub-evolved）/ 雾魉→雾鬼（ghost）/ 跃行尸→雾猎狼（wolf）/ 缝合师→缝补小巫（wizard）；第一关四只保留 KayKit 骷髅（用户定案）。工程侧：`CLIP_FAMILIES` 动作家族翻译层 + `resolveClipAliases` + `clipOverrides`、`findBone`（GLTFLoader 洗点号）、`footY` 脚底对齐、`glow` 自发光、配件按世界缩放反推尺寸；`.tmp-mob-calib.js` 正交相机逐像素实测身高（取代人眼比对）；图鉴 13 张缩略图重出 | v=62 |
 
 第 51 块上线后 hotfix（v=61，用户报「属性页返回按钮失效」）：
 
@@ -101,6 +103,23 @@ Three.js r160 的单摇杆幸存者肉鸽《奶蛙夜行》，纯静态站点（
 - **UI**：`codex.js` 怪物条目加 `thumb: 'assets/codex/<id>.webp'`；`main.js` 的 `renderCodex` 遇到 `en.thumb` 就包一层 `.cx-item.has-thumb`（img + `.cx-body`），其它页签完全不变（测试里专门断言武器/奇遇页签没有 `.cx-thumb`）。
 - **测试**：`.tmp-block51-cdp.js` **20** 项全绿（13 条都有 thumb 且文件名=id / DOM 13 图 13 body / 全部解码成功 0 破图 / 尺寸 240×288 / lazy + alt / 66×79 且图在文字左侧 / 其它页签不受影响 / 13 个文件 HTTP 200 且是真 webp >5KB / 总体积 <400KB / 零报错）。截图 `.tmp-block51-cdp.js` 输出 `%TEMP%/naiwa-shot-51/`（codex-enemies / codex-swords）。
 - **截图坑（复踩）**：公告是 loading 淡完 **+700ms** 才弹，测试里 `sleep(2600)` 之后必须显式 `__game.notice.hide()`，否则截出来整屏都是公告。
+
+第 52 块要点（13 只怪一只一个模型，2026-10-23，v=62）：
+
+- **用户要求**：「现在的怪物有重复使用 3D 模型，允许上 GitHub 找其他家的模型，**不要和之前怪物重复并替换掉**」。调研确认：13 只怪其实只用了 4 个 glb（minion 1 只、warrior 3 只、rogue 3 只、mage **6 只**）。两个决策由用户当场拍板：① **只换后 9 只，第一关 4 只保持 KayKit 骷髅**（名字也保留）；② 风格走「**夜行怪物大杂烩**」（幽灵/恶魔/雪怪/菌人/狼/牛都用）。
+- **素材**：Quaternius《Ultimate Monsters》（CC0），经 `Dallolz/moorfall-assets` 镜像取 9 个 glb 到 `assets/monsters/`。**没用上的备选（squidle / glub / ghost-skull / goleling / blue-demon / yeti）已删掉**，别再往仓库里堆。全 13 个模型共 **5.0MB**（旧 4 个就 2.7MB，新的九只 ≈2.4MB）——boot 时 13 只全部预载，**首屏比 v=61 重 2.4MB**；若用户反馈加载慢，下一步做「按关预载」（注意 `spawn()` 遇到未加载类型是 `console.warn` + 返回 null，**不会懒加载**，所以按关预载必须在开局前 await）。
+- **改名对照（全项目同步：wave 回合提示 / codex 图鉴 / achievements / events / 音频注释）**：
+  `hexer 骨咒师→咒面图腾`、`pyro 火焚巫祝→焚火魔`、`hierarch 霜牢主祭→孢冠菌王`、`charger 骨骑冲锋兵→冲锋蛮牛`、`shielder 骸盾兵→盾斧兽人`、`brood 孵骨巫祝→孢生菇`、`wraith 雾魉→雾鬼`、`leaper 跃行尸→雾猎狼`、`mender 缝合师→缝补小巫`。**id（`ENEMY_TYPES` 的键）一个都没改**，存档/成就/测试断言的键不受影响。
+- **跨引擎动画名**：两家 clip 命名完全不同（KayKit `1H_Melee_Attack_Chop`；Quaternius `CharacterArmature|Flying_Idle` / `Bite_Front` / `Attack_Headbutt` / `Jump`…）。`enemy.js` 里 `CLIP_FAMILIES` 给四族（humanoid / flying / blob / quad）定义语义键→真实 clip 名，`resolveClipAliases()` 按「去掉 `|` 前缀的短名」建表，单只怪用 `clipOverrides` 覆盖个别动作（如 hexer/pyro 的 `cast → Punch`，四足没有读条动画）。解析出的别名由 `spawn()` 挂到 `actions` 上（`actions[语义键] = actions[真实名]`），业务代码继续只认语义键。**加新模型只改 `CLIP_FAMILIES` + `clipOverrides`，别在业务里写死动画名**。
+- **身高/脚底不再靠人眼比对**：新脚本 `.tmp-mob-calib.js`（正交相机 + 网格 + `readPixels` 量透明包围盒）直接给 `sourceHeight` 与 `footY`（模型本体相对原点的悬空/下沉量；浮空怪别按到地上）。**`readPixels` 行方向是从下往上**，翻屏幕坐标时别写反（写反会得到「高 2.06、脚 -2」这种鬼数）；正交视野 `FIXED_H` 要够大（4 装不下 Quaternius 的模型，用 14）。
+- **配件挂骨骼的血案（`attachShield` / `attachStaff`）**：Quaternius 的 `CharacterArmature` 自带 **×100 缩放**，挂件直接塞局部尺寸 → 盾牌放大 40 倍糊满全屏。修法：`slot.updateWorldMatrix(true, false)`（**`true` 必须带**，否则祖先链没更新、量到 1.29 而不是 ~47）→ `getWorldScale` → `k = 目标世界半径 / (0.34 × 骨骼世界缩放)`；举盾动画里**不许写死局部 y**（旧写法的 0.17 在 ×47 下等于 8 格位移），只按 `userData.k` 乘。修好后盾牌世界包围盒 0.83×0.79×0.20，正常贴在小臂上。
+- **骨骼名点号**：GLTFLoader 会把 `LowerArm.L` 洗成 `LowerArmL`，`findBone()` 必须先 `toLowerCase().replace(/\./g,'')` 再匹配（旧版只小写化 → 盾/杖挂点全部落空，`hasShieldMesh:false`）。
+- **顺手修的真 bug（第 51 块遗留）**：`.tmp-codex-shots.js` 自动取景里 `aimX -= (bcX - W/2)*wpp` **符号反了**——对称模型看不出来，遇到大翅膀/长尾巴（demon、bull）就越修越偏，最后整只跑出画面（`pyro.webp` 只有 1.1KB 就是证据）。改成 `+=` 后 13 张图都正常（8~13KB）。
+- **测试**：新增 `.tmp-block52-test.mjs` **125** 项全绿（13 只 13 个文件零重复 / 文件真在且体积合理 / **直接解 glb 头 JSON 断言每个 `clipOverrides` 名字真存在于那个模型** / 身高半径区间 / 9 只都配 glow（盾斧兽人亮绿例外）/ 四关回合表点名的 type 全在且已启用）。
+  回归：block29 **39**/0、block35 **49**/0、block51 **20**/0、block50 **12**/0、level2 65/0、level3 71/0、level4 90/0。
+- **测试坑（新）**：换模型后每只怪第一次出场都要**编译自己的着色器**，SwiftShader 下十几秒——老套件里「关卡表真的刷出了 XX」的 25 秒预算会假失败。block29 / block35 已放到 **60 秒**并写明原因。另外 block29 / block35 早就因为第 41 块的「选关分步三页」进不了关（点完卡片还要 `#diffNext` → `#curseStart`），本块一并补上，两套才真正跑起来。
+
+
 
 第 50 块要点（主菜单属性页，2026-10-22，v=59；同批发版还有 47 箭雨 / 48 加载轮播 / 49 种子挑战）：
 
@@ -460,7 +479,7 @@ Three.js r160 的单摇杆幸存者肉鸽《奶蛙夜行》，纯静态站点（
 | `main.js` (~5400 行)                                                                          | 主循环 + 所有 UI 面板（标题/选关/种子/属性/记录/设置/图鉴/商店/升级/事件/背包/结算/教程/公告/礼包/读取存档）+ 各系统接线 + `__game` 钩子。**改之前先 grep 定位** |
 | `wave.js`                                                                                    | 20 回合编排、`roundScale`、**难度 DIFFS**、`startAt`（读档）、升级点/商店点                                                    |
 | `stats.js`                                                                                   | 通用属性引擎（`createStats(defs)`），主角 14 项 / 武器 11 项两套实例；`dumpMods/loadMods`（存档）                                  |
-| `enemy.js`                                                                                   | 7 种怪（minion/warrior/archer/bowman + 第二关巫师 hexer/pyro/hierarch）、红圈落箭、法术地阵（hex/burn）、光环、`takeDamage(无敌期打不动)` |
+| `enemy.js`                                                                                   | 13 只怪（**第 52 块起一只一个 glb**：第一关 KayKit 骷髅 4 只 + Quaternius 独立模型 9 只）、`CLIP_FAMILIES` 动作家族翻译 + `clipOverrides`、`findBone`（洗点号）、`footY`/`glow`/配件（盾弓杖）、红圈落箭、法术地阵（hex/burn）、光环/卫队/石刺 |
 | `weapon.js`                                                                                  | 环剑、5 种元素剑、`grant/addSword/restore`                                                                         |
 | `turret.js` / `relics.js`                                                                    | 弩炮台（上限 3）、地刺/霜环（各 3 级），都有 `restore`                                                                        |
 | `upgrade.js`                                                                                 | 28 张升级卡（含 rarity 0~4）                                                                                      |
@@ -475,7 +494,10 @@ Three.js r160 的单摇杆幸存者肉鸽《奶蛙夜行》，纯静态站点（
 | `runSave.js`                                                                                 | 读取存档（第 38 块：多存档列表），键 `naiwa_rouge_runs_v1`（数组，按 uid upsert；每回合开始写 + pagehide 补一次；通关选完永夜火种才清） |
 | `gift.js`                                                                                    | 礼包兑换（第 44 块）：`GIFT_TABLE` 只存 16 位哈希 + 骨币，`normalizeCode`/`codeHash`/`lookupGift`/`giftByHash`；明文码在 gitignore 的 `gift-codes.local.md` |
 | `voicepack.js`                                                                               | 音效包（第 46 块）：`FROG_FILES` 4 段奶蛙素材（含试听区间）、`FROG_SFX` 8 个位置的 `offset/dur/vol/rate/jitter`、`PACK_LIST`；**改裁切只改这张表** |
-| `assets/codex/*.webp` | 图鉴怪物缩略图（第 51 块）：13 张 240×288，`node .tmp-codex-shots.js` 生成；**换模型/皮肤后要重跑** |
+| `assets/codex/*.webp` | 图鉴怪物缩略图（第 51 块）：13 张 240×288，`node .tmp-codex-shots.js` 生成；**换模型/皮肤后要重跑**（第 52 块换模型就重出过一次） |
+| `assets/monsters/*.glb` | 13 个怪物模型（第 52 块去重后一只一个）：`skeleton-{minion,warrior,rogue,mage}` = KayKit；`tribal/demon/mushroom-king/bull/orc/mushnub-evolved/ghost/wolf/wizard` = Quaternius。共 5.0MB，**boot 时全量预载**；换/加模型要同步 `.tmp-block52-test.mjs` |
+| `.tmp-mob-calib.js` | 怪物身高标定（第 52 块）：正交相机 + `readPixels` 实测 `sourceHeight` / `footY`，输出 PNG + 数字；换模型先跑它 |
+| `.tmp-mob-lineup.js` | 9 只新怪并排对比图 + 兽人盾牌特写（验收用，输出 `%TEMP%/naiwa-mob-lineup/`） |
 | `arrowRain.js`                                                                               | 箭雨（第 47 块）：单技能 8s CD、自动找最近怪标警告圈落群箭，伤害走 wstats（剑油/磨剑石可强化）；`unlock/reset/restore/snapshot`                    |
 | `statView.js`                                                                                | 属性页 3D 展台（第 50 块）：独立 canvas + renderer，拖动旋转/定时蹦跳拍掌；**与主场景隔离，只有属性页开着才 update**                              |
 | `eventsExtra.js`                                                                             | 事件扩容（第 31 块）：42 条新事件 + 3 条连锁，与 `events.js` 合并成 112 条                                                      |
@@ -556,7 +578,7 @@ node .tmp-econ-test.mjs       # 78  经济/商店/事件作用域
 node .tmp-event-test.mjs      # 105 事件库结构/权衡/连锁/抽取/文案（112 条）
 node .tmp-rarity-test.mjs     # 71  品质/幸运
 node .tmp-camp-test.mjs       # 99  篝火/骨币（多级 + 阶梯 + 金币折算 + 关卡倍率）
-node .tmp-level2-test.mjs     # 67  第二关/巫师
+node .tmp-level2-test.mjs     # 65  第二关/三只（第 52 块起各用各的模型）
 node .tmp-level3-test.mjs     # 71  第三关/三只新怪/三件新装备/专属奇遇
 node .tmp-level4-test.mjs     # 90  第四关/雾魉/跃行尸/缝合师/暖炉/剑阵定案
 node .tmp-admin-test.mjs      # 28  管理员模式（设置键/免费点火/skipRound 四种走向）
@@ -616,6 +638,9 @@ node .tmp-boon-test.mjs       # 146 永夜火种（层数/品质吃幸运/待领
 .tmp-block49-cdp.js    23  种子挑战（同种子同关/难度匹配/记录取优/续玩）
 .tmp-block50-cdp.js    12  属性页（含「全页零重复 id」通用断言 + 面板内定位点击——新面板抄这个）
 .tmp-block51-cdp.js    20  图鉴贴图（13 图解码/lazy/尺寸/其它页签无 thumb）
+.tmp-block52-test.mjs 125  13 只怪模型去重（解 glb 头对拍动画名 / 文件在 / 关卡表不断链）— 纯 Node
+.tmp-mob-calib.js          怪物身高标定（正交实测 sourceHeight/footY）
+.tmp-mob-lineup.js         9 只新怪并排对比 + 盾牌特写（验收图）
 .tmp-wtut-title-check.js 4  武器教程卡标题随步骤变化（wtutTitle）
 .tmp-codex-shots.js        图鉴缩略图生成器（非测试；换模型/皮肤后重跑，先起 8124）
 .tmp-shot45/50.js          视觉截图脚本（390×844 → %TEMP%/naiwa-shot-XX/）

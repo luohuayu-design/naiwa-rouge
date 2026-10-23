@@ -13,13 +13,13 @@
 // （击杀 / 弹事件卡 / 选升级卡）。
 // ============================================================
 
-import { ENEMY_TYPES } from './enemy.js?v=61';
-import { SWORD_KINDS } from './swordKinds.js?v=61';
-import { RELIC_DEFS } from './relics.js?v=61';
-import { UPGRADES } from './upgrade.js?v=61';
-import { ALL_EVENTS } from './events.js?v=61';
-import { RARITIES } from './rarity.js?v=61';
-import { codexAll, codexCount } from './profile.js?v=61';
+import { ENEMY_TYPES } from './enemy.js?v=62';
+import { SWORD_KINDS } from './swordKinds.js?v=62';
+import { RELIC_DEFS } from './relics.js?v=62';
+import { UPGRADES } from './upgrade.js?v=62';
+import { ALL_EVENTS } from './events.js?v=62';
+import { RARITIES } from './rarity.js?v=62';
+import { codexAll, codexCount } from './profile.js?v=62';
 
 export const CODEX_TABS = [
   { id: 'enemies', name: '怪物' },
@@ -29,7 +29,7 @@ export const CODEX_TABS = [
   { id: 'events', name: '奇遇' },
 ];
 
-// 数值格式化。**必须容错**：霜牢主祭按设计没有 damage 字段
+// 数值格式化。**必须容错**：孢冠菌王按设计没有 damage 字段
 // （它一次都不还手），旧写法 undefined.toFixed() 会让整个图鉴面板崩掉。
 const NUM = (v) =>
   typeof v === 'number' && !Number.isNaN(v) ? (Number.isInteger(v) ? String(v) : v.toFixed(1)) : null;
@@ -38,7 +38,7 @@ const NUM = (v) =>
 const statLine = (pairs) =>
   pairs.filter(([, v]) => NUM(v) !== null).map(([k, v]) => `${k} ${NUM(v)}`).join(' · ');
 
-// 怪物数值行。没有 damage 的（霜牢主祭）显式写「不还手」，
+// 怪物数值行。没有 damage 的（孢冠菌王）显式写「不还手」，
 // 不然玩家会以为是数值漏填。
 function enemySub(cfg) {
   const line = statLine([['生命', cfg.hp], ['伤害', cfg.damage], ['速度', cfg.speed]]);

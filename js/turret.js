@@ -13,10 +13,10 @@
 // 做弩臂 + 上膛的箭 + 骨头点缀（均 CC0），加载失败时退回程序化炮台（外观稍简，
 // 逻辑完全一致）。深夜里靠自发光宝珠看清楚。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=61';
-import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=61';
-import { distance2D } from './stats.js?v=61';
-import audio from './audio.js?v=61';
+import * as THREE from '../lib/three.module.js?v=62';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=62';
+import { distance2D } from './stats.js?v=62';
+import audio from './audio.js?v=62';
 
 // ---------------- 可调参数（平衡都在这里） ----------------
 export const TURRET = {
@@ -163,7 +163,7 @@ export function createTurretSystem({ scene, fx, enemies }) {
   // 射一发：目标 = 炮台射程内最近的活怪；弹道 = 出手瞬间目标的位置（直线）
   function fire(t, ctx) {
     const foes = enemies.list.filter((e) =>
-      e.state !== 'dead' && e.state !== 'spawn' && !e.ghostHidden   // 雾魉隐身：炮台当它不存在（第 35 块）
+      e.state !== 'dead' && e.state !== 'spawn' && !e.ghostHidden   // 雾鬼隐身：炮台当它不存在（第 35 块）
       && distance2D(t, e.pos) <= TURRET.RANGE
     );
     if (!foes.length) return;

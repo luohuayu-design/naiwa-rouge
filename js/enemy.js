@@ -1,7 +1,15 @@
 // ============================================================
 // enemy.js —— 怪物系统（模型加载 / 克隆 / AI / 血条 / 死亡）
 //
-// 模型来自 KayKit《Skeletons》（CC0），已裁剪成 7~9 段动画。
+// 模型两个来源（都是 CC0，资产铁律：先找现成的，不手写几何）：
+//   第一关四只（minion/warrior/archer/bowman）—— KayKit《Skeletons》
+//   第二~四关九只 —— Quaternius《Ultimate Monsters》（经 Dallolz/moorfall-assets 分发）
+// 第 52 块换掉的就是「一个模型被 6 只怪共用」的老毛病：13 只怪现在各自一个模型。
+//
+// 两家的动画名完全不同（KayKit 是 Walking_A / Spellcast_Shoot，
+// Quaternius 是 Walk / Weapon / Bite_Front / Flying_Idle），所以新模型不写死
+// 动画名，改用「动作家族」表（CLIP_FAMILIES）在加载时翻译成真实 clip 名。
+//
 // 每只怪 = SkeletonUtils 克隆的蒙皮模型 + 独立 AnimationMixer。
 //
 // 第一关现在启用四种：
@@ -12,17 +20,16 @@
 //   bowman  弓手   —— 远程（第 12 块）：站在远处拉弓，把**红圈钉在你脚下**，
 //                     1.15 秒后箭从天而降，圈里挨打、圈外没事（第 12 回合起登场）
 //
-// 第二关三只巫师（hexer/pyro/hierarch，第 14~17 块）、第三关三只（charger/
-// shielder/brood，第 29 块）各自在下面的 ENEMY_TYPES 里有详细注释，
-// 第四关三只（wraith/leaper/mender，第 35 块）同理。
-//
-// 第五种（mage）只写好了配置，暂不生成。
+// 第二关三只（hexer/pyro/hierarch，第 14~17 块，第 52 块换模型）、
+// 第三关三只（charger/shielder/brood，第 29 块，第 52 块换模型）、
+// 第四关三只（wraith/leaper/mender，第 35 块，第 52 块换模型），
+// 各自在下面 ENEMY_TYPES 里有详细注释。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=61';
-import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=61';
-import { clone as cloneSkinned } from '../lib/jsm/utils/SkeletonUtils.js?v=61';
-import { distance2D } from './stats.js?v=61';
-import { createRangeRing } from './rangeRing.js?v=61';
+import * as THREE from '../lib/three.module.js?v=62';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=62';
+import { clone as cloneSkinned } from '../lib/jsm/utils/SkeletonUtils.js?v=62';
+import { distance2D } from './stats.js?v=62';
+import { createRangeRing } from './rangeRing.js?v=62';
 
 // KayKit 模型正面朝 +Z；如果哪天换模型发现怪倒着走，把这里改成 Math.PI
 export const ENEMY_MODEL_YAW = 0;
@@ -40,6 +47,74 @@ const ANIM = {
   shoot: '1H_Ranged_Shoot',     // 放箭
   cast: 'Spellcast_Shoot',      // 巫师读条（mage 模型自带，第 20 块）
 };
+
+// ------------------------------------------------------------
+// 动作家族（第 52 块）
+// ------------------------------------------------------------
+// Quaternius 那批模型每只只带自己那几段动画，名字还带 `CharacterArmature|` 前缀：
+//   人形   Idle / Walk / Run / Punch / Weapon / Jump / Death / HitReact
+//   飞行   Flying_Idle / Fast_Flying / Headbutt / Punch / Death / HitReact
+//   团块   Idle / Walk / Jump / Bite_Front / Death / HitRecieve
+//   四足   Idle / Walk / Gallop / Attack / Death / Idle_HitReact_Left
+// 这里把「玩家能感知的动作」抽象成 idle/walk/attack/cast/... 几个语义键，
+// 由加载时翻译成该模型真实存在的 clip 名。缺哪段就退到 idle（不会出现 T pose 定格）。
+const CLIP_FAMILIES = {
+  humanoid: {
+    idle: 'Idle', walk: 'Walk', run: 'Run', attack: 'Punch', cast: 'Weapon',
+    death: 'Death', hit: 'HitReact', spawn: 'Idle',
+  },
+  flying: {
+    idle: 'Flying_Idle', walk: 'Fast_Flying', run: 'Fast_Flying', attack: 'Headbutt',
+    cast: 'Punch', death: 'Death', hit: 'HitReact', spawn: 'Flying_Idle',
+  },
+  blob: {
+    idle: 'Idle', walk: 'Walk', run: 'Walk', attack: 'Bite_Front', cast: 'Jump',
+    death: 'Death', hit: 'HitRecieve', spawn: 'Idle',
+  },
+  quad: {
+    idle: 'Idle', walk: 'Walk', run: 'Gallop', attack: 'Attack', cast: 'Walk',
+    death: 'Death', hit: 'Idle_HitReact_Left', spawn: 'Idle',
+  },
+};
+
+// 把 gltf 里的动画按「短名 → clip」建表（去掉 CharacterArmature| 这类前缀），
+// 再按 cfg.animFamily / cfg.clipOverrides 解析出语义键 → 真实 clip 名。
+// 返回的 value 是 clip.name，也就是 actions 表里的键。
+function resolveClipAliases(gltf, cfg) {
+  const byName = new Map();
+  for (const c of gltf.animations) {
+    byName.set(c.name, c);
+    const short = c.name.split('|').pop();
+    if (short && !byName.has(short)) byName.set(short, c);
+  }
+  const fam = CLIP_FAMILIES[cfg.animFamily];
+  if (!fam) return {};
+  const aliases = {};
+  for (const [key, def] of Object.entries(fam)) {
+    const want = (cfg.clipOverrides && cfg.clipOverrides[key]) || def;
+    const clip = byName.get(want);
+    if (clip) aliases[key] = clip.name;
+  }
+  // 兜底：家族里缺 idle 就退到第一段动画，别让怪站着张牙舞爪
+  if (!aliases.idle && gltf.animations[0]) aliases.idle = gltf.animations[0].name;
+  return aliases;
+}
+
+// 按名字找骨骼：KayKit 是 handslot.r / hand.l / head（小写），
+// Quaternius 是 UpperArm.L / LowerArm.L / Head（首字母大写、没手骨），
+// 所以一律「小写 + 去掉点」比对，并允许「找不到手就退到小臂」。
+// ⚠️ GLTFLoader 会把名字里的 '.' 洗掉（LowerArm.L → LowerArmL），
+// 第 52 块第一次挂盾就栽在这上面：只做了小写化，点还在，于是永远找不到。
+function findBone(model, names) {
+  const norm = (s) => s.toLowerCase().replace(/\./g, '');
+  const map = new Map();
+  model.traverse((o) => { if (o.name) map.set(norm(o.name), o); });
+  for (const n of names) {
+    const o = map.get(norm(n));
+    if (o) return o;
+  }
+  return null;
+}
 
 export const ENEMY_TYPES = {
   // ---------------- 第一关：小兵 ----------------
@@ -173,45 +248,33 @@ export const ENEMY_TYPES = {
   },
 
   // ============================================================
-  // 第二关：三位巫师
+  // 第二关：三位「塔里的东西」（第 20 块定案，第 52 块换模型）
   //
   // 【设计定案 · 第 20 块】用户明确要求：**一个巫师只带一个招牌技能**，
   // 不许出现「一个人又会减速又会灼地还带光环」的全能法师。
-  // 所以三人共用一套 mage 骨架，但各自只负责一种压力，逼玩家换应对方式：
+  // 所以三人各只负责一种压力，逼玩家换应对方式：
   //
-  //   hexer    骨咒师   —— 时间压力。紫阵钉在脚下，落地掉血 + 减速。
-  //                        躲得掉，但两只以上会连发，被粘住就走不动。
-  //   pyro     火焚巫祝 —— 空间压力。地上留一片灼地烧 4 秒，好位置被一片片烧掉。
-  //                        不许站桩，输出节奏被迫切碎。
-  //   hierarch 霜牢主祭 —— 目标选择压力。血最厚、站最后排。
-  //                        第 28 块重做（用户定案）：
-  //                        ① 霜牢环不再以自己为中心，而是**钉在主角脚下跟随**——
-  //                          环里的怪 +35% 攻速 +25% 减伤，且浑身泛起青光（样貌改变）；
-  //                          想让怪变回软柿子，就得把怪群从环里引出去。
-  //                        ② 每隔一段时间在自己身边召出 4 名霜牢卫队（骷髅战士，
-  //                          环绕主祭站立、不自主动，有战士同款近战判定）。
-  //                        ③ 主动攻击：朝主角方向放一串石刺（延伸有限），
-  //                          石刺尽头钻出一只骷髅小兵。
+  //   hexer    咒面图腾 —— 时间压力。紫阵钉在脚下，落地掉血 + 减速。
+  //                       躲得掉，但两只以上会连发，被粘住就走不动。
+  //   pyro     焚火魔   —— 空间压力。地上留一片灼地烧 4 秒，好位置被一片片烧掉。
+  //                       不许站桩，输出节奏被迫切碎。
+  //   hierarch 孢冠菌王 —— 目标选择压力。血最厚、站最后排。
+  //                       第 28 块重做：霜牢环钉在主角脚下跟随（环里怪提速减伤泛青光）、
+  //                       周期召 4 名卫队、朝主角放一串石刺（尽头钻小兵）。
   //
-  // 三者外观靠「帽子 / 眼睛发光色 / 手持法器 / 身高」四件事区分（见 skin）——
-  // 素材库只有一套巫师骨架，程序化装备是这里唯一能做出三种模型的路径。
-  // 将来若有独立 glb，只改各自的 file / sourceHeight 即可，其余代码不用动。
-  //
-  // sourceHeight 已验证（2026-10-21）：三个巫师与 minion 1.05 / warrior 1.15 同一把尺，
-  // 并排截图 + 离线正交渲染剪影确认视觉比例与落脚正确（脚底 ≈ -0.01）。
-  // 注意：骨架本身比骷髅兵矮，视觉高度主要靠帽子/骨冠/法杖撑起来，
-  // 所以「含配件总高」的自动量法会得出乱数，改数值请走截图人眼比对。
+  // 【第 52 块：模型不再共用一套巫师骨架】
+  // 以前三人共用 skeleton-mage.glb，只靠帽子/眼睛颜色区分 —— 六只怪长一个样。
+  // 现在换成 Quaternius《Ultimate Monsters》的三个不同模型（CC0，见文件头）：
+  //   hexer    → 图腾面具（tribal，会飘，自带羽冠，读条时飘在原地最像在念咒）
+  //   pyro     → 蝙蝠小恶魔（demon，脚离地 0.49，天生浮空 = 火球托着它）
+  //   hierarch → 菌王（mushroom-king，最高最壮，一顶大菌盖当"冠"）
   // ============================================================
   hexer: {
-    name: '骨咒师',
-    file: 'assets/monsters/skeleton-mage.glb',
-    // sourceHeight 实测记录（2026-10-21）：三个巫师与 minion(1.05)/warrior(1.15) 同一把尺，
-    // 并排截图比对（剪影图可用班级网站根的 .tmp-height-ortho.js 重出）确认视觉比例正确、
-    // 脚底 footY ≈ -0.01 不浮不陷。⚠️ 不要用「逐顶点 applyBoneTransform / gl.readPixels
-    // 量像素」去"精确标定"——两种自动量法都给出 2.2~3.4 的乱数（骨架本身比小兵矮、
-    // 高度全靠帽子/法杖撑起来，剪影顶点根本不是头）。要动就先并排截图人眼比对。
-    sourceHeight: 1.20,
-    height: 1.32,
+    name: '咒面图腾',
+    file: 'assets/monsters/tribal.glb',
+    // sourceHeight = 正交相机实测的 Idle 渲染身高（.tmp-mob-calib.js，单位同世界）
+    sourceHeight: 4.238,
+    height: 1.40,          // 比原来高一点：图腾加羽冠本来就长
     radius: 0.45,
     hp: 4,
     armor: 0,
@@ -229,22 +292,25 @@ export const ENEMY_TYPES = {
     deathTime: 1.6,
     selfDestruct: false,
     color: 0xd7a8ff,
-    skin: { eye: 0xc08cff, hat: true, staff: 'bone', body: 0xcfc4e8 },
+    footY: 0.246,          // 模型本体悬浮在原点上方（实测），照原样飘着
+    animFamily: 'flying',
+    clipOverrides: { cast: 'Punch' },   // 飞行家族没有读条动画，抬手挥一下代替
+    glow: { color: 0x5a2a9a, intensity: 0.55 },   // 一圈紫气，对应它的紫阵
     anim: {
-      walk: ANIM.walk, idle: ANIM.idle, cast: ANIM.cast,
-      death: ANIM.death, spawn: ANIM.spawn,
+      walk: 'walk', idle: 'idle', cast: 'cast',
+      death: 'death', spawn: 'spawn',
     },
   },
 
   pyro: {
-    name: '火焚巫祝',
-    file: 'assets/monsters/skeleton-mage.glb',
-    sourceHeight: 1.20,    // 实测记录见 hexer 处（并排截图比对，勿用自动量法）
-    height: 1.22,          // 比骨咒师矮一点：摘了帽子，也更快
+    name: '焚火魔',
+    file: 'assets/monsters/demon.glb',
+    sourceHeight: 2.352,   // 实测（含翅膀高度）
+    height: 1.22,
     radius: 0.42,
     hp: 3,
     armor: 0,
-    speed: 1.35,           // 三个巫师里最灵活，追它容易被灼地拖住
+    speed: 1.35,           // 三个里最灵活，追它容易被灼地拖住
     attackRange: 7.2,
     keepDistance: 4.6,
     damage: 1,
@@ -257,18 +323,21 @@ export const ENEMY_TYPES = {
     deathTime: 1.5,
     selfDestruct: false,
     color: 0xffb27a,
-    skin: { eye: 0xff7a3a, hat: false, staff: 'torch', body: 0xe8b8a0 },
+    footY: 0.492,          // 蝙蝠恶魔天生浮空，别把它按到地上
+    animFamily: 'flying',
+    clipOverrides: { cast: 'Punch' },
+    glow: { color: 0x8c1a06, intensity: 0.85 },   // 暗红余烬，远处也能看见它在烧
     anim: {
-      walk: ANIM.walk, idle: ANIM.idle, cast: ANIM.cast,
-      death: ANIM.death, spawn: ANIM.spawn,
+      walk: 'walk', idle: 'idle', cast: 'cast',
+      death: 'death', spawn: 'spawn',
     },
   },
 
   hierarch: {
-    name: '霜牢主祭',
-    file: 'assets/monsters/skeleton-mage.glb',
-    sourceHeight: 1.20,    // 实测记录见 hexer 处（并排截图比对，勿用自动量法）
-    height: 1.52,          // 最高的一只：戴骨冠、披着气场，一眼就能认出来
+    name: '孢冠菌王',
+    file: 'assets/monsters/mushroom-king.glb',
+    sourceHeight: 3.527,   // 实测（含菌盖）
+    height: 1.62,          // 最高的一只：一顶菌盖就是它的王冠
     radius: 0.52,
     hp: 5,                 // 血最厚（第 20 回合 24 血，得专门冲一趟）
     armor: 0,
@@ -280,50 +349,51 @@ export const ENEMY_TYPES = {
     windup: 1.2,
     attackDuration: 2.4,
     castTime: 1.2,         // 有它就说明「这个远程不画脚下范围环」
-    // 石刺：从主祭身前起，朝主角方向延伸 count 段、每段间隔 step，
+    // 石刺：从菌王身前起，朝主角方向延伸 count 段、每段间隔 step，
     // 每段 eruption 半径 radius，尽头钻出一只骷髅小兵
     spell: { kind: 'spikes', count: 6, step: 1.15, radius: 1.0, gap: 0.16, color: 0x9ee8ff },
     summon: { kind: 'warrior', count: 4, every: 9.0, first: 4.5, orbit: 1.45 },
-    // 霜牢环（第 28 块）：不再以主祭为中心 —— followPlayer 让环钉在主角脚下，
+    // 霜牢环（第 28 块）：不再以菌王为中心 —— followPlayer 让环钉在主角脚下，
     // 走到哪跟到哪；环里的怪吃加成且泛青光。环小了（4.6 → 2.6），压的是站位。
     aura: { radius: 2.6, haste: 0.35, armor: 0.25, followPlayer: true },
     spawnTime: 1.1,
     deathTime: 1.8,
     selfDestruct: false,
     color: 0x9ee8ff,
-    skin: { eye: 0x7ef0ff, hat: false, crown: true, staff: 'crystal', body: 0xbfe0f0 },
+    animFamily: 'humanoid',
+    glow: { color: 0x1d5f70, intensity: 0.7 },    // 霜气：菌盖底下透青
     anim: {
-      walk: ANIM.walk, idle: ANIM.idle, cast: ANIM.cast,
-      death: ANIM.death, spawn: ANIM.spawn,
+      walk: 'walk', idle: 'idle', cast: 'cast',
+      death: 'death', spawn: 'spawn',
     },
   },
   // ============================================================
-  // 第三关：焦土钟楼的三只怪（第 29 块）
+  // 第三关：焦土钟楼的三只怪（第 29 块；第 52 块换模型）
   //
   // 一二关已经把「密度」和「站位躲避」用掉了，三关必须换一种压力：
   //   **打断与目标优先级**。三只怪都带「放着不管就滚雪球」的性质，
   //   逼玩家在怪群里挑出该先处理的那一只 —— 这也是给新装备（震钟 / 棘甲 /
   //   震剑）留出的解法空间：它们全都围绕「打断 + 击退」。
   //
-  //   charger  骨骑冲锋兵 —— 机动压力。蓄力 0.85 秒（地上一道直线预警），
-  //                        然后沿直线冲 6.5 格；撞上就是 2 点伤害。侧移能躲，
-  //                        站桩必吃；撞完有 1.1 秒僵直，是输出窗口。
-  //   shielder 骸盾兵     —— 节奏压力。举盾 1.6 秒（减伤 70%、不移动）↔
-  //                        放盾 1.6 秒（正常受伤、加速追人）。要挑放盾窗口打。
-  //   brood    孵骨巫祝   —— 目标优先级压力。每 7 秒脚下孵 2 只小兵（上限 6 只），
-  //                        不点掉它，这一回合永远清不完。
+  //   charger  冲锋蛮牛 —— 机动压力。蓄力 0.85 秒（地上一道直线预警），
+  //                       然后沿直线冲 6.5 格；撞上就是 2 点伤害。侧移能躲，
+  //                       站桩必吃；撞完有 1.1 秒僵直，是输出窗口。
+  //   shielder 盾斧兽人 —— 节奏压力。举盾 1.6 秒（减伤 70%、不移动）↔
+  //                       放盾 1.6 秒（正常受伤、加速追人）。要挑窗口打。
+  //   brood    孢生菇   —— 目标优先级压力。每 7 秒脚下孵 2 只小兵（上限 6 只），
+  //                       不点掉它，这一回合永远清不完。
   //
-  // 外观依旧靠「模型重涂 + 程序化配件」区分（assets 铁律：不手写模型）：
-  //   charger  战士骨架放大 1.15、铁灰染色 → 看上去像披了铁片的重甲兵
-  //   shielder 战士骨架、骨白偏青 + 左手一面程序化骨盾（举盾时盾抬起并发光）
-  //   brood    法师骨架、暗绿眼、摘帽、提一盏骨篮（骨篮就是缩短的法杖）
+  // 第 52 块换模型（原来三只共用战士/法师骨架，只靠染铁灰和加骨盾区分）：
+  //   charger  → 黑牛（bull，Gallop + Attack_Headbutt，四足冲锋比人形更对味）
+  //   shielder → 兽人（orc，自带一把钉头骨棒，左手挂程序化骨盾）
+  //   brood    → 尖刺菌（mushnub-evolved，一团孢子，孵小兵变成"吐孢子"）
   // ============================================================
   charger: {
-    name: '骨骑冲锋兵',
-    file: 'assets/monsters/skeleton-warrior.glb',
-    sourceHeight: 1.15,    // warrior 实测身高（同一把尺）
-    height: 1.58,          // 放大一圈：一眼能认出「这只最壮」
-    radius: 0.58,
+    name: '冲锋蛮牛',
+    file: 'assets/monsters/bull.glb',
+    sourceHeight: 4.594,   // 实测（含犄角与尾巴）
+    height: 1.55,          // 四足但块头大：一眼能认出「这只最壮」
+    radius: 0.66,          // 牛身长，碰撞半径比人形宽
     hp: 4,
     armor: 0,
     speed: 1.05,           // 慢慢逼近，威胁全在冲锋那一下
@@ -348,18 +418,20 @@ export const ENEMY_TYPES = {
     color: 0xff8a6a,
     // ⚠️ 不设 ringColor：它 5.4 的「起手距离」画成范围环会把半个战场染红，
     // 玩家要看的预警是蓄力时地上那条直线（见 showChargeLine）。
-    tint: 0x9aa0a8,        // 战士骨架整体偏铁灰
+    animFamily: 'quad',
+    clipOverrides: { attack: 'Attack_Headbutt' },   // 低头顶人，正好是冲锋那一下
+    glow: { color: 0x3a1006, intensity: 0.9 },      // 黑牛在焦土场景里就是一团黑，给点余烬红描边
     anim: {
-      walk: ANIM.walk, idle: ANIM.idle, death: ANIM.death, spawn: ANIM.spawn,
-      attack: ANIM.punch,
+      walk: 'walk', idle: 'idle', death: 'death', spawn: 'spawn',
+      attack: 'attack',
     },
   },
 
   shielder: {
-    name: '骸盾兵',
-    file: 'assets/monsters/skeleton-warrior.glb',
-    sourceHeight: 1.15,
-    height: 1.44,
+    name: '盾斧兽人',
+    file: 'assets/monsters/orc.glb',
+    sourceHeight: 3.117,   // 实测
+    height: 1.46,
     radius: 0.55,
     hp: 5,                 // 比同期的战士厚一点，逼玩家挑窗口打
     armor: 0,
@@ -376,17 +448,18 @@ export const ENEMY_TYPES = {
     selfDestruct: false,
     color: 0xa9c8d8,
     ringColor: 0x8fbfd8,
-    tint: 0xb9c6cc,
+    animFamily: 'humanoid',
+    clipOverrides: { attack: 'Weapon' },   // 兽人自带钉头骨棒，挥棒比空手拳好看
     anim: {
-      walk: ANIM.walk, idle: ANIM.idle, death: ANIM.death, spawn: ANIM.spawn,
-      attack: ANIM.punch,
+      walk: 'walk', idle: 'idle', death: 'death', spawn: 'spawn',
+      attack: 'attack',
     },
   },
 
   brood: {
-    name: '孵骨巫祝',
-    file: 'assets/monsters/skeleton-mage.glb',
-    sourceHeight: 1.20,   // 实测记录见 hexer 处
+    name: '孢生菇',
+    file: 'assets/monsters/mushnub-evolved.glb',
+    sourceHeight: 4.457,   // 实测（含头顶一圈尖刺）
     height: 1.26,
     radius: 0.42,
     hp: 4,                 // 血不厚：设计上就是「你肯冲进去就能拆掉」
@@ -399,47 +472,50 @@ export const ENEMY_TYPES = {
     windup: 1.2,
     attackDuration: 1.9,
     castTime: 1.2,         // 有它就说明「这个远程不画脚下范围环」
-    // 召唤：在她脚下孵出小兵（cap 是「同一只 brood 名下的存活上限」）
+    // 召唤：在它脚下孵出小兵（cap 是「同一只 brood 名下的存活上限」）
     spell: { kind: 'brood', count: 2, cap: 6, radius: 1.25, color: 0x8ef07a },
     spawnTime: 1.0,
     deathTime: 1.6,
     selfDestruct: false,
     color: 0xaef08a,
-    skin: { eye: 0x8ef07a, hat: false, staff: 'brood', body: 0xcfe0b8 },
+    footY: -0.082,         // 实测：脚底略低于原点，按脚落地（不然会陷进土里）
+    animFamily: 'blob',
+    clipOverrides: { cast: 'Jump' },   // 团块家族没有读条，原地一蹦 = 喷孢子
+    glow: { color: 0x1d6b22, intensity: 0.6 },
     anim: {
-      walk: ANIM.walk, idle: ANIM.idle, cast: ANIM.cast,
-      death: ANIM.death, spawn: ANIM.spawn,
+      walk: 'walk', idle: 'idle', cast: 'cast',
+      death: 'death', spawn: 'spawn',
     },
   },
   // ============================================================
-  // 第四关：雾堤服务区的三只怪（第 35 块）
+  // 第四关：雾堤服务区的三只怪（第 35 块；第 52 块换模型）
   //
   // 三关已经把「打断与目标优先级」用掉了，四关换一种压力：
   //   **信息差与持续战**。浓雾里看不清、打不着、打不死：
-  //   wraith  雾魉     —— 信息差压力。周期隐身（隐身时无敌、打不着），
+  //   wraith  雾鬼     —— 信息差压力。周期隐身（隐身时无敌、打不着），
   //                       贴到玩家 1.2 内强制显形。逼玩家留一手范围技。
-  //   leaper  跃行尸   —— 空间压力。蓄力后跳向玩家**当时**的位置，
-  //                       落点红圈预警，落地小范围震荡。和骨骑的「直线」
+  //   leaper  雾猎狼   —— 空间压力。蓄力后跳向玩家**当时**的位置，
+  //                       落点红圈预警，落地小范围震荡。和蛮牛的「直线」
   //                       区分：它跳的是点，必须离开那个点。
-  //   mender  缝合师   —— 续航压力。周期给周围怪回血（对立于孵骨的加人），
+  //   mender  缝补小巫 —— 续航压力。周期给周围怪回血（对立于孢生菇的加人），
   //                       不先拆它，前面打的血全白打。逼切后排。
   //
-  // 外观依旧靠「模型重涂 + 程序化配件」区分（assets 铁律：不手写模型）：
-  //   wraith  投手骨架、青灰重涂 + 材质半透明呼吸（隐身时整体淡出）
-  //   leaper  投手骨架、尸绿重涂（跳起来的那一下最显眼）
-  //   mender  法师骨架、绿眼、摘帽、提一根骨针（缝合师的针）
+  // 第 52 块换模型（原来三只共用投手/法师骨架）：
+  //   wraith → 幽灵（ghost，天生半透明 + 脚离地 0.22，隐身淡出最自然）
+  //   leaper → 狼（wolf，四足扑咬，跳劈那一下最像野兽扑过来）
+  //   mender → 尖帽小巫（wizard，一顶绿尖帽的团块，奶人的小怪物）
   // ============================================================
   wraith: {
-    name: '雾魉',
-    file: 'assets/monsters/skeleton-rogue.glb',
-    sourceHeight: 1.10,    // 投手实测身高（同一把尺）
-    height: 1.30,
+    name: '雾鬼',
+    file: 'assets/monsters/ghost.glb',
+    sourceHeight: 3.145,   // 实测（含两只耳朵）
+    height: 1.34,
     radius: 0.42,
     hp: 2,
     armor: 0,
     speed: 1.45,
     damage: 1,
-    attackRange: 1.5,      // 近战；显形半径 1.7 比它大，隐身时永远够不着人
+    attackRange: 1.5,      // 近战；显形半径 1.2 比它小，隐身时永远够不着人
     attackInterval: 1.9,
     windup: 0.4,
     attackDuration: 0.75,
@@ -457,23 +533,25 @@ export const ENEMY_TYPES = {
     selfDestruct: false,
     color: 0x9fd8d0,
     ringColor: 0x9fd8d0,   // 脚下近战圈（隐身时圈也一起藏）
-    tint: 0xa8cfc9,        // 投手骨架整体偏青灰，像裹了层雾
+    footY: 0.219,          // 天生浮空
+    animFamily: 'flying',
+    glow: { color: 0x1c4c52, intensity: 1.0 },   // 雾里的青灰冷光：模型本身很黑，不发光看不见
     anim: {
-      walk: ANIM.walk, idle: ANIM.idle, death: ANIM.death, spawn: ANIM.spawn,
-      attack: ANIM.punch,
+      walk: 'walk', idle: 'idle', death: 'death', spawn: 'spawn',
+      attack: 'attack',
     },
   },
 
   leaper: {
-    name: '跃行尸',
-    file: 'assets/monsters/skeleton-rogue.glb',
-    sourceHeight: 1.10,
-    height: 1.36,
-    radius: 0.48,
+    name: '雾猎狼',
+    file: 'assets/monsters/wolf.glb',
+    sourceHeight: 2.707,   // 实测（站立时头顶高度）
+    height: 1.30,
+    radius: 0.54,          // 狼身长，碰撞半径宽一些
     hp: 3,
     armor: 0,
     speed: 1.30,
-    damage: 2,             // 落地震荡 2 点（和骨骑冲锋同档）
+    damage: 2,             // 落地震荡 2 点（和蛮牛冲锋同档）
     attackRange: 5.8,      // 进入这个距离开始蓄力起跳
     attackInterval: 4.2,
     windup: 0.8,           // 蓄力 = 落点红圈的显示时间（走位窗口）
@@ -492,24 +570,25 @@ export const ENEMY_TYPES = {
     selfDestruct: false,
     color: 0xc8d89a,
     // ⚠️ 不设 ringColor：起手距离画环会染半个战场，玩家要看的是落点红圈
-    tint: 0x9fae7a,        // 投手骨架偏尸绿
+    animFamily: 'quad',
+    glow: { color: 0x24414a, intensity: 0.5 },   // 一圈雾色描边，暗处不至于糊成一团
     anim: {
-      walk: ANIM.walk, idle: ANIM.idle, death: ANIM.death, spawn: ANIM.spawn,
-      attack: ANIM.punch,
+      walk: 'walk', idle: 'idle', death: 'death', spawn: 'spawn',
+      attack: 'attack',
     },
   },
 
   mender: {
-    name: '缝合师',
-    file: 'assets/monsters/skeleton-mage.glb',
-    sourceHeight: 1.20,   // 实测记录见 hexer 处
-    height: 1.30,
-    radius: 0.44,
+    name: '缝补小巫',
+    file: 'assets/monsters/wizard.glb',
+    sourceHeight: 2.625,   // 实测（含尖帽）
+    height: 1.12,          // 团块小怪，比其它怪矮一截
+    radius: 0.40,
     hp: 4,                 // 血不厚：设计上就是「肯冲进去就能拆掉」
     armor: 0,
     speed: 1.10,
     // 故意不写 damage：它一次都不伤人（图鉴会显示「从不还手」），
-    // 威胁全在那根骨针 —— 不拆它，前排的怪永远打不死。
+    // 威胁全在那顶帽子里 —— 不拆它，前排的怪永远打不死。
     attackRange: 7.0,
     keepDistance: 5.0,
     attackInterval: 4.8,
@@ -523,10 +602,12 @@ export const ENEMY_TYPES = {
     deathTime: 1.6,
     selfDestruct: false,
     color: 0x9ef0b8,
-    skin: { eye: 0x8ef0b8, hat: false, staff: 'mend', body: 0xbfe0c8 },
+    animFamily: 'blob',
+    clipOverrides: { cast: 'Jump' },   // 蹦一下 = 撒药
+    glow: { color: 0x1a6b48, intensity: 0.8 },
     anim: {
-      walk: ANIM.walk, idle: ANIM.idle, cast: ANIM.cast,
-      death: ANIM.death, spawn: ANIM.spawn,
+      walk: 'walk', idle: 'idle', cast: 'cast',
+      death: 'death', spawn: 'spawn',
     },
   },
 };
@@ -588,21 +669,19 @@ function attachBow(root, model) {
 }
 
 // ------------------------------------------------------------
-// 巫师的「三套装备」（程序化，不额外占下载体积）
+// 法杖（程序化，不额外占下载体积）
 //
-// 素材库只有一套 mage 骨架，三位巫师是靠这里做出「三个模型」的：
-//   帽子开关 + 眼睛发光色 + 手持法器 + 身高，四件事叠起来在游戏视角下足够分辨。
-// 法杖挂右手骨骼，朝向用和弓一样的「骨骼世界四元数 → 模型世界四元数」反解，
-// 所以不管 KayKit 的骨骼轴怎么摆，杖身都保持竖直。
-//
-// ⚠️ GLTFLoader 会把骨骼名里的 '.' 洗掉（handslot.r → handslotr），两个名字都要试。
+// ⚠️ 第 52 块换模型后**暂时没有怪在用**：新模型（Quaternius）自带武器/配件，
+// 而且骨架没有手骨。代码留着是因为它已经处理了「骨骼轴任意 → 杖身竖直」的反解，
+// 将来想让某只怪重新拿杖，只要在 cfg 里写 skin.staff = 'bone' 就能挂上。
+// 挂点顺序见 attachStaff：手骨 → 小臂（新模型只有到小臂）。
 // ------------------------------------------------------------
 const STAFF_STYLES = {
-  bone:    { rod: 0xcfc9b8, tip: 0xa96bff, len: 1.00, orb: 0.075 },   // 骨咒师：短骨杖 + 紫晶
-  torch:   { rod: 0x8a5a34, tip: 0xff7a2a, len: 0.82, orb: 0.062 },   // 火焚巫祝：短炬 + 橙火
-  crystal: { rod: 0xa9d8ee, tip: 0x7ef0ff, len: 1.42, orb: 0.085 },   // 霜牢主祭：长杖 + 青晶
-  brood:   { rod: 0x6b7a52, tip: 0x8ef07a, len: 0.66, orb: 0.055 },   // 孵骨巫祝：短骨篮 + 绿卵光（第 29 块）
-  mend:    { rod: 0xd8d2c0, tip: 0x8ef0b8, len: 0.74, orb: 0.045 },   // 缝合师：一根白骨针 + 针尖绿光（第 35 块）
+  bone:    { rod: 0xcfc9b8, tip: 0xa96bff, len: 1.00, orb: 0.075 },   // 咒面图腾：短骨杖 + 紫晶
+  torch:   { rod: 0x8a5a34, tip: 0xff7a2a, len: 0.82, orb: 0.062 },   // 焚火魔：短炬 + 橙火
+  crystal: { rod: 0xa9d8ee, tip: 0x7ef0ff, len: 1.42, orb: 0.085 },   // 孢冠菌王：长杖 + 青晶
+  brood:   { rod: 0x6b7a52, tip: 0x8ef07a, len: 0.66, orb: 0.055 },   // 孢生菇：短骨篮 + 绿卵光（第 29 块）
+  mend:    { rod: 0xd8d2c0, tip: 0x8ef0b8, len: 0.74, orb: 0.045 },   // 缝补小巫：一根白骨针 + 针尖绿光（第 35 块）
 };
 
 function makeStaff(kind) {
@@ -656,25 +735,32 @@ function makeStaff(kind) {
 }
 
 function attachStaff(root, model, kind) {
-  const slot = model.getObjectByName('handslot.r')
-    || model.getObjectByName('handslotr')
-    || model.getObjectByName('hand.r')
-    || model.getObjectByName('handr');
+  // 第 52 块：新模型没有手骨（Quaternius 的骨架只到 LowerArm），
+  // findBone 逐个试、找不到手就挂小臂，实在没有就不挂（返回 null，不报错）。
+  const slot = findBone(model, [
+    'handslot.r', 'handslotr', 'hand.r', 'handr',
+    'lowerarm.r', 'forearm.r', 'upperarm.r',
+  ]);
   if (!slot) return null;
   const staff = makeStaff(kind);
   model.updateMatrixWorld(true);
+  slot.updateWorldMatrix(true, false);   // 同上：祖先链也要强制更新（骨骼可能带巨大缩放）
   const qb = new THREE.Quaternion();
   const qr = new THREE.Quaternion();
   slot.getWorldQuaternion(qb);
   root.getWorldQuaternion(qr);
   staff.quaternion.copy(qb.invert().multiply(qr));
-  staff.position.set(0, -0.03, 0);
+  // 杖身几何是按「骨骼缩放 ≈ 1」做的（长 1.0 世界单位），骨骼带 ×100 时按 1/ws 缩回来
+  const ws = new THREE.Vector3();
+  slot.getWorldScale(ws);
+  staff.scale.setScalar(ws.x > 1e-6 ? 1 / ws.x : 1);
+  staff.position.set(0, 0, 0);
   slot.add(staff);
   return staff;
 }
 
 // ------------------------------------------------------------
-// 骸盾兵的骨盾（第 29 块，程序化）
+// 盾斧兽人的骨盾（第 29 块，程序化）
 // 挂在左手骨骼上；举盾时盾牌抬到胸前并发青光，放盾时垂下。
 // 材质一起进 mats，受击闪白时盾也闪（不然会出现「人白盾不白」的割裂感）。
 // ------------------------------------------------------------
@@ -706,20 +792,35 @@ function makeShield() {
   return g;
 }
 
-function attachShield(root, model) {
-  const slot = model.getObjectByName('handslot.l')
-    || model.getObjectByName('handslotl')
-    || model.getObjectByName('hand.l')
-    || model.getObjectByName('handl');
+function attachShield(root, model, worldRadius = 0.34) {
+  // 同上：新模型没有手骨，退到小臂（兽人的盾就是挂在小臂上的）
+  const slot = findBone(model, [
+    'handslot.l', 'handslotl', 'hand.l', 'handl',
+    'lowerarm.l', 'forearm.l', 'upperarm.l',
+  ]);
   if (!slot) return null;
   const shield = makeShield();
   model.updateMatrixWorld(true);
+  // ⚠️ 必须强制把祖先链也更新一遍（updateWorldMatrix(true, false)）：
+  // 兽人的 CharacterArmature 自带 ×100 缩放，只更新 model 子树时骨骼矩阵还是旧值，
+  // 于是下面量到的世界缩放是 1.29 而不是 47 —— 盾牌当场被放大四十倍糊满屏幕。
+  slot.updateWorldMatrix(true, false);
   const qb = new THREE.Quaternion();
   const qr = new THREE.Quaternion();
   slot.getWorldQuaternion(qb);
   root.getWorldQuaternion(qr);
   shield.quaternion.copy(qb.invert().multiply(qr));
-  shield.position.set(0.04, 0.06, 0.02);
+  // 第 52 块：挂件尺寸按「世界半径」反推 —— 骨骼可能自带巨大缩放，
+  // 直接塞局部尺寸会变成一面城墙。盾牌几何半径 0.34，k = 世界半径 / (0.34 × 骨骼世界缩放)。
+  const ws = new THREE.Vector3();
+  slot.getWorldScale(ws);
+  const k = ws.x > 1e-6 ? worldRadius / (0.34 * ws.x) : 1;
+  shield.scale.setScalar(k);
+  shield.position.set(0.04 / ws.x, 0.06 / ws.x, 0.02 / ws.x);
+  // 举盾动画要用的基准（见「盾斧兽人：举盾 ↔ 放盾」那段）：记 k 与骨骼缩放，
+  // 动画里只按比例乘，绝不再写死局部坐标（旧写法 0.17 在 ×47 的骨骼下等于 8 格）。
+  shield.userData.k = k;
+  shield.userData.ws = ws.x;
   slot.add(shield);
   return shield;
 }
@@ -746,7 +847,7 @@ function applyWizardSkin(model, skin) {
 
   // 骨冠：主祭专属。挂在 head 骨骼上，跟着动画一起动。
   if (skin.crown) {
-    const head = model.getObjectByName('head');
+    const head = findBone(model, ['head']);   // KayKit 是 head，Quaternius 是 Head
     if (head) {
       const crownMat = new THREE.MeshStandardMaterial({
         color: 0xd8f6ff, emissive: 0x1f5a70, emissiveIntensity: 0.9,
@@ -782,7 +883,10 @@ export async function buildPreviewModel(type) {
     previewGltf.set(cfg.file, gltf);
   }
   const model = cloneSkinned(gltf.scene);
-  model.scale.setScalar(cfg.height / cfg.sourceHeight);
+  const s = cfg.height / cfg.sourceHeight;
+  model.scale.setScalar(s);
+  // 脚底对齐（同 spawn）：实测脚底在原点以下的模型要往上抬一点，不然缩略图会「陷」进影子
+  if (cfg.footY != null && cfg.footY < 0) model.position.y = -cfg.footY * s;
   model.traverse((o) => {
     if (!o.isMesh) return;
     o.castShadow = false;
@@ -797,7 +901,17 @@ export async function buildPreviewModel(type) {
       if (o.isMesh && o.material && o.material.color) o.material.color.copy(tc);
     });
   }
-  // 雾魉：局内是「半透明 + 隐身淡出」，缩略图给个 0.75 让它在图鉴里也像一缕雾
+  // 自带微光（雾鬼 / 焚火魔这类深色或半透明模型，不给一点自发光在暗场景里看不见）
+  if (cfg.glow) {
+    const gc = new THREE.Color(cfg.glow.color ?? 0xffffff);
+    model.traverse((o) => {
+      if (o.isMesh && o.material && o.material.emissive) {
+        o.material.emissive.copy(gc);
+        o.material.emissiveIntensity = cfg.glow.intensity ?? 0.6;
+      }
+    });
+  }
+  // 雾鬼：局内是「半透明 + 隐身淡出」，缩略图给个 0.75 让它在图鉴里也像一缕雾
   if (cfg.ghost) {
     model.traverse((o) => {
       if (!o.isMesh || !o.material) return;
@@ -805,8 +919,16 @@ export async function buildPreviewModel(type) {
       o.material.opacity = 0.75;
     });
   }
-  // 绑定姿态是张牙舞爪的 T pose，不能直接用 —— 先推进 Idle 半拍再定格
-  const clip = gltf.animations.find((c) => c.name === ANIM.idle) || gltf.animations[0];
+  // 配件（第 52 块）：盾 / 弓 / 法杖也挂上 —— 图鉴里盾斧兽人没盾就说不通了。
+  // 这里 model 既是 root 也是模型（预览模型的旋转是 0，和局内一致的挂法）。
+  if (cfg.shield) attachShield(model, model, cfg.height * 0.26);
+  if (cfg.volley) attachBow(model, model);
+  if (cfg.skin && cfg.skin.staff) attachStaff(model, model, cfg.skin.staff);
+  // 绑定姿态是张牙舞爪的 T pose，不能直接用 —— 先推进 Idle 半拍再定格。
+  // 第 52 块：新模型的 idle 叫 Flying_Idle / 带 CharacterArmature| 前缀，走别名表解析。
+  const aliases = resolveClipAliases(gltf, cfg);
+  const idleName = aliases.idle || ANIM.idle;
+  const clip = gltf.animations.find((c) => c.name === idleName) || gltf.animations[0];
   if (clip) {
     const mixer = new THREE.AnimationMixer(model);
     mixer.clipAction(clip).play();
@@ -885,8 +1007,8 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
   async function loadType(type) {
     if (assets.has(type)) return assets.get(type);
     const cfg = ENEMY_TYPES[type];
-    // 同一个 glb 只解析一次：三位巫师共用 mage 骨架，
-    // 不共用就会出现「一份模型在内存里存三份、动画也建三套」。
+    // 同一个 glb 只解析一次（同文件的怪共用一份模型与动画）。
+    // 第 52 块换模型后 13 只怪已经各用各的文件，这条只对「以后又复用」的怪有用。
     for (const [k, v] of assets) {
       if (ENEMY_TYPES[k] && ENEMY_TYPES[k].file === cfg.file) {
         assets.set(type, v);
@@ -898,7 +1020,8 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
     const clips = {};
     for (const c of gltf.animations) clips[c.name] = c;
 
-    const data = { scene: gltf.scene, clips };
+    // 语义键（idle/walk/attack…）→ 真实 clip 名，见 CLIP_FAMILIES
+    const data = { scene: gltf.scene, clips, aliases: resolveClipAliases(gltf, cfg) };
     assets.set(type, data);
     return data;
   }
@@ -923,7 +1046,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
       return null;
     }
 
-    // 数值兜底：霜牢主祭这类「不出手」的怪没有 damage 字段，
+    // 数值兜底：孢冠菌王这类「不出手」的怪没有 damage 字段，
     // 直接乘会得到 NaN（Math.max(1, NaN) 依然是 NaN），存档/面板都可能带出脏值。
     const hpBase = Number.isFinite(cfg.hp) ? cfg.hp : 1;
     const dmgBase = Number.isFinite(cfg.damage) ? cfg.damage : 0;
@@ -945,6 +1068,9 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
     const s = cfg.height / cfg.sourceHeight;
     model.scale.setScalar(s);
     model.rotation.y = ENEMY_MODEL_YAW;
+    // 脚底对齐（第 52 块）：新模型的脚底不完全在原点（实测 -0.08 ~ +0.49），
+    // 负的要抬起来（不然半个身子陷进土里），正的是天生浮空（雾鬼/焚火魔），照原样飘。
+    if (cfg.footY != null && cfg.footY < 0) model.position.y = -cfg.footY * s;
 
     const mats = [];
     model.traverse((o) => {
@@ -965,7 +1091,17 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
         if (o.isMesh && o.material && o.material.color) o.material.color.copy(tc);
       });
     }
-    // 雾魉（第 35 块）：整套材质转半透明，隐身时靠 opacity 淡出。
+    // 自带微光（第 52 块）：雾鬼/焚火魔这类深色模型在暗场景里就是一团黑，
+    // 给点自发光才看得见。受击闪白后 baseEmissive 会把这个颜色还回来。
+    if (cfg.glow) {
+      const gc = new THREE.Color(cfg.glow.color ?? 0xffffff);
+      for (const m of mats) {
+        if (!m.emissive) continue;
+        m.emissive.copy(gc);
+        m.emissiveIntensity = cfg.glow.intensity ?? 0.6;
+      }
+    }
+    // 雾鬼（第 35 块）：整套材质转半透明，隐身时靠 opacity 淡出。
     // 必须在 clone 之后做 —— 材质已经是独立的，改这里不影响别的怪。
     if (cfg.ghost) {
       for (const m of mats) {
@@ -1019,6 +1155,11 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
     const actions = {};
     for (const [name, clip] of Object.entries(src.clips)) {
       actions[name] = mixer.clipAction(clip);
+    }
+    // 语义键别名（第 52 块）：新模型的 cfg.anim 写的是 'idle'/'walk'/'attack'，
+    // 这里把它们指向真实 clip 的动作实例。同一个 action 挂两个键是安全的。
+    for (const [key, real] of Object.entries(src.aliases || {})) {
+      if (actions[real]) actions[key] = actions[real];
     }
 
     let current = null;
@@ -1074,16 +1215,16 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
       baseEmissive: mats.map((m) => (m.emissive ? m.emissive.clone() : null)),
       currentAnim: '',
       // ---- 第三关（第 29 块）----
-      shieldUp: false,                                    // 骸盾兵此刻举没举盾
+      shieldUp: false,                                    // 盾斧兽人此刻举没举盾
       shieldT: cfg.shield ? cfg.shield.firstUp : 0,        // 距离下次翻转盾的时间
       chargeDirX: 0, chargeDirZ: 0,                        // 骨骑冲锋锁定的方向
       chargeLine: null,                                    // 蓄力预警线（网格，按需创建）
       chargeDone: false, chargeHitDone: false,
       summonedBy: null,                                    // 孵出来的小兵记着「谁生的」
       // ---- 第四关（第 35 块）----
-      ghostHidden: false,                                  // 雾魉此刻隐没没隐身
+      ghostHidden: false,                                  // 雾鬼此刻隐没没隐身
       ghostT: cfg.ghost ? cfg.ghost.firstHidden : 0,        // 距离下次隐身/显形翻转的时间
-      leapRing: null,                                      // 跃行尸的落点红圈（按需创建）
+      leapRing: null,                                      // 雾猎狼的落点红圈（按需创建）
       leapFromX: 0, leapFromZ: 0, leapToX: 0, leapToZ: 0,   // 起跳点 / 锁定的落点
       leapHitDone: false,
     };
@@ -1111,9 +1252,10 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
       }
     }
 
-    // 骸盾兵：左手一面骨盾（第 29 块）。材质同样进 mats，受击时盾一起闪白。
+    // 盾斧兽人：左手一面骨盾（第 29 块）。材质同样进 mats，受击时盾一起闪白。
+    // 第 52 块：盾的世界半径跟身高走（0.30×身高），骨架缩放再大也不会变形。
     if (cfg.shield) {
-      const sh = attachShield(root, model);
+      const sh = attachShield(root, model, cfg.height * 0.30);
       if (sh) {
         e.shieldMesh = sh;
         e.mats.push(...sh.userData.mats);
@@ -1137,12 +1279,12 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
   //   quiet 只扣血不播命中碎屑（连锁闪电等批量伤害用）
   function takeDamage(e, amount, crit = false, opts = {}) {
     if (e.state === 'dead' || e.state === 'spawn') return false;
-    // 雾魉隐身（第 35 块）：无形之物不受击 —— 近战、剑、炮台、法器全部打空。
+    // 雾鬼隐身（第 35 块）：无形之物不受击 —— 近战、剑、炮台、法器全部打空。
     // 想打它只有两条路：等它显形，或者贴脸逼它显形。
     if (e.ghostHidden) return false;
     // 减伤有两个来源，乘法叠加：
     //   auraArmor —— 主祭霜牢环（第 28 块）
-    //   shieldUp  —— 骸盾兵举盾（第 29 块，举盾时减伤 70%）
+    //   shieldUp  —— 盾斧兽人举盾（第 29 块，举盾时减伤 70%）
     const red = Math.min(0.95, (e.auraArmor || 0) + (e.shieldUp && e.cfg.shield ? e.cfg.shield.reduce : 0));
     const dealt = red > 0 ? amount * (1 - red) : amount;
     e.hp -= dealt;
@@ -1179,7 +1321,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
     // 跟随玩家的霜牢环：主祭一倒环就消（不挂在它身上，得手动收）
     if (e.auraRing && e.cfg.aura && e.cfg.aura.followPlayer) e.auraRing.mesh.visible = false;
     hideChargeLine(e);   // 骨骑死在蓄力里：预警线立刻收掉（第 29 块）
-    hideLeapRing(e);     // 跃行尸死在蓄力里：落点红圈立刻收掉（第 35 块）
+    hideLeapRing(e);     // 雾猎狼死在蓄力里：落点红圈立刻收掉（第 35 块）
     if (e.cfg.leap) e.root.position.y = 0;   // 滞空时被打死：尸体落回地面
     if (fx) fx.death(e.pos, e.cfg.color);
     if (onDeath) onDeath(e);
@@ -1234,7 +1376,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
     e.chargeLine = null;
   }
 
-  // ---------------- 跃行尸的落点红圈（第 35 块） ----------------
+  // ---------------- 雾猎狼的落点红圈（第 35 块） ----------------
   // 蓄力时钉在「玩家当时站的位置」：红圈 + 一层淡红填充，跟弓手的红圈一个语言。
   // 落点在起手那一刻就锁死 —— 红圈出现 → 走出去，就是这么直白的应对。
   const leapRingGeo = new THREE.RingGeometry(0.9, 1, 48).rotateX(-Math.PI / 2);
@@ -1279,7 +1421,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
     e.leapRing = null;
   }
 
-  // ---------------- 雾魉的隐身 / 显形（第 35 块） ----------------
+  // ---------------- 雾鬼的隐身 / 显形（第 35 块） ----------------
   // 隐身 = 无敌 + 不可索敌 + 外观淡出（材质透明度过渡到 ghostOpacity）。
   // 显形的三条路：等循环翻转、贴脸（revealDist）、（将来）特定装备强制显形。
   function hideGhost(e) {
@@ -1399,7 +1541,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
   //   rim   圈边亮环（呼吸）
   //   tick  里面的细环从大缩到小 —— 缩到底就是箭落地
   // ============================================================
-  const zones = [];      // 正在倒计时的地面圈（弓手红圈 / 骨咒师紫阵 / 火焚灼地）
+  const zones = [];      // 正在倒计时的地面圈（弓手红圈 / 咒面图腾紫阵 / 火焚灼地）
   const arrows = [];     // 正在下落的箭（纯视觉；伤害在落地那一刻结算）
   let zoneGeo = null, zoneRimGeo = null, zoneTickGeo = null;
   let arrowGeo = null, arrowMat = null;
@@ -1495,11 +1637,11 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
   // 两者都是「圈先出现 1~1.5 秒，再落地」，区别是落地之后还留不留在场上。
   function spawnSpell(e, ctx) {
     const sp = e.cfg.spell;
-    // 第 28 块：霜牢主祭的石刺 —— 不走「圈」系统，是一串沿线爆发的地刺
+    // 第 28 块：孢冠菌王的石刺 —— 不走「圈」系统，是一串沿线爆发的地刺
     if (sp.kind === 'spikes') { spawnSpikes(e, ctx); return; }
-    // 第 29 块：孵骨巫祝 —— 在脚下孵小兵（同一只名下存活上限 cap，否则会无限滚雪球）
+    // 第 29 块：孢生菇 —— 在脚下孵小兵（同一只名下存活上限 cap，否则会无限滚雪球）
     if (sp.kind === 'brood') { spawnBroodlings(e); return; }
-    // 第 35 块：缝合师 —— 给周围怪回血（不走「圈」系统，作用对象是怪不是地）
+    // 第 35 块：缝补小巫 —— 给周围怪回血（不走「圈」系统，作用对象是怪不是地）
     if (sp.kind === 'mend') { mendWounds(e); return; }
     makeZone(sp.kind, e, ctx, sp.radius, {
       color: sp.color,
@@ -1512,7 +1654,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
   }
 
   // ============================================================
-  // 孵骨巫祝 · 孵小兵（第 29 块）
+  // 孢生菇 · 孵小兵（第 29 块）
   // 每读一次条孵 count 只，但「她名下存活的」不超过 cap —— 想让她停手
   // 只有一条路：把她本人打掉。孵出来的小兵带 `summonedBy` 便于计数。
   // ============================================================
@@ -1541,10 +1683,10 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
   }
 
   // ============================================================
-  // 缝合师 · 回血（第 35 块）
+  // 缝补小巫 · 回血（第 35 块）
   // 每读一次条，给半径内所有**掉血的**怪回 heal × 本局伤害成长
   // （满血的怪不浪费，血条即时刷新）。对立于孵骨的「加人」：
-  //   孵骨逼你比谁清得快，缝合师逼你比谁拆得快 —— 不先拆它，血全白打。
+  //   孵骨逼你比谁清得快，缝补小巫逼你比谁拆得快 —— 不先拆它，血全白打。
   // 奶量随回合成长（跟着生成时的 damageScale 走），后期一口奶小半管。
   // ============================================================
   function mendWounds(e) {
@@ -1574,7 +1716,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
   }
 
   // ============================================================
-  // 霜牢主祭 · 石刺（第 28 块）
+  // 孢冠菌王 · 石刺（第 28 块）
   // 朝主角方向放一串石头刺：从主祭身前 1.4 格起，每隔 step 爆一段，
   // 共 count 段（延伸范围有限）；每段落地时玩家在半径内就吃一刀，
   // 最后一段的尽头钻出一只骷髅小兵 —— 把「躲技能」变成「清小兵」的连锁。
@@ -1916,7 +2058,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
       e.root.rotation.y = lerpAngle(e.root.rotation.y, Math.atan2(dx, dz), 1 - Math.exp(-9 * dt));
     }
 
-    // ---- 雾魉：隐身 / 显形循环（第 35 块）----
+    // ---- 雾鬼：隐身 / 显形循环（第 35 块）----
     // 隐身时无敌且不可索敌；贴到玩家脸上强制显形（这是玩家的主动解法）。
     // 材质透明度逐帧过渡，隐身不是「啪一下消失」而是慢慢淡进雾里。
     if (e.cfg.ghost && e.state !== 'dead' && e.state !== 'spawn') {
@@ -1934,7 +2076,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
       }
     }
 
-    // ---- 骸盾兵：举盾 ↔ 放盾 循环（第 29 块）----
+    // ---- 盾斧兽人：举盾 ↔ 放盾 循环（第 29 块）----
     // 举盾 1.6 秒（减伤 70%、不移动、不打人）↔ 放盾 1.6 秒（正常挨打、追人）。
     // 出手（attack）期间不翻转 —— 打到一半突然举盾会显得很假。
     if (e.cfg.shield) {
@@ -1944,8 +2086,11 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
           e.shieldUp = !e.shieldUp;
           e.shieldT = e.shieldUp ? e.cfg.shield.up : e.cfg.shield.down;
           if (e.shieldMesh) {
-            e.shieldMesh.position.y = e.shieldUp ? 0.17 : 0.02;
-            e.shieldMesh.scale.setScalar(e.shieldUp ? 1.12 : 1);
+            // 第 52 块：只按比例缩放，不写死局部坐标 —— 骨骼世界缩放可能是 47，
+            // 旧写法 position.y = 0.17 会让盾牌飞出八个身位（换模型当天就踩了）。
+            const sh = e.shieldMesh;
+            const k = sh.userData.k || 1;
+            sh.scale.setScalar(k * (e.shieldUp ? 1.12 : 1));
           }
           if (fx) {
             fx.ring(e.pos, {
@@ -1982,11 +2127,11 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
       }
     }
 
-    // ---- 跃行尸（第四关，第 35 块）----
+    // ---- 雾猎狼（第四关，第 35 块）----
     // 四种状态：attack（蓄力，落点红圈钉在玩家**当时**的位置）
     //           → jump（抛物线跳过去，滞空期间不可打断）
     //           → recover（落地僵直，就是输出窗口）→ chase
-    // 和骨骑的区别：骨骑冲一条线（侧移躲），跃行尸跳一个点（必须离开那个点）。
+    // 和骨骑的区别：骨骑冲一条线（侧移躲），雾猎狼跳一个点（必须离开那个点）。
     if (e.cfg.leap) {
       const lp = e.cfg.leap;
 
@@ -2085,7 +2230,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
       return;
     }
 
-    // ---- 骨骑冲锋兵（第三关，第 29 块）----
+    // ---- 冲锋蛮牛（第三关，第 29 块）----
     // 三种状态：attack（蓄力，地上画直线）→ dash（直线推进，撞人一次）→ recover（僵直）。
     // 侧移就能躲开：方向在蓄力开始那一刻锁定，冲到一半不会拐弯。
     if (e.cfg.charge) {
@@ -2397,7 +2542,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
 
     // ---- 战士：近战攻击循环 ----
     if (e.type === 'warrior' || e.cfg.attackRange != null) {
-      // 骸盾兵举盾时原地不动、也不打人（第 29 块）—— 这是玩家的输出窗口，
+      // 盾斧兽人举盾时原地不动、也不打人（第 29 块）—— 这是玩家的输出窗口，
       // 盾一举起来就打它只是浪费输出（减伤 70%）。
       if (e.cfg.shield && e.shieldUp && e.state !== 'attack') {
         if (e.currentAnim !== e.cfg.anim.idle) {
@@ -2426,7 +2571,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
 
       e.attackCd -= dt;
       if (dist <= e.cfg.attackRange + 0.15 && e.attackCd <= 0) {
-        // 雾魉要出手就必须露脸（第 35 块）：隐身的不可能打人
+        // 雾鬼要出手就必须露脸（第 35 块）：隐身的不可能打人
         if (e.cfg.ghost && e.ghostHidden) revealGhost(e);
         e.state = 'attack';
         e.t = 0;

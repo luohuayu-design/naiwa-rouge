@@ -90,15 +90,15 @@ export const LEVEL_1 = {
 //
 // 和一关的区别不是「数值更高」，而是**压力的形状变了**：
 //   一关是密度逐渐堆高，玩家靠走位 + 输出就能推过去；
-//   二关场上永远站着几种「不打就难受」的巫师，逼玩家判断该先切谁。
+//   二关场上永远站着几种「不打就难受」的施法怪，逼玩家判断该先切谁。
 //
-// 三位巫师各带一件事（enemy.js 里一人一个技能，绝不叠在同一个人身上）：
-//   骨咒师 hexer   —— 读条在你脚下钉紫阵，落地掉血 + 减速。躲得掉，但连发就烦。
-//   火焚巫祝 pyro  —— 读条留一片灼地，站上去持续掉血 4 秒。不许站桩。
-//   霜牢主祭 hierarch —— 霜牢环钉在玩家脚下跟着走，环里的怪加攻速 & 减伤泛青光；
+// 三个施法怪各带一件事（enemy.js 里一人一个技能，绝不叠在同一个人身上）：
+//   咒面图腾 hexer —— 读条在你脚下钉紫阵，落地掉血 + 减速。躲得掉，但连发就烦。
+//   焚火魔 pyro    —— 读条留一片灼地，站上去持续掉血 4 秒。不许站桩。
+//   孢冠菌王 hierarch —— 霜牢环钉在玩家脚下跟着走，环里的怪加攻速 & 减伤泛青光；
 //                        自己还会放石刺、召卫队。血最厚，站最后排，优先点掉。
 //
-// 登场节奏：R6 骨咒师 → R10 火焚 → R13 霜牢。每次只放一位新面孔，
+// 登场节奏：R6 图腾 → R10 焚火魔 → R13 菌王。每次只放一位新面孔，
 // 玩家有四五回合去适应，再混编。第 16~20 回合三种同时在场的「骨塔议会」
 // 是这一关的毕业考。
 //
@@ -131,21 +131,21 @@ export const LEVEL_2 = {
     { minion: 4,  warrior: 1, archer: 1, bowman: 0, hexer: 0, pyro: 0, hierarch: 0, gap: 0.80, tip: '一上来就有投手了，横着走躲骨刀' },
     { minion: 5,  warrior: 2, archer: 1, bowman: 0, hexer: 0, pyro: 0, hierarch: 0, gap: 0.75, tip: '这一波之后，你会有新武器' },
     { minion: 5,  warrior: 2, archer: 1, bowman: 0, hexer: 0, pyro: 0, hierarch: 0, gap: 0.70, tip: '院子深处有灯亮着 —— 有人在等你' },
-    // ---- 第二幕（R6~R10）：三位巫师依次登场 ----
-    { minion: 6,  warrior: 2, archer: 1, bowman: 0, hexer: 1, pyro: 0, hierarch: 0, gap: 0.65, tip: '戴尖帽的那个在念咒：脚下出紫圈就赶紧走' },
+    // ---- 第二幕（R6~R10）：三个新面孔依次登场 ----
+    { minion: 6,  warrior: 2, archer: 1, bowman: 0, hexer: 1, pyro: 0, hierarch: 0, gap: 0.65, tip: '那个面具图腾在念咒：脚下出紫圈就赶紧走' },
     { minion: 6,  warrior: 2, archer: 2, bowman: 0, hexer: 1, pyro: 0, hierarch: 0, gap: 0.60, tip: '被它的咒打中会走不动路，别硬吃' },
-    { minion: 6,  warrior: 2, archer: 2, bowman: 1, hexer: 1, pyro: 0, hierarch: 0, gap: 0.58, tip: '骨咒师血厚，值得专门冲一趟' },
-    { minion: 7,  warrior: 3, archer: 2, bowman: 1, hexer: 1, pyro: 0, hierarch: 0, gap: 0.55, tip: '两只骨咒师了，紫圈会叠' },
-    { minion: 7,  warrior: 3, archer: 2, bowman: 1, hexer: 2, pyro: 1, hierarch: 0, gap: 0.55, tip: '新面孔：橙眼的会在地上留火，别站着不动' },
-    // ---- 第三幕（R11~R15）：混编加压，霜牢主祭登场 ----
+    { minion: 6,  warrior: 2, archer: 2, bowman: 1, hexer: 1, pyro: 0, hierarch: 0, gap: 0.58, tip: '咒面图腾血厚，值得专门冲一趟' },
+    { minion: 7,  warrior: 3, archer: 2, bowman: 1, hexer: 1, pyro: 0, hierarch: 0, gap: 0.55, tip: '两只图腾了，紫圈会叠' },
+    { minion: 7,  warrior: 3, archer: 2, bowman: 1, hexer: 2, pyro: 1, hierarch: 0, gap: 0.55, tip: '新面孔：那只蝙蝠会在你脚下留火，别站着不动' },
+    // ---- 第三幕（R11~R15）：混编加压，孢冠菌王登场 ----
     { minion: 7,  warrior: 3, archer: 2, bowman: 1, hexer: 2, pyro: 1, hierarch: 0, gap: 0.50, tip: '火是留在地上的，踩上去一直掉血' },
     { minion: 7,  warrior: 3, archer: 2, bowman: 2, hexer: 2, pyro: 1, hierarch: 0, gap: 0.50, tip: '紫圈、火地、红圈，三样一起来' },
-    { minion: 8,  warrior: 4, archer: 3, bowman: 2, hexer: 2, pyro: 1, hierarch: 1, gap: 0.48, tip: '后排戴骨冠的那个：脚下青圈里的怪会变凶，它自己还会放石刺' },
-    { minion: 8,  warrior: 4, archer: 3, bowman: 2, hexer: 2, pyro: 2, hierarch: 1, gap: 0.46, tip: '先砍主祭 —— 它一死，跟着它的卫队也会散架' },
-    { minion: 8,  warrior: 4, archer: 3, bowman: 2, hexer: 2, pyro: 2, hierarch: 1, gap: 0.45, tip: '别站在青圈里打，石刺是从主祭那边吐过来的' },
-    // ---- 第四幕（R16~R20）：骨塔议会。三种巫师同场 ----
+    { minion: 8,  warrior: 4, archer: 3, bowman: 2, hexer: 2, pyro: 1, hierarch: 1, gap: 0.48, tip: '后排那顶菌盖：脚下青圈里的怪会变凶，它自己还会放石刺' },
+    { minion: 8,  warrior: 4, archer: 3, bowman: 2, hexer: 2, pyro: 2, hierarch: 1, gap: 0.46, tip: '先砍菌王 —— 它一死，跟着它的卫队也会散架' },
+    { minion: 8,  warrior: 4, archer: 3, bowman: 2, hexer: 2, pyro: 2, hierarch: 1, gap: 0.45, tip: '别站在青圈里打，石刺是从菌王那边吐过来的' },
+    // ---- 第四幕（R16~R20）：骨塔议会。三个 Boss 同场 ----
     { minion: 8,  warrior: 4, archer: 3, bowman: 2, hexer: 3, pyro: 2, hierarch: 1, gap: 0.45, tip: '第 16 回合：骨塔议会开始点名' },
-    { minion: 9,  warrior: 5, archer: 3, bowman: 2, hexer: 3, pyro: 2, hierarch: 2, gap: 0.42, tip: '两个主祭 = 两圈青光，先点掉一个，卫队会跟着散' },
+    { minion: 9,  warrior: 5, archer: 3, bowman: 2, hexer: 3, pyro: 2, hierarch: 2, gap: 0.42, tip: '两个菌王 = 两圈青光，先点掉一个，卫队会跟着散' },
     { minion: 9,  warrior: 5, archer: 4, bowman: 3, hexer: 3, pyro: 2, hierarch: 2, gap: 0.40, tip: '别贪输出，脚下先留一条退路' },
     { minion: 9,  warrior: 5, archer: 4, bowman: 3, hexer: 3, pyro: 2, hierarch: 2, gap: 0.40, tip: '还差两回合，撑住' },
     { minion: 9,  warrior: 5, archer: 4, bowman: 3, hexer: 3, pyro: 2, hierarch: 2, gap: 0.38, tip: '最后一波：把塔里的人全拍碎' },
@@ -158,15 +158,15 @@ export const LEVEL_2 = {
 // 一关考「密度」，二关考「站位与技能躲避」，三关换成**打断与目标优先级**：
 // 场上永远有一只「放着不管就滚雪球」的怪，玩家得在怪堆里挑目标。
 //
-// 三只新怪（enemy.js 一人一套行为）：
-//   charger  骨骑冲锋兵 —— 蓄力 0.85 秒（地上画直线）→ 直线冲 6.5 格，撞上 2 伤，
+// 三只新怪（enemy.js 一人一套行为；第 52 块换成牛/兽人/菇）：
+//   charger  冲锋蛮牛 —— 蓄力 0.85 秒（地上画直线）→ 直线冲 6.5 格，撞上 2 伤，
 //                          撞完僵直 1.1 秒。**必须横向侧移**，这是三关唯一的硬走位要求。
-//   shielder 骸盾兵     —— 举盾 1.6 秒（减伤 70%、不动）↔ 放盾 1.6 秒（正常挨打）。
+//   shielder 盾斧兽人 —— 举盾 1.6 秒（减伤 70%、不动）↔ 放盾 1.6 秒（正常挨打）。
 //                          输出窗口是自己给的，急着打只会浪费伤害。
-//   brood    孵骨巫祝   —— 每 7 秒孵 2 只小兵（她名下最多 6 只存活）。
+//   brood    孢生菇   —— 每 7 秒孵 2 只小兵（它名下最多 6 只存活）。
 //                          不点掉她，这回合永远清不完。
 //
-// 登场节奏：R4 骨骑 → R9 骸盾兵 → R13 孵骨巫祝，每次只放一位新面孔；
+// 登场节奏：R4 蛮牛 → R9 兽人 → R13 孢生菇，每次只放一位新面孔；
 // 第 16~20 回合三者混编的「钟楼残响」是毕业考。
 //
 // 数值比二关再硬一档（用户定案）：每回合 +24% 生命 / +14% 伤害（二关 20% / 12%），
@@ -199,24 +199,24 @@ export const LEVEL_3 = {
     { minion: 3,  warrior: 0, charger: 0, archer: 0, bowman: 0, shielder: 0, brood: 0, gap: 0.90, tip: '钟楼的院子里全是灰，踩上去像雪' },
     { minion: 4,  warrior: 1, charger: 0, archer: 0, bowman: 0, shielder: 0, brood: 0, gap: 0.80, tip: '还是老规矩：边走边拍' },
     { minion: 4,  warrior: 1, charger: 0, archer: 1, bowman: 0, shielder: 0, brood: 0, gap: 0.80, tip: '这次一上来就有投手了' },
-    // ---- 第二幕（R4~R8）：骨骑登场 ----
-    { minion: 5,  warrior: 2, charger: 1, archer: 0, bowman: 0, shielder: 0, brood: 0, gap: 0.75, tip: '铁灰的那只会冲：地上出红线就往侧面走' },
+    // ---- 第二幕（R4~R8）：蛮牛登场 ----
+    { minion: 5,  warrior: 2, charger: 1, archer: 0, bowman: 0, shielder: 0, brood: 0, gap: 0.75, tip: '那头黑牛会冲：地上出红线就往侧面走' },
     { minion: 5,  warrior: 2, charger: 1, archer: 1, bowman: 0, shielder: 0, brood: 0, gap: 0.72, tip: '冲锋躲开之后它会僵一下 —— 那时候打' },
-    { minion: 5,  warrior: 2, charger: 2, archer: 1, bowman: 1, shielder: 0, brood: 0, gap: 0.70, tip: '两只骨骑：别站在它们和你的连线上' },
+    { minion: 5,  warrior: 2, charger: 2, archer: 1, bowman: 1, shielder: 0, brood: 0, gap: 0.70, tip: '两头牛：别站在它们和你的连线上' },
     { minion: 6,  warrior: 3, charger: 2, archer: 1, bowman: 1, shielder: 0, brood: 0, gap: 0.66, tip: '新面孔：弓手的红圈，得挪出去' },
     { minion: 6,  warrior: 3, charger: 2, archer: 2, bowman: 1, shielder: 0, brood: 0, gap: 0.62, tip: '红线 + 红圈一起出现时，先躲圈' },
-    // ---- 第三幕（R9~R12）：骸盾兵 ----
-    { minion: 6,  warrior: 3, charger: 2, archer: 2, bowman: 1, shielder: 1, brood: 0, gap: 0.60, tip: '举盾的那只打不动：等它放下盾再打' },
+    // ---- 第三幕（R9~R12）：盾斧兽人 ----
+    { minion: 6,  warrior: 3, charger: 2, archer: 2, bowman: 1, shielder: 1, brood: 0, gap: 0.60, tip: '举盾的兽人打不动：等它放下盾再打' },
     { minion: 7,  warrior: 3, charger: 3, archer: 2, bowman: 1, shielder: 1, brood: 0, gap: 0.58, tip: '盾放下的一瞬间，它反而走得更快' },
     { minion: 7,  warrior: 4, charger: 3, archer: 2, bowman: 2, shielder: 2, brood: 0, gap: 0.55, tip: '两头盾兵：别把输出全花在盾上' },
     { minion: 7,  warrior: 4, charger: 3, archer: 3, bowman: 2, shielder: 2, brood: 0, gap: 0.54, tip: '灰里已经有钟声了 —— 塔上有人' },
-    // ---- 第四幕（R13~R15）：孵骨巫祝 ----
-    { minion: 7,  warrior: 4, charger: 3, archer: 3, bowman: 2, shielder: 2, brood: 1, gap: 0.52, tip: '绿眼睛那个会孵小兵 —— 先冲过去砍她' },
-    { minion: 8,  warrior: 4, charger: 3, archer: 3, bowman: 2, shielder: 2, brood: 1, gap: 0.50, tip: '她孵出来的小兵会自己走，别追着打' },
-    { minion: 8,  warrior: 4, charger: 4, archer: 3, bowman: 2, shielder: 2, brood: 1, gap: 0.48, tip: '骨骑四只：留一条横向的空地' },
+    // ---- 第四幕（R13~R15）：孢生菇 ----
+    { minion: 7,  warrior: 4, charger: 3, archer: 3, bowman: 2, shielder: 2, brood: 1, gap: 0.52, tip: '那颗尖刺菇在孵小兵 —— 先冲过去砍它' },
+    { minion: 8,  warrior: 4, charger: 3, archer: 3, bowman: 2, shielder: 2, brood: 1, gap: 0.50, tip: '它孵出来的小兵会自己走，别追着打' },
+    { minion: 8,  warrior: 4, charger: 4, archer: 3, bowman: 2, shielder: 2, brood: 1, gap: 0.48, tip: '蛮牛四头：留一条横向的空地' },
     // ---- 第五幕（R16~R20）：钟楼残响。三者混编的毕业考 ----
     { minion: 8,  warrior: 5, charger: 4, archer: 3, bowman: 2, shielder: 3, brood: 2, gap: 0.46, tip: '第 16 回合：钟楼残响，三样一起来了' },
-    { minion: 9,  warrior: 5, charger: 4, archer: 3, bowman: 3, shielder: 3, brood: 2, gap: 0.44, tip: '两只孵骨 = 十二只小兵上限，先拆一只' },
+    { minion: 9,  warrior: 5, charger: 4, archer: 3, bowman: 3, shielder: 3, brood: 2, gap: 0.44, tip: '两颗孢生菇 = 十二只小兵上限，先拆一只' },
     { minion: 9,  warrior: 5, charger: 4, archer: 4, bowman: 3, shielder: 3, brood: 2, gap: 0.42, tip: '盾兵打不动就先绕开，别在它身上耗' },
     { minion: 9,  warrior: 6, charger: 5, archer: 4, bowman: 3, shielder: 3, brood: 2, gap: 0.40, tip: '还差两回合：横向走位不要停' },
     { minion: 10, warrior: 6, charger: 5, archer: 4, bowman: 3, shielder: 4, brood: 2, gap: 0.38, tip: '最后一波：把钟楼里的人全拍碎' },
@@ -228,7 +228,7 @@ export const LEVEL_3 = {
 // 焦土公路尽头的废弃服务区，夜里起雾、地面积霜。
 // 难度与第三关持平（用户定案）：hp 0.26 / dmg 0.15，约 400 只，
 // 场地 19→20（怪多一点，摊得开一点）。
-// 新怪：雾魉（隐身）/ 跃行尸（跳劈）/ 缝合师（回血）。
+// 新怪：雾鬼（隐身）/ 雾猎狼（跳劈）/ 缝补小巫（回血）。
 // ============================================================
 export const LEVEL_4 = {
   id: 4,
@@ -255,27 +255,27 @@ export const LEVEL_4 = {
     // ---- 第一幕（R1~R3）：霜面停车场 ----
     { minion: 3,  warrior: 0, charger: 0, leaper: 0, archer: 0, bowman: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, gap: 0.90, tip: '雾堤服务区：地上有霜，看脚下' },
     { minion: 4,  warrior: 1, charger: 0, leaper: 0, archer: 0, bowman: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, gap: 0.80, tip: '还是老规矩：边走边拍' },
-    { minion: 4,  warrior: 1, charger: 0, leaper: 0, archer: 1, bowman: 0, wraith: 1, shielder: 0, brood: 0, mender: 0, gap: 0.80, tip: '半透明的那只是雾魉：隐身时打不着' },
-    // ---- 第二幕（R4~R7）：跳劈登场 ----
-    { minion: 5,  warrior: 1, charger: 0, leaper: 1, archer: 0, bowman: 0, wraith: 1, shielder: 0, brood: 0, mender: 0, gap: 0.75, tip: '跃行尸要跳了：地上出红圈就挪出去' },
+    { minion: 4,  warrior: 1, charger: 0, leaper: 0, archer: 1, bowman: 0, wraith: 1, shielder: 0, brood: 0, mender: 0, gap: 0.80, tip: '半透明的那只是雾鬼：隐身时打不着' },
+    // ---- 第二幕（R4~R7）：雾猎狼登场 ----
+    { minion: 5,  warrior: 1, charger: 0, leaper: 1, archer: 0, bowman: 0, wraith: 1, shielder: 0, brood: 0, mender: 0, gap: 0.75, tip: '雾狼要扑了：地上出红圈就挪出去' },
     { minion: 5,  warrior: 2, charger: 0, leaper: 1, archer: 1, bowman: 0, wraith: 1, shielder: 0, brood: 0, mender: 0, gap: 0.72, tip: '落地会震荡：它跳的是你刚才站的地方' },
-    { minion: 5,  warrior: 2, charger: 0, leaper: 1, archer: 1, bowman: 1, wraith: 2, shielder: 0, brood: 0, mender: 0, gap: 0.70, tip: '雾魉两只：别背对雾开怪' },
+    { minion: 5,  warrior: 2, charger: 0, leaper: 1, archer: 1, bowman: 1, wraith: 2, shielder: 0, brood: 0, mender: 0, gap: 0.70, tip: '雾鬼两只：别背对雾开怪' },
     { minion: 5,  warrior: 3, charger: 0, leaper: 2, archer: 1, bowman: 1, wraith: 2, shielder: 0, brood: 0, mender: 0, gap: 0.66, tip: '两只跳劈：红圈别叠着站' },
-    // ---- 第三幕（R8~R11）：缝合师 ----
-    { minion: 6,  warrior: 3, charger: 0, leaper: 2, archer: 2, bowman: 1, wraith: 2, shielder: 0, brood: 0, mender: 1, gap: 0.62, tip: '拿骨针的那只会给怪回血：先冲它' },
+    // ---- 第三幕（R8~R11）：缝补小巫 ----
+    { minion: 6,  warrior: 3, charger: 0, leaper: 2, archer: 2, bowman: 1, wraith: 2, shielder: 0, brood: 0, mender: 1, gap: 0.62, tip: '戴尖帽的小巫会给怪回血：先冲它' },
     { minion: 6,  warrior: 3, charger: 0, leaper: 2, archer: 2, bowman: 1, wraith: 2, shielder: 1, brood: 0, mender: 1, gap: 0.60, tip: '盾兵回来了：老规矩，等它放盾' },
-    { minion: 7,  warrior: 3, charger: 0, leaper: 2, archer: 2, bowman: 1, wraith: 3, shielder: 1, brood: 0, mender: 1, gap: 0.58, tip: '雾魉三只：显形的那一瞬最脆' },
-    { minion: 7,  warrior: 4, charger: 0, leaper: 2, archer: 2, bowman: 2, wraith: 3, shielder: 1, brood: 1, mender: 1, gap: 0.56, tip: '孵骨也来了：一边加人一边加血' },
+    { minion: 7,  warrior: 3, charger: 0, leaper: 2, archer: 2, bowman: 1, wraith: 3, shielder: 1, brood: 0, mender: 1, gap: 0.58, tip: '雾鬼三只：显形的那一瞬最脆' },
+    { minion: 7,  warrior: 4, charger: 0, leaper: 2, archer: 2, bowman: 2, wraith: 3, shielder: 1, brood: 1, mender: 1, gap: 0.56, tip: '孢生菇也来了：一边加人一边加血' },
     // ---- 第四幕（R12~R15）：三新混编 ----
     { minion: 7,  warrior: 4, charger: 0, leaper: 3, archer: 2, bowman: 2, wraith: 3, shielder: 2, brood: 1, mender: 1, gap: 0.54, tip: '跳劈三只：留一条没有红圈的路' },
-    { minion: 8,  warrior: 4, charger: 0, leaper: 3, archer: 3, bowman: 2, wraith: 3, shielder: 2, brood: 1, mender: 1, gap: 0.52, tip: '缝疖师不砍就一直奶：别恋战' },
+    { minion: 8,  warrior: 4, charger: 0, leaper: 3, archer: 3, bowman: 2, wraith: 3, shielder: 2, brood: 1, mender: 1, gap: 0.52, tip: '缝补小巫不砍就一直奶：别恋战' },
     { minion: 8,  warrior: 4, charger: 0, leaper: 3, archer: 3, bowman: 2, wraith: 4, shielder: 2, brood: 1, mender: 1, gap: 0.50, tip: '雾最浓的时候：贴着边圈走' },
     { minion: 8,  warrior: 5, charger: 0, leaper: 3, archer: 3, bowman: 2, wraith: 4, shielder: 2, brood: 1, mender: 1, gap: 0.48, tip: '回血和孵兵一起上场：先拆绿的' },
     // ---- 第五幕（R16~R20）：雾堤长夜。全家桶的雾中毕业考 ----
     { minion: 7,  warrior: 4, charger: 0, leaper: 4, archer: 2, bowman: 2, wraith: 4, shielder: 2, brood: 2, mender: 1, gap: 0.46, tip: '第 16 回合：雾堤长夜，全来了' },
     { minion: 7,  warrior: 4, charger: 0, leaper: 4, archer: 3, bowman: 2, wraith: 4, shielder: 3, brood: 2, mender: 1, gap: 0.44, tip: '盾厚雾浓：冰剑和暖炉该上场了' },
     { minion: 7,  warrior: 4, charger: 0, leaper: 4, archer: 2, bowman: 2, wraith: 4, shielder: 3, brood: 2, mender: 1, gap: 0.42, tip: '还剩四回合：横着走，别停' },
-    { minion: 7,  warrior: 4, charger: 0, leaper: 4, archer: 3, bowman: 2, wraith: 4, shielder: 3, brood: 2, mender: 1, gap: 0.40, tip: '倒数第二波：缝疖师留到最后也行，先保命' },
+    { minion: 7,  warrior: 4, charger: 0, leaper: 4, archer: 3, bowman: 2, wraith: 4, shielder: 3, brood: 2, mender: 1, gap: 0.40, tip: '倒数第二波：小巫留到最后也行，先保命' },
     { minion: 8,  warrior: 4, charger: 0, leaper: 4, archer: 4, bowman: 3, wraith: 4, shielder: 3, brood: 2, mender: 1, gap: 0.38, tip: '最后一波：把服务区里的雾全拍散' },
   ],
 };

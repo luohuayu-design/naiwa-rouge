@@ -5,71 +5,71 @@
 // 目标是把三件事调顺：摇杆输入 → 角色速度/朝向 → 相机跟随。
 // 后续叠战斗时，只需要在 tick() 里加敌人更新与自动攻击，不用动输入层。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=61';
-import { buildNightScene } from './scene.js?v=61';
-import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=61';
-import { createInput } from './input.js?v=61';
-import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=61';
-import { createStatView } from './statView.js?v=61';
-import { createWeaponStats } from './weaponStats.js?v=61';
-import { createFx } from './fx.js?v=61';
-import { createEnemySystem } from './enemy.js?v=61';
+import * as THREE from '../lib/three.module.js?v=62';
+import { buildNightScene } from './scene.js?v=62';
+import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=62';
+import { createInput } from './input.js?v=62';
+import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=62';
+import { createStatView } from './statView.js?v=62';
+import { createWeaponStats } from './weaponStats.js?v=62';
+import { createFx } from './fx.js?v=62';
+import { createEnemySystem } from './enemy.js?v=62';
 import {
   createLevel, LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVELS_BY_ID, DIFFS, setDifficulty, getDifficulty, roundScale, levelStats,
-} from './wave.js?v=61';
-import { createRangeRing } from './rangeRing.js?v=61';
-import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=61';
-import { createWeaponSystem } from './weapon.js?v=61';
-import { createArrowRainSystem } from './arrowRain.js?v=61';
-import { SWORD_KINDS } from './swordKinds.js?v=61';
-import { createGoldSystem } from './gold.js?v=61';
-import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW } from './shop.js?v=61';
-import { createTurretSystem, TURRET } from './turret.js?v=61';
-import { createRelicSystem, RELIC_DEFS } from './relics.js?v=61';
-import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=61';
-import audio from './audio.js?v=61';
-import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=61';
+} from './wave.js?v=62';
+import { createRangeRing } from './rangeRing.js?v=62';
+import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=62';
+import { createWeaponSystem } from './weapon.js?v=62';
+import { createArrowRainSystem } from './arrowRain.js?v=62';
+import { SWORD_KINDS } from './swordKinds.js?v=62';
+import { createGoldSystem } from './gold.js?v=62';
+import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW } from './shop.js?v=62';
+import { createTurretSystem, TURRET } from './turret.js?v=62';
+import { createRelicSystem, RELIC_DEFS } from './relics.js?v=62';
+import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=62';
+import audio from './audio.js?v=62';
+import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=62';
 import {
   settings as readSettings, setSetting, save as saveProfile, profile,
   bumpStat, setStatMax, codexAdd, codexCount, countCard, unlockAch, hasAch, addBones, bones, resetAll,
   storyProgress, markStorySeen, markStoryRead, addStoryMark, setStoryEnding,
   setSaveSuppressed, reloadFromStorage,
   giftLog, giftRedeemed, markGift,
-} from './profile.js?v=61';
+} from './profile.js?v=62';
 // 第 44 块：礼包兑换（码表只有哈希，明细在 gift.js 顶部注释）
-import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=61';
+import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=62';
 // 第 46 块：音效包（抽象奶蛙音效包 —— 4 段奶蛙叫声，通关第一关解锁）
-import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=61';
-import * as runSave from './runSave.js?v=61';
+import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=62';
+import * as runSave from './runSave.js?v=62';
 import {
   CAMPFIRE, CAMP_STEP, campBuy, campOwned, campLevel,
   campCost, campApply, bonesFor, diffBoneMul, levelBoneMul, coinBones, BONE,
-} from './campfire.js?v=61';
+} from './campfire.js?v=62';
 // 第 23 块：永夜火种（通关白给的 3 次永久三选一）
 import {
   BOONS, BOON_BY_ID, BOON_PICKS, boonOwned, boonStacks, boonPending, boonTotalStacks,
   grantBoons, rollBoons, takeBoon, applyBoons, boonStackText,
-} from './boons.js?v=61';
+} from './boons.js?v=62';
 // 第 21 块：夜行诅咒（自选 debuff 换骨币倍率）
-import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=61';
+import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=62';
 // 第 22 块：种子与每日挑战
 import {
   DAILY_RULES, dayKey, dayText, dailySeed, seedCode, pickDailyCurses,
   seedFromText, pickSeedRules, loadSeedRecords, saveSeedRecord, pruneSeeds,
   dailyRecord, saveDailyRecord, pruneDaily, makeRng,
-} from './seed.js?v=61';
-import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=61';
-import { achById, ACHS } from './achievements.js?v=61';
+} from './seed.js?v=62';
+import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=62';
+import { achById, ACHS } from './achievements.js?v=62';
 import {
   EVENTS, ALL_EVENTS, getEventById, pickEvent, effectLines,
   choiceHint, canAfford, costShort, REP_MIN, REP_MAX, REP_START,
   isTalk, eventChoices, resolveRoll, mergeEffects,
-} from './events.js?v=61';
+} from './events.js?v=62';
 // 第 32 块：主线《笑不出来的那一夜》（18 夜，一夜一关，前 3 夜已有关卡）
 import {
   STORY_ARC, STORY_CHAPTERS, STORY_ENDINGS, MARK_INFO,
   storyChapterAt, storyChapterById, storyEndingKey,
-} from './story.js?v=61';
+} from './story.js?v=62';
 
 // 标记模块已经跑起来了：index.html 的兜底自检靠它判断
 // 「模块根本没执行」还是「执行了但加载慢」。
@@ -529,8 +529,7 @@ async function boot() {
 
   let enemyLoadOk = true;
   try {
-    // 三种怪都要预载：投手（远程）第 11 回合登场，模型 655KB
-    // 三位巫师共用 mage 模型（loadType 内部按 file 去重，不会解析三遍）
+    // 13 只怪全部预载（第 52 块起每个各用各的模型，不再有复用去重）
     await enemies.preload(
       ['minion', 'warrior', 'archer', 'bowman', 'hexer', 'pyro', 'hierarch',
         'charger', 'shielder', 'brood', 'wraith', 'leaper', 'mender'],
@@ -934,7 +933,7 @@ async function boot() {
     const want = 1 + Math.max(0, Math.round(stats.get('multiHit')));
     const hits = stats.findTargets(
       pos, enemies.list, want,
-      (e) => e.state !== 'dead' && e.state !== 'spawn' && !e.ghostHidden   // 雾魉隐身时拍不着（第 35 块）
+      (e) => e.state !== 'dead' && e.state !== 'spawn' && !e.ghostHidden   // 雾鬼隐身时拍不着（第 35 块）
     );
     if (!hits.length) return false;
 
@@ -5143,7 +5142,7 @@ async function boot() {
     return a + d * t;
   }
 
-  // ---------------- 骨咒师的减速诅咒（第 20 块） ----------------
+  // ---------------- 咒面图腾的减速诅咒（第 20 块） ----------------
   // 紫阵命中后短时间降低**移速**，不影响攻击和技能，也不叠加（取更狠的一次）。
   // 设计意图：这是「走位失误的惩罚」，不是「把你钉死」——
   // 全点满的篝火也吃不掉这个 debuff，但它 2.6 秒就过去了。
@@ -5202,7 +5201,7 @@ async function boot() {
 
       // 1) 输入 → 目标速度（屏幕 y 向下 = 世界 +Z，相机在 +Z 方向看向场景）
       //    移速取属性面板里的实时值：升级加成就立刻跑得更快
-      // 被骨咒师的咒打中时移速打折（第 20 块）
+      // 被咒面图腾的咒打中时移速打折（第 20 块）
       const moveSpeed = stats.get('moveSpeed') * (curseT > 0 ? curseFactor : 1);
       const dir = input.read();
       const targetVX = dir.x * moveSpeed;

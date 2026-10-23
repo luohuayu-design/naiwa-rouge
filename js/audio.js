@@ -22,7 +22,7 @@
 //   所以 buffer 缓存按**实际文件**存（'s:音效名' / 'v:文件名'），换包只换取哪份。
 // ============================================================
 
-import { VOICE_BASE, FROG_SFX } from './voicepack.js?v=61';
+import { VOICE_BASE, FROG_SFX } from './voicepack.js?v=62';
 
 const BGM_BASE = 'assets/audio/bgm/';
 const SFX_BASE = 'assets/audio/sfx/';
@@ -66,7 +66,7 @@ export const SFX_DEFS = {
   aegis: { file: 'aegis.mp3', vol: 0.55, jitter: 0.03 },        // 金钟罩护体开启
   turretShot: { file: 'turretShot.mp3', vol: 0.30, jitter: 0.10 }, // 弩炮台发射（频繁，音量压低）
   spikes: { file: 'spikes.mp3', vol: 0.45, jitter: 0.08 },      // 地刺破土
-  curse: { file: 'curse.mp3', vol: 0.60, jitter: 0 },           // 被骨咒师咒中
+  curse: { file: 'curse.mp3', vol: 0.60, jitter: 0 },           // 被咒面图腾咒中
   soldout: { file: 'soldout.mp3', vol: 0.50, jitter: 0 },       // 商店售罄 / 买不了
   ach: { file: 'ach.mp3', vol: 0.60, jitter: 0 },               // 成就解锁
   boon: { file: 'boon.mp3', vol: 0.65, jitter: 0 },             // 永夜火种揭示

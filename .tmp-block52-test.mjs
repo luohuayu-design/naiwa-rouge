@@ -1,0 +1,118 @@
+// ============================================================
+// .tmp-block52-test.mjs —— 第 52 块：13 只怪「一只一个模型」（纯 Node，无浏览器）
+// 跑法：node .tmp-block52-test.mjs（cwd = naiwa-rouge）
+//
+// 这一套守四件事：
+//   1. **零重复**：13 只怪 13 个 glb，谁也不许再共用骨架（这是本块的立项原因）；
+//   2. **文件真在**：config 里写的路径必须真能读到，且是合法 glb；
+//   3. **动作不错位**：clipOverrides 里每一条都得真的存在于那个模型里
+//      （跨引擎动画名是手抄的，抄错就是「怪站在那不动」，肉眼很难发现）；
+//   4. **关卡不断链**：wave.js 每个回合点名的 type 都得在 ENEMY_TYPES 里且已启用。
+// ============================================================
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { ENEMY_TYPES } from './js/enemy.js';
+import { LEVELS_BY_ID } from './js/wave.js';
+
+const ROOT = path.dirname(fileURLToPath(import.meta.url));
+
+let pass = 0, fail = 0;
+const ok = (cond, name, extra = '') => {
+  if (cond) { pass++; console.log(`  ✓ ${name}`); }
+  else { fail++; console.log(`  ✗ ${name} ${extra}`); }
+};
+const sec = (t) => console.log(`\n—— ${t} ——`);
+
+// 读 glb 头里的 JSON chunk，拿骨架动画名（去掉 "CharacterArmature|" 前缀）
+function glbClipNames(abs) {
+  const buf = fs.readFileSync(abs);
+  if (buf.readUInt32LE(0) !== 0x46546c67) throw new Error('不是 glb（magic 不对）');
+  let off = 12;
+  while (off + 8 <= buf.length) {
+    const len = buf.readUInt32LE(off);
+    const type = buf.readUInt32LE(off + 4);
+    if (type === 0x4e4f534a) {   // 'JSON'
+      const json = JSON.parse(buf.subarray(off + 8, off + 8 + len).toString('utf8'));
+      return (json.animations || []).map((a) => String(a.name || '').split('|').pop());
+    }
+    off += 8 + len + ((4 - (len % 4)) % 4);
+  }
+  return [];
+}
+
+const TYPES = Object.entries(ENEMY_TYPES).filter(([, t]) => !t.planned);
+const typeNames = TYPES.map(([k]) => k);
+
+sec('一、13 只怪 · 一只一个模型');
+ok(TYPES.length === 13, `怪物条目 13 只（实际 ${TYPES.length}）`);
+const files = TYPES.map(([, t]) => t.file);
+ok(files.every((f) => typeof f === 'string' && f.startsWith('assets/monsters/')), '每条都写了 assets/monsters/ 下的模型');
+ok(new Set(files).size === files.length,
+  `13 个模型文件互不重复（${files.length} 条目 / ${new Set(files).size} 文件）`,
+  `重复：${files.filter((f, i) => files.indexOf(f) !== i).join(', ')}`);
+const names = TYPES.map(([, t]) => t.name);
+ok(new Set(names).size === names.length, '13 个中文名互不重复');
+// 第一关四只维持 KayKit 骷髅（用户定案：只换后 9 只）
+for (const k of ['minion', 'warrior', 'archer', 'bowman']) {
+  ok(ENEMY_TYPES[k].file.includes('skeleton-'), `${k} 仍是 KayKit 骷髅（${ENEMY_TYPES[k].file.split('/').pop()}）`);
+}
+
+sec('二、模型文件真的在，且是合法 glb');
+for (const [k, t] of TYPES) {
+  const abs = path.join(ROOT, t.file);
+  ok(fs.existsSync(abs), `${k} 文件存在（${t.file.split('/').pop()}）`);
+  if (!fs.existsSync(abs)) continue;
+  ok(fs.statSync(abs).size > 8 * 1024, `${k} 体积不像空壳（${(fs.statSync(abs).size / 1024).toFixed(0)}KB）`);
+}
+
+sec('三、动作名对得上（clipOverrides 不许抄错）');
+const CLIP_KEYS = ['idle', 'walk', 'run', 'attack', 'cast', 'death', 'hit', 'spawn'];
+for (const [k, t] of TYPES) {
+  const abs = path.join(ROOT, t.file);
+  if (!fs.existsSync(abs)) continue;
+  const clips = glbClipNames(abs);
+  ok(clips.length >= 3, `${k} 模型自带动画 ≥3 段（${clips.length} 段）`);
+  const overrides = t.clipOverrides || {};
+  const badKeys = Object.keys(overrides).filter((x) => !CLIP_KEYS.includes(x));
+  ok(badKeys.length === 0, `${k} clipOverrides 只用语义键`, `非法键：${badKeys.join(',')}`);
+  const missing = Object.entries(overrides).filter(([, real]) => !clips.includes(real));
+  ok(missing.length === 0, `${k} 覆盖的动作名都真存在`,
+    `缺失：${missing.map(([sem, real]) => `${sem}→${real}`).join(', ')}（现有 ${clips.slice(0, 8).join('/')}…）`);
+}
+
+sec('四、身高 / 落地 / 自发光配置');
+for (const [k, t] of TYPES) {
+  ok(t.sourceHeight > 0 && t.height > 0, `${k} sourceHeight/height 已标定`);
+  ok(t.height >= 0.8 && t.height <= 2.2, `${k} 归一后身高在 0.8~2.2（实际 ${t.height}）`);
+  ok(t.radius > 0.2 && t.radius < 1.0, `${k} 碰撞半径合理（实际 ${t.radius}）`);
+}
+// 9 只换过模型的都给配了自发光（暗场景可见性靠它）
+// 例外：盾斧兽人是亮绿色，本来就看得清，没配 glow。
+const RENEWED = ['hexer', 'pyro', 'hierarch', 'charger', 'brood', 'wraith', 'leaper', 'mender'];
+for (const k of RENEWED) {
+  ok(ENEMY_TYPES[k].glow && ENEMY_TYPES[k].glow.intensity > 0, `${k} 带自发光`);
+}
+ok(!ENEMY_TYPES.shielder.glow, '盾斧兽人亮绿、不需要自发光（省一次着色开销）');
+ok(ENEMY_TYPES.hexer.footY > 0 && ENEMY_TYPES.pyro.footY > 0 && ENEMY_TYPES.wraith.footY > 0,
+  '浮空模型都留了 footY（不按到地上）');
+
+sec('五、关卡表不断链');
+const NON_TYPE_KEYS = ['tip', 'gap'];
+const used = new Set();
+for (const lv of Object.values(LEVELS_BY_ID)) {
+  for (const r of lv.rounds) {
+    for (const k of Object.keys(r)) {
+      if (NON_TYPE_KEYS.includes(k)) continue;
+      used.add(k);
+    }
+  }
+}
+const unknown = [...used].filter((k) => !ENEMY_TYPES[k]);
+ok(unknown.length === 0, '每个回合点名的 type 都在 ENEMY_TYPES 里', `未知：${unknown.join(',')}`);
+const notReady = [...used].filter((k) => ENEMY_TYPES[k] && ENEMY_TYPES[k].planned);
+ok(notReady.length === 0, '点名的 type 都已启用（没有预案占位）', `未启用：${notReady.join(',')}`);
+ok(used.size >= 13, `四关合起来用满 13 只（实际 ${used.size}）`);
+
+console.log(`\n结果：${pass} 通过 / ${fail} 失败`);
+process.exit(fail ? 1 : 0);

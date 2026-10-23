@@ -1,6 +1,7 @@
-// 第 51 块：图鉴怪物缩略图（离线渲染 → assets/codex/*.png）
+// 第 51 块：图鉴怪物缩略图（离线渲染 → assets/codex/*.webp）
 // 跑法：先起 `python -m http.server 8124`（cwd = naiwa-rouge），再 `node .tmp-codex-shots.js`
-// 换怪物模型 / 换皮肤后重跑一次即可；图鉴只读这些 PNG，运行时不加载任何模型。
+// 换怪物模型 / 换皮肤后重跑一次即可；图鉴只读这些 webp，运行时不加载任何模型。
+// 第 52 块：9 只怪换了模型（Quaternius），13 张图全部重出过。
 const { spawn } = require('child_process');
 const os = require('os');
 const path = require('path');
@@ -11,7 +12,7 @@ const PORT = 9356;
 const PAGE = 'http://127.0.0.1:8124/?debug=1&title';
 const UD = path.join(os.tmpdir(), 'naiwa-cdp-51shot');
 const OUT = path.join(__dirname, 'assets', 'codex');
-const V = '59';
+const V = '62';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 (async () => {
@@ -141,7 +142,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
           const bcY = (b.minY + b.maxY) / 2;
           const bcX = (b.minX + b.maxX) / 2;
           aimY -= (bcY - S.H / 2) * worldPerPx;           // 把包围盒中心挪到画面中心
-          aimX -= (bcX - S.W / 2) * worldPerPx;
+          aimX += (bcX - S.W / 2) * worldPerPx;           // ⚠️ 第 52 块修正：原写成「-=」，非对称模型（翅膀/尾巴）会越修越偏出画面
           const fitY = bh / (S.H * 0.84);
           const fitX = bw / (S.W * 0.90);
           const fit = Math.max(fitY, fitX);

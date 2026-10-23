@@ -16,10 +16,10 @@
 // 与环剑（自动索敌、消耗制）和炮台（固定点位）互补；价格定在
 // 商店里「买得起但要攒一攒」的档，让 9/12/15/18 回合的商店有取舍。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=61';
-import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=61';
-import { distance2D } from './stats.js?v=61';
-import audio from './audio.js?v=61';
+import * as THREE from '../lib/three.module.js?v=62';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=62';
+import { distance2D } from './stats.js?v=62';
+import audio from './audio.js?v=62';
 
 export const RELIC_DEFS = {
   spikes: {
@@ -41,7 +41,7 @@ export const RELIC_DEFS = {
   },
   // ---------------- 第三关新增（第 29 块） ----------------
   // 震钟：定期一圈冲击波，**打断**读条/蓄力/冲锋 + 击退。三关的骨骑冲锋与
-  // 孵骨巫祝的召唤都怕它 —— 这是「打断」这一层的解法，前两关用不上。
+  // 孢生菇的召唤都怕它 —— 这是「打断」这一层的解法，前两关用不上。
   bell: {
     name: '震钟',
     maxLevel: 3,
@@ -67,7 +67,7 @@ export const RELIC_DEFS = {
   // 暖炉：废服务区捡来的汽油桶，锯开半截塞进炭火，推着走。
   // 每 1 秒对身边一圈怪结算一次灼烧 —— 和地刺同属「主动周期」，
   // 但它是**高频低伤**（地刺是 1.3 秒一次的高伤），专治雾里那种
-  // 血少、量大、还爱隐身的怪；缝合师奶回来多少，它一秒就烧回去一点。
+  // 血少、量大、还爱隐身的怪；缝补小巫奶回来多少，它一秒就烧回去一点。
   stove: {
     name: '暖炉',
     maxLevel: 3,

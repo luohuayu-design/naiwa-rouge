@@ -13,9 +13,9 @@
 // 数值：伤害吃武器属性表 wstats（swordDamage / 暴击），× ARROW_DMG_MUL ——
 //   商店的剑油 / 磨剑石同样强化箭雨，升级卡不白买。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=61';
-import { mitigate } from './stats.js?v=61';
-import audio from './audio.js?v=61';
+import * as THREE from '../lib/three.module.js?v=62';
+import { mitigate } from './stats.js?v=62';
+import audio from './audio.js?v=62';
 
 const AIM_TIME = 0.85;      // 警告圈亮起到第一支箭落地（给怪走位、给玩家预判）
 const SPREAD_TIME = 1.0;    // 全部箭落完的时间窗（每支箭在这个窗内错开）
@@ -69,7 +69,7 @@ export function createArrowRainSystem({ scene, fx, enemies, wstats }) {
   function fire(playerPos) {
     if (!unlocked || cd > 0) return false;
 
-    // 找最近的活怪（不含正在生成 / 已死 / 隐身的雾魉 —— 别对着空气放箭）
+    // 找最近的活怪（不含正在生成 / 已死 / 隐身的雾鬼 —— 别对着空气放箭）
     const list = enemies.list.filter((e) => e.state !== 'dead' && e.state !== 'spawn' && !e.ghostHidden);
     const p = playerPos || { x: 0, z: 0 };
     let best = null, bestD = SEARCH_R * SEARCH_R;
