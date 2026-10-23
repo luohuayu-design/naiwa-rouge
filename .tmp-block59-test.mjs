@@ -1,11 +1,11 @@
 // 第 59 块 Node 契约测试：每日签到（周为单位）
 // 覆盖：默认态 / 单日签到 / 重复签到 / 3 天与 6 天里程碑 / 跨周清零 /
 //       脏数据过滤 / 一周封顶 / 七格与「今天」标记
-import { profile, resetAll, bones } from './js/profile.js?v=69';
+import { profile, resetAll, bones } from './js/profile.js?v=70';
 import {
   SIGN_BONES, WEEK_TIERS, SIGN_BONES as SB, weekCells, signSummary,
   signToday, signedToday, signState, weekKeyOf, weekStartOf, dayKey,
-} from './js/signin.js?v=69';
+} from './js/signin.js?v=70';
 
 // localStorage 桩（profile.js 只在函数体内访问它）
 const store = new Map();

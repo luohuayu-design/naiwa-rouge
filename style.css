@@ -2,6 +2,11 @@
    配色取自夜间草地：墨绿 / 月光青 / 暖黄萤火 */
 
 *{margin:0;padding:0;box-sizing:border-box}
+/* ⚠️ 兜底：`hidden` 属性是浏览器默认样式 `[hidden]{display:none}`，但只要自己给元素
+   写过 display（比如 .tt-dot 的 inline-block），作者样式就赢过 UA 样式，hidden 直接失效。
+   签到红点就是这么「签完了还亮着」的（第 60 块修的）。这条放在最前面，管住全站所有
+   `el.hidden = true` 的开关。 */
+[hidden]{display:none!important}
 html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
   font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
   color:#e8f3ee;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;
@@ -1266,7 +1271,9 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
   border:1px solid rgba(110,170,255,.32);
   background:linear-gradient(180deg,rgba(28,44,74,.86),rgba(14,22,38,.88))}
 .tt-daily-k{font-size:13px;font-weight:700;letter-spacing:.2em}
-.tt-daily-s{font-size:10px;letter-spacing:.06em;color:rgba(160,196,246,.72)}
+.tt-daily-s{font-size:10px;letter-spacing:.06em;color:rgba(160,196,246,.72);
+  /* 这三个按钮格子很窄，副标题一旦换行就会把整排撑高、和邻居错位 */
+  white-space:nowrap}
 .tt-daily:hover{border-color:rgba(140,196,255,.62);background:rgba(40,64,104,.9)}
 .tt-daily:active{transform:scale(.97)}
 .tt-daily.done{border-color:rgba(120,220,170,.44)}

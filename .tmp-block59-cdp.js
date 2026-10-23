@@ -151,6 +151,16 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     ok(/今日签到：\+20 骨币/.test(gainTxt), '即时反馈写了拿到什么', gainTxt);
     const bBtn = JSON.parse(await ev('JSON.stringify(__game.sign.btn())'));
     ok(bBtn.dot === false && bBtn.done === true, '主菜单红点消失、按钮变绿', JSON.stringify(bBtn));
+    // 第 60 块 hotfix：只翻 hidden 属性不算数，要确认元素真的不渲染
+    // （.tt-dot 自己写了 display:inline-block，会压过 [hidden] 这条 UA 样式）
+    ok(await ev("getComputedStyle(document.getElementById('signDot')).display") === 'none',
+      '红点元素真的不渲染（computed display: none）');
+    ok(await ev("document.getElementById('signDot').getClientRects().length") === 0, '红点没有实际盒子');
+    // 副标题不许换行 —— 换行会把「今日挑战 / 种子挑战 / 每日签到」这一排撑得错位
+    ok(await ev("document.getElementById('btnSignSub').getClientRects().length") === 1,
+      '副标题仍是单行（按钮没被撑高）', String(await ev("document.getElementById('btnSignSub').textContent")));
+    const rowH = JSON.parse(await ev("JSON.stringify([...document.querySelectorAll('.tt-row-chal .tt-daily')].map(e => Math.round(e.getBoundingClientRect().height)))"));
+    ok(new Set(rowH).size === 1, '「今日挑战」那一排按钮等高', JSON.stringify(rowH));
 
     // ============================================================
     console.log('\n[E] 重复签到');
