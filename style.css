@@ -274,9 +274,51 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
   -webkit-tap-highlight-color:transparent}
 .ft-later:hover{border-color:rgba(255,166,80,.32);color:rgba(232,206,180,.88)}
 
+/* ---------------- 新怪物信息卡（第 55 块） ----------------
+   某种怪第一次上场时糊上来的一张「它怎么打人」。z-index 17：
+   压得住升级卡 / 商店 / 事件卡（16 及以下），又低于结算（18）和失败提示（19）——
+   万一同一帧里既冒新怪又结算，先让玩家看结算。 */
+#meetCard{position:fixed;inset:0;z-index:17;display:flex;align-items:center;justify-content:center;
+  padding:calc(22px + env(safe-area-inset-top)) 18px calc(22px + env(safe-area-inset-bottom));
+  background:rgba(4,7,9,.80);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+  opacity:0;pointer-events:none;transition:opacity .26s ease}
+#meetCard.on{opacity:1;pointer-events:auto}
+.mt-card{width:min(90vw,382px);padding:18px 18px 14px;border-radius:18px;text-align:left;
+  border:1px solid rgba(255,120,120,.26);
+  background:linear-gradient(180deg,rgba(34,18,20,.985),rgba(12,9,11,.99));
+  box-shadow:0 24px 60px rgba(0,0,0,.74),inset 0 1px 0 rgba(255,200,200,.08);
+  transform:translateY(14px) scale(.975);transition:transform .26s ease}
+#meetCard.on .mt-card{transform:none}
+.mt-tag{font-size:10.5px;font-weight:800;letter-spacing:.30em;color:rgba(255,150,150,.78)}
+.mt-main{display:flex;align-items:center;gap:14px;margin-top:12px}
+.mt-shot{flex:0 0 auto;width:96px;height:116px;border-radius:12px;overflow:hidden;
+  display:flex;align-items:flex-end;justify-content:center;
+  border:1px solid rgba(255,120,120,.20);
+  background:radial-gradient(circle at 50% 78%,rgba(255,120,120,.16),rgba(255,120,120,0) 68%),
+             linear-gradient(180deg,rgba(28,16,18,.9),rgba(10,7,9,.95))}
+.mt-shot img{width:100%;height:100%;object-fit:contain;display:block}
+.mt-body{flex:1 1 auto;min-width:0}
+.mt-name{font-size:19px;font-weight:800;letter-spacing:.04em;color:#ffe6e6;
+  text-shadow:0 0 20px rgba(255,120,120,.22)}
+.mt-sub{margin-top:7px;font-size:11px;line-height:1.7;color:rgba(214,182,186,.80)}
+.mt-sec{margin-top:15px;padding-top:12px;border-top:1px solid rgba(255,120,120,.14);
+  font-size:10.5px;font-weight:800;letter-spacing:.26em;color:rgba(255,158,158,.70)}
+.mt-desc{margin-top:9px;font-size:12.5px;line-height:1.85;color:rgba(236,220,222,.92)}
+.mt-ok{width:100%;margin-top:16px;padding:12px;border-radius:12px;cursor:pointer;font-family:inherit;
+  font-size:13.5px;font-weight:800;letter-spacing:.16em;color:#2b0d0d;
+  border:1px solid rgba(255,190,190,.52);
+  background:linear-gradient(180deg,#ffd6d0,#e8827a);
+  -webkit-tap-highlight-color:transparent}
+.mt-ok:hover{filter:brightness(1.05)}
+.mt-ok:active{transform:scale(.985)}
+.mt-note{margin-top:9px;text-align:center;font-size:10.5px;letter-spacing:.06em;
+  color:rgba(206,170,174,.52)}
+
 @media (max-height:520px){
   .ap-card{max-height:88vh}
   .ap-desc{display:none}
+  .mt-shot{width:74px;height:90px}
+  .mt-desc{font-size:11.5px;line-height:1.7}
   .hud-stats{display:none}
   .rs-grid{margin:12px 0 14px}
   .rs-card{padding:16px 16px 14px}

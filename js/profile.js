@@ -66,6 +66,11 @@ const DEFAULT_PROFILE = {
   //   id 是唯一真相源，audio.setPack() 只是把它推进音频引擎；
   //   解锁前设置里那两项是锁着的，点不动。
   voicePack: { unlocked: false, id: 'normal' },
+  // 见过的怪（第 55 块）：{ minion: 首次遇到的时间戳 }。
+  // 用来决定「新怪物信息卡」还要不要弹 —— 一种怪一辈子只拦一次，
+  // 之后靠图鉴自己查。**不能用 codex.enemies 代替**：那是击倒数，
+  // 遇到而没打死的怪在那边是 0。
+  met: {},
 };
 
 let cache = null;
@@ -170,6 +175,27 @@ export function codexCount(group, id) {
 
 export function codexAll(group) {
   return profile().codex[group] || {};
+}
+
+// ---------------- 见过的怪（第 55 块） ----------------
+// 注意：这不是「击倒过」，是「在场上遇见过」。首次遭遇卡只看这张表。
+export function metLog() {
+  const p = profile();
+  if (!p.met || typeof p.met !== 'object') p.met = {};
+  return p.met;
+}
+
+export function enemyMet(type) {
+  return !!metLog()[type];
+}
+
+// 记一笔「见过了」。返回 true 表示这次是新纪录（调用方据此决定弹不弹卡）。
+export function markEnemyMet(type) {
+  const m = metLog();
+  if (!type || m[type]) return false;
+  m[type] = Date.now();
+  save();
+  return true;
 }
 
 // ---------------- 成就 ----------------

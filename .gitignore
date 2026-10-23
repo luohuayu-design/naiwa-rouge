@@ -11,3 +11,7 @@ desktop.ini
 # 礼包码明文：只在本地留档，别提交（提交了码就等于公开）
 gift-codes.local.md
 *.local.md
+
+# 兑换码大全（第 55 块，用户要的本地 txt）：含明文码，绝不提交
+兑换码大全.txt
+*兑换码大全*.txt

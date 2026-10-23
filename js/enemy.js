@@ -25,11 +25,11 @@
 // 第四关三只（wraith/leaper/mender，第 35 块，第 52 块换模型），
 // 各自在下面 ENEMY_TYPES 里有详细注释。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=64';
-import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=64';
-import { clone as cloneSkinned } from '../lib/jsm/utils/SkeletonUtils.js?v=64';
-import { distance2D } from './stats.js?v=64';
-import { createRangeRing } from './rangeRing.js?v=64';
+import * as THREE from '../lib/three.module.js?v=65';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=65';
+import { clone as cloneSkinned } from '../lib/jsm/utils/SkeletonUtils.js?v=65';
+import { distance2D } from './stats.js?v=65';
+import { createRangeRing } from './rangeRing.js?v=65';
 
 // KayKit 模型正面朝 +Z；如果哪天换模型发现怪倒着走，把这里改成 Math.PI
 export const ENEMY_MODEL_YAW = 0;
@@ -1008,7 +1008,7 @@ function createBar(cfg, scale = 1) {
 }
 
 // ------------------------------------------------------------
-export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
+export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpawn }) {
   let arenaR = arenaRadius;   // 可走半径，随关卡变（第三关 19，第 33 块）—— setArenaRadius 改
   const assets = new Map();   // type -> { scene, clips, height, minY }
   const list = [];            // 场上所有怪（含正在消散的）
@@ -1285,6 +1285,9 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath }) {
     if (fx) fx.spawnRing(e.pos, cfg.color);
 
     list.push(e);
+    // 第 55 块：新怪第一次上场时通报一声 —— main.js 据此冻结世界、弹「它怎么打人」的信息卡。
+    // 放在 push 之后：回调里就看得见这只怪已经在场上了（测试也靠这点断言）。
+    if (onSpawn) onSpawn(e);
     return e;
   }
 

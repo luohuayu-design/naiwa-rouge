@@ -2,13 +2,13 @@
 
 > 新对话从这里开始读，不要先翻聊天记录。**先读 §0「给新对话的话」，再按需查后面章节。**
 >   
-> 最后更新：2026-10-23 中午 · 线上 **v=64** · 第 54 块（用户实测四条：布袋金币超模 / 主菜单排版 / 篝火改名篝火商店 / 倒下弹温馨提示）已上线，工作区干净，无未完成任务
+> 最后更新：2026-10-23 下午 · 线上 **v=65** · 第 55 块（兑换码大全 txt / 新怪物信息卡 / 只记打斗时长）已完成并推送
 
 ---
 
 ## 0. 给新对话的话（2026-10-23 交接）
 
-1. **当前基线**：v=64（第 54 块）已推送且线上生效，git 工作区干净。最近十三块（44~54 + v=53~56 一串音效包 hotfix + v=61 hotfix）全部完结，**没有挂起的半成品**。用户新需求来了再开工，别主动找活。
+1. **当前基线**：v=65（第 55 块）已推送，git 工作区干净。最近十四块（44~55 + v=53~56 一串音效包 hotfix + v=61 hotfix）全部完结，**没有挂起的半成品**。用户新需求来了再开工，别主动找活。
 2. **节奏**：用户偏好**小步块状推进**——一块功能 = 一次提交 = 一个版本号（v=N）。铁律 12：**做完回归绿就立刻推送交给用户测**，用户的反馈比自测更快更准。
 3. **最容易翻车的五件事**（细节都在铁律和下文）：
    ① 发版**两处版本号**都要 bump（index.html + js 内部所有 `import ...?v=N`），漏一处就是「本地好线上炸」；
@@ -16,10 +16,11 @@
    ③ **公告在 loading 淡完 +700ms 才弹**，测试截图要先 `sleep(2600)` 再 `__game.notice.hide()`；
    ④ `jumpToRound/skipRound` **只在 adminOn 时生效**，不开管理员是静默 no-op；
    ⑤ 本地服务器必须 `run_in_background`；CDP 截图路径**不能含中文**；推送走 `git -c http.proxy=http://127.0.0.1:7897 ...`（先 curl 探代理，挂了改直连）。
-4. **最新绿基线**（动到相关文件后要回归）：block54 **54**/0（Node，布袋 + 排版 + 改名 + 失败提示源码契约）+ block54-cdp **36**/0（真 DOM：两行同行等高、商店标题、布袋 10 金币、倒下 0.9s 弹提示、两个按钮的去向）、block53 **46**/0 + block53-cdp **39**/0、block52 **125**/0、block51 **20**/0、block50 **12**/0（含重复 id 断言）、block19 **44**/0（篝火/骨币全流程）、block29 **39**/0、block35 **49**/0、`.tmp-wtut-title-check.js` **4**/0、block47 27/0、block49 23/0。跑法见 §6，一次只跑一套。
+4. **最新绿基线**（动到相关文件后要回归）：block55 **89**/0（Node：码表 txt 逐个重算哈希 / 新怪卡源码契约 / 计时白名单）+ block55-cdp **51**/0（真 DOM：首次遇怪弹卡 + 世界冻结 + 计时不动 + 我明白了继续 + 不重复弹；商店/剧情/升级/属性卡都不计时；开新局归零）、block54 **54**/0（Node，布袋 + 排版 + 改名 + 失败提示源码契约）+ block54-cdp **36**/0（真 DOM：两行同行等高、商店标题、布袋 10 金币、倒下 0.9s 弹提示、两个按钮的去向）、block53 **46**/0 + block53-cdp **39**/0、block52 **125**/0、block51 **20**/0、block50 **12**/0（含重复 id 断言）、block19 **44**/0（篝火/骨币全流程）、block29 **39**/0、block35 **49**/0、`.tmp-wtut-title-check.js` **4**/0、block47 27/0、block49 23/0。跑法见 §6，一次只跑一套。
    已知**既有**失败（不是新代码弄坏的，别浪费时间去查）：`.tmp-rogue-unit.mjs` 142/2、`.tmp-camp-test.mjs` 84/22、`.tmp-boon-test.mjs` 133/13、`.tmp-eventui-test.js` 35/2、`.tmp-block18-test.js` 34/1 —— 都是第 27/33/41/43 块改过数值或 UI 后没回填的过期断言（2026-10-23 用 git stash 对拍确认过基线一致）。
 5. **用户规则**：全中文；有疑问先问、有疑问不写码；README 与实况同步；美术资产优先 GitHub 现成 CC0；不做多角色；局外对局内影响要小（篝火每级 +1 生命这种量级）。
-6. **改交互规则要回头跑老套件**（2026-10-23 的教训）：第 42/43 块给回话按钮加 3 秒读秒锁后，block32（读秒之前写的）静默挂了 9 项；公告升 `NOTICE_VER=2` 后 block45 写死 `|1` 也挂了。**横向特性（锁定/延迟/版本号）上线时，把受影响的老 CDP 套件重跑一遍**，别只跑新套件。本次两个都已修好（block32 60/0、block45 49/0）。
+6. **新怪信息卡在 `?debug=1` 下默认是关的**（第 55 块）：它会冻结整个世界，二十多套老 CDP 都要开局刷怪等回合推进，一上来被拦一下就成片挂（实测 block53 就栽在这）。要测这张卡的套件地址加 **`&meet`**（或 `__game.meetCard.setAuto(true)`）；正常游玩永远是开的。同类「首次提示型」弹窗以后照这个办：**生产默认开、测试显式开**。
+7. **改交互规则要回头跑老套件**（2026-10-23 的教训）：第 42/43 块给回话按钮加 3 秒读秒锁后，block32（读秒之前写的）静默挂了 9 项；公告升 `NOTICE_VER=2` 后 block45 写死 `|1` 也挂了。**横向特性（锁定/延迟/版本号）上线时，把受影响的老 CDP 套件重跑一遍**，别只跑新套件。本次两个都已修好（block32 60/0、block45 49/0）。
 
 ---
 
@@ -85,6 +86,7 @@ Three.js r160 的单摇杆幸存者肉鸽《奶蛙夜行》，纯静态站点（
 | **52** | **13 只怪一只一个模型**（用户立项：之前 13 只其实只用了 4 个 glb，法师骨架被 6 只共用）。后 9 只换 Quaternius《Ultimate Monsters》并改名：骨咒师→咒面图腾（tribal）/ 火焚巫祝→焚火魔（demon）/ 霜牢主祭→孢冠菌王（mushroom-king）/ 骨骑冲锋兵→冲锋蛮牛（bull）/ 骸盾兵→盾斧兽人（orc）/ 孵骨巫祝→孢生菇（mushnub-evolved）/ 雾魉→雾鬼（ghost）/ 跃行尸→雾猎狼（wolf）/ 缝合师→缝补小巫（wizard）；第一关四只保留 KayKit 骷髅（用户定案）。工程侧：`CLIP_FAMILIES` 动作家族翻译层 + `resolveClipAliases` + `clipOverrides`、`findBone`（GLTFLoader 洗点号）、`footY` 脚底对齐、`glow` 自发光、配件按世界缩放反推尺寸；`.tmp-mob-calib.js` 正交相机逐像素实测身高（取代人眼比对）；图鉴 13 张缩略图重出 | v=62 |
 | **53** | **用户实测报的七条一起修**：① **概率事件点完只有「这一夜什么都没发生」**（真 bug：`chooseEventOption` 把 `{roll:[...]}` 原样交给 `applyEffects`——结算内部摇了，但摇出的分支没外传，结果页拿到只有 `roll` 键的对象、`effectLines` 一项都认不出。现在先 `resolveRoll(choice.effects, rngOf('event'))` 摇一次，同一份结果既结算又显示；种子局也因此可复现；摇到空手写「这一把落空了，什么也没拿到」）。② 第二/三关**提亮**（crypt/ash 的底色、雾色、雾浓度 0.0152→0.0122 / 0.0168→0.0132、天光 1.05→1.55、月光 2.35/2.40→3.10、补光 0.70→0.95，地面贴图底部色也提了一档）。③ 咒面图腾 ×1.8（1.40→2.52）、焚火魔 ×1.2（1.22→1.464）、孢冠菌王 ×2（1.62→3.24），碰撞半径同步。④ 菌王的四个卫队缩到 0.7 倍（`spawn(type, at, { scale })` 按实例缩放，不动 warrior 本体；血条/伤害数字跟着 `e.height` 走；轨道 1.45→1.9）。⑤ **箭雨教程**挂进 `WEAPON_TUT`（`arrowrain`，label「技能教程」，最后一步 `wait:'rain'` 要求真放一次），拿环剑时按「武器卡 → 环剑教程 → 箭雨教程 → 回合链」串起来。⑥ 加载轮播 3200ms → **1778ms**（×1.8 速），淡出 450→200ms（CSS 同步） | v=63 |
 | **54** | **用户实测四条一起修**：① 篝火商店「布袋 · 铜板」每级金币 **30 → 10**（`campfire.js` 的 `coins`，desc 同步；一档就白送半家摊子，局内经济被它一个人抬起来）；② **主菜单排版收成两行**（`index.html` 把 `tt-start`/`tt-resume` 包进 `.tt-row-main`、`tt-daily`/`tt-seedbtn` 包进 `.tt-row-chal`；CSS 用 `flex:1 + max-width + align-items:stretch` 让两枚等高，行内按钮 `margin-top:0` 免得一高一低，隐藏「读取存档」时开始游戏自己居中）；③ 「篝火」改名 **篝火商店**（主菜单按钮、面板标题、礼包/属性页脚、结算提示、加载轮播、永久说明标题统一；剧情「篝火边的故事」保留原文）；④ **倒下弹「温馨提示」**（`#failTip`：标题「温馨提示」+「想要提升实力？去篝火商店看看吧。」，副文案现读 `bones()`；`endGame` 里 `!isWin` 时 900ms 后弹，层级 19 压过结算卡 18；「去篝火商店」= 关提示 → 关结算 → `showTitle()` → `showCampfire()`，「下次吧」只关提示）。钩子 `__game.failTip` | v=64 |
+| **55** | **用户三条**：① **兑换码大全 txt**（本机 `兑换码大全.txt`，A 类 300×10 / B 类 100×10，分类 + 速查 + 用法；20 码逐个重算哈希对上 `js/gift.js`；已 gitignore）；② **新怪物信息卡**（`#meetCard` + `profile.met` + `enemy.js onSpawn`：一种怪首次上场 → `gameState='meet'` 冻结世界 → 讲攻击方式 → 「我明白了」继续，一辈子只拦一次；`?debug=1` 下默认关、加 `&meet` 才开）；③ **只记打斗时长**（`elapsed` 只在 playing/tutorial/wtut 且无 panelOpen/bagOpen/meetOpen/uiHold 时走表；`startPlay` 归零 —— 以前跨局会累积） | v=65 |
 
 第 51 块上线后 hotfix（v=61，用户报「属性页返回按钮失效」）：
 
@@ -138,6 +140,24 @@ Three.js r160 的单摇杆幸存者肉鸽《奶蛙夜行》，纯静态站点（
 - **测试坑**：CDP 里测箭雨千万别把怪放在玩家脚边 —— 自动攻击会在你 `waitFor` 之前把它砍死（探针里那只 1.6 格的 minion 就是这么没的），而且要等 `state` 从 `spawn` 转成 `chase`，否则 `arrowRain.fire()` 直接返回 false（选目标跳过 spawn/dead/隐身）。放 6 格外 + `speedScale: 0` 最稳。
   另外 `ok()` 的**参数顺序**要盯住（本项目惯例是 `ok(cond, name)`），写反了会打出一屏「✓ true」的假绿——第 53 块第一版就这么假绿了一轮，`✗` 一个没报。
 
+
+第 55 块要点（兑换码大全 / 新怪物信息卡 / 只记打斗时长，2026-10-23，v=65）：
+
+- **① 兑换码大全.txt（本机文件，不进仓库）**：明文码只在 `gift-codes.local.md` 里（第 44 块留下的），第 55 块按用户要求整理成 `naiwa-rouge/兑换码大全.txt`：**A 类 300 骨币 ×10 + B 类 100 骨币 ×10**，分「怎么用 / 输入规则 / 分类总览 / A 类清单 / B 类清单 / 速查清单 / 校验记录」，每个码前面留了 `[ ]` 打勾位。**20 个码不是抄一遍就完**：脚本把每个码按 `normalizeCode + codeHash` 重算哈希，逐个对 `js/gift.js` 的码表核档位（20/20 全中）—— 以后加码同理，**先算哈希再写 txt**。文件已进 `.gitignore`（`兑换码大全.txt` + `*兑换码大全*.txt`）。
+- **② 新怪物信息卡（用户要「新类型怪物暂停 + 讲攻击方式 + 我明白了继续」）**：
+  · 数据层：`profile.met = { minion: 时间戳 }`（**和 `codex.enemies` 是两张表** —— 那张是击倒数，遇到没打死在那边是 0），配 `enemyMet()/markEnemyMet()`。
+  · 触发点：`createEnemySystem({ onSpawn })`，在 `list.push(e)` **之后**、`return` 之前回调（回调里就看得见怪已上场）。
+  · 拦截规则（`onMeetSpawn`）：`meetAuto` → `gameState==='playing'` 且 `level.roundNo` 已开 → 没 `meetOpen` → `enemyMet` 为假 → `markEnemyMet` 成功才排队。教程/武器教程里冒出来的怪**不打断也不记档**（那些有自己的教学卡）。
+  · 冻结：`gameState = 'meet'`（`inGame` 白名单里没有它 → 移动、怪物、波次、秒表一起停）+ `input.joystick.release()` + `vel` 清零。`closeMeet()` 还原 `meetAfter`；队列里还有下一只就 160ms 后再弹（两张卡硬切会闪）。
+  · 内容：直接 `codexEntries('enemies')` 取 `title/sub/desc/thumb`（图鉴改文案，两处同步），`desc` 里清掉 `**` 星号。层级 `#meetCard` **z-index 17**（压商店/升级 16，低于结算 18 与失败提示 19）；`endGame/showTitle/startPlay` 里 `dropMeet()` 收干净。
+  · **⚠️ `?debug=1` 下默认不弹，加 `&meet` 才开**：这张卡会冻世界，二十多套老 CDP 一开局就被拦（实测 block53 的「怪进入可攻击状态」直接超时）。钩子：`__game.meetCard.{on,type,pending,met,auto,setAuto,close,forget,metAll}`。
+- **③ 只记打斗时长（用户要「商店/剧情/选属性都不算」）**：
+  · 全项目只有**一处** `elapsed += dt`，条件 `inGame` 现在 = `playing|tutorial|wtut` 且 `!panelOpen && !bagOpen && !meetOpen && uiHold===0`。商店/奇遇与主线/升级/武器卡都把 `gameState` 换掉了，天然不计；属性卡走 `panelOpen`、背包走 `bagOpen`、**通用确认弹窗走新加的 `uiHold`**（`askConfirm` +1 / `closeConfirm` 按 `confirmOpen` 才 -1，重入不会减成负数）。
+  · **真 bug：跨局累积**。`elapsed` 只在模块初始化时置 0，打完一局回标题再开，第二局的「用时」把上一局的带进来（记录/成就全歪）。现在 `startPlay()` 里归零；读档仍走 `elapsed = saved.elapsed || 0` 接着算。
+  · 调试钩子 `__game.timeInfo() → { seconds, running, state, holds }`；测试就断言 `running === false` + 1.1 秒内秒数不动。
+- **测试**：`.tmp-block55-test.mjs` **89**/0（纯 Node：txt 20 码重算哈希 + 分类段/说明/总额 + gitignore；met 两张表分离 + onSpawn 位置 + 守卫链 + 层级 + 全页零重复 id + 计时白名单 + 归零唯一性）、`.tmp-block55-cdp.js` **51**/0（真 DOM，**URL 必须带 `&meet`**）。
+  回归：block53-cdp **39**/0、block50 **12**/0、block29 **39**/0、block35 **49**/0、block19 **44**/0、block54-cdp **36**/0、block52/53/54 Node 全绿。
+- **踩坑**：① 量 `#meetCard` 的 opacity 不能紧跟 `waitFor(.on)` —— CSS 有 0.26s 淡入，量到 0 是正常的（先 `sleep(420)`）；缩略图要等 `img.complete && naturalWidth>0`。② `elapsed = 0;` 的正则会被 `let elapsed = 0;` 命中，断言「只有一处归零」要用 `(?<!let )`。③ 商店面板的类名是 `.shop` 不是 `#shopScr`（取 z-index 别猜）。
 
 第 50 块要点（主菜单属性页，2026-10-22，v=59；同批发版还有 47 箭雨 / 48 加载轮播 / 49 种子挑战）：
 
@@ -661,6 +681,8 @@ node .tmp-boon-test.mjs       # 146 永夜火种（层数/品质吃幸运/待领
 .tmp-block53-cdp.js    39  第 53 块真流程（掷骰 16 次看数值 + 金币账 / 第二关亮度 / 模型缩放 / 教程卡 wait:rain）
 .tmp-block54-test.mjs  54  第 54 块四条（布袋 10 金币 + 别的火种没被动 / 主菜单两行结构 + 行内 margin 清零 / 改名全链路 / 失败提示只在 !isWin 弹 + 按钮链路 + z-index）— 纯 Node
 .tmp-block54-cdp.js    36  第 54 块真 DOM（两按钮同行等高 + 菜单横向居中 / 商店标题与布袋说明 / 倒下 0.9s 自动弹 + 真实骨币 / 下次吧保留结算 / 去商店的落点）
+.tmp-block55-test.mjs  89  第 55 块（兑换码大全.txt 20 码逐个重算哈希对 gift.js / 新怪卡 profile.met + onSpawn + 守卫 + 层级 + 唯一 id / 计时白名单 + 确认弹窗挂起 + 开新局归零）— 纯 Node
+.tmp-block55-cdp.js    51  第 55 块真流程（⚠️ URL 要带 &meet：首次遇怪 → state=meet → 计时与刷怪全停 → 内容与图鉴一致 → 我明白了继续 → 不重复弹；商店/奇遇/升级/属性卡 1.1s 计时不动；win 后 beginGame 归零）
 .tmp-mob-calib.js          怪物身高标定（正交实测 sourceHeight/footY）
 .tmp-mob-lineup.js         9 只新怪并排对比 + 盾牌特写（验收图）
 .tmp-wtut-title-check.js 4  武器教程卡标题随步骤变化（wtutTitle）

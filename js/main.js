@@ -5,71 +5,72 @@
 // 目标是把三件事调顺：摇杆输入 → 角色速度/朝向 → 相机跟随。
 // 后续叠战斗时，只需要在 tick() 里加敌人更新与自动攻击，不用动输入层。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=64';
-import { buildNightScene } from './scene.js?v=64';
-import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=64';
-import { createInput } from './input.js?v=64';
-import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=64';
-import { createStatView } from './statView.js?v=64';
-import { createWeaponStats } from './weaponStats.js?v=64';
-import { createFx } from './fx.js?v=64';
-import { createEnemySystem } from './enemy.js?v=64';
+import * as THREE from '../lib/three.module.js?v=65';
+import { buildNightScene } from './scene.js?v=65';
+import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=65';
+import { createInput } from './input.js?v=65';
+import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=65';
+import { createStatView } from './statView.js?v=65';
+import { createWeaponStats } from './weaponStats.js?v=65';
+import { createFx } from './fx.js?v=65';
+import { createEnemySystem } from './enemy.js?v=65';
 import {
   createLevel, LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVELS_BY_ID, DIFFS, setDifficulty, getDifficulty, roundScale, levelStats,
-} from './wave.js?v=64';
-import { createRangeRing } from './rangeRing.js?v=64';
-import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=64';
-import { createWeaponSystem } from './weapon.js?v=64';
-import { createArrowRainSystem } from './arrowRain.js?v=64';
-import { SWORD_KINDS } from './swordKinds.js?v=64';
-import { createGoldSystem } from './gold.js?v=64';
-import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW } from './shop.js?v=64';
-import { createTurretSystem, TURRET } from './turret.js?v=64';
-import { createRelicSystem, RELIC_DEFS } from './relics.js?v=64';
-import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=64';
-import audio from './audio.js?v=64';
-import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=64';
+} from './wave.js?v=65';
+import { createRangeRing } from './rangeRing.js?v=65';
+import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=65';
+import { createWeaponSystem } from './weapon.js?v=65';
+import { createArrowRainSystem } from './arrowRain.js?v=65';
+import { SWORD_KINDS } from './swordKinds.js?v=65';
+import { createGoldSystem } from './gold.js?v=65';
+import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW } from './shop.js?v=65';
+import { createTurretSystem, TURRET } from './turret.js?v=65';
+import { createRelicSystem, RELIC_DEFS } from './relics.js?v=65';
+import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=65';
+import audio from './audio.js?v=65';
+import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=65';
 import {
   settings as readSettings, setSetting, save as saveProfile, profile,
   bumpStat, setStatMax, codexAdd, codexCount, countCard, unlockAch, hasAch, addBones, bones, resetAll,
   storyProgress, markStorySeen, markStoryRead, addStoryMark, setStoryEnding,
   setSaveSuppressed, reloadFromStorage,
   giftLog, giftRedeemed, markGift,
-} from './profile.js?v=64';
+  enemyMet, markEnemyMet,
+} from './profile.js?v=65';
 // 第 44 块：礼包兑换（码表只有哈希，明细在 gift.js 顶部注释）
-import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=64';
+import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=65';
 // 第 46 块：音效包（抽象奶蛙音效包 —— 4 段奶蛙叫声，通关第一关解锁）
-import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=64';
-import * as runSave from './runSave.js?v=64';
+import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=65';
+import * as runSave from './runSave.js?v=65';
 import {
   CAMPFIRE, CAMP_STEP, campBuy, campOwned, campLevel,
   campCost, campApply, bonesFor, diffBoneMul, levelBoneMul, coinBones, BONE,
-} from './campfire.js?v=64';
+} from './campfire.js?v=65';
 // 第 23 块：永夜火种（通关白给的 3 次永久三选一）
 import {
   BOONS, BOON_BY_ID, BOON_PICKS, boonOwned, boonStacks, boonPending, boonTotalStacks,
   grantBoons, rollBoons, takeBoon, applyBoons, boonStackText,
-} from './boons.js?v=64';
+} from './boons.js?v=65';
 // 第 21 块：夜行诅咒（自选 debuff 换骨币倍率）
-import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=64';
+import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=65';
 // 第 22 块：种子与每日挑战
 import {
   DAILY_RULES, dayKey, dayText, dailySeed, seedCode, pickDailyCurses,
   seedFromText, pickSeedRules, loadSeedRecords, saveSeedRecord, pruneSeeds,
   dailyRecord, saveDailyRecord, pruneDaily, makeRng,
-} from './seed.js?v=64';
-import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=64';
-import { achById, ACHS } from './achievements.js?v=64';
+} from './seed.js?v=65';
+import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=65';
+import { achById, ACHS } from './achievements.js?v=65';
 import {
   EVENTS, ALL_EVENTS, getEventById, pickEvent, effectLines,
   choiceHint, canAfford, costShort, REP_MIN, REP_MAX, REP_START,
   isTalk, eventChoices, resolveRoll, mergeEffects,
-} from './events.js?v=64';
+} from './events.js?v=65';
 // 第 32 块：主线《笑不出来的那一夜》（18 夜，一夜一关，前 3 夜已有关卡）
 import {
   STORY_ARC, STORY_CHAPTERS, STORY_ENDINGS, MARK_INFO,
   storyChapterAt, storyChapterById, storyEndingKey,
-} from './story.js?v=64';
+} from './story.js?v=65';
 
 // 标记模块已经跑起来了：index.html 的兜底自检靠它判断
 // 「模块根本没执行」还是「执行了但加载慢」。
@@ -511,6 +512,8 @@ async function boot() {
 
   const enemies = createEnemySystem({
     scene, fx, arenaRadius: ARENA_R,
+    // 第 55 块：新类型第一次上场 → 冻结世界 + 弹「它怎么打人」的信息卡
+    onSpawn: (e) => onMeetSpawn(e),
     onDeath: (e) => {
       kills++;
       codexAdd('enemies', e.type);      // 图鉴：击倒计数
@@ -671,8 +674,15 @@ async function boot() {
 
   // ---------------- 战斗状态 ----------------
   // title（标题页）| tutorial（新手教程）| playing | upgrade（三选一）| weapon（武器卡）| over
+  // 第 55 块新增一种：meet（新怪物信息卡，世界冻结）
   let gameState = 'title';
-  let elapsed = 0;             // 本局时长（秒）
+  // 本局的**战斗时长**（秒）——用户定案（第 55 块）：只算真正在打的时间。
+  // 商店 / 奇遇与主线剧情 / 升级三选一 / 属性卡 / 背包 / 确认弹窗 / 新怪信息卡
+  // 全都不许算进来（判断在 tick 里的 combatOn），开新局时归零。
+  let elapsed = 0;
+  // 战斗外界面的挂起计数（第 55 块）：目前只有通用确认弹窗会 +1。
+  // 用它而不是再塞一个 gameState —— 确认弹窗是叠在任意状态上的薄壳。
+  let uiHold = 0;
   let iframe = 0;              // 无敌帧剩余
   let shake = 0;               // 相机震动强度
   let attackCd = 0;            // 主角攻击冷却
@@ -1201,6 +1211,7 @@ async function boot() {
   // 语义：确定 → resolve(true)，取消/点外面 → resolve(false)。
   // cancelText 传 null = 单按钮「我知道了」的告知型弹窗（不给人反悔的机会）。
   let confirmResolve = null;
+  let confirmOpen = false;
   function askConfirm(title, sub, { okText = '确定', cancelText = '再想想' } = {}) {
     if (!confirmAsk) return Promise.resolve(false);
     caTitle.textContent = title;
@@ -1210,12 +1221,16 @@ async function boot() {
     caCancel.hidden = !cancelText;
     confirmAsk.classList.add('on');
     confirmAsk.setAttribute('aria-hidden', 'false');
+    // 第 55 块：弹窗开着的时候人没在打，战斗计时也停下来
+    confirmOpen = true;
+    uiHold++;
     return new Promise((res) => { confirmResolve = res; });
   }
   function closeConfirm(ok) {
     if (!confirmAsk) return;
     confirmAsk.classList.remove('on');
     confirmAsk.setAttribute('aria-hidden', 'true');
+    if (confirmOpen) { confirmOpen = false; uiHold = Math.max(0, uiHold - 1); }
     const r = confirmResolve;
     confirmResolve = null;
     if (r) r(!!ok);
@@ -1238,6 +1253,7 @@ async function boot() {
   // ---------------- 开始界面 / 新手教程 / 武器获得卡 ----------------
   function showTitle() {
     gameState = 'title';
+    dropMeet();                   // 第 55 块：回标题时新怪卡一起收掉
     audio.playBgm('night');
     titleScr.style.display = '';
     requestAnimationFrame(() => titleScr.classList.remove('off'));
@@ -1269,6 +1285,10 @@ async function boot() {
     tutCard.classList.remove('on');
     tutCard.setAttribute('aria-hidden', 'true');
     gameState = 'playing';
+    // 第 55 块：新一局从 0 起表。以前只初始化一次 —— 打完一局回标题再开，
+    // 第二局的「用时」会把上一局那几十分钟一起带进来（记录/成就全被带歪）。
+    elapsed = 0;
+    meetQueue.length = 0;             // 上一局没来得及看的怪别追到这一局来
     hintDone = false;
     hintEl.classList.remove('off');
     runRarities = new Set();          // 本局品质集合重置（cards_all_kinds 用）
@@ -4389,6 +4409,7 @@ async function boot() {
   function endGame(isWin) {
     if (gameState === 'over') return;
     gameState = 'over';
+    dropMeet();                     // 第 55 块：新怪卡不许盖在结算上
     const wasDaily = dailyMode;       // 下面会把 dailyMode 清掉，成就判定要用开局那一下
     won = isWin;
     deadT = 0;
@@ -4590,6 +4611,105 @@ async function boot() {
     });
   }
 
+  // ============================================================
+  // 新怪物信息卡（第 55 块，用户要求）
+  // ------------------------------------------------------------
+  // 「每遇到一个新类型的怪，游戏暂停，展示它的攻击方式，点了才继续。」
+  //   · 「新」= 这份档案第一次遇见（profile.met，一种怪一辈子只拦一次），
+  //     不是每局都弹 —— 每局弹一次会把 20 回合的节奏全打断。
+  //   · 冻结方式沿用全局约定：gameState 换成 'meet'，tick 里的 combatOn 随之变假，
+  //     移动、怪物、波次、战斗计时一起停（战斗计时也因此天然不含看卡的时间）。
+  //   · 内容直接借图鉴那一份（codex.js 的 name/sub/desc/thumb），
+  //     一处改文案、两处同步，不会再出现「图鉴说一套、卡片说另一套」。
+  // ============================================================
+  const meetEl = document.getElementById('meetCard');
+  const mtImg = document.getElementById('mtImg');
+  const mtName = document.getElementById('mtName');
+  const mtSub = document.getElementById('mtSub');
+  const mtDesc = document.getElementById('mtDesc');
+  const mtOk = document.getElementById('mtOk');
+  let meetOpen = false;
+  let meetType = '';           // 现在这张卡讲的是谁（测试要看）
+  let meetAfter = 'playing';   // 关掉之后回到哪个状态
+  const meetQueue = [];        // 同一帧冒出来好几只新怪时排队，一张一张来
+  // 自动化测试友好：?debug=1 下**默认不弹**这张卡。
+  // 理由：它会冻结整个世界，而二十多套老 CDP 都要开局、刷怪、等回合推进，
+  // 一上来就被拦一下会连着挂（第 55 块回归时实测 block53 就栽在这）。
+  // 要测这张卡的套件在地址后面加 &meet，或者在 debug 里调 __game.meetCard.setAuto(true)。
+  const meetQs = new URLSearchParams(location.search);
+  let meetAuto = meetQs.has('debug') ? meetQs.has('meet') : true;
+
+  function meetInfo(type) {
+    const all = codexEntries('enemies');
+    return all.find((e) => e.id === type) || null;
+  }
+
+  // 怪物上场时被 enemy.js 的 onSpawn 叫到
+  function onMeetSpawn(e) {
+    if (!meetAuto) return;                 // debug 下没加 &meet：自动化测试不想被拦
+    if (!e || !e.type) return;
+    // 只在真打的时候拦人：教程 / 武器教程里冒出来的怪先放过（那些有自己的教学卡，
+    // 而且教程靶子就是第一关的兵，留给正式开打时再讲）。不记「见过」，下次还会判。
+    if (gameState !== 'playing' || !level.roundNo || meetOpen) return;
+    if (enemyMet(e.type)) return;
+    if (!markEnemyMet(e.type)) return;     // 写档案；沙盒期 save 会被吞掉，只在内存里
+    meetQueue.push(e.type);
+    pumpMeet();
+  }
+
+  function pumpMeet() {
+    if (meetOpen || !meetQueue.length) return;
+    if (gameState !== 'playing') return;   // 等世界回到战斗状态再弹
+    const type = meetQueue.shift();
+    const info = meetInfo(type);
+    if (!info) { pumpMeet(); return; }     // 图鉴里没有这只（以后新加的）就不拦路
+    meetType = type;
+    meetAfter = gameState;
+    meetOpen = true;
+    gameState = 'meet';
+    input.joystick.release();
+    vel.set(0, 0, 0);
+    audio.sfx('event');
+    mtName.textContent = info.title;
+    mtSub.textContent = info.sub || '';
+    mtDesc.textContent = String(info.desc || '').replace(/\*\*/g, '');
+    if (mtImg) {
+      if (info.thumb) {
+        mtImg.src = info.thumb;
+        mtImg.alt = info.title;
+        mtImg.hidden = false;
+      } else {
+        mtImg.removeAttribute('src');
+        mtImg.hidden = true;
+      }
+    }
+    meetEl.classList.add('on');
+    meetEl.setAttribute('aria-hidden', 'false');
+  }
+
+  function closeMeet() {
+    if (!meetOpen) return;
+    meetOpen = false;
+    meetType = '';
+    meetEl.classList.remove('on');
+    meetEl.setAttribute('aria-hidden', 'true');
+    if (gameState === 'meet') gameState = meetAfter || 'playing';
+    meetAfter = 'playing';
+    // 排队里的下一只等这张淡完再上（两张卡硬切会闪）
+    if (meetQueue.length) setTimeout(pumpMeet, 160);
+  }
+
+  if (mtOk) mtOk.addEventListener('click', () => { audio.sfx('uiSwitch'); closeMeet(); });
+  // 兜底：结算 / 回标题 / 重开时把卡和队列一起收掉，别糊在下一屏上。
+  // 只收界面和标记 —— gameState 由调用方自己摆（它们紧接着就会设成 over/title/playing）。
+  function dropMeet() {
+    meetQueue.length = 0;
+    meetOpen = false;
+    meetType = '';
+    meetEl.classList.remove('on');
+    meetEl.setAttribute('aria-hidden', 'true');
+  }
+
   document.getElementById('rsBtn').addEventListener('click', () => {
     // 有没领的永久火种就先选：选完 closeBoons 会自己 reload 开下一局
     if (boonPending() > 0 && showBoons({ after: 'reload' })) {
@@ -4772,6 +4892,41 @@ async function boot() {
         hide: () => { hideFailTip(); return true; },
         on: () => !!(failTipEl && failTipEl.classList.contains('on')),
       },
+      // 新怪物信息卡（第 55 块）
+      meetCard: {
+        on: () => meetOpen,
+        type: () => meetType,
+        pending: () => meetQueue.length,
+        met: (type) => enemyMet(type),
+        state: () => gameState,
+        auto: () => meetAuto,
+        setAuto: (b) => { meetAuto = !!b; return meetAuto; },
+        close: () => { closeMeet(); return true; },
+        // 测试用：把某只怪或全部怪重新标成「没见过」
+        forget: (type) => {
+          const p = profile();
+          if (!p.met) p.met = {};
+          if (type) delete p.met[type];
+          else p.met = {};
+          saveProfile();
+          return true;
+        },
+        // 测试用：一次性把 13 只全标成「见过」——
+        // 老 CDP 套件手动刷怪时不希望被信息卡冻结，setup 里调一下就干净了。
+        metAll: () => {
+          for (const it of codexEntries('enemies')) markEnemyMet(it.id);
+          return true;
+        },
+      },
+      // 战斗秒表（第 55 块）：{ seconds, running, state, holds }
+      // running 是「这一刻在不在计时」，测试据此断言商店/剧情/属性卡里都不涨。
+      timeInfo: () => ({
+        seconds: elapsed,
+        running: (gameState === 'playing' || gameState === 'tutorial' || gameState === 'wtut')
+          && !panelOpen && !bagOpen && !meetOpen && uiHold === 0,
+        state: gameState,
+        holds: uiHold,
+      }),
       // 永夜火种（第 23 块）：通关白给的永久属性
       boons: {
         list: () => BOONS.map((b) => ({
@@ -5303,8 +5458,13 @@ async function boot() {
 
     // 教程/武器教程也算「在游戏里」：能移动、能打怪，只是不推进回合波次
     // 背包打开时同样冻结（第 13 块：随时能开，开就是暂停）
+    // 第 55 块（用户要求）：这才是「本局战斗时长」的唯一开关。
+    //   · 商店 / 奇遇 / 主线剧情 / 升级三选一 / 武器卡 / 新怪信息卡
+    //     都把 gameState 换掉了 → 不进这里 → 不计时；
+    //   · 属性卡（panelOpen）、背包（bagOpen）、确认弹窗（uiHold）也是同类拦路。
+    // 也就是说：只有真的能动、能挨打、怪在动的那段时间，秒表才走。
     const inGame = (gameState === 'playing' || gameState === 'tutorial' || gameState === 'wtut')
-      && !panelOpen && !bagOpen;
+      && !panelOpen && !bagOpen && !meetOpen && uiHold === 0;
     if (inGame) {
       elapsed += dt;
       updateCurse(dt);
