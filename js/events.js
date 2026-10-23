@@ -44,11 +44,11 @@
 // ctx: { round, hasWeapon, gold, rep, hp, maxHp, luck }
 //   luck 用来写 cond（幸运够高才遇得到的吉兆事件，第 11 块）。
 // ============================================================
-import { STAT_DEFS } from './stats.js?v=70';
-import { WEAPON_STAT_DEFS } from './weaponStats.js?v=70';
+import { STAT_DEFS } from './stats.js?v=71';
+import { WEAPON_STAT_DEFS } from './weaponStats.js?v=71';
 // 第 31 块：事件扩容（40 条随机事件 + 3 条连锁后续）单独放一个文件，
 // 不然这个文件会涨到 5000 行。抽取规则、effectLines 等工具函数仍在本文件。
-import { EXTRA_EVENTS, EXTRA_CHAIN_EVENTS } from './eventsExtra.js?v=70';
+import { EXTRA_EVENTS, EXTRA_CHAIN_EVENTS } from './eventsExtra.js?v=71';
 
 export const REP_MIN = 0;
 export const REP_MAX = 100;
