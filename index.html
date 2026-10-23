@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#080f14">
 <link rel="icon" href="data:,">
 <title>蛙步 · 夜行</title>
-<link rel="stylesheet" href="style.css?v=63">
+<link rel="stylesheet" href="style.css?v=64">
 </head>
 <body>
 
@@ -224,22 +224,27 @@
     <p class="tt-sub">夜色里的草地不太平，骷髅从四面钻出来。<br>选一关，撑过所有回合。</p>
     <div class="tt-notice" id="ttNotice" hidden></div>
     <div class="tt-menu">
-      <button class="tt-start" id="btnStart" type="button">开始游戏</button>
-      <button class="tt-resume" id="btnResume" type="button" hidden>读取存档</button>
+      <!-- 第 54 块（用户定案）：开始/读取一行，今日/种子一行，主菜单不再一路竖排 -->
+      <div class="tt-row tt-row-main">
+        <button class="tt-start" id="btnStart" type="button">开始游戏</button>
+        <button class="tt-resume" id="btnResume" type="button" hidden>读取存档</button>
+      </div>
       <!-- 今日挑战（第 22 块）：日期哈希出固定种子，同一天所有人抽到同一手牌 -->
-      <button class="tt-daily" id="btnDaily" type="button">
-        <span class="tt-daily-k">今日挑战</span>
-        <span class="tt-daily-s" id="btnDailySub">同一颗种子</span>
-      </button>
-      <!-- 种子挑战（第 49 块）：自己输入种子，难度按战绩自动匹配 -->
-      <button class="tt-daily tt-seedbtn" id="btnSeed" type="button">
-        <span class="tt-daily-k">种子挑战</span>
-        <span class="tt-daily-s">输入种子开一局</span>
-      </button>
-      <!-- 篝火（第 19 块）：局外成长。骨币只在结算发，只在这里花 -->
+      <div class="tt-row tt-row-chal">
+        <button class="tt-daily" id="btnDaily" type="button">
+          <span class="tt-daily-k">今日挑战</span>
+          <span class="tt-daily-s" id="btnDailySub">同一颗种子</span>
+        </button>
+        <!-- 种子挑战（第 49 块）：自己输入种子，难度按战绩自动匹配 -->
+        <button class="tt-daily tt-seedbtn" id="btnSeed" type="button">
+          <span class="tt-daily-k">种子挑战</span>
+          <span class="tt-daily-s">输入种子开一局</span>
+        </button>
+      </div>
+      <!-- 篝火商店（第 19 块，第 54 块改名）：局外成长。骨币只在结算发，只在这里花 -->
       <button class="tt-camp" id="btnCamp" type="button">
         <span class="tt-camp-fire">🔥</span>
-        <span class="tt-camp-name">篝 火</span>
+        <span class="tt-camp-name">篝火商店</span>
         <span class="tt-camp-bone"><i></i><b id="campBoneNum">0</b></span>
       </button>
       <div class="tt-row">
@@ -344,7 +349,7 @@
     </div>
     <div class="gf-msg" id="giftMsg"></div>
     <div class="gf-log" id="giftLog"></div>
-    <div class="lv-foot">一个码在本机只能用一次 · 大小写和横杠都不影响 · 换来的骨币直接进篝火</div>
+    <div class="lv-foot">一个码在本机只能用一次 · 大小写和横杠都不影响 · 换来的骨币直接进篝火商店</div>
   </div>
 </div>
 
@@ -428,7 +433,7 @@
       <div class="st-hint">拖动旋转 · 它偶尔会自己动</div>
     </div>
     <div class="st-rows" id="statRows"></div>
-    <div class="lv-foot">已计入篝火与永夜火种的局外加成 · 局内升级/装备另算</div>
+    <div class="lv-foot">已计入篝火商店与永夜火种的局外加成 · 局内升级/装备另算</div>
   </div>
 </div>
 
@@ -460,7 +465,7 @@
 <div id="campScr" class="tt-sub-scr" aria-hidden="true">
   <div class="lv-card">
     <div class="lv-head">
-      <div class="lv-title">篝火</div>
+      <div class="lv-title">篝火商店</div>
       <button class="lv-back" id="cfBack" type="button">‹ 返回</button>
     </div>
     <div class="cf-purse">
@@ -573,6 +578,19 @@
   </div>
 </div>
 
+<!-- 失败提示（第 54 块，用户定案）：倒下之后别直接把玩家丢回主菜单，
+     先指一条「变强」的路 —— 局外成长全在篝火商店里。 -->
+<div id="failTip" aria-hidden="true">
+  <div class="ft-card">
+    <div class="ft-icon">🔥</div>
+    <div class="ft-title">温馨提示</div>
+    <div class="ft-text">想要提升实力？去篝火商店看看吧。</div>
+    <div class="ft-sub" id="ftSub">这一局结算的骨币已经进账 · 火里点过的东西，下一局就带着</div>
+    <button class="ft-go" id="ftGo" type="button">去篝火商店</button>
+    <button class="ft-later" id="ftLater" type="button">下次吧</button>
+  </div>
+</div>
+
 <!-- 公告弹窗（第 45 块）：进主界面后按「日期 + 公告版本」检查一次；
      勾了「今日内不再弹出」当天就不会再自动弹，但主菜单「公告」按钮随时能回看。
      改公告内容时把 main.js 里的 NOTICE_VER +1，就算今天勾过也会重新看到新公告。 -->
@@ -634,7 +652,7 @@
 <!-- 不用 importmap：老手机浏览器（iOS 16.4 以下、旧版微信/安卓 WebView）
      不支持 import maps，会让整个模块解析失败、加载页永远停在 0%。
      项目内所有 import 都写成相对路径，直接靠原生 ES Module 解析。 -->
-<script type="module" src="js/main.js?v=63"></script>
+<script type="module" src="js/main.js?v=64"></script>
 
 <!-- 兜底自检：模块没跑起来时把原因写出来，别让用户对着 0% 干等 -->
 <script>

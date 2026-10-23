@@ -5,71 +5,71 @@
 // 目标是把三件事调顺：摇杆输入 → 角色速度/朝向 → 相机跟随。
 // 后续叠战斗时，只需要在 tick() 里加敌人更新与自动攻击，不用动输入层。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=63';
-import { buildNightScene } from './scene.js?v=63';
-import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=63';
-import { createInput } from './input.js?v=63';
-import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=63';
-import { createStatView } from './statView.js?v=63';
-import { createWeaponStats } from './weaponStats.js?v=63';
-import { createFx } from './fx.js?v=63';
-import { createEnemySystem } from './enemy.js?v=63';
+import * as THREE from '../lib/three.module.js?v=64';
+import { buildNightScene } from './scene.js?v=64';
+import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=64';
+import { createInput } from './input.js?v=64';
+import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=64';
+import { createStatView } from './statView.js?v=64';
+import { createWeaponStats } from './weaponStats.js?v=64';
+import { createFx } from './fx.js?v=64';
+import { createEnemySystem } from './enemy.js?v=64';
 import {
   createLevel, LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVELS_BY_ID, DIFFS, setDifficulty, getDifficulty, roundScale, levelStats,
-} from './wave.js?v=63';
-import { createRangeRing } from './rangeRing.js?v=63';
-import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=63';
-import { createWeaponSystem } from './weapon.js?v=63';
-import { createArrowRainSystem } from './arrowRain.js?v=63';
-import { SWORD_KINDS } from './swordKinds.js?v=63';
-import { createGoldSystem } from './gold.js?v=63';
-import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW } from './shop.js?v=63';
-import { createTurretSystem, TURRET } from './turret.js?v=63';
-import { createRelicSystem, RELIC_DEFS } from './relics.js?v=63';
-import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=63';
-import audio from './audio.js?v=63';
-import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=63';
+} from './wave.js?v=64';
+import { createRangeRing } from './rangeRing.js?v=64';
+import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=64';
+import { createWeaponSystem } from './weapon.js?v=64';
+import { createArrowRainSystem } from './arrowRain.js?v=64';
+import { SWORD_KINDS } from './swordKinds.js?v=64';
+import { createGoldSystem } from './gold.js?v=64';
+import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW } from './shop.js?v=64';
+import { createTurretSystem, TURRET } from './turret.js?v=64';
+import { createRelicSystem, RELIC_DEFS } from './relics.js?v=64';
+import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=64';
+import audio from './audio.js?v=64';
+import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=64';
 import {
   settings as readSettings, setSetting, save as saveProfile, profile,
   bumpStat, setStatMax, codexAdd, codexCount, countCard, unlockAch, hasAch, addBones, bones, resetAll,
   storyProgress, markStorySeen, markStoryRead, addStoryMark, setStoryEnding,
   setSaveSuppressed, reloadFromStorage,
   giftLog, giftRedeemed, markGift,
-} from './profile.js?v=63';
+} from './profile.js?v=64';
 // 第 44 块：礼包兑换（码表只有哈希，明细在 gift.js 顶部注释）
-import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=63';
+import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=64';
 // 第 46 块：音效包（抽象奶蛙音效包 —— 4 段奶蛙叫声，通关第一关解锁）
-import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=63';
-import * as runSave from './runSave.js?v=63';
+import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=64';
+import * as runSave from './runSave.js?v=64';
 import {
   CAMPFIRE, CAMP_STEP, campBuy, campOwned, campLevel,
   campCost, campApply, bonesFor, diffBoneMul, levelBoneMul, coinBones, BONE,
-} from './campfire.js?v=63';
+} from './campfire.js?v=64';
 // 第 23 块：永夜火种（通关白给的 3 次永久三选一）
 import {
   BOONS, BOON_BY_ID, BOON_PICKS, boonOwned, boonStacks, boonPending, boonTotalStacks,
   grantBoons, rollBoons, takeBoon, applyBoons, boonStackText,
-} from './boons.js?v=63';
+} from './boons.js?v=64';
 // 第 21 块：夜行诅咒（自选 debuff 换骨币倍率）
-import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=63';
+import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=64';
 // 第 22 块：种子与每日挑战
 import {
   DAILY_RULES, dayKey, dayText, dailySeed, seedCode, pickDailyCurses,
   seedFromText, pickSeedRules, loadSeedRecords, saveSeedRecord, pruneSeeds,
   dailyRecord, saveDailyRecord, pruneDaily, makeRng,
-} from './seed.js?v=63';
-import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=63';
-import { achById, ACHS } from './achievements.js?v=63';
+} from './seed.js?v=64';
+import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=64';
+import { achById, ACHS } from './achievements.js?v=64';
 import {
   EVENTS, ALL_EVENTS, getEventById, pickEvent, effectLines,
   choiceHint, canAfford, costShort, REP_MIN, REP_MAX, REP_START,
   isTalk, eventChoices, resolveRoll, mergeEffects,
-} from './events.js?v=63';
+} from './events.js?v=64';
 // 第 32 块：主线《笑不出来的那一夜》（18 夜，一夜一关，前 3 夜已有关卡）
 import {
   STORY_ARC, STORY_CHAPTERS, STORY_ENDINGS, MARK_INFO,
   storyChapterAt, storyChapterById, storyEndingKey,
-} from './story.js?v=63';
+} from './story.js?v=64';
 
 // 标记模块已经跑起来了：index.html 的兜底自检靠它判断
 // 「模块根本没执行」还是「执行了但加载慢」。
@@ -213,7 +213,7 @@ async function boot() {
     '毒 / 冰 / 雷 / 血元素剑，商店买了就上环',
     '炮台 · 法器 · 金钟罩 · 背包，深夜装备库',
     '一百多条夜行奇遇，路边处处有故事',
-    '篝火与永夜火种：死掉也不白死，越打越强',
+    '篝火商店与永夜火种：死掉也不白死，越打越强',
     '自选诅咒换骨币倍率，胆子越大赚得越多',
     '提建议 / 报 bug 有礼包兑换码 —— 主菜单「公告」看详情',
     '祝你今夜走得比昨夜远',
@@ -1813,7 +1813,7 @@ async function boot() {
           if (!adminOn) return;
           applyAdmin(false);
           renderSettings();
-          showToast('管理员模式已关闭', '本局进度 / 永夜火种 / 篝火 / 记录全部还原到开启前');
+          showToast('管理员模式已关闭', '本局进度 / 永夜火种 / 篝火商店 / 记录全部还原到开启前');
         });
         seg.append(bOn, bOff);
         wrap.append(label, seg);
@@ -3935,7 +3935,7 @@ async function boot() {
     renderCampfire();
     showSub(campScr);
     // 第 41 块：第一次进篝火先把「这里买的东西是永久的」讲明白（每个存档只弹一次）
-    permNoticeOnce('campfire', '篝火是永久投资，不是这一局的装备',
+    permNoticeOnce('campfire', '篝火商店是永久投资，不是这一局的装备',
       '用夜行骨币点燃的每一簇火种，都会写进本机存档，' +
       '之后每一关、每一局都带着它 —— 换关、重开、关掉网页再来，都还在。\n' +
       '花掉的骨币不会退回，点下去就改不回来了，请谨慎选择。');
@@ -4535,7 +4535,7 @@ async function boot() {
       rsBone.textContent = `🔥 夜行骨币 +${boneGain}`
         + (parts.length ? `（${parts.join(' · ')}）` : '')
         + ` · 现有 ${boneTotal}`
-        + (boneTotal >= 90 ? ' —— 去篝火边看看' : '');
+        + (boneTotal >= 90 ? ' —— 去篝火商店看看' : '');
     }
     // 通关才能拿永久火种：按钮直接改成「先领火种」，别让人错过
     if (rsBtn) {
@@ -4548,6 +4548,46 @@ async function boot() {
         if (gameState === 'over' && !boonOpen) showPackGet();
       }, 1400);
     }
+    // 第 54 块（用户定案）：倒下之后弹一句「去篝火商店看看」。
+    // 等结算卡淡入完再出 —— 两层面板同时糊上来，玩家不知道该先看哪个。
+    if (!isWin) {
+      setTimeout(() => {
+        if (gameState === 'over' && !boonOpen) showFailTip();
+      }, 900);
+    }
+  }
+
+  // ---------------- 失败提示（第 54 块） ----------------
+  // 只干一件事：把「这一局输了，但骨币进账了，去篝火商店能变强」讲明白。
+  // 「去篝火商店」直接回主菜单并把商店推到他面前；「下次吧」退回结算卡。
+  const failTipEl = document.getElementById('failTip');
+  const ftSub = document.getElementById('ftSub');
+  function showFailTip() {
+    if (!failTipEl) return;
+    if (ftSub) {
+      ftSub.textContent = `这一局结算的骨币已经进账 · 现有 ${bones()} 骨币 · 火里点过的东西，下一局就带着`;
+    }
+    failTipEl.classList.add('on');
+    failTipEl.setAttribute('aria-hidden', 'false');
+  }
+  function hideFailTip() {
+    if (!failTipEl) return;
+    failTipEl.classList.remove('on');
+    failTipEl.setAttribute('aria-hidden', 'true');
+  }
+  const ftLaterBtn = document.getElementById('ftLater');
+  if (ftLaterBtn) ftLaterBtn.addEventListener('click', () => { audio.sfx('uiSwitch'); hideFailTip(); });
+  const ftGoBtn = document.getElementById('ftGo');
+  if (ftGoBtn) {
+    ftGoBtn.addEventListener('click', () => {
+      audio.sfx('uiSwitch');
+      hideFailTip();
+      // 结算卡一起收掉：已经决定去花钱了，别让两层遮罩叠着
+      resultEl.classList.remove('on');
+      resultEl.setAttribute('aria-hidden', 'true');
+      showTitle();          // 游戏世界还停在原地（和「存档并退出」一样）
+      showCampfire();       // 直接把商店推到他面前
+    });
   }
 
   document.getElementById('rsBtn').addEventListener('click', () => {
@@ -4725,6 +4765,12 @@ async function boot() {
           renderCampBadge();
           if (campScr.classList.contains('on')) renderCampfire();
         },
+      },
+      // 第 54 块：失败提示（测试要看它什么时候弹、点了跳哪儿）
+      failTip: {
+        show: () => { showFailTip(); return true; },
+        hide: () => { hideFailTip(); return true; },
+        on: () => !!(failTipEl && failTipEl.classList.contains('on')),
       },
       // 永夜火种（第 23 块）：通关白给的永久属性
       boons: {
