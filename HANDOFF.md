@@ -2,13 +2,13 @@
 
 > 新对话从这里开始读，不要先翻聊天记录。**先读 §0「给新对话的话」，再按需查后面章节。**
 >   
-> 最后更新：2026-10-23 下午 · 线上 **v=65** · 第 55 块（兑换码大全 txt / 新怪物信息卡 / 只记打斗时长）已完成并推送
+> 最后更新：2026-10-23 晚 · 线上 **v=66** · 第 56 块（生命条统一 / 后续关卡自带环剑 / 万剑齐发 CD 制 / 冰雷加强 / 技能栏让开教程卡）已完成并推送
 
 ---
 
 ## 0. 给新对话的话（2026-10-23 交接）
 
-1. **当前基线**：v=65（第 55 块）已推送，git 工作区干净。最近十四块（44~55 + v=53~56 一串音效包 hotfix + v=61 hotfix）全部完结，**没有挂起的半成品**。用户新需求来了再开工，别主动找活。
+1. **当前基线**：v=66（第 56 块）已推送，git 工作区干净。最近十五块（44~56 + v=53~56 一串音效包 hotfix + v=61 hotfix）全部完结，**没有挂起的半成品**。用户新需求来了再开工，别主动找活。
 2. **节奏**：用户偏好**小步块状推进**——一块功能 = 一次提交 = 一个版本号（v=N）。铁律 12：**做完回归绿就立刻推送交给用户测**，用户的反馈比自测更快更准。
 3. **最容易翻车的五件事**（细节都在铁律和下文）：
    ① 发版**两处版本号**都要 bump（index.html + js 内部所有 `import ...?v=N`），漏一处就是「本地好线上炸」；
@@ -16,11 +16,11 @@
    ③ **公告在 loading 淡完 +700ms 才弹**，测试截图要先 `sleep(2600)` 再 `__game.notice.hide()`；
    ④ `jumpToRound/skipRound` **只在 adminOn 时生效**，不开管理员是静默 no-op；
    ⑤ 本地服务器必须 `run_in_background`；CDP 截图路径**不能含中文**；推送走 `git -c http.proxy=http://127.0.0.1:7897 ...`（先 curl 探代理，挂了改直连）。
-4. **最新绿基线**（动到相关文件后要回归）：block55 **89**/0（Node：码表 txt 逐个重算哈希 / 新怪卡源码契约 / 计时白名单）+ block55-cdp **51**/0（真 DOM：首次遇怪弹卡 + 世界冻结 + 计时不动 + 我明白了继续 + 不重复弹；商店/剧情/升级/属性卡都不计时；开新局归零）、block54 **54**/0（Node，布袋 + 排版 + 改名 + 失败提示源码契约）+ block54-cdp **36**/0（真 DOM：两行同行等高、商店标题、布袋 10 金币、倒下 0.9s 弹提示、两个按钮的去向）、block53 **46**/0 + block53-cdp **39**/0、block52 **125**/0、block51 **20**/0、block50 **12**/0（含重复 id 断言）、block19 **44**/0（篝火/骨币全流程）、block29 **39**/0、block35 **49**/0、`.tmp-wtut-title-check.js` **4**/0、block47 27/0、block49 23/0。跑法见 §6，一次只跑一套。
-   已知**既有**失败（不是新代码弄坏的，别浪费时间去查）：`.tmp-rogue-unit.mjs` 142/2、`.tmp-camp-test.mjs` 84/22、`.tmp-boon-test.mjs` 133/13、`.tmp-eventui-test.js` 35/2、`.tmp-block18-test.js` 34/1 —— 都是第 27/33/41/43 块改过数值或 UI 后没回填的过期断言（2026-10-23 用 git stash 对拍确认过基线一致）。
+4. **最新绿基线**（动到相关文件后要回归）：block56 **84**/0（Node：万剑齐发 n/CD/不动环绕源码契约 / 冰雷新语义常量与面板 / 预送逻辑与反例 / 血条尺寸与 scale 无关 / 技能介绍文案）+ block56-cdp **50**/0（真 DOM：A 血条统一 1.5 / B CD+n 把+不动环绕+连按拦停+走表+按钮态+恢复 / C 冰冻全套+端到端 / D 全场连锁 3.5×4 / E 上移 12px 零遮挡+归位 / F 第二关预送+反例不送）、block55 **87**/0 + block55-cdp **51**/0、block54 **54**/0（布袋 + 排版 + 改名 + 失败提示源码契约）+ block54-cdp **36**/0（真 DOM：两行同行等高、商店标题、布袋 10 金币、倒下 0.9s 弹提示、两个按钮的去向）、block53 **46**/0 + block53-cdp **39**/0、block52 **125**/0、block51 **20**/0、block50 **12**/0（含重复 id 断言）、block19 **44**/0、block29 **39**/0、block35 **49**/0、`.tmp-wtut-title-check.js` **4**/0、block47 27/0、block49 23/0。第 56 块还修绿的老套件：weapon **23**/0、sword-shop **30**/0、econ-cdp **46**/0、talk-skill **54**/0、battle **39**/0、wtut **34**/0、rogue-unit **144**/0。跑法见 §6，一次只跑一套。
+   已知**既有**失败（不是新代码弄坏的，别浪费时间去查；2026-10-23 晚第 56 块用 git worktree 对拍 v=65 再次确认全部同状）：`.tmp-camp-test.mjs` 84/22、`.tmp-boon-test.mjs` 133/13（**偶发 132/14**：幸运概率采样贴阈值抖动，对拍 v=65 同样抖）、`.tmp-eventui-test.js` 35/2、`.tmp-block18-test.js` 34/1、`.tmp-start-test.js` 33/15（断言还是第 14 块前「选关直接进教程」的老流程）、`.tmp-block30-cdp.js` 42/8、`.tmp-ui-test.js` 15/7 —— 都是早期块改过数值或 UI 后没回填的过期断言。另：`.tmp-event-test.mjs` 主跑 105/0，**偶发 104/1**（「没环剑时只可能抽到顺风」300 次采样漏抽 breeze，重跑即绿）。~~`.tmp-rogue-unit.mjs` 142/2~~ 第 56 块已修绿 **144**/0。
 5. **用户规则**：全中文；有疑问先问、有疑问不写码；README 与实况同步；美术资产优先 GitHub 现成 CC0；不做多角色；局外对局内影响要小（篝火每级 +1 生命这种量级）。
 6. **新怪信息卡在 `?debug=1` 下默认是关的**（第 55 块）：它会冻结整个世界，二十多套老 CDP 都要开局刷怪等回合推进，一上来被拦一下就成片挂（实测 block53 就栽在这）。要测这张卡的套件地址加 **`&meet`**（或 `__game.meetCard.setAuto(true)`）；正常游玩永远是开的。同类「首次提示型」弹窗以后照这个办：**生产默认开、测试显式开**。
-7. **改交互规则要回头跑老套件**（2026-10-23 的教训）：第 42/43 块给回话按钮加 3 秒读秒锁后，block32（读秒之前写的）静默挂了 9 项；公告升 `NOTICE_VER=2` 后 block45 写死 `|1` 也挂了。**横向特性（锁定/延迟/版本号）上线时，把受影响的老 CDP 套件重跑一遍**，别只跑新套件。本次两个都已修好（block32 60/0、block45 49/0）。
+7. **改交互规则要回头跑老套件**（2026-10-23 的教训）：第 42/43 块给回话按钮加 3 秒读秒锁后，block32（读秒之前写的）静默挂了 9 项；公告升 `NOTICE_VER=2` 后 block45 写死 `|1` 也挂了。**横向特性（锁定/延迟/版本号）上线时，把受影响的老 CDP 套件重跑一遍**，别只跑新套件。前两个都已修好（block32 60/0、block45 49/0）。第 56 块又实证两次：① **技能键常驻 DOM**（`buildSkillButtons` 给每条 SKILLS 建按钮，`renderSkill` 只切 `display`——箭雨键从第 47 块起就躺着）→ weapon / talk-skill / econ-cdp 三套「数技能格」的断言假绿或挂，**数格子必须数可见的**（`filter(b => b.style.display !== 'none')`）；② **乞丐/商队是两拍对话 + 3 秒读秒**（第 31/43 块起）→ `choose` 点 disabled 按钮静默失败，econ-cdp / talk-skill 共 4 处加 `sleep(3500)` 才绿。
 
 ---
 
@@ -48,7 +48,7 @@ Three.js r160 的单摇杆幸存者肉鸽《奶蛙夜行》，纯静态站点（
 
 ---
 
-## 2. 当前状态（2026-10-23，v=61）
+## 2. 当前状态（2026-10-23，v=66）
 
 | 块      | 内容                                            | 状态                          |
 | ------ | --------------------------------------------- | --------------------------- |
@@ -87,6 +87,7 @@ Three.js r160 的单摇杆幸存者肉鸽《奶蛙夜行》，纯静态站点（
 | **53** | **用户实测报的七条一起修**：① **概率事件点完只有「这一夜什么都没发生」**（真 bug：`chooseEventOption` 把 `{roll:[...]}` 原样交给 `applyEffects`——结算内部摇了，但摇出的分支没外传，结果页拿到只有 `roll` 键的对象、`effectLines` 一项都认不出。现在先 `resolveRoll(choice.effects, rngOf('event'))` 摇一次，同一份结果既结算又显示；种子局也因此可复现；摇到空手写「这一把落空了，什么也没拿到」）。② 第二/三关**提亮**（crypt/ash 的底色、雾色、雾浓度 0.0152→0.0122 / 0.0168→0.0132、天光 1.05→1.55、月光 2.35/2.40→3.10、补光 0.70→0.95，地面贴图底部色也提了一档）。③ 咒面图腾 ×1.8（1.40→2.52）、焚火魔 ×1.2（1.22→1.464）、孢冠菌王 ×2（1.62→3.24），碰撞半径同步。④ 菌王的四个卫队缩到 0.7 倍（`spawn(type, at, { scale })` 按实例缩放，不动 warrior 本体；血条/伤害数字跟着 `e.height` 走；轨道 1.45→1.9）。⑤ **箭雨教程**挂进 `WEAPON_TUT`（`arrowrain`，label「技能教程」，最后一步 `wait:'rain'` 要求真放一次），拿环剑时按「武器卡 → 环剑教程 → 箭雨教程 → 回合链」串起来。⑥ 加载轮播 3200ms → **1778ms**（×1.8 速），淡出 450→200ms（CSS 同步） | v=63 |
 | **54** | **用户实测四条一起修**：① 篝火商店「布袋 · 铜板」每级金币 **30 → 10**（`campfire.js` 的 `coins`，desc 同步；一档就白送半家摊子，局内经济被它一个人抬起来）；② **主菜单排版收成两行**（`index.html` 把 `tt-start`/`tt-resume` 包进 `.tt-row-main`、`tt-daily`/`tt-seedbtn` 包进 `.tt-row-chal`；CSS 用 `flex:1 + max-width + align-items:stretch` 让两枚等高，行内按钮 `margin-top:0` 免得一高一低，隐藏「读取存档」时开始游戏自己居中）；③ 「篝火」改名 **篝火商店**（主菜单按钮、面板标题、礼包/属性页脚、结算提示、加载轮播、永久说明标题统一；剧情「篝火边的故事」保留原文）；④ **倒下弹「温馨提示」**（`#failTip`：标题「温馨提示」+「想要提升实力？去篝火商店看看吧。」，副文案现读 `bones()`；`endGame` 里 `!isWin` 时 900ms 后弹，层级 19 压过结算卡 18；「去篝火商店」= 关提示 → 关结算 → `showTitle()` → `showCampfire()`，「下次吧」只关提示）。钩子 `__game.failTip` | v=64 |
 | **55** | **用户三条**：① **兑换码大全 txt**（本机 `兑换码大全.txt`，A 类 300×10 / B 类 100×10，分类 + 速查 + 用法；20 码逐个重算哈希对上 `js/gift.js`；已 gitignore）；② **新怪物信息卡**（`#meetCard` + `profile.met` + `enemy.js onSpawn`：一种怪首次上场 → `gameState='meet'` 冻结世界 → 讲攻击方式 → 「我明白了」继续，一辈子只拦一次；`?debug=1` 下默认关、加 `&meet` 才开）；③ **只记打斗时长**（`elapsed` 只在 playing/tutorial/wtut 且无 panelOpen/bagOpen/meetOpen/uiHold 时走表；`startPlay` 归零 —— 以前跨局会累积） | v=65 |
+| **56** | **用户五条一起修**：① **生命条统一大小**（`enemy.js createBar`：世界宽固定 `BAR_W=1.5`，实例缩放只碰 mesh 不碰血条——第 53 块卫队 0.7 / 菌王 3.24 倍时血条差 4 倍多；「挂多高」仍按 `cfg.height×scale` 算）；② **后续关卡默认带环剑**（`profile.ringGot` + `main.js prefillRing()`：第一关第 5 回合首得后写档，第二关起开局 `weapon.grant()` 送 3 把并解锁箭雨、弹 toast、排队教程；第一关自己保留仪式时刻，读档不走这里）；③ **万剑齐发改 CD 制**（辐射 **n = owned.length** 具有的总剑数含商店购买，**不再是 2n**；**释放不改变环绕数量**；`FIRE_CD=6` 秒，CD 中按钮显示倒计时；技能介绍文案整条重写）；④ **商店环剑大加强**（冰剑 `applyFreeze` 直接冻结 `frostTime=1.2` 秒——`updateOne` 在卫队公转前插冰冻分支、动画 timeScale=0、早退；雷剑 `chainTargets(e, Infinity, Infinity)` 连锁全场，直接命中那只除外，各吃 `chainRatio=0.35`；武器表删 frostSlow/chainCount 两项，升级卡「严寒/导电」跟着改）；⑤ **技能栏上移**（`syncSkillLift` 改用 `computed bottom + offsetHeight` 还原最终位置——教程卡 `.22s` 滑入中途量 rect 会少算一截，实测抬升 278px、gap=-12px） | v=66 |
 
 第 51 块上线后 hotfix（v=61，用户报「属性页返回按钮失效」）：
 
@@ -158,6 +159,32 @@ Three.js r160 的单摇杆幸存者肉鸽《奶蛙夜行》，纯静态站点（
 - **测试**：`.tmp-block55-test.mjs` **89**/0（纯 Node：txt 20 码重算哈希 + 分类段/说明/总额 + gitignore；met 两张表分离 + onSpawn 位置 + 守卫链 + 层级 + 全页零重复 id + 计时白名单 + 归零唯一性）、`.tmp-block55-cdp.js` **51**/0（真 DOM，**URL 必须带 `&meet`**）。
   回归：block53-cdp **39**/0、block50 **12**/0、block29 **39**/0、block35 **49**/0、block19 **44**/0、block54-cdp **36**/0、block52/53/54 Node 全绿。
 - **踩坑**：① 量 `#meetCard` 的 opacity 不能紧跟 `waitFor(.on)` —— CSS 有 0.26s 淡入，量到 0 是正常的（先 `sleep(420)`）；缩略图要等 `img.complete && naturalWidth>0`。② `elapsed = 0;` 的正则会被 `let elapsed = 0;` 命中，断言「只有一处归零」要用 `(?<!let )`。③ 商店面板的类名是 `.shop` 不是 `#shopScr`（取 z-index 别猜）。
+
+第 56 块要点（用户实测五条，2026-10-23，v=66）：
+
+- **① 生命条统一大小（用户原话「放大缩小怪物，你把生命条一起改了」）**：根因是血条宽度随身高走，第 53 块又给菌王卫队加了 `spawn(..., {scale:0.7})`、菌王放大到 3.24 倍——血条跟着差 4 倍多。修法（`enemy.js`）：世界宽度固定 `BAR_W = 1.5`（≈普通怪身高×1.18 的老观感），`spr.scale.set(BAR_W, BAR_W*(H/W), 1)` 谁都不特殊；**只有「挂多高」仍按这一只的实际头顶算**（`cfg.height * scale + BAR_LIFT`）——缩放过的怪脑袋在别的高度，不跟会飘/会埋。CDP 实测全场血条统一 1.5、卫队 0.7 倍下血条不再缩。
+- **② 后续关卡默认拥有环剑（用户原话「在第一关第五回合结束获得环剑之后，就在后续关卡默认拥有该技能」）**：
+  · 档案层：`profile.ringGot`（`profile.js` 的 `ringObtained()/markRingObtained()`，幂等）；第一关第 5 回合 `grantRingThen` 里 `markRingObtained()`。
+  · 开局层：`main.js` 的 `prefillRing()`（`startPlay` 里 `setLevel` 之后调）——`weapon.granted` 已真（续读存档）直接返回；`curLevelId < 2` 返回（**第一关保留「第 5 回合获得」的仪式时刻，不预送**）；没拿到过（`!ringObtained()`）不送。送的同时 `arrowRain.unlock()` + `renderSkill()` + 图鉴/成就 + toast「环剑已在手」+ `queueWeaponTut('ring'/'arrowrain')`。
+  · **读档不走这里**（存档里的 weapon 直接 restore），所以老档在第二关开局也能补上。
+- **③ 万剑齐发改 CD 制（用户逐字定的语义）**：
+  · 辐射数量 **n = 拥有的总剑数**（`owned.length`：最初 3 把 + 商店买的），**不再是旧版的 2n**（n 的定义也换了）；
+  · **释放不改变正在环绕的数量**——辐射的是对象池里「额外的剑」，放完环上一把不少，该转的转、该补的照补（`orbitingCount` 不变，`flyingCount === n`）；
+  · **`FIRE_CD = 6.0` 秒冷却**，冷却中按不动（`fire()` 开头 `fireCd > 0` 直接 return false）；CD 走表在 `weapon.update`（`debugNoWaves`/`debugNoEnemies` 都拦不住它）；
+  · `skills.js` 的 swordRain 条目：`ready` 改 `ctx.weapon.fireReady`、`progress` 改 `fireCdProgress`、新增 `cdText`（格子上显示还剩几秒）；**介绍文案整条重写**（「向四周辐射出你拥有的每一把剑（不影响环上转的），冷却 6 秒」），README/武器教程/图鉴/`关卡事件表.txt` 全部同步。
+- **④ 商店环剑大加强**：
+  · **冰剑直接冻结**：`weapon.js applyKind` 的 frost 分支改调 `enemies.applyFreeze(e, { time: wstats.get('frostTime') })`（`frostTime` 基础 1.2 秒）。`enemy.js`：怪身上新增 `freezeT` 字段；`updateOne` 在 AI 之前、**卫队公转之前**插冰冻分支——`mixer.timeScale = 0`（动画一起冻）、脚底每 0.45s 冒一个淡蓝圈、`return` 早退（移动/攻击/蓄力/冲锋/公转全停）；解冻恢复 `timeScale = 1` 并冒一个圈。**死亡消散不受冰冻影响**（`state==='dead` 照样走消散计时），否则冰里死掉的怪会永远僵在场上。旧的 `applySlow` 还在 enemy.js 里但武器已不调用（`slowT` 字段保留恒 0，测试别断言它非 0）。
+  · **雷剑连锁全场**：`chainTargets(e, Infinity, Infinity)`（次数/距离都放开），**排除直接命中那只**（`o === e`），其余全场每只吃 `dmg × chainRatio`（0.35，用户定的「伤害可以稍微低一点」）；视觉只画最近几道线（`MAX_BOLT_VIS`），三十只怪同时链会糊满屏。
+  · 武器表（`weaponStats.js`）删 `frostSlow`/`chainCount` 两项，`frostTime` 改「冰冻持续」；升级卡「严寒」`frostSlow +8% → frostTime +0.3s`、「导电」`chainCount +1 → chainRatio +10%`；商店冰/雷剑 desc 同步。
+- **⑤ 技能栏上移（用户报「技能介绍挡住技能按钮」）**：`main.js` 的 `syncSkillLift` 原来读 `card.getBoundingClientRect().top`，而教程卡有 `.22s` 滑入（`translateY(12px)→0`）——刚加 `.on` 时量到的是**动画中间态**，抬升量少算一截（约 12.5px，表现为介绍图还是压着按钮）。修法：用不过渡的量还原最终位置 `top = window.innerHeight - parseFloat(getComputedStyle(card).bottom) - card.offsetHeight`。实测弹卡抬升 278px、技能栏底边在卡片上方 12px（gap = -12），收卡归零；`startPlay` 里也补一次 `syncSkillLift()`（教程卡收掉 → 技能栏落回右下角）。
+- **测试**：新 `.tmp-block56-test.mjs` **84**/0（纯 Node：`fire()` n=owned.length/不动环绕/FIRE_CD 源码契约 / 冰雷新语义常量与面板行 / `prefillRing` 四道闸与反例 / `BAR_W` 与 scale 无关 / 技能介绍文案）+ `.tmp-block56-cdp.js` **50**/0（真 DOM：A 血条统一 1.5 / B CD + n 把 + 不动环绕 + 连按拦停 + 走表 + 按钮态 + 恢复 / C 冰冻全套 + 端到端 / D 全场连锁 3.5×4 / E 上移 12px 零遮挡 + 归位 / F 第二关预送 + 反例不送）。
+  修绿的老套件：weapon **23**/0（可见格计数 + 0 号飞剑弹道正上方放冻结怪保证命中 + getter 去括号）、sword-shop **30**/0（万剑齐发段按新语义重写：`flying===29`、`orbiting===29`、`cd>5.5`）、econ-cdp **46**/0（冰雷断言 + 乞丐两拍对话加 3.5s 读秒等待）、talk-skill **54**/0（同上加技能栏段按第 47 块现状重写：`skillList` 2 条、拿剑前可见 **0** 格）、battle **39**/0、wtut **34**/0、rogue-unit **144**/0（甲壳 +0.3/次的旧账，第 33 块防御改减法后就没回填）。
+- **测试坑（本块新踩四个，都值钱）**：
+  ① **`setWaves(true)` 才是暂停波次**（`debugNoWaves = !!p`，`false` = 开着波次）。第一版写 `setWaves(false)`，怪持续刷、贴脸自爆清回合弹三选一暂停世界——A 段「场上正好三只怪」多一只、C 段解冻超时。要「世界照常运转但不出新怪」用 `setEnemies(true)`（只冻 AI）；`weapon.update` 两个都拦不住（CD 走表/飞剑/恢复照跑）。
+  ② **`weapon.fireReady/fireCdLeft/fireCdTotal/fireCdProgress` 是 getter 不能加括号**；`__game.fireReady()/fireCdLeft()` 是钩子函数。混用 TypeError（weapon-test ×3、sword-shop ×1、talk-skill ×1 全踩过）。
+  ③ **飞剑 1.2 秒就消散**——B 段「按下→看飞行→等恢复」必须**同一次 evaluate 内连按两次**（第一次看 flying/orbiting/CD，第二次验证拦停），分两次 evaluate 第二次读到的已是 0。
+  ④ **`.sk` 技能键常驻 DOM**（`renderSkill` 只切 `display`）——数技能格/数图标必须 `filter(b => b.style.display !== 'none')`，三套老套件栽在这（详见 §0 第 7 条）。
+- **顺带**：`.tmp-block55-test.mjs` 的版本断言改成版本无关式（「全局一个版本 + ≥65」，block45 教训），89 → **87** 项；`.tmp-gen-doc.mjs` 的万剑齐发硬编码文案换新版，`关卡事件表.txt` 重新生成（冰/雷/严寒/导电文案随活模块同步）。
 
 第 50 块要点（主菜单属性页，2026-10-22，v=59；同批发版还有 47 箭雨 / 48 加载轮播 / 49 种子挑战）：
 
@@ -517,8 +544,8 @@ Three.js r160 的单摇杆幸存者肉鸽《奶蛙夜行》，纯静态站点（
 | `main.js` (~5400 行)                                                                          | 主循环 + 所有 UI 面板（标题/选关/种子/属性/记录/设置/图鉴/商店/升级/事件/背包/结算/教程/公告/礼包/读取存档）+ 各系统接线 + `__game` 钩子。**改之前先 grep 定位** |
 | `wave.js`                                                                                    | 20 回合编排、`roundScale`、**难度 DIFFS**、`startAt`（读档）、升级点/商店点                                                    |
 | `stats.js`                                                                                   | 通用属性引擎（`createStats(defs)`），主角 14 项 / 武器 11 项两套实例；`dumpMods/loadMods`（存档）                                  |
-| `enemy.js`                                                                                   | 13 只怪（**第 52 块起一只一个 glb**：第一关 KayKit 骷髅 4 只 + Quaternius 独立模型 9 只）、`CLIP_FAMILIES` 动作家族翻译 + `clipOverrides`、`findBone`（洗点号）、`footY`/`glow`/配件（盾弓杖）、红圈落箭、法术地阵（hex/burn）、光环/卫队/石刺 |
-| `weapon.js`                                                                                  | 环剑、5 种元素剑、`grant/addSword/restore`                                                                         |
+| `enemy.js`                                                                                   | 13 只怪（**第 52 块起一只一个 glb**：第一关 KayKit 骷髅 4 只 + Quaternius 独立模型 9 只）、`CLIP_FAMILIES` 动作家族翻译 + `clipOverrides`、`findBone`（洗点号）、`footY`/`glow`/配件（盾弓杖）、红圈落箭、法术地阵（hex/burn）、光环/卫队/石刺；**血条全怪统一宽 `BAR_W=1.5`**（挂高仍按实例身高）与 **冰冻 `freezeT`**（第 56 块，冰剑命中定身） |
+| `weapon.js`                                                                                  | 环剑、5 种元素剑、`grant/addSword/restore`；**万剑齐发 CD 制**（第 56 块：`FIRE_CD` 6s、辐射 n=owned.length、不动环绕）；冰剑 `applyFreeze` / 雷剑 `chainTargets(e, Infinity, Infinity)`                                                                        |
 | `turret.js` / `relics.js`                                                                    | 弩炮台（上限 3）、地刺/霜环（各 3 级），都有 `restore`                                                                        |
 | `upgrade.js`                                                                                 | 28 张升级卡（含 rarity 0~4）                                                                                      |
 | `shop.js`                                                                                    | 18 件货、按品质加权摆 4 件、`itemLocked`                                                                              |
@@ -584,6 +611,7 @@ setCoins(n) / coins（getter）
 bag.total / bag.add(id,n) / bag.use(id)
 turrets.count() / relics.levels()
 weapon.grant() / weapon.orbitingCount / weapon.flyingCount
+weapon.fireReady / fireCdLeft / fireCdTotal / fireCdProgress   ← 第 56 块（对象上的 **getter**，不能加括号；`__game.fireReady()/fireCdLeft()` 才是钩子函数）
 upgrade.isOpen() / upgrade.roll / shop.cards / hurt(n) / win()
 runCurses() / setCurses(ids) / curseMul() / curseDmg()        ← 第 21 块
 boons.list() / stacks(id) / pending() / grant(n) / roll(luck) / take(id) / apply() / show(after) / close() / totalStacks() / reset()   ← 第 23 块
@@ -606,26 +634,26 @@ statPage.{show,ready,yaw,rows}                                ← 第 50 块（�
 
 ## 6. 测试
 
-**Node 13 套（1090 项，纯逻辑，秒级）**
+**Node 13 套（1060 项，纯逻辑，秒级）**
 
 ```
 cd C:/Users/MECHREVO/Desktop/班级网站
 node .tmp-stats-test.mjs      # 70  属性引擎
 node .tmp-rogue-unit.mjs      # 144 回合/升级/概率（含 roundScale 对拍）
-node .tmp-econ-test.mjs       # 78  经济/商店/事件作用域
-node .tmp-event-test.mjs      # 105 事件库结构/权衡/连锁/抽取/文案（112 条）
+node .tmp-econ-test.mjs       # 80  经济/商店/事件作用域
+node .tmp-event-test.mjs      # 105 事件库结构/权衡/连锁/抽取/文案（112 条；偶发 104/1 采样抖动）
 node .tmp-rarity-test.mjs     # 71  品质/幸运
-node .tmp-camp-test.mjs       # 99  篝火/骨币（多级 + 阶梯 + 金币折算 + 关卡倍率）
+node .tmp-camp-test.mjs       # 84  篝火/骨币（多级 + 阶梯 + 金币折算 + 关卡倍率）—— ⚠️ 22 项过期断言，见 §0
 node .tmp-level2-test.mjs     # 65  第二关/三只（第 52 块起各用各的模型）
 node .tmp-level3-test.mjs     # 71  第三关/三只新怪/三件新装备/专属奇遇
 node .tmp-level4-test.mjs     # 90  第四关/雾魉/跃行尸/缝合师/暖炉/剑阵定案
 node .tmp-admin-test.mjs      # 28  管理员模式（设置键/免费点火/skipRound 四种走向）
-node .tmp-eventui-test.js     # 37  事件 UI（长文案排版/多拍对话/随机性/条件事件/图鉴）
+node .tmp-eventui-test.js     # 35  事件 UI（长文案排版/多拍对话/随机性/条件事件/图鉴）—— ⚠️ 2 项过期断言，见 §0
 node .tmp-curse-test.mjs      # 84  诅咒/种子/每日规则
-node .tmp-boon-test.mjs       # 146 永夜火种（层数/品质吃幸运/待领次数/克制）
+node .tmp-boon-test.mjs       # 133 永夜火种（层数/品质吃幸运/待领次数/克制）—— ⚠️ 13 项过期断言 + 幸运采样偶发抖动，见 §0
 ```
 
-**CDP 端到端（39 套约 1280 项，需先起 8124；一次只跑一套，套间跑 `.tmp-cdp-clean.js`）**
+**CDP 端到端（52 套约 1700 项，需先起 8124；一次只跑一套，套间跑 `.tmp-cdp-clean.js`）**
 
 ```
 .tmp-start-test.js      48  开局→选关→教程→战斗→技能（含选卡关面板/技能键可点）
@@ -637,11 +665,11 @@ node .tmp-boon-test.mjs       # 146 永夜火种（层数/品质吃幸运/待领
 .tmp-block19-cdp.js     43  篝火/骨币（多级）
 .tmp-wtut-test.js       34  武器教程
 .tmp-block13-test.js    32  炮台/金钟罩/法器/背包
-.tmp-shop-chain-test.js 49  .tmp-econ-cdp-test.js 44
+.tmp-shop-chain-test.js 49  .tmp-econ-cdp-test.js 46
 .tmp-rogue-test.js      41  .tmp-ring-test.js 19  .tmp-atk-test.js 11
-.tmp-weapon-test.js     19  .tmp-archer-test.js 20  .tmp-crowd-test.js 15
+.tmp-weapon-test.js     23  .tmp-archer-test.js 20  .tmp-crowd-test.js 15
 .tmp-talk-skill-test.js 54  .tmp-audio-test.js 41  .tmp-rarity-cdp-test.js 48
-.tmp-bowman-test.js     21  .tmp-sword-shop-test.js 26
+.tmp-bowman-test.js     22  .tmp-sword-shop-test.js 30
 .tmp-live-smoke.js      12  线上烟测（GAME_URL 环境变量指线上）
 .tmp-live-upgrade.js     7  线上验证「点三选一没反应」已修
 .tmp-block21-cdp.js     36  诅咒（勾选/倍率/落账/受伤加重/结算/换局不残留）
@@ -681,8 +709,12 @@ node .tmp-boon-test.mjs       # 146 永夜火种（层数/品质吃幸运/待领
 .tmp-block53-cdp.js    39  第 53 块真流程（掷骰 16 次看数值 + 金币账 / 第二关亮度 / 模型缩放 / 教程卡 wait:rain）
 .tmp-block54-test.mjs  54  第 54 块四条（布袋 10 金币 + 别的火种没被动 / 主菜单两行结构 + 行内 margin 清零 / 改名全链路 / 失败提示只在 !isWin 弹 + 按钮链路 + z-index）— 纯 Node
 .tmp-block54-cdp.js    36  第 54 块真 DOM（两按钮同行等高 + 菜单横向居中 / 商店标题与布袋说明 / 倒下 0.9s 自动弹 + 真实骨币 / 下次吧保留结算 / 去商店的落点）
-.tmp-block55-test.mjs  89  第 55 块（兑换码大全.txt 20 码逐个重算哈希对 gift.js / 新怪卡 profile.met + onSpawn + 守卫 + 层级 + 唯一 id / 计时白名单 + 确认弹窗挂起 + 开新局归零）— 纯 Node
+.tmp-block55-test.mjs  87  第 55 块（兑换码大全.txt 20 码逐个重算哈希对 gift.js / 新怪卡 profile.met + onSpawn + 守卫 + 层级 + 唯一 id / 计时白名单 + 确认弹窗挂起 + 开新局归零；版本断言版本无关式）— 纯 Node
 .tmp-block55-cdp.js    51  第 55 块真流程（⚠️ URL 要带 &meet：首次遇怪 → state=meet → 计时与刷怪全停 → 内容与图鉴一致 → 我明白了继续 → 不重复弹；商店/奇遇/升级/属性卡 1.1s 计时不动；win 后 beginGame 归零）
+.tmp-block56-test.mjs  84  第 56 块五条（万剑齐发 n/CD/不动环绕源码契约 / 冰雷新语义与面板 / 预送四道闸+反例 / 血条 BAR_W 与 scale 无关 / 技能介绍文案）— 纯 Node
+.tmp-block56-cdp.js    50  第 56 块真 DOM（A 血条统一 1.5 / B CD+n 把+不动环绕+连按拦停+走表+按钮态+恢复 / C 冰冻全套 / D 全场连锁 3.5×4 / E 上移 12px 零遮挡+归位 / F 第二关预送+反例；⚠️ 冻怪用 setWaves(true)，getter 不能加括号）
+.tmp-story-test.mjs    76  主线十八夜数据结构/调度/印记/结局/阅读器数据 — 纯 Node
+.tmp-gift-test.mjs     17  礼包码表（归一化/哈希/20 真码/碰撞/假码全拒）— 纯 Node
 .tmp-mob-calib.js          怪物身高标定（正交实测 sourceHeight/footY）
 .tmp-mob-lineup.js         9 只新怪并排对比 + 盾牌特写（验收图）
 .tmp-wtut-title-check.js 4  武器教程卡标题随步骤变化（wtutTitle）

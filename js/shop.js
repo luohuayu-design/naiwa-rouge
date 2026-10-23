@@ -26,9 +26,9 @@
 // 第 11 块：每件货都带 rarity（0 普通 ~ 4 传说），店里按品质加权抽取 ——
 // 幸运越高，摆出来的货越往金/红那一头走（见 rarity.js）。
 // ============================================================
-import { rarityWeight } from './rarity.js?v=65';
-import { TURRET } from './turret.js?v=65';
-import { RELIC_DEFS } from './relics.js?v=65';
+import { rarityWeight } from './rarity.js?v=66';
+import { TURRET } from './turret.js?v=66';
+import { RELIC_DEFS } from './relics.js?v=66';
 
 export const SHOP_ITEMS = [
   // ---------------- 生命药水（第 13 块起：买进背包，作战中随时用） ----------------
@@ -99,13 +99,13 @@ export const SHOP_ITEMS = [
     id: 'buyFrost', type: 'sword', kind: 'frost', price: 26, needWeapon: true,
     rarity: 1,
     icon: 'assets/weapons/icon-frost.svg', name: '冰剑',
-    desc: '命中后减速 35% 持续 2.5 秒（属性可升级）。放投手风筝的好搭档。',
+    desc: '命中后直接把怪冻住 1.2 秒：定身期间它不能移动也不能攻击。放投手风筝、断骨骑冲锋都好用。',
   },
   {
     id: 'buyThunder', type: 'sword', kind: 'thunder', price: 34, needWeapon: true,
     rarity: 2,
     icon: 'assets/weapons/icon-thunder.svg', name: '雷剑',
-    desc: '命中时对附近 1 只怪连锁一道闪电（60% 伤害，可升级链数）。',
+    desc: '命中时一道闪电打到场上所有怪，每道 35% 伤害（属性可升级）。怪越密越是清场技。',
   },
   {
     id: 'buyLeech', type: 'sword', kind: 'leech', price: 38, needWeapon: true,

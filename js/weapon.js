@@ -3,20 +3,26 @@
 //
 // 玩法（用户定案）：
 //   · 第 5 回合打完自动获得 3 把铁剑环绕主角旋转，各有自己的判定。
+//     第 56 块起：第一关拿到过之后，**之后的关卡开局就送这 3 把**（见 main.js prefillRing）。
 //   · 剑碰到怪物 → 造成伤害并消失（少一把）；
 //   · 被消耗的剑按「整环补满」制恢复：swordRefill 秒内无论缺几把全部补满**数量不设上限**（第 9 块定案）：
 //     拥有几把就上环几把，买多少把都能同时转，没有「闲置的剑」。
-//   · 技能「万剑齐发」：把环上所有剑沿各自朝向四周射出，并在每两把
-//     之间插入一把（一次 2n 把）；没有冷却，有剑就能放。
+//   · 技能「万剑齐发」（第 56 块重做，用户定案）：**有冷却**（FIRE_CD 秒）。
+//     按一下向四周辐射出 n 把剑，**n = 拥有的总剑数**（最初 3 把 + 商店买的），
+//     与环上此刻恢复了几把无关；辐射的是额外的剑（走对象池），
+//     **不碰环上正在转的** —— 放完技能环上一把不少。
+//     （旧版是把环上 n 把全射出去、每两把之间再插一把 = 2n 且无冷却，
+//       放完环就秃了，和整环补满制叠在一起手感很堵，用户要求改成 CD 制。）
 //
 // 元素剑（见 swordKinds.js）：每把剑有一种元素，命中触发附加效果——
-//   poison 毒（DoT）/ frost 冰缓（减速）/ thunder 雷（连锁闪电）/
+//   poison 毒（DoT）/ frost 冰冻（第 56 块起：直接冻住，不再是减速）/
+//   thunder 雷（第 56 块起：连锁场上所有怪，伤害比例下调）/
 //   leech 血（回血）/ iron 铁（无附加）。
 //   商店可以买新剑（addSword），买到就立刻上环。
 //
 // 数值全部走**武器自己的属性表** wstats（weaponStats.js）：
 //   swordDamage / swordCrit / swordCritMul / swordOrbit / swordRefill
-//   + poisonDps / poisonTime / frostSlow / frostTime / chainCount / leechRate
+//   + poisonDps / poisonTime / frostTime / chainRatio / leechRate
 // ⚠️ 第 6 块起武器与主角彻底解耦：剑的伤害、暴击、吸血都不吃主角属性，
 //    stats 在武器系统里只剩一个用途 —— 给主角回血（血剑/吸血）。
 //
@@ -24,11 +30,11 @@
 //       五种元素共用同一模型，克隆后改材质 color/emissive 染色区分；
 //       图标用 assets/weapons/icon-*.svg。加载失败时用双盒拼占位剑。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=65';
-import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=65';
-import { SWORD_KINDS, KIND_ORDER } from './swordKinds.js?v=65';
-import { rollSwordDamage } from './weaponStats.js?v=65';
-import audio from './audio.js?v=65';
+import * as THREE from '../lib/three.module.js?v=66';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=66';
+import { SWORD_KINDS, KIND_ORDER } from './swordKinds.js?v=66';
+import { rollSwordDamage } from './weaponStats.js?v=66';
+import audio from './audio.js?v=66';
 
 // 轨道半径（世界单位）：贴着主角攻击范围环内侧转，视觉上「护体剑气」
 const ORBIT_R = 1.7;
@@ -40,13 +46,15 @@ const FLY_SPEED = 15;          // 射出的飞行速度
 const FLY_MAX_DIST = 30;       // 飞行最大距离（出场地就散掉）
 const FLY_Y = 0.85;            // 飞行/环绕高度
 const HIT_Y = 0.8;             // 判定高度基准（怪都是贴地的，只算水平面）
-const CHAIN_DIST = 4.5;        // 雷剑连锁的最大距离
-const CHAIN_RATIO = 0.6;       // 连锁伤害比例
+// 雷剑连锁（第 56 块起）：目标是场上所有怪，不限只数也不限距离 —— 见 applyKind 的 thunder 分支
+const FIRE_CD = 6.0;           // 万剑齐发冷却（秒，第 56 块用户定案：技能改成有 CD 的）
+const MAX_BOLT_VIS = 8;        // 一帧最多画几道闪电线：雷剑连锁全场，线只画最近的几条，别把屏幕糊满
 
 export function createWeaponSystem({ scene, stats, wstats, fx, enemies }) {
-  let granted = false;         // 是否已获得（第 5 回合 grant）
+  let granted = false;         // 是否已获得（第 5 回合 grant；第 56 块起后续关卡开局也送）
   let owned = [];              // 拥有的剑（kind 字符串数组，按获得顺序）
   let regenT = 0;              // 恢复计时器（按 swordRefill 总时长推进）
+  let fireCd = 0;              // 万剑齐发冷却剩余秒数（第 56 块）
   let orbitAngle = Math.random() * Math.PI * 2;
   let t = 0;                   // 总时间（浮动动画用）
 
@@ -179,27 +187,26 @@ export function createWeaponSystem({ scene, stats, wstats, fx, enemies }) {
     return null;
   }
 
-  // ---------------- 技能：万剑齐发 ----------------
-  // 按一下：环上现有 n 把剑全部射出，同时在每两把之间「插入」一把，
-  // 合计射出 2n 把（插入的剑沿用前一把的元素）。插入的剑从对象池取，
-  // 飞完/命中就回池，不影响环上的计数。没有冷却：有剑就能放。
+  // ---------------- 技能：万剑齐发（第 56 块重做） ----------------
+  // 新版规则（用户定案）：
+  //   · **有冷却**（FIRE_CD 秒），冷却中按不动；
+  //   · 不管环上此刻恢复了几把，一律向四周辐射出 **n = 拥有的总剑数**把
+  //     （最初 3 把 + 商店买的；不再是旧版的 2n，n 的定义也换了）；
+  //   · 辐射的是「额外的剑」（从对象池取），**不改变环上正在环绕的数量** ——
+  //     放完技能环上一把不少，该转的转、该补的照补。
+  // 辐射的剑飞完/命中就回池，和环绕的剑共用一套 holder 池，互不干扰。
   function fire(getPlayerPos) {
-    if (!granted || orbiting.length === 0) return false;
+    if (!granted || fireCd > 0) return false;
+    const n = owned.length;
+    if (n === 0) return false;
     const p = getPlayerPos();
-    const n = orbiting.length;
     const step = (Math.PI * 2) / n;
     // 原点记发射瞬间的位置，之后与主角移动无关。
     for (let i = 0; i < n; i++) {
       const a = orbitAngle + i * step;
-      flyers.push({ kind: orbiting[i].kind, holder: orbiting[i].holder, a, ox: p.x, oz: p.z, dist: 0, spin: -a });
+      flyers.push({ kind: owned[i], holder: acquire(owned[i]), a, ox: p.x, oz: p.z, dist: 0, spin: -a });
     }
-    for (let i = 0; i < n; i++) {
-      const a = orbitAngle + i * step + step / 2;
-      const kind = orbiting[i].kind;   // 插在它后面的空隙里，元素跟随
-      flyers.push({ kind, holder: acquire(kind), a, ox: p.x, oz: p.z, dist: 0, spin: -a });
-    }
-    orbiting.length = 0;
-    regenT = 0;
+    fireCd = FIRE_CD;
     if (fx) {
       fx.ring(p, { from: 0.3, to: ORBIT_R + 1.2, color: 0x9fe8ff, life: 0.4, opacity: 0.9, y: 0.07 });
       fx.burst(p, { color: 0xbff2ff, count: 24, speed: 6.5, life: 0.5, size: 0.14, y: FLY_Y, up: 1.2, gravity: 3 });
@@ -225,7 +232,10 @@ export function createWeaponSystem({ scene, stats, wstats, fx, enemies }) {
       enemies.applyDot(e, { dps: wstats.get('poisonDps'), time: wstats.get('poisonTime') });
       audio.sfx('poison');
     } else if (kind === 'frost') {
-      enemies.applySlow(e, { factor: wstats.get('frostSlow'), time: wstats.get('frostTime') });
+      // 冰剑（第 56 块重做，用户定案）：命中后**直接冻结**一段时间，
+      // 不再是「减速」—— 冻住的怪不能移动也不能攻击，投手/冲锋全得干瞪眼。
+      // 时长走 frostTime（属性可升级延长）。
+      enemies.applyFreeze(e, { time: wstats.get('frostTime') });
       audio.sfx('ice');
     } else if (kind === 'leech') {
       const r = wstats.get('leechRate');
@@ -234,12 +244,17 @@ export function createWeaponSystem({ scene, stats, wstats, fx, enemies }) {
         audio.sfx('heal');
       }
     } else if (kind === 'thunder') {
-      const targets = enemies.chainTargets(e, Math.round(wstats.get('chainCount')), CHAIN_DIST);
+      // 雷剑（第 56 块重做，用户定案）：连锁到**场上所有怪**（不再限只数/距离），
+      // 每道闪电的伤害比例下调到 chainRatio（可升级）。怪越密越是清场技。
+      // 视觉上只画最近的几道线（MAX_BOLT_VIS）—— 三十只怪同时链会糊满屏。
+      const targets = enemies.chainTargets(e, Infinity, Infinity);
       if (targets.length) audio.sfx('thunder');
+      const ratio = wstats.get('chainRatio');
+      let vis = 0;
       for (const tgt of targets) {
-        const cd = dmg * CHAIN_RATIO;
+        const cd = dmg * ratio;
         enemies.takeDamage(tgt, cd, false, { quiet: true });
-        bolt(e.pos, tgt.pos);
+        if (vis < MAX_BOLT_VIS) { bolt(e.pos, tgt.pos); vis++; }
       }
     } else if (kind === 'quake') {
       // 震剑（第 29 块）：命中时有概率把目标震退 + 打断蓄力/读条。
@@ -295,6 +310,8 @@ export function createWeaponSystem({ scene, stats, wstats, fx, enemies }) {
   function update(dt, { playerPos, onHudChange } = {}) {
     if (!granted) return;
     t += dt;
+    // 万剑齐发冷却（第 56 块）：走表，归零就可再放
+    if (fireCd > 0) fireCd = Math.max(0, fireCd - dt);
 
     const target = targetCount();
     const list = aliveEnemies();
@@ -400,6 +417,7 @@ export function createWeaponSystem({ scene, stats, wstats, fx, enemies }) {
     bolts.length = 0;
     owned = [];
     regenT = 0;
+    fireCd = 0;
     granted = false;
   }
 
@@ -436,6 +454,11 @@ export function createWeaponSystem({ scene, stats, wstats, fx, enemies }) {
     get orbitingCount() { return orbiting.length; },
     get flyingCount() { return flyers.length; },
     get orbitAngle() { return orbitAngle; },   // 调试/测试用
+    // 万剑齐发冷却（第 56 块）：ready = 冷却走完；cdLeft 剩余秒数；progress 0→1 填满
+    get fireReady() { return granted && fireCd <= 0; },
+    get fireCdLeft() { return fireCd; },
+    get fireCdTotal() { return FIRE_CD; },
+    get fireCdProgress() { return granted ? Math.max(0, Math.min(1, 1 - fireCd / FIRE_CD)) : 0; },
     // 技能栏恢复进度条：0（刚消耗）→ 1（下一把剑就绪）；满剑时恒为 0
     get regenProgress() {
       if (orbiting.length >= targetCount()) return 0;

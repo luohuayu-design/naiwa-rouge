@@ -25,11 +25,11 @@
 // 第四关三只（wraith/leaper/mender，第 35 块，第 52 块换模型），
 // 各自在下面 ENEMY_TYPES 里有详细注释。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=65';
-import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=65';
-import { clone as cloneSkinned } from '../lib/jsm/utils/SkeletonUtils.js?v=65';
-import { distance2D } from './stats.js?v=65';
-import { createRangeRing } from './rangeRing.js?v=65';
+import * as THREE from '../lib/three.module.js?v=66';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=66';
+import { clone as cloneSkinned } from '../lib/jsm/utils/SkeletonUtils.js?v=66';
+import { distance2D } from './stats.js?v=66';
+import { createRangeRing } from './rangeRing.js?v=66';
 
 // KayKit 模型正面朝 +Z；如果哪天换模型发现怪倒着走，把这里改成 Math.PI
 export const ENEMY_MODEL_YAW = 0;
@@ -954,8 +954,15 @@ function lerpAngle(a, b, t) {
 }
 
 // ------------------------------------------------------------
-// 怪物血条：一张 96×12 的 canvas 贴图 + Sprite，受伤才显示
+// 怪物血条：一张 168×42 的 canvas 贴图 + Sprite，受伤才显示
+// 第 56 块（用户定案）：**所有怪的血条统一大小**。以前宽随身高走，第 53 块
+// 又把放大/缩小的怪连带缩放（卫队缩到 0.7、菌王放到 3.24 倍时血条差 4 倍多），
+// 一大一小很难看。现在世界宽度固定 BAR_W，谁都不特殊；只有「挂多高」仍按
+// 这一只的实际头顶高度算（缩放过的怪脑袋在别的高度，不跟会飘/会埋）。
 // ------------------------------------------------------------
+const BAR_W = 1.5;        // 血条世界宽度：全怪统一（≈ 普通怪身高×1.18 的老观感）
+const BAR_LIFT = 0.95;    // 头顶上方抬升：俯视 45° 相机下贴太近会被怪自己的头挡住
+
 function createBar(cfg, scale = 1) {
   const W = 168, H = 42;
   const cv = document.createElement('canvas');
@@ -967,13 +974,12 @@ function createBar(cfg, scale = 1) {
 
   const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, depthTest: false });
   const spr = new THREE.Sprite(mat);
-  // 头顶常驻血条：宽随身高、高固定。
+  // 头顶常驻血条：宽固定（见上），高按画布比例折算。
   // ⚠️ 必须抬到头顶上方约 0.95 —— 相机是俯视 45°，贴得太近会被怪自己的头挡住。
-  // 第 53 块：血条跟着 opts.scale 走（卫队缩到 0.7，血条还按原高挂会飘在半空）。
+  // 挂多高仍按实际身高：卫队 0.7 倍、菌王 3.24 倍的脑袋不在这里，血条得跟着挪。
   const hh = cfg.height * scale;
-  const w = hh * 1.18;
-  spr.scale.set(w, w * (H / W), 1);
-  spr.position.y = hh + 0.95 * Math.max(0.7, scale);
+  spr.scale.set(BAR_W, BAR_W * (H / W), 1);
+  spr.position.y = hh + BAR_LIFT;
   spr.visible = true;
   spr.renderOrder = 5;
 
@@ -1210,6 +1216,8 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
       dot: null,       // 中毒：{ dps, t, tick }
       slowT: 0,        // 冰缓剩余时间
       slowFactor: 0,   // 冰缓减速比例
+      freezeT: 0,      // 冰冻剩余时间（第 56 块，冰剑）：>0 时完全定住，不动也不打
+      freezeFxT: 0,    // 冰冻指示圈的发出计时
       // —— 打散怪群的三件套（第 6 块）——
       speedMul,        // 生成时随机出来的速度倍率（0.85~1.15，同种怪也不一样）
       restCd: 2.5 + Math.random() * 3.5,  // 再走多久开始歇（第一次 2.5~6 秒）
@@ -2026,6 +2034,29 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
       }
     }
 
+    // ---- 冰冻（第 56 块，冰剑）：冻住的怪完全定住 —— 不动、不打、动画也停 ----
+    // 放在 AI 之前、卫队公转之前：冰封期间连光环/闪白都照常走（挨打还是要看得见），
+    // 但移动、攻击、蓄力、冲锋、公转全停。解冻后从原姿态继续（状态机没被清）。
+    // ⚠️ 死亡消散不受冰冻影响（state==='dead' 的怪照样往下走消散计时）——
+    //    否则冰里死掉的怪会永远僵在场上，回收循环收不走。
+    if (e.freezeT > 0 && e.state !== 'dead') {
+      e.freezeT -= dt;
+      e.mixer.timeScale = 0;      // 动画一起冻住（解冻时恢复 1）
+      // 冰封指示：脚底淡蓝圈，每 0.45 秒冒一个（复用冰缓那个颜色）
+      e.freezeFxT -= dt;
+      if (e.freezeFxT <= 0) {
+        e.freezeFxT = 0.45;
+        if (fx) fx.ring(e.pos, { from: 0.25, to: 0.8, color: 0x9fdcff, life: 0.4, opacity: 0.55, y: 0.05 });
+      }
+      if (e.freezeT <= 0) {
+        e.freezeT = 0;
+        e.mixer.timeScale = 1;
+        if (fx) fx.ring(e.pos, { from: 0.3, to: 1.0, color: 0x9fdcff, life: 0.3, opacity: 0.6, y: 0.05 });
+      }
+      return;
+    }
+    if (e.mixer.timeScale === 0) e.mixer.timeScale = 1;   // 解冻后恢复（兜底：没走上面的归零分支）
+
     // ---- 主祭的霜牢卫队：环绕主祭站位、不自主动（第 28 块）----
     // 位置完全由主祭决定；主祭一死，卫队当场散架（霜牢断了，傀儡失去支撑）。
     if (e.guard) {
@@ -2750,6 +2781,17 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     if (fx) fx.ring(e.pos, { from: 0.2, to: 0.95, color: 0x6fd2ff, life: 0.35, opacity: 0.5, y: 0.05 });
   }
 
+  // 冰冻（第 56 块，冰剑重做）：直接把怪定住 time 秒 —— 不能移动也不能攻击。
+  // 与冰缓是两套东西：冰缓只是砍移速（上限 90%），冰冻是 100% 定身，
+  // 投手的骨刀、战士的贴脸、骨骑的冲锋全都得停。时长取更强的（后命中刷新）。
+  function applyFreeze(e, { time }) {
+    if (!e || e.state === 'dead' || e.state === 'spawn') return;
+    e.freezeT = Math.max(e.freezeT, time);
+    e.freezeFxT = 0.2;
+    // 冰冻指示：比冰缓更亮一圈，一眼看出「这只动不了了」
+    if (fx) fx.ring(e.pos, { from: 0.25, to: 1.0, color: 0x9fdcff, life: 0.4, opacity: 0.65, y: 0.05 });
+  }
+
   // 连锁闪电的目标：e 之外最近的 count 只活怪（距离 ≤ maxDist）
   function chainTargets(e, count, maxDist = 4.5) {
     const out = [];
@@ -2865,7 +2907,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     list,
     aliveCount,
     takeDamage,
-    applyDot, applySlow, chainTargets,
+    applyDot, applySlow, applyFreeze, chainTargets,
     shotCount: () => shots.length,
     zoneCount: () => zones.length,      // 场上正在倒计时的圈（三种法术都算）
     arrowCount: () => arrows.length,    // 正在下落/插在地上的箭
@@ -2881,6 +2923,8 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     buffedCount: () => list.filter((e) => e.auraHaste > 0).length,
     // 第三关的观测口（第 29 块）
     shieldedCount: () => list.filter((e) => e.shieldUp && e.state !== 'dead').length,
+    // 冰冻观测口（第 56 块，冰剑）：场上被冻住的怪数
+    frozenCount: () => list.filter((e) => e.freezeT > 0 && e.state !== 'dead').length,
     chargingCount: () => list.filter((e) => e.cfg.charge && (e.state === 'attack' || e.state === 'dash')).length,
     broodlingCount: (parent) => list.filter((e) => e.summonedBy && (!parent || e.summonedBy === parent) && e.state !== 'dead').length,
     // 第四关的观测口（第 35 块）

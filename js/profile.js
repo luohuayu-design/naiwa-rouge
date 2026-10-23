@@ -71,6 +71,10 @@ const DEFAULT_PROFILE = {
   // 之后靠图鉴自己查。**不能用 codex.enemies 代替**：那是击倒数，
   // 遇到而没打死的怪在那边是 0。
   met: {},
+  // 环剑「已经拿到过」（第 56 块）：第一关第 5 回合首次获得时置 true。
+  // 之后从第二关起（含读档新开一局直接选后面的关卡）开局就送 3 把铁剑，
+  // 不用再等那一关的第 5 回合。第一关自己仍保留「第 5 回合获得」的仪式时刻。
+  ringGot: false,
 };
 
 let cache = null;
@@ -194,6 +198,21 @@ export function markEnemyMet(type) {
   const m = metLog();
   if (!type || m[type]) return false;
   m[type] = Date.now();
+  save();
+  return true;
+}
+
+// ---------------- 环剑「已拿到过」（第 56 块） ----------------
+// 第一关第 5 回合首次获得时记下；之后的关卡开局直接送 3 把铁剑。
+export function ringObtained() {
+  return !!profile().ringGot;
+}
+
+// 记下「拿到过环剑」。重复调用无副作用（幂等）。
+export function markRingObtained() {
+  const p = profile();
+  if (p.ringGot) return false;
+  p.ringGot = true;
   save();
   return true;
 }

@@ -24,19 +24,22 @@
 //
 // ctx 由 main.js 每帧拼好传进来：{ playing, weapon, playerPos, stats, coins }
 // ============================================================
-import audio from './audio.js?v=65';
+import audio from './audio.js?v=66';
 
 export const SKILLS = [
   {
     id: 'swordRain',
     name: '万剑齐发',
     icon: 'assets/weapons/icon-sword.png',
-    hint: '把环上的剑一次全射出去（每两把之间再补一把）',
+    // 第 56 块（用户定案）：技能改成有 CD 的 —— 向四周辐射出「拥有的每一把剑」，
+    // 不影响环上正在转的。介绍文案同步改说法（不再是「把环上的剑全射出去」）。
+    hint: '向四周辐射出你拥有的每一把剑（不影响环上转的），冷却 6 秒',
     key: '1',
     requiresWeapon: true,
-    // 有剑才能放：剑全射出去之后就等它们一把把补回来
-    ready: (ctx) => ctx.playing && ctx.weapon.granted && ctx.weapon.count > 0,
-    progress: (ctx) => (ctx.weapon.granted ? ctx.weapon.regenProgress : 0),
+    // 冷却中按不动；按钮底部进度条 = 冷却填充，格子上的数字 = 还剩几秒
+    ready: (ctx) => ctx.playing && ctx.weapon.granted && ctx.weapon.fireReady,
+    progress: (ctx) => (ctx.weapon.granted ? ctx.weapon.fireCdProgress : 0),
+    cdText: (ctx) => (ctx.weapon.granted && !ctx.weapon.fireReady ? Math.ceil(ctx.weapon.fireCdLeft) + '' : ''),
     press(ctx) {
       if (!ctx.weapon.fire(() => ctx.playerPos)) return false;
       audio.sfx('swordFire');

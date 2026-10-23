@@ -31,9 +31,9 @@
 //   标了 scope:'weapon' 的项改的是武器表（剑系 / 元素系），其余改主角表。
 //   两块表都要传进来，没传 wstats 时武器项会退化到主角表（只为兼容老调用）。
 // ============================================================
-import { STAT_DEFS } from './stats.js?v=65';
-import { WEAPON_STAT_DEFS } from './weaponStats.js?v=65';
-import { RARITIES, rarityWeight, oddsOf } from './rarity.js?v=65';
+import { STAT_DEFS } from './stats.js?v=66';
+import { WEAPON_STAT_DEFS } from './weaponStats.js?v=66';
+import { RARITIES, rarityWeight, oddsOf } from './rarity.js?v=66';
 
 // 一张卡改的是哪块表
 function tableFor(scope, stats, wstats) {
@@ -155,15 +155,15 @@ export const UPGRADES = [
     id: 'chill', tag: 'atk', glyph: '❆', name: '严寒',
     rarity: 2, needsWeapon: true, scope: 'weapon',
     w0: 0.80, gw: +0.030,
-    title: '冰缓 +8%', desc: '冰剑把怪冻得更狠（35% → 43% 减速），持续 2.5 秒',
-    stat: 'frostSlow', flat: 0.08,
+    title: '冰冻 +0.3 秒', desc: '冰剑把怪冻得更久（1.2 → 1.5 秒），定住就是完全动不了',
+    stat: 'frostTime', flat: 0.3,
   },
   {
     id: 'volt', tag: 'atk', glyph: '⚡', name: '导电',
     rarity: 3, needsWeapon: true, scope: 'weapon',
     w0: 0.60, gw: +0.040,
-    title: '雷链数 +1', desc: '雷剑多连锁一只怪，每道闪电 60% 伤害',
-    stat: 'chainCount', flat: 1,
+    title: '闪电伤害 +10%', desc: '雷剑连锁的每道闪电更疼（35% → 45%），连锁目标是场上所有怪',
+    stat: 'chainRatio', flat: 0.10,
   },
   {
     id: 'spring', tag: 'atk', glyph: '❥', name: '活血',

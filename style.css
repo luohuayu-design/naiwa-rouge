@@ -178,11 +178,13 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
 /* ---------------- 技能栏（右下角，一栏纯技能键） ----------------
    默认隐藏，有技能可用后 .on 淡入；一格一个技能，从下往上排
    （第一格贴着拇指）。.sk.ready = 现在能放，.sk.spent = 不能放（灰着），
-   .sk-cd 是底部的冷却/恢复进度条。 */
+   .sk-cd 是底部的冷却/恢复进度条。
+   第 56 块（用户报「技能介绍挡住技能按钮」）：教程卡弹出时整栏上移让开卡片 ——
+   --sk-lift 由 main.js 的 syncSkillLift() 按卡片实际高度写，平时是 0（仍贴右下角）。 */
 #skillBar{position:fixed;right:calc(14px + env(safe-area-inset-right));
-  bottom:calc(16px + env(safe-area-inset-bottom));z-index:7;
+  bottom:calc(16px + var(--sk-lift,0px) + env(safe-area-inset-bottom));z-index:7;
   display:none;flex-direction:column-reverse;gap:10px;
-  pointer-events:none}
+  pointer-events:none;transition:bottom .22s ease}
 #skillBar.on{display:flex;pointer-events:auto}
 .sk{position:relative;width:58px;height:58px;border-radius:14px;overflow:hidden;
   border:1px solid rgba(126,235,196,.22);background:rgba(6,18,16,.62);

@@ -14,7 +14,7 @@
 // 数值怎么算：与 stats.js 完全同一套 (base + Σflat) × (1 + Σpct)。
 // 面板分组：'剑本体' / '元素'。
 // ============================================================
-import { createStats, mitigate, pct, num1 } from './stats.js?v=65';
+import { createStats, mitigate, pct, num1 } from './stats.js?v=66';
 
 export const WEAPON_STAT_DEFS = [
   // ---------------- 剑本体 ----------------
@@ -30,9 +30,12 @@ export const WEAPON_STAT_DEFS = [
   // ---------------- 元素（毒 / 冰 / 雷 / 血 见 swordKinds.js） ----------------
   { key: 'poisonDps',    name: '毒伤',       base: 0.10,  fmt: (v) => v.toFixed(2) + '/秒', group: '元素', desc: '毒剑命中后每秒扣的血' },
   { key: 'poisonTime',   name: '毒持续',     base: 5.0,   fmt: (v) => v.toFixed(1) + ' 秒',  group: '元素', desc: '中毒状态的持续时间' },
-  { key: 'frostSlow',    name: '冰缓',       base: 0.35,  fmt: pct,  group: '元素', desc: '冰剑命中后降低的移动速度比例' },
-  { key: 'frostTime',    name: '冰缓持续',   base: 2.5,   fmt: (v) => v.toFixed(1) + ' 秒',  group: '元素', desc: '减速状态的持续时间' },
-  { key: 'chainCount',   name: '雷链数',     base: 1,     fmt: num1, group: '元素', desc: '雷剑命中时额外连锁的目标数' },
+  // 冰剑（第 56 块重做）：不再是减速，是**冰冻** —— 命中的怪直接定住 frostTime 秒，
+  // 不能移动也不能攻击。1.2 秒是定身的底线：再短就只是「顿一下」，再长boss没得打。
+  { key: 'frostTime',    name: '冰冻持续',   base: 1.2,   fmt: (v) => v.toFixed(1) + ' 秒',  group: '元素', desc: '冰剑命中后把怪定住的时间（完全冻住，不能移动也不能攻击）' },
+  // 雷剑（第 56 块重做）：连锁目标是**场上所有怪**（不再限只数与距离），
+  // 每道闪电的伤害比例走这里（比旧版 60% 低 —— 用户定的「伤害可以稍微低一点」）。
+  { key: 'chainRatio',   name: '闪电伤害',   base: 0.35,  fmt: pct,  group: '元素', desc: '雷剑连锁时每道闪电的伤害比例（连锁目标为场上所有怪）' },
   { key: 'leechRate',    name: '血剑回血',   base: 0.15,  fmt: pct,  group: '元素', desc: '血剑命中时按造成伤害的比例回血' },
 ];
 

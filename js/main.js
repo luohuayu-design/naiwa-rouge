@@ -5,30 +5,30 @@
 // 目标是把三件事调顺：摇杆输入 → 角色速度/朝向 → 相机跟随。
 // 后续叠战斗时，只需要在 tick() 里加敌人更新与自动攻击，不用动输入层。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=65';
-import { buildNightScene } from './scene.js?v=65';
-import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=65';
-import { createInput } from './input.js?v=65';
-import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=65';
-import { createStatView } from './statView.js?v=65';
-import { createWeaponStats } from './weaponStats.js?v=65';
-import { createFx } from './fx.js?v=65';
-import { createEnemySystem } from './enemy.js?v=65';
+import * as THREE from '../lib/three.module.js?v=66';
+import { buildNightScene } from './scene.js?v=66';
+import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=66';
+import { createInput } from './input.js?v=66';
+import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=66';
+import { createStatView } from './statView.js?v=66';
+import { createWeaponStats } from './weaponStats.js?v=66';
+import { createFx } from './fx.js?v=66';
+import { createEnemySystem } from './enemy.js?v=66';
 import {
   createLevel, LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVELS_BY_ID, DIFFS, setDifficulty, getDifficulty, roundScale, levelStats,
-} from './wave.js?v=65';
-import { createRangeRing } from './rangeRing.js?v=65';
-import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=65';
-import { createWeaponSystem } from './weapon.js?v=65';
-import { createArrowRainSystem } from './arrowRain.js?v=65';
-import { SWORD_KINDS } from './swordKinds.js?v=65';
-import { createGoldSystem } from './gold.js?v=65';
-import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW } from './shop.js?v=65';
-import { createTurretSystem, TURRET } from './turret.js?v=65';
-import { createRelicSystem, RELIC_DEFS } from './relics.js?v=65';
-import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=65';
-import audio from './audio.js?v=65';
-import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=65';
+} from './wave.js?v=66';
+import { createRangeRing } from './rangeRing.js?v=66';
+import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=66';
+import { createWeaponSystem } from './weapon.js?v=66';
+import { createArrowRainSystem } from './arrowRain.js?v=66';
+import { SWORD_KINDS } from './swordKinds.js?v=66';
+import { createGoldSystem } from './gold.js?v=66';
+import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW } from './shop.js?v=66';
+import { createTurretSystem, TURRET } from './turret.js?v=66';
+import { createRelicSystem, RELIC_DEFS } from './relics.js?v=66';
+import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=66';
+import audio from './audio.js?v=66';
+import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=66';
 import {
   settings as readSettings, setSetting, save as saveProfile, profile,
   bumpStat, setStatMax, codexAdd, codexCount, countCard, unlockAch, hasAch, addBones, bones, resetAll,
@@ -36,41 +36,42 @@ import {
   setSaveSuppressed, reloadFromStorage,
   giftLog, giftRedeemed, markGift,
   enemyMet, markEnemyMet,
-} from './profile.js?v=65';
+  ringObtained, markRingObtained,
+} from './profile.js?v=66';
 // 第 44 块：礼包兑换（码表只有哈希，明细在 gift.js 顶部注释）
-import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=65';
+import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=66';
 // 第 46 块：音效包（抽象奶蛙音效包 —— 4 段奶蛙叫声，通关第一关解锁）
-import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=65';
-import * as runSave from './runSave.js?v=65';
+import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=66';
+import * as runSave from './runSave.js?v=66';
 import {
   CAMPFIRE, CAMP_STEP, campBuy, campOwned, campLevel,
   campCost, campApply, bonesFor, diffBoneMul, levelBoneMul, coinBones, BONE,
-} from './campfire.js?v=65';
+} from './campfire.js?v=66';
 // 第 23 块：永夜火种（通关白给的 3 次永久三选一）
 import {
   BOONS, BOON_BY_ID, BOON_PICKS, boonOwned, boonStacks, boonPending, boonTotalStacks,
   grantBoons, rollBoons, takeBoon, applyBoons, boonStackText,
-} from './boons.js?v=65';
+} from './boons.js?v=66';
 // 第 21 块：夜行诅咒（自选 debuff 换骨币倍率）
-import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=65';
+import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=66';
 // 第 22 块：种子与每日挑战
 import {
   DAILY_RULES, dayKey, dayText, dailySeed, seedCode, pickDailyCurses,
   seedFromText, pickSeedRules, loadSeedRecords, saveSeedRecord, pruneSeeds,
   dailyRecord, saveDailyRecord, pruneDaily, makeRng,
-} from './seed.js?v=65';
-import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=65';
-import { achById, ACHS } from './achievements.js?v=65';
+} from './seed.js?v=66';
+import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=66';
+import { achById, ACHS } from './achievements.js?v=66';
 import {
   EVENTS, ALL_EVENTS, getEventById, pickEvent, effectLines,
   choiceHint, canAfford, costShort, REP_MIN, REP_MAX, REP_START,
   isTalk, eventChoices, resolveRoll, mergeEffects,
-} from './events.js?v=65';
+} from './events.js?v=66';
 // 第 32 块：主线《笑不出来的那一夜》（18 夜，一夜一关，前 3 夜已有关卡）
 import {
   STORY_ARC, STORY_CHAPTERS, STORY_ENDINGS, MARK_INFO,
   storyChapterAt, storyChapterById, storyEndingKey,
-} from './story.js?v=65';
+} from './story.js?v=66';
 
 // 标记模块已经跑起来了：index.html 的兜底自检靠它判断
 // 「模块根本没执行」还是「执行了但加载慢」。
@@ -441,7 +442,10 @@ async function boot() {
     if (panelTab === 'weapon' && !weapon.granted) {
       const tip = document.createElement('div');
       tip.className = 'ap-note';
-      tip.textContent = '第 5 回合结束会自动获得环剑，下面是它的独立数值（不吃主角的攻击与暴击）。';
+      // 第 56 块：第一关第 5 回合获得；之后的关卡（拿到过就）开局直接送
+      tip.textContent = ringObtained() && curLevelId >= 2
+        ? '这一关开局就带着环剑（第一关拿到过），下面是它的独立数值（不吃主角的攻击与暴击）。'
+        : '第 5 回合结束会自动获得环剑，下面是它的独立数值（不吃主角的攻击与暴击）。';
       apList.appendChild(tip);
     }
     // 第 21 块：本局带了诅咒时，点明「上面的数值已经扣过诅咒」，
@@ -1191,6 +1195,34 @@ async function boot() {
     }
   }
 
+  // 第 56 块（用户报「技能介绍挡住技能按钮」）：教程卡（新手教程 / 武器教程，
+  // 共用 .tut-card）弹出时，把整栏技能按钮**统一上移**让开卡片；卡片一收就归零，
+  // 平时仍贴在右下角，拇指够得着。
+  // 实测依据：卡片底边距底 86px、最高 235px（窄屏长文案）；两个技能按钮从底部
+  // 16px 起有 126px 高 —— 上面那个按钮正好被盖住 56px，箭雨教程最后一步
+  // 要按的那个按钮首当其冲。
+  function syncSkillLift() {
+    const card = document.querySelector('.tut-card.on');
+    if (!card) { skillBar.style.setProperty('--sk-lift', '0px'); return; }
+    // 卡片有 .22s 滑入过渡（translateY 12px→0）：刚加 .on 时读 rect 会量到动画中间态，
+    // 抬升量算少一截（实测差 12px，收卡时技能栏短一截、离卡片只剩 0px）。
+    // 底边距和布局高都不过渡，用它们还原卡片的最终位置：top = innerHeight - bottom - height。
+    // （wtRender 先跑完再调本函数，内容高度已是终值；bottom 是 calc(86px + env(...))，已解析）
+    const cs = getComputedStyle(card);
+    const bottom = parseFloat(cs.bottom);
+    const h = card.offsetHeight || card.getBoundingClientRect().height;
+    const top = Number.isFinite(bottom) ? window.innerHeight - bottom - h : card.getBoundingClientRect().top;
+    let barH = skillBar.getBoundingClientRect().height;
+    if (!barH) barH = 58;                       // 藏着的时候按一格算（不影响观感）
+    // 目标：技能栏底边落在卡片上方 12px。现在底边在 16px，补的差就是 lift。
+    let lift = Math.max(0, (window.innerHeight - top) + 12 - 16);
+    // 别把整栏顶出屏幕（超矮的横屏）：留 24px 给边缘
+    lift = Math.min(lift, Math.max(0, window.innerHeight - barH - 24));
+    skillBar.style.setProperty('--sk-lift', lift.toFixed(1) + 'px');
+  }
+  window.addEventListener('resize', syncSkillLift);
+  window.addEventListener('orientationchange', () => setTimeout(syncSkillLift, 120));
+
   function pressSkill(sk) {
     const ctx = skillCtx();
     if (!sk.ready(ctx)) return false;
@@ -1284,6 +1316,7 @@ async function boot() {
   function startPlay() {
     tutCard.classList.remove('on');
     tutCard.setAttribute('aria-hidden', 'true');
+    syncSkillLift();          // 第 56 块：教程卡收掉，技能栏落回右下角
     gameState = 'playing';
     // 第 55 块：新一局从 0 起表。以前只初始化一次 —— 打完一局回标题再开，
     // 第二局的「用时」会把上一局那几十分钟一起带进来（记录/成就全被带歪）。
@@ -1295,6 +1328,10 @@ async function boot() {
     storyMarked.clear();              // 第 32 块：印记去重表一局一清（重打可以重新选，档案照样累计）
     setDifficulty(diffOverride || profile().difficulty || 'normal');   // 难度一局一选，开局生效
     setLevel(pendingLevelId);         // 第 20 块：按选关重建这一关（含场景皮肤）
+    // 第 56 块（用户定案）：第一关第 5 回合拿到过环剑之后，之后的关卡开局就送 3 把铁剑
+    // （「后续关卡默认拥有该技能」）。第一关自己仍走 weaponAt 那一回合的获得时刻，
+    // 那是全游戏的仪式瞬间，不预送。读档不走这里（存档里的 weapon 直接 restore）。
+    prefillRing();
     // 第 36 块：开局把相机焦点贴到角色身上，别从上一局死的地方慢慢飞过来
     camFocus.set(pos.x, 0, pos.z);
     camFov = CAM_FOV_BASE;
@@ -1346,6 +1383,7 @@ async function boot() {
     hintEl.classList.add('off');
     tutCard.classList.add('on');
     tutCard.setAttribute('aria-hidden', 'false');
+    syncSkillLift();          // 第 56 块：新手教程卡同样别盖技能栏
     whWave.textContent = '教程';
     whFill.style.width = '0%';
     whSub.textContent = '先熟悉一下';
@@ -1358,6 +1396,7 @@ async function boot() {
     tcStep.textContent = `新手教程 ${tutStep + 1} / ${TUT_STEPS.length}`;
     tcTitle.textContent = s.title;
     tcText.textContent = s.text;
+    syncSkillLift();          // 第 56 块：文案换了卡片高度可能变
     tcBar.style.width = ((tutStep / TUT_STEPS.length) * 100).toFixed(1) + '%';
     if (tutStep === 1) spawnTutDummy();
   }
@@ -2173,7 +2212,7 @@ async function boot() {
         { title: '剑会补回来', text: '砍中怪的那把剑会消失，之后每 3 秒补回一把。剑买得越多，环就越密。' },
         {
           title: '技能 · 万剑齐发',
-          text: '按数字 1，或点右下角的剑形按钮：把环上的剑一次全射出去（每两把之间再补一把）。现在就试一次。',
+          text: '按数字 1，或点右下角的剑形按钮：你拥有的每一把剑都会向四周辐射出去（商店买的也算，不影响环上正在转的）。冷却 6 秒，现在就试一次。',
           wait: 'fire',
         },
       ],
@@ -2188,11 +2227,11 @@ async function boot() {
     },
     frost: {
       name: '冰 剑',
-      steps: [{ title: '命中就变慢', text: '冰缓让怪跑不动 —— 投手的骨刀、战士的贴脸都追不上你。被围住时先蹭一刀再撤。' }],
+      steps: [{ title: '命中就冻住', text: '冰剑不再只是减速 —— 命中的怪直接定住 1.2 秒，不能移动也不能攻击。投手的骨刀、骨骑的冲锋，冻一下全断。' }],
     },
     thunder: {
       name: '雷 剑',
-      steps: [{ title: '命中会连锁', text: '砍中一只，闪电顺带弹到旁边一只。怪越密越划算，只剩一只时别指望它。' }],
+      steps: [{ title: '命中就全场连锁', text: '砍中一只，一道闪电打到场上所有怪（每道 35% 伤害）。怪越密越是清场技，孤单单一只时性价比一般。' }],
     },
     leech: {
       name: '血 剑',
@@ -2285,6 +2324,7 @@ async function boot() {
     wtEl.setAttribute('aria-hidden', 'false');
     audio.sfx('card');
     wtRender();
+    syncSkillLift();          // 第 56 块：技能栏整栏上移，别被卡片盖住
   }
 
   function wtRender() {
@@ -2297,6 +2337,7 @@ async function boot() {
     wtBarEl.style.width = ((wtStepIdx / t.steps.length) * 100).toFixed(1) + '%';
     wtNextBtn.classList.toggle('on', !s.wait);
     wtNextBtn.textContent = wtStepIdx + 1 >= t.steps.length ? '知道了' : '下一步';
+    syncSkillLift();          // 第 56 块：文案换了卡片高度可能变，技能栏跟着挪
   }
 
   function wtAdvance() {
@@ -2314,6 +2355,7 @@ async function boot() {
     wtKind = null;
     wtEl.classList.remove('on');
     wtEl.setAttribute('aria-hidden', 'true');
+    syncSkillLift();          // 第 56 块：卡片收了，技能栏落回右下角
     if (wtQueue.length > 0) { wtPump(); return; }
     gameState = 'playing';
     wtFlush();
@@ -2327,6 +2369,7 @@ async function boot() {
     wtKind = null;
     wtEl.classList.remove('on');
     wtEl.setAttribute('aria-hidden', 'true');
+    syncSkillLift();          // 第 56 块：同上
   }
 
   wtNextBtn.addEventListener('click', () => wtAdvance());
@@ -3049,9 +3092,30 @@ async function boot() {
     runEvent();
   }
 
+  // 第 56 块（用户定案）：后续关卡开局自带环剑。
+  // 条件：以前拿到过（profile.ringGot）+ 这一关不是第一关 + 现在手上没有。
+  // 送的就是最初的 3 把铁剑；第二关起顺带把箭雨一并解锁（它本来就是「第二关起」的武器）。
+  // 教程不重播 —— queueWeaponTut 内部看 wtSeen，老玩家早就看过了；
+  // 真没看过的（比如清过教程记录）会补教，比让他拿着一格不会用的技能栏好。
+  function prefillRing() {
+    if (weapon.granted) return;            // 这一局已经有了（续读的存档在这里之前已 restore）
+    if (curLevelId < 2) return;            // 第一关保留「第 5 回合获得」的仪式时刻
+    if (!ringObtained()) return;           // 没拿到过就不送
+    weapon.grant();
+    if (curLevelId >= 2) arrowRain.unlock();
+    renderSkill();
+    codexAdd('swords', 'ring');
+    tryAch('first_sword');
+    showToast('环剑已在手', '这一关开局就带着 3 把铁剑，技能栏第 1 格就是万剑齐发');
+    queueWeaponTut('ring');
+    if (curLevelId >= 2) queueWeaponTut('arrowrain');
+  }
+
   // 第一次拿到环剑：武器卡 → 用法教程 → 接续回合链
   function grantRingThen(next) {
     weapon.grant();
+    // 第 56 块（用户定案）：拿到过就记进档案 —— 之后从第二关起开局直接送 3 把铁剑
+    markRingObtained();
     // 第 47 块（用户定案）：第一关只允许出现剑；第二关起解锁箭雨
     const withRain = curLevelId >= 2;
     if (withRain) {
@@ -5342,6 +5406,11 @@ async function boot() {
       addSword: (kind) => weapon.addSword(kind),
       get swordKinds() { return weapon.kindCounts(); },
       swordKindsAll: SWORD_KINDS,
+      // 万剑齐发冷却（第 56 块）：ready = 能放；cdLeft 剩余秒数；progress 0→1
+      fireReady: () => weapon.fireReady,
+      fireCdLeft: () => +weapon.fireCdLeft.toFixed(2),
+      fireCdTotal: () => weapon.fireCdTotal,
+      fireCdProgress: () => +weapon.fireCdProgress.toFixed(3),
       // 炮台 / 法器 / 金钟罩 / 背包（第 13 块，测试用）
       turrets: {
         spawn: () => turrets.spawn(pos),

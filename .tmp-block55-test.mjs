@@ -4,7 +4,7 @@
 //   B 新怪信息卡：profile.met / enemy onSpawn / main.js 的排队与冻结链路
 //   C 战斗计时：只有真打的时候走表，商店/剧情/升级/属性卡/确认弹窗/新怪卡都不算
 import fs from 'fs';
-import { profile, markEnemyMet, enemyMet, metLog } from './js/profile.js?v=65';
+import { profile, markEnemyMet, enemyMet, metLog } from './js/profile.js';
 
 let pass = 0, fail = 0;
 const fails = [];
@@ -200,11 +200,21 @@ ok(/let meetAuto = meetQs\.has\('debug'\) \? meetQs\.has\('meet'\) : true;/.test
 ok(/if \(!meetAuto\) return;/.test(mainSrc.split('function onMeetSpawn')[1] || ''),
   'onMeetSpawn 第一道闸就是 meetAuto');
 
-// C6 版本号：两处都 bump（漏一处 = 本地好线上炸）
-ok(/style\.css\?v=65/.test(htmlSrc), 'index.html 的样式表是 v=65');
-ok(/js\/main\.js\?v=65/.test(htmlSrc), 'index.html 的入口是 v=65');
-ok(!/\?v=64/.test(htmlSrc), 'index.html 里没有残留的 v=64');
-ok(!/from '\.\/[^']+\?v=64'/.test(mainSrc), 'main.js 的 import 里没有残留的 v=64');
+// C6 版本号：全局只允许一个版本，且只升不降
+// （不写死具体数字 —— block45 的教训：写死 v=NN 的断言会在下次 bump 时假挂，
+//   逼着人回来改测试；这里查「一致性 + 不低于本站稳时的版本」）
+const allV = (s) => [...s.matchAll(/\?v=(\d+)/g)].map((m) => +m[1]);
+const htmlVs = new Set(allV(htmlSrc));
+const jsVs = new Set();
+try {
+  for (const f of fs.readdirSync(new URL('./js/', import.meta.url))) {
+    if (f.endsWith('.js')) for (const v of allV(read('./js/' + f))) jsVs.add(v);
+  }
+} catch (_) { /* 目录读不到就只查 index.html */ }
+const curV = [...htmlVs][0];
+ok(htmlVs.size === 1 && jsVs.size === 1 && curV === [...jsVs][0],
+  `index.html 与全部 js import 同一版本（html=${[...htmlVs].join('/')}，js=${[...jsVs].join('/')}）`);
+ok(curV >= 65, `版本号只升不降（当前 v=${curV}，第 55 块落地时是 v=65）`);
 
 console.log(`\n结果：${pass} 通过 / ${fail} 失败`);
 if (fails.length) console.log('失败项：\n  ' + fails.join('\n  '));

@@ -7,8 +7,8 @@
 // 效果规则（命中怪物时触发，见 weapon.js 的 applyKindEffects）：
 //   iron    铁剑  无附加，稳定输出
 //   poison  毒剑  中毒：poisonDps/秒 持续 poisonTime 秒（可叠加刷新）
-//   frost   冰剑  冰缓：移速 ×(1 - frostSlow)，持续 frostTime 秒
-//   thunder 雷剑  连锁：对 chainCount 只附近怪各弹一次 60% 伤害
+//   frost   冰剑  冰冻（第 56 块重做）：直接把怪定住 frostTime 秒，不能移动也不能攻击
+//   thunder 雷剑  连锁（第 56 块重做）：闪电打到场上所有怪，每道 chainRatio 伤害
 //   leech   血剑  吸血：按造成伤害的 leechRate 回血（近战吸血之外的独立来源）
 // ============================================================
 
@@ -34,8 +34,8 @@ export const SWORD_KINDS = {
     color: 0x9cdcff,
     emissive: 0x2fb8ff,
     icon: 'assets/weapons/icon-frost.svg',
-    tagline: '命中后减速',
-    desc: '命中后冰缓：怪物移速 ×0.65 持续 2.5 秒（属性可升级）。躲投手的好帮手。',
+    tagline: '命中后冰冻',
+    desc: '命中后直接把怪冻住 1.2 秒（属性可升级延长）：定身期间它不能移动也不能攻击，投手和冲锋全得干瞪眼。',
   },
   thunder: {
     name: '雷剑',
@@ -43,7 +43,7 @@ export const SWORD_KINDS = {
     emissive: 0x8a5cff,
     icon: 'assets/weapons/icon-thunder.svg',
     tagline: '闪电连锁',
-    desc: '命中时对附近 1 只怪连锁一道闪电，造成 60% 伤害（雷链数可升级）。',
+    desc: '命中时一道闪电打到场上所有怪，每道 35% 伤害（属性可升级）。怪越密越是清场技。',
   },
   leech: {
     name: '血剑',
