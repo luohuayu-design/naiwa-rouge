@@ -44,16 +44,17 @@ function codeHash(n) {
   return a.toString(16).padStart(8, '0') + b.toString(16).padStart(8, '0');
 }
 const giftTable = new Map();
-for (const m of giftSrc.matchAll(/\['([0-9a-f]{16})',\s*(\d+)\]/g)) giftTable.set(m[1], Number(m[2]));
+// 第 57 块起码表行带可选第三个元素（组名）：['hash', 300, '宣传礼包']
+for (const m of giftSrc.matchAll(/\['([0-9a-f]{16})',\s*(\d+)(?:,\s*'[^']*')?\]/g)) giftTable.set(m[1], Number(m[2]));
 
 const codes = [...txt.matchAll(/\bN([AB])-([A-Z0-9]{4})-([A-Z0-9]{4})\b/g)]
   .map((m) => ({ tier: m[1], plain: m[0] }));
 const uniq = new Map(codes.map((c) => [c.plain, c]));
-ok(uniq.size === 20, `txt 里正好 20 个不重复的码（实际 ${uniq.size}）`);
+ok(uniq.size === 40, `txt 里正好 40 个不重复的码（第一批 20 + 宣传有礼 20，实际 ${uniq.size}）`);
 const tierA = [...uniq.values()].filter((c) => c.tier === 'A');
 const tierB = [...uniq.values()].filter((c) => c.tier === 'B');
-ok(tierA.length === 10, `A 类 10 个（实际 ${tierA.length}）`);
-ok(tierB.length === 10, `B 类 10 个（实际 ${tierB.length}）`);
+ok(tierA.length === 20, `A 类 20 个（实际 ${tierA.length}）`);
+ok(tierB.length === 20, `B 类 20 个（实际 ${tierB.length}）`);
 
 let hashOk = 0, tierOk = 0;
 for (const c of uniq.values()) {
@@ -61,25 +62,32 @@ for (const c of uniq.values()) {
   if (bones != null) hashOk++;
   if (bones === (c.tier === 'A' ? 300 : 100)) tierOk++;
 }
-ok(hashOk === 20, `20 个码的哈希在 gift.js 里都查得到（${hashOk}/20）`);
-ok(tierOk === 20, `档位全对：NA-* = 300 骨币、NB-* = 100 骨币（${tierOk}/20）`);
-ok(giftTable.size === 20, `gift.js 码表还是 20 条（实际 ${giftTable.size}）`);
+ok(hashOk === 40, `40 个码的哈希在 gift.js 里都查得到（${hashOk}/40）`);
+ok(tierOk === 40, `档位全对：NA-* = 300 骨币、NB-* = 100 骨币（${tierOk}/40）`);
+ok(giftTable.size === 40, `gift.js 码表 40 条（实际 ${giftTable.size}）`);
 
-// 分类展示：两段标题 + 总览 + 使用说明，一个都不能少
-ok(/A 类/.test(txt) && /300 骨币/.test(txt), '有「A 类 · 300 骨币」的分类段');
-ok(/B 类/.test(txt) && /100 骨币/.test(txt), '有「B 类 · 100 骨币」的分类段');
+// 分类展示：宣传礼包 / 推荐礼包段 + 第一批两段 + 总览 + 使用说明，一个都不能少
+ok(/宣传礼包/.test(txt) && /300 骨币/.test(txt), '有「宣传礼包 · 300 骨币」的分类段');
+ok(/推荐礼包/.test(txt) && /100 骨币/.test(txt), '有「推荐礼包 · 100 骨币」的分类段');
+ok(/A 类/.test(txt) && /300 骨币/.test(txt), '第一批「A 类 · 300 骨币」的分类段还在');
+ok(/B 类/.test(txt) && /100 骨币/.test(txt), '第一批「B 类 · 100 骨币」的分类段还在');
 ok(/分类总览/.test(txt), '有分类总览');
 ok(/怎么用/.test(txt), '有使用说明（怎么用）');
 ok(/输入规则/.test(txt), '有输入规则（大小写/横杠/空格）');
 ok(/只能用一次|一码一次/.test(txt), '写明了「一个码一台机只能用一次」');
 ok(/篝火商店/.test(txt), '指向了骨币的去处：篝火商店');
-ok(/4000 骨币/.test(txt), '全换完的总额（300×10 + 100×10 = 4000）算得对');
+ok(/8000 骨币/.test(txt), '全换完的总额（300×20 + 100×20 = 8000）算得对');
 ok(/只留本机|别提交|gitignore/.test(txt), 'txt 里也写了「不要外传/提交」');
+// 宣传有礼两段要真有 10 行码
+const secPromo = (txt.match(/宣传礼包 · 每个 300 骨币[\s\S]*?(?=推荐礼包 · 每个 100 骨币)/) || [''])[0];
+const secRec = (txt.match(/推荐礼包 · 每个 100 骨币[\s\S]*?(?=A 类 · 每个 300 骨币)/) || [''])[0];
+ok((secPromo.match(/\bNA-[A-Z0-9]{4}-[A-Z0-9]{4}\b/g) || []).length === 10, '宣传礼包清单里逐行列了 10 个');
+ok((secRec.match(/\bNB-[A-Z0-9]{4}-[A-Z0-9]{4}\b/g) || []).length === 10, '推荐礼包清单里逐行列了 10 个');
 // 每段要真有 10 行码（不是只在总览里列一遍）
 const secA = (txt.match(/A 类 · 每个 300 骨币[\s\S]*?(?=B 类 · 每个 100 骨币)/) || [''])[0];
 const secB = (txt.match(/B 类 · 每个 100 骨币[\s\S]*?(?=速查清单)/) || [''])[0];
-ok((secA.match(/\bNA-[A-Z0-9]{4}-[A-Z0-9]{4}\b/g) || []).length === 10, 'A 类清单里逐行列了 10 个');
-ok((secB.match(/\bNB-[A-Z0-9]{4}-[A-Z0-9]{4}\b/g) || []).length === 10, 'B 类清单里逐行列了 10 个');
+ok((secA.match(/\bNA-[A-Z0-9]{4}-[A-Z0-9]{4}\b/g) || []).length === 10, '第一批 A 类清单里逐行列了 10 个');
+ok((secB.match(/\bNB-[A-Z0-9]{4}-[A-Z0-9]{4}\b/g) || []).length === 10, '第一批 B 类清单里逐行列了 10 个');
 
 // 明文码不许进仓库：gitignore 必须排除（README 第 44 块也这么写的）
 ok(/兑换码大全\.txt/.test(gitignore), '.gitignore 排除了 兑换码大全.txt');

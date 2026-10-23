@@ -20,7 +20,7 @@ console.log('礼包兑换 · Node 回归\n');
 
 // ---- 1. 码表规模 ----
 console.log('[1] 码表规模');
-ok('共 20 个礼包码', GIFT_COUNT === 20, String(GIFT_COUNT));
+ok('共 40 个礼包码（第一批 20 + 宣传有礼 20）', GIFT_COUNT === 40, String(GIFT_COUNT));
 
 // ---- 2. 归一化（拿假串验规则）----
 console.log('\n[2] 归一化（大小写 / 横杠 / 空格都吃掉）');
@@ -44,18 +44,20 @@ if (!fs.existsSync(LOCAL)) {
   const txt = fs.readFileSync(LOCAL, 'utf8');
   // 只认表格行（| 1 | `NA-XXXX-XXXX` |），免得把说明文字里的示例码算进来
   const rows = [...txt.matchAll(/^\|\s*\d+\s*\|\s*`(N[AB]-[A-Z0-9]{4}-[A-Z0-9]{4})`/gm)].map((m) => m[1]);
-  ok('本地档里读到 20 个码', rows.length === 20, String(rows.length));
+  ok('本地档里读到 40 个码', rows.length === 40, String(rows.length));
   const aCodes = rows.filter((c) => c.startsWith('NA-'));
   const bCodes = rows.filter((c) => c.startsWith('NB-'));
-  ok('A 类 10 个', aCodes.length === 10, String(aCodes.length));
-  ok('B 类 10 个', bCodes.length === 10, String(bCodes.length));
+  ok('A 类 20 个', aCodes.length === 20, String(aCodes.length));
+  ok('B 类 20 个', bCodes.length === 20, String(bCodes.length));
 
-  let aAll = true, bAll = true, altAll = true;
+  let aAll = true, bAll = true, altAll = true, nameAll = true;
   const hashes = new Set();
+  const names = new Set();
   for (const c of rows) {
     const hit = lookupGift(c);
     if (!hit) { if (c.startsWith('NA-')) aAll = false; else bAll = false; continue; }
     hashes.add(hit.hash);
+    names.add(hit.name || '');
     if (c.startsWith('NA-') && (hit.bones !== 300 || hit.tier !== 'A')) aAll = false;
     if (c.startsWith('NB-') && (hit.bones !== 100 || hit.tier !== 'B')) bAll = false;
     const alt = lookupGift('  ' + c.replace(/-/g, ' ').toLowerCase() + ' ');
@@ -63,8 +65,10 @@ if (!fs.existsSync(LOCAL)) {
   }
   ok('A 类全部 → 300 骨币 / tier A', aAll);
   ok('B 类全部 → 100 骨币 / tier B', bAll);
-  ok('20 个码哈希互不相同（无碰撞）', hashes.size === 20, String(hashes.size));
+  ok('40 个码哈希互不相同（无碰撞）', hashes.size === 40, String(hashes.size));
   ok('每个码换写法仍可查', altAll);
+  // 第 57 块：组名三件套（第一批无组名 / 宣传礼包 / 推荐礼包）
+  ok('组名集合 = 空 + 宣传礼包 + 推荐礼包', names.size === 3 && names.has('宣传礼包') && names.has('推荐礼包'), [...names].join(','));
 
   // ---- 5. giftByHash 反查 ----
   console.log('\n[5] 已兑换列表用的反查');

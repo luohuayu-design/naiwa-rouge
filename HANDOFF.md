@@ -2,13 +2,13 @@
 
 > 新对话从这里开始读，不要先翻聊天记录。**先读 §0「给新对话的话」，再按需查后面章节。**
 >   
-> 最后更新：2026-10-23 晚 · 线上 **v=66** · 第 56 块（生命条统一 / 后续关卡自带环剑 / 万剑齐发 CD 制 / 冰雷加强 / 技能栏让开教程卡）已完成并推送
+> 最后更新：2026-10-23 晚 · 线上 **v=67** · 第 57 块（宣传有礼活动 / 20 个新兑换码 / 图鉴夜行记忆卡顿优化 / sr-alt 字号 / boot 闪屏与浮层被切修复）已完成并推送
 
 ---
 
 ## 0. 给新对话的话（2026-10-23 交接）
 
-1. **当前基线**：v=66（第 56 块）已推送，git 工作区干净。最近十五块（44~56 + v=53~56 一串音效包 hotfix + v=61 hotfix）全部完结，**没有挂起的半成品**。用户新需求来了再开工，别主动找活。
+1. **当前基线**：v=67（第 57 块）已推送，git 工作区干净。最近十六块（44~57 + v=53~56 一串音效包 hotfix + v=61 hotfix）全部完结，**没有挂起的半成品**。用户新需求来了再开工，别主动找活。
 2. **节奏**：用户偏好**小步块状推进**——一块功能 = 一次提交 = 一个版本号（v=N）。铁律 12：**做完回归绿就立刻推送交给用户测**，用户的反馈比自测更快更准。
 3. **最容易翻车的五件事**（细节都在铁律和下文）：
    ① 发版**两处版本号**都要 bump（index.html + js 内部所有 `import ...?v=N`），漏一处就是「本地好线上炸」；
@@ -16,7 +16,7 @@
    ③ **公告在 loading 淡完 +700ms 才弹**，测试截图要先 `sleep(2600)` 再 `__game.notice.hide()`；
    ④ `jumpToRound/skipRound` **只在 adminOn 时生效**，不开管理员是静默 no-op；
    ⑤ 本地服务器必须 `run_in_background`；CDP 截图路径**不能含中文**；推送走 `git -c http.proxy=http://127.0.0.1:7897 ...`（先 curl 探代理，挂了改直连）。
-4. **最新绿基线**（动到相关文件后要回归）：block56 **84**/0（Node：万剑齐发 n/CD/不动环绕源码契约 / 冰雷新语义常量与面板 / 预送逻辑与反例 / 血条尺寸与 scale 无关 / 技能介绍文案）+ block56-cdp **50**/0（真 DOM：A 血条统一 1.5 / B CD+n 把+不动环绕+连按拦停+走表+按钮态+恢复 / C 冰冻全套+端到端 / D 全场连锁 3.5×4 / E 上移 12px 零遮挡+归位 / F 第二关预送+反例不送）、block55 **87**/0 + block55-cdp **51**/0、block54 **54**/0（布袋 + 排版 + 改名 + 失败提示源码契约）+ block54-cdp **36**/0（真 DOM：两行同行等高、商店标题、布袋 10 金币、倒下 0.9s 弹提示、两个按钮的去向）、block53 **46**/0 + block53-cdp **39**/0、block52 **125**/0、block51 **20**/0、block50 **12**/0（含重复 id 断言）、block19 **44**/0、block29 **39**/0、block35 **49**/0、`.tmp-wtut-title-check.js` **4**/0、block47 27/0、block49 23/0。第 56 块还修绿的老套件：weapon **23**/0、sword-shop **30**/0、econ-cdp **46**/0、talk-skill **54**/0、battle **39**/0、wtut **34**/0、rogue-unit **144**/0。跑法见 §6，一次只跑一套。
+4. **最新绿基线**（动到相关文件后要回归）：block57 **112**/0（Node 源码契约：宣传有礼 DOM/CSS/钩子 / 码表 40 条两组组名 / `--app-h` 机制 / 渲染闸门 / 图鉴分块预热 / sr-alt 12.5px / 公告老行为）+ block57-cdp **57**/0（连跑两次全绿，真 DOM 全链条：boot 藏标题页 / 宣传有礼艺术字→正文→今日不再弹→强制回看 / 图鉴预热+112 条分块 / 背包冻帧 / UI 几何 / 公告不回归；套件内常驻 MutationObserver 防「✕ 关不掉」偶发）、block56 **84**/0 + block56-cdp **50**/0、block55 **91**/0 + block55-cdp **51**/0、block54 **54**/0 + block54-cdp **36**/0、block53 **46**/0 + block53-cdp **39**/0、block52 **125**/0、block51 **20**/0、block50 **12**/0（含重复 id 断言）、block19 **44**/0、block29 **39**/0、block35 **49**/0、`.tmp-wtut-title-check.js` **4**/0、block47 27/0（**偶发 26/1**：箭雨落点时怪在走位，重跑即绿）、block49 23/0。第 56 块还修绿的老套件：weapon **23**/0、sword-shop **30**/0、econ-cdp **46**/0、talk-skill **54**/0、battle **39**/0、wtut **34**/0、rogue-unit **144**/0。第 57 块回归：block41 37 / block42 28 / block44 36（码表 20→40 断言已更新）/ block45 49 / block46 65 / block46b 14 / block47 27 / block49 23 / block50 12 / block51 20 / block53 39 / block54 36（补了 promo 清理）/ block55 51 / block56 50 全绿。跑法见 §6，一次只跑一套。
    已知**既有**失败（不是新代码弄坏的，别浪费时间去查；2026-10-23 晚第 56 块用 git worktree 对拍 v=65 再次确认全部同状）：`.tmp-camp-test.mjs` 84/22、`.tmp-boon-test.mjs` 133/13（**偶发 132/14**：幸运概率采样贴阈值抖动，对拍 v=65 同样抖）、`.tmp-eventui-test.js` 35/2、`.tmp-block18-test.js` 34/1、`.tmp-start-test.js` 33/15（断言还是第 14 块前「选关直接进教程」的老流程）、`.tmp-block30-cdp.js` 42/8、`.tmp-ui-test.js` 15/7 —— 都是早期块改过数值或 UI 后没回填的过期断言。另：`.tmp-event-test.mjs` 主跑 105/0，**偶发 104/1**（「没环剑时只可能抽到顺风」300 次采样漏抽 breeze，重跑即绿）。~~`.tmp-rogue-unit.mjs` 142/2~~ 第 56 块已修绿 **144**/0。
 5. **用户规则**：全中文；有疑问先问、有疑问不写码；README 与实况同步；美术资产优先 GitHub 现成 CC0；不做多角色；局外对局内影响要小（篝火每级 +1 生命这种量级）。
 6. **新怪信息卡在 `?debug=1` 下默认是关的**（第 55 块）：它会冻结整个世界，二十多套老 CDP 都要开局刷怪等回合推进，一上来被拦一下就成片挂（实测 block53 就栽在这）。要测这张卡的套件地址加 **`&meet`**（或 `__game.meetCard.setAuto(true)`）；正常游玩永远是开的。同类「首次提示型」弹窗以后照这个办：**生产默认开、测试显式开**。
@@ -48,7 +48,7 @@ Three.js r160 的单摇杆幸存者肉鸽《奶蛙夜行》，纯静态站点（
 
 ---
 
-## 2. 当前状态（2026-10-23，v=66）
+## 2. 当前状态（2026-10-23，v=67）
 
 | 块      | 内容                                            | 状态                          |
 | ------ | --------------------------------------------- | --------------------------- |
@@ -88,6 +88,7 @@ Three.js r160 的单摇杆幸存者肉鸽《奶蛙夜行》，纯静态站点（
 | **54** | **用户实测四条一起修**：① 篝火商店「布袋 · 铜板」每级金币 **30 → 10**（`campfire.js` 的 `coins`，desc 同步；一档就白送半家摊子，局内经济被它一个人抬起来）；② **主菜单排版收成两行**（`index.html` 把 `tt-start`/`tt-resume` 包进 `.tt-row-main`、`tt-daily`/`tt-seedbtn` 包进 `.tt-row-chal`；CSS 用 `flex:1 + max-width + align-items:stretch` 让两枚等高，行内按钮 `margin-top:0` 免得一高一低，隐藏「读取存档」时开始游戏自己居中）；③ 「篝火」改名 **篝火商店**（主菜单按钮、面板标题、礼包/属性页脚、结算提示、加载轮播、永久说明标题统一；剧情「篝火边的故事」保留原文）；④ **倒下弹「温馨提示」**（`#failTip`：标题「温馨提示」+「想要提升实力？去篝火商店看看吧。」，副文案现读 `bones()`；`endGame` 里 `!isWin` 时 900ms 后弹，层级 19 压过结算卡 18；「去篝火商店」= 关提示 → 关结算 → `showTitle()` → `showCampfire()`，「下次吧」只关提示）。钩子 `__game.failTip` | v=64 |
 | **55** | **用户三条**：① **兑换码大全 txt**（本机 `兑换码大全.txt`，A 类 300×10 / B 类 100×10，分类 + 速查 + 用法；20 码逐个重算哈希对上 `js/gift.js`；已 gitignore）；② **新怪物信息卡**（`#meetCard` + `profile.met` + `enemy.js onSpawn`：一种怪首次上场 → `gameState='meet'` 冻结世界 → 讲攻击方式 → 「我明白了」继续，一辈子只拦一次；`?debug=1` 下默认关、加 `&meet` 才开）；③ **只记打斗时长**（`elapsed` 只在 playing/tutorial/wtut 且无 panelOpen/bagOpen/meetOpen/uiHold 时走表；`startPlay` 归零 —— 以前跨局会累积） | v=65 |
 | **56** | **用户五条一起修**：① **生命条统一大小**（`enemy.js createBar`：世界宽固定 `BAR_W=1.5`，实例缩放只碰 mesh 不碰血条——第 53 块卫队 0.7 / 菌王 3.24 倍时血条差 4 倍多；「挂多高」仍按 `cfg.height×scale` 算）；② **后续关卡默认带环剑**（`profile.ringGot` + `main.js prefillRing()`：第一关第 5 回合首得后写档，第二关起开局 `weapon.grant()` 送 3 把并解锁箭雨、弹 toast、排队教程；第一关自己保留仪式时刻，读档不走这里）；③ **万剑齐发改 CD 制**（辐射 **n = owned.length** 具有的总剑数含商店购买，**不再是 2n**；**释放不改变环绕数量**；`FIRE_CD=6` 秒，CD 中按钮显示倒计时；技能介绍文案整条重写）；④ **商店环剑大加强**（冰剑 `applyFreeze` 直接冻结 `frostTime=1.2` 秒——`updateOne` 在卫队公转前插冰冻分支、动画 timeScale=0、早退；雷剑 `chainTargets(e, Infinity, Infinity)` 连锁全场，直接命中那只除外，各吃 `chainRatio=0.35`；武器表删 frostSlow/chainCount 两项，升级卡「严寒/导电」跟着改）；⑤ **技能栏上移**（`syncSkillLift` 改用 `computed bottom + offsetHeight` 还原最终位置——教程卡 `.22s` 滑入中途量 rect 会少算一截，实测抬升 278px、gap=-12px） | v=66 |
+| **57** | **用户七条一起修**：① **「宣传有礼」活动**（`#promoOv` + `PROMO_VER=1` / `PROMO_KEY=naiwa_rouge_promo_v1` / `PROMO_ART_MS=1500`）：公告关掉 +350ms（仅标题页链）先播艺术字特效（`.promo-art` 盖层 + `promoArtIn` 关键帧 + 渐变裁字），到点摘 `.art`、标题正文淡入；三条规则（推荐 100 / 视频 300 / 赞评藏各 5，11 月 30 日结算——**用户口述「11 月 31 日」不存在，已按 30 日落**）+ QQ/网址复制行（复用 `copyText` 与 `.notice-copy` 委托）；勾选逻辑与公告平行（自己的「日期|版本」键），主菜单第五排「🎁 宣传有礼」`showPromo(true,false)` 强制回看不播特效。② **新增 20 码**（`GIFT_TABLE` 40 条：推荐礼包 100×10 / 宣传礼包 300×10，行改 `[hash, bones, name]` 三元素，`GIFT_MAP` 查组名，UI 成功提示与已兑列表显示组名，无组名回退「A/B 类礼包」；`兑换码大全.txt` 同步 40 码；生成器 `.tmp-gen-codes.mjs 10 A|B`）。③ **卡顿优化**：tick 加 `worldLive` 渲染闸门（见下）、图鉴 `cxBuildInto` rAF 每帧 24 条分块 + `cxSignature` 签名缓存 + 标题页停留 1.2s 预热游离 fragment。④ **sr-alt 字号 10.5→12.5px**（旧规则删掉，margin/padding/white-space 合入新规则）。⑤ **boot 闪屏**：加载段 `#titleScr` 内联 `display:none`，`showTitle()` 挪进遮罩淡出同一 timeout。⑥⑦ **浮层被切/露黑/被盖**：`appH()` 取 `visualViewport.height` 与 `innerHeight` 较大值写 `--app-h`（`:root{--app-h:100vh}` + `@supports 100dvh`），全屏层清单统一 `height:var(--app-h,100vh)`、卡片限高 `calc(var(--app-h,100vh) - Npx)`；`#noticeOv,#promoOv` 与 `.tt-sub-scr` 可滚 + 子元素 `margin:auto`；`.tt-sub-scr` 底色 .62→**.88**。钩子 `__game.promo{show/hide/open/art/ver/key/clear}`、`__game.render{live/frames/appH/appHpx}`、`__game.codex.cache()`；`profile.js` 的 `RESET_KEYS` 加 promo 键 | v=67 |
 
 第 51 块上线后 hotfix（v=61，用户报「属性页返回按钮失效」）：
 

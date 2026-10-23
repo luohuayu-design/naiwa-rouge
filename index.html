@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#080f14">
 <link rel="icon" href="data:,">
 <title>蛙步 · 夜行</title>
-<link rel="stylesheet" href="style.css?v=66">
+<link rel="stylesheet" href="style.css?v=67">
 </head>
 <body>
 
@@ -215,8 +215,11 @@
   <div class="tc-bar"><i id="tcBar"></i></div>
 </div>
 
-<!-- 主页面（标题 + 主菜单） -->
-<div id="titleScr" class="title-scr">
+<!-- 主页面（标题 + 主菜单）
+     第 57 块：加载段整页藏着（display:none + .off）—— 以前它一直绘在加载遮罩
+     背后，手机上两个全屏大图层互相抢合成器，用户看到「进度条还在走，主页面
+     在后面闪」。到遮罩淡出那一刻（main.js boot 尾部）才 display:'' + 淡入。 -->
+<div id="titleScr" class="title-scr off" style="display:none">
   <div class="tt-glow"></div>
   <div class="tt-body">
     <div class="tt-kicker">ROGUELIKE · 荒草地</div>
@@ -260,6 +263,8 @@
       <div class="tt-row">
         <button class="tt-menu-btn" id="btnStats" type="button">属性</button>
         <button class="tt-menu-btn" id="btnNotice" type="button">📢 公告</button>
+        <!-- 宣传有礼（第 57 块）：和公告同一排，暖金色，随时回看 -->
+        <button class="tt-menu-btn tt-promo-btn" id="btnPromo" type="button">🎁 宣传有礼</button>
       </div>
       <!-- 公告挪进上面的第四排（第 50 块：属性 + 公告同排） -->
     </div>
@@ -642,6 +647,53 @@
   </div>
 </div>
 
+<!-- 宣传有礼（第 57 块）：公告关掉后接着弹 —— 先来一记「宣传有礼」艺术字特效，
+     特效消散变成公告标题，再展开正文。规则同公告：「日期 + 版本」写本机，
+     勾「今日内不再弹出」当天不自动弹；主菜单「🎁 宣传有礼」随时回看。
+     改活动内容把 main.js 里的 PROMO_VER +1。 -->
+<div id="promoOv" aria-hidden="true">
+  <div class="notice-box promo-box">
+    <button class="notice-x" id="promoX" type="button" aria-label="关闭宣传有礼">✕</button>
+    <div class="promo-art" id="promoArt">
+      <b>宣传有礼</b>
+      <i>把这条路，说给下一个人听</i>
+    </div>
+    <div class="promo-hd">🎁 宣传有礼</div>
+    <div class="promo-bd">
+      <p class="nb-p">《蛙步 · 夜行》是一个人和一个 AI 一点点改出来的。觉得这一夜走得值，就帮我说给下一个人听 —— 两种方式都有骨币：</p>
+      <div class="promo-row">
+        <div class="promo-no">①</div>
+        <div class="promo-txt"><b>推荐给朋友 · 每人 100 骨币</b>把本站网址推荐给一位朋友，每推荐一个人，得 100 骨币（推荐礼包码）。</div>
+      </div>
+      <div class="promo-row">
+        <div class="promo-no">②</div>
+        <div class="promo-txt"><b>发视频 / 发动态 · 300 骨币</b>做视频剪辑或实机录屏，发布在抖音、快手、小红书、哔哩哔哩等平台，或微信朋友圈、QQ 动态，得 300 骨币（宣传礼包码）。</div>
+      </div>
+      <div class="promo-row">
+        <div class="promo-no">③</div>
+        <div class="promo-txt"><b>每个赞 / 评论 / 收藏 · 各 5 骨币</b>你发的视频，每获得一个赞、一条评论、一次收藏，都再得 5 骨币。11 月 30 日联系本人，统一结算。</div>
+      </div>
+      <p class="nb-p">以上都要<b>联系本人</b>领取礼包码，再回主菜单「礼包兑换」输入兑换：</p>
+      <div class="cp-row">
+        <div class="cp-meta">
+          <span class="cp-label">🌸 本人 QQ · 落花雨</span>
+          <span class="cp-val">3829845261</span>
+        </div>
+        <button class="notice-copy" data-copy="3829845261" type="button">📋 复制</button>
+      </div>
+      <div class="cp-row">
+        <div class="cp-meta">
+          <span class="cp-label">🔗 本站网址</span>
+          <span class="cp-val">https://luohuayu-design.github.io/naiwa-rouge/</span>
+        </div>
+        <button class="notice-copy" data-copy="https://luohuayu-design.github.io/naiwa-rouge/" type="button">📋 复制</button>
+      </div>
+    </div>
+    <label class="notice-chk"><input type="checkbox" id="promoHideToday"> 今日内不再弹出</label>
+    <button class="notice-btn" id="promoOk" type="button">我知道了</button>
+  </div>
+</div>
+
 <!-- 获得新音效包（第 46 块）：第一关通关后弹一次，问要不要换成奶蛙叫。
      两个按钮都算「见过这张卡」，之后不再弹；设置里随时能改。 -->
 <div id="packGet" class="pack-get" aria-hidden="true">
@@ -672,7 +724,7 @@
 <!-- 不用 importmap：老手机浏览器（iOS 16.4 以下、旧版微信/安卓 WebView）
      不支持 import maps，会让整个模块解析失败、加载页永远停在 0%。
      项目内所有 import 都写成相对路径，直接靠原生 ES Module 解析。 -->
-<script type="module" src="js/main.js?v=66"></script>
+<script type="module" src="js/main.js?v=67"></script>
 
 <!-- 兜底自检：模块没跑起来时把原因写出来，别让用户对着 0% 干等 -->
 <script>

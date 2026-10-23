@@ -5,30 +5,30 @@
 // 目标是把三件事调顺：摇杆输入 → 角色速度/朝向 → 相机跟随。
 // 后续叠战斗时，只需要在 tick() 里加敌人更新与自动攻击，不用动输入层。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=66';
-import { buildNightScene } from './scene.js?v=66';
-import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=66';
-import { createInput } from './input.js?v=66';
-import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=66';
-import { createStatView } from './statView.js?v=66';
-import { createWeaponStats } from './weaponStats.js?v=66';
-import { createFx } from './fx.js?v=66';
-import { createEnemySystem } from './enemy.js?v=66';
+import * as THREE from '../lib/three.module.js?v=67';
+import { buildNightScene } from './scene.js?v=67';
+import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=67';
+import { createInput } from './input.js?v=67';
+import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=67';
+import { createStatView } from './statView.js?v=67';
+import { createWeaponStats } from './weaponStats.js?v=67';
+import { createFx } from './fx.js?v=67';
+import { createEnemySystem } from './enemy.js?v=67';
 import {
   createLevel, LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVELS_BY_ID, DIFFS, setDifficulty, getDifficulty, roundScale, levelStats,
-} from './wave.js?v=66';
-import { createRangeRing } from './rangeRing.js?v=66';
-import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=66';
-import { createWeaponSystem } from './weapon.js?v=66';
-import { createArrowRainSystem } from './arrowRain.js?v=66';
-import { SWORD_KINDS } from './swordKinds.js?v=66';
-import { createGoldSystem } from './gold.js?v=66';
-import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW } from './shop.js?v=66';
-import { createTurretSystem, TURRET } from './turret.js?v=66';
-import { createRelicSystem, RELIC_DEFS } from './relics.js?v=66';
-import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=66';
-import audio from './audio.js?v=66';
-import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=66';
+} from './wave.js?v=67';
+import { createRangeRing } from './rangeRing.js?v=67';
+import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=67';
+import { createWeaponSystem } from './weapon.js?v=67';
+import { createArrowRainSystem } from './arrowRain.js?v=67';
+import { SWORD_KINDS } from './swordKinds.js?v=67';
+import { createGoldSystem } from './gold.js?v=67';
+import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW } from './shop.js?v=67';
+import { createTurretSystem, TURRET } from './turret.js?v=67';
+import { createRelicSystem, RELIC_DEFS } from './relics.js?v=67';
+import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=67';
+import audio from './audio.js?v=67';
+import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=67';
 import {
   settings as readSettings, setSetting, save as saveProfile, profile,
   bumpStat, setStatMax, codexAdd, codexCount, countCard, unlockAch, hasAch, addBones, bones, resetAll,
@@ -37,41 +37,41 @@ import {
   giftLog, giftRedeemed, markGift,
   enemyMet, markEnemyMet,
   ringObtained, markRingObtained,
-} from './profile.js?v=66';
+} from './profile.js?v=67';
 // 第 44 块：礼包兑换（码表只有哈希，明细在 gift.js 顶部注释）
-import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=66';
+import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=67';
 // 第 46 块：音效包（抽象奶蛙音效包 —— 4 段奶蛙叫声，通关第一关解锁）
-import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=66';
-import * as runSave from './runSave.js?v=66';
+import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=67';
+import * as runSave from './runSave.js?v=67';
 import {
   CAMPFIRE, CAMP_STEP, campBuy, campOwned, campLevel,
   campCost, campApply, bonesFor, diffBoneMul, levelBoneMul, coinBones, BONE,
-} from './campfire.js?v=66';
+} from './campfire.js?v=67';
 // 第 23 块：永夜火种（通关白给的 3 次永久三选一）
 import {
   BOONS, BOON_BY_ID, BOON_PICKS, boonOwned, boonStacks, boonPending, boonTotalStacks,
   grantBoons, rollBoons, takeBoon, applyBoons, boonStackText,
-} from './boons.js?v=66';
+} from './boons.js?v=67';
 // 第 21 块：夜行诅咒（自选 debuff 换骨币倍率）
-import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=66';
+import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=67';
 // 第 22 块：种子与每日挑战
 import {
   DAILY_RULES, dayKey, dayText, dailySeed, seedCode, pickDailyCurses,
   seedFromText, pickSeedRules, loadSeedRecords, saveSeedRecord, pruneSeeds,
   dailyRecord, saveDailyRecord, pruneDaily, makeRng,
-} from './seed.js?v=66';
-import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=66';
-import { achById, ACHS } from './achievements.js?v=66';
+} from './seed.js?v=67';
+import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=67';
+import { achById, ACHS } from './achievements.js?v=67';
 import {
   EVENTS, ALL_EVENTS, getEventById, pickEvent, effectLines,
   choiceHint, canAfford, costShort, REP_MIN, REP_MAX, REP_START,
   isTalk, eventChoices, resolveRoll, mergeEffects,
-} from './events.js?v=66';
+} from './events.js?v=67';
 // 第 32 块：主线《笑不出来的那一夜》（18 夜，一夜一关，前 3 夜已有关卡）
 import {
   STORY_ARC, STORY_CHAPTERS, STORY_ENDINGS, MARK_INFO,
   storyChapterAt, storyChapterById, storyEndingKey,
-} from './story.js?v=66';
+} from './story.js?v=67';
 
 // 标记模块已经跑起来了：index.html 的兜底自检靠它判断
 // 「模块根本没执行」还是「执行了但加载慢」。
@@ -157,14 +157,36 @@ async function boot() {
   let camFov = CAM_FOV_BASE;                 // 当前视野（每帧向目标值缓动）
   let speedFovOn = !!readSettings().speedFov;   // 设置项：速度感（applySettings 里同步）
 
+  // 第 57 块：全屏浮层的真实高度（--app-h）。
+  // 用户截图实证：WeChat / 安卓下 position:fixed + inset:0 按「布局视口」算，
+  // 工具栏收起后可视视口更高 → 浮层只盖半屏、底部露黑、卡片被切（种子挑战
+  // 面板的「开始」按钮被切掉一半）。按 visualViewport 实时写 --app-h（取
+  // innerHeight 与 visualViewport.height 的较大值，绝不比原来矮）；CSS 里
+  // 所有全屏浮层和卡片限高都改用这个变量。
+  function appH() {
+    const vv = window.visualViewport;
+    return Math.round(Math.max(window.innerHeight || 0, (vv && vv.height) || 0));
+  }
+  function syncAppHeight() {
+    const h = appH();
+    if (h > 0) document.documentElement.style.setProperty('--app-h', h + 'px');
+  }
+  syncAppHeight();   // 模块体就执行（boot 之前），加载遮罩第一屏就是对的
+  window.addEventListener('resize', syncAppHeight);
+  window.addEventListener('orientationchange', () => setTimeout(syncAppHeight, 120));
+  if (window.visualViewport) window.visualViewport.addEventListener('resize', syncAppHeight);
+
   function applyViewport() {
-    const w = window.innerWidth, h = window.innerHeight;
+    const w = window.innerWidth, h = appH();
     renderer.setSize(w, h);
     camera.aspect = w / h;
     // 竖屏时把相机往后拉，否则角色会顶满屏幕
     const k = camera.aspect < 1 ? 1.0 + (1 - camera.aspect) * 0.55 : 1;
     camOffset.copy(CAM_OFFSET).multiplyScalar(k);
     camera.updateProjectionMatrix();
+    // 第 57 块：世界冻结期间（菜单/图鉴开着）旋转屏幕 → setSize 会清掉画布内容，
+    // 背后那张「定住的夜景」会变黑。补渲染一帧，模糊 backdrop 重新有东西可糊。
+    renderer.render(scene, camera);
   }
   applyViewport();
   window.addEventListener('resize', applyViewport);
@@ -371,6 +393,8 @@ async function boot() {
   const wtNextBtn = document.getElementById('wtNext');
   const wtSkipBtn = document.getElementById('wtSkip');
   let hintDone = false;
+  let renderFrames = 0;        // 第 57 块：世界渲染帧计数（测试钩子用：菜单期间不再增长）
+  let worldLiveNow = false;    // 第 57 块：最近一帧的闸门状态（tick 内是局部 const，这里给钩子留镜像）
 
   // 关键属性（生命走血条，这里放三个最常看的）
   const KEY_STATS = ['attack', 'attackRange', 'moveSpeed'];
@@ -1293,6 +1317,8 @@ async function boot() {
     refreshResume();              // 有存档就亮出「读取存档」入口
     renderCampBadge();            // 篝火按钮上的骨币数（第 19 块）
     renderDailyBadge();           // 今日挑战按钮上的「今天最好」（第 22 块）
+    // 第 57 块：在主界面停留一会儿 → 默默建图鉴缓存（用户建议的「自动缓存」）
+    scheduleCodexPrewarm();
     // 第 23 块：上次通关后直接关了网页，这 3 次永久选择还欠着 —— 回标题页补上
     if (boonPending() > 0) {
       setTimeout(() => { if (!boonOpen && gameState === 'title') showBoons({ after: 'close' }); }, 500);
@@ -3417,7 +3443,83 @@ async function boot() {
   const cxFoot = document.getElementById('cxFoot');
   let cxTab = 'enemies';
 
+  // 第 57 块：图鉴分块渲染 + 签名缓存 + 空闲预热
+  //   · 奇遇页签 112 条，逐条建 DOM 在老手机上要几百毫秒（一点开就卡住）→
+  //     改成每帧最多建 CX_CHUNK 条，让出主线程；
+  //   · 建完缓存一份（签名 = 页签 + 本机图鉴档案），下次打开签名没变就直接
+  //     整块克隆塞进去，秒开；
+  //   · 标题页停留 CX_PREWARM_MS 没人动 → 默默把缓存建好（用户建议的
+  //     「主界面停留时自动缓存」）。预热建在游离 fragment 上，不碰界面。
+  const CX_CHUNK = 24;
+  const CX_PREWARM_MS = 1200;
+  let cxCache = { sig: '', frag: null };
+  let cxBuild = 0;          // 分批建造的 rAF 句柄（切页签 / 关面板时作废）
+  let cxPrewarmTimer = 0;
+
+  function cxSignature(tab) {
+    // 图鉴档案（遇过哪些事件 / 击倒多少怪）全量进签名 —— 任何变化都算过期
+    return `${tab}|${JSON.stringify(profile().codex || {})}`;
+  }
+
+  function cxItem(en) {
+    const item = document.createElement('div');
+    item.className = 'cx-item' + (en.seen ? '' : ' dim');
+    if (en.color) item.style.borderColor = en.color + '55';
+    // 第 51 块：有缩略图的（怪物页签）走「左图右文」，文字塞进 .cx-body
+    let box = item;
+    if (en.thumb) {
+      item.classList.add('has-thumb');
+      const img = document.createElement('img');
+      img.className = 'cx-thumb';
+      img.src = en.thumb;
+      img.alt = en.title;
+      img.loading = 'lazy';
+      img.decoding = 'async';
+      item.appendChild(img);
+      box = document.createElement('div');
+      box.className = 'cx-body';
+      item.appendChild(box);
+    }
+    const title = document.createElement('div');
+    title.className = 'cx-title';
+    if (en.color) title.style.color = en.color;
+    title.textContent = en.title;
+    const sub = document.createElement('div');
+    sub.className = 'cx-sub';
+    sub.textContent = en.sub || '';
+    box.append(title, sub);
+    if (en.desc) {
+      const desc = document.createElement('div');
+      desc.className = 'cx-desc';
+      desc.textContent = en.desc;
+      box.appendChild(desc);
+    }
+    if (en.meta) {
+      const meta = document.createElement('div');
+      meta.className = 'cx-meta';
+      meta.textContent = en.meta;
+      box.appendChild(meta);
+    }
+    return item;
+  }
+
+  // 分块把条目建进 host（cxList 或游离 fragment）；建完回调（写缓存用）
+  function cxBuildInto(host, entries, done) {
+    let i = 0;
+    const step = () => {
+      const end = Math.min(entries.length, i + CX_CHUNK);
+      for (; i < end; i++) host.appendChild(cxItem(entries[i]));
+      if (i < entries.length) {
+        cxBuild = requestAnimationFrame(step);
+      } else if (done) {
+        done();
+      }
+    };
+    step();
+  }
+
   function renderCodex() {
+    if (cxBuild) { cancelAnimationFrame(cxBuild); cxBuild = 0; }
     cxTabs.textContent = '';
     const sum = codexSummary();
     for (const t of CODEX_TABS) {
@@ -3430,56 +3532,39 @@ async function boot() {
       cxTabs.appendChild(b);
     }
     cxList.textContent = '';
-    for (const en of codexEntries(cxTab)) {
-      const item = document.createElement('div');
-      item.className = 'cx-item' + (en.seen ? '' : ' dim');
-      if (en.color) item.style.borderColor = en.color + '55';
-      // 第 51 块：有缩略图的（怪物页签）走「左图右文」，文字塞进 .cx-body
-      let box = item;
-      if (en.thumb) {
-        item.classList.add('has-thumb');
-        const img = document.createElement('img');
-        img.className = 'cx-thumb';
-        img.src = en.thumb;
-        img.alt = en.title;
-        img.loading = 'lazy';
-        img.decoding = 'async';
-        item.appendChild(img);
-        box = document.createElement('div');
-        box.className = 'cx-body';
-        item.appendChild(box);
-      }
-      const title = document.createElement('div');
-      title.className = 'cx-title';
-      if (en.color) title.style.color = en.color;
-      title.textContent = en.title;
-      const sub = document.createElement('div');
-      sub.className = 'cx-sub';
-      sub.textContent = en.sub || '';
-      box.append(title, sub);
-      if (en.desc) {
-        const desc = document.createElement('div');
-        desc.className = 'cx-desc';
-        desc.textContent = en.desc;
-        box.appendChild(desc);
-      }
-      if (en.meta) {
-        const meta = document.createElement('div');
-        meta.className = 'cx-meta';
-        meta.textContent = en.meta;
-        box.appendChild(meta);
-      }
-      cxList.appendChild(item);
-    }
-    if (!cxList.children.length) {
+    const entries = codexEntries(cxTab);
+    if (!entries.length) {
       const empty = document.createElement('div');
       empty.className = 'cx-empty';
       empty.textContent = '这里空空如也';
       cxList.appendChild(empty);
+    } else {
+      // 命中缓存（页签 + 图鉴档案都没变）→ 整块克隆，秒开
+      const sig = cxSignature(cxTab);
+      if (cxCache.sig === sig && cxCache.frag) {
+        cxList.appendChild(cxCache.frag.cloneNode(true));
+      } else {
+        // 现场分块建（顺便写缓存，下次就热了）
+        cxBuildInto(cxList, entries, () => {
+          cxCache = { sig, frag: cxList.cloneNode(true) };
+        });
+      }
     }
     cxFoot.textContent = cxTab === 'events'
       ? `遇见过的奇遇会亮起来 —— 共 ${sum.events} 个，已遇 ${sum.eventsSeen} 个`
       : '怪物会记下你击倒它们的次数 · 事件遇到一次就点亮';
+  }
+
+  // 标题页停留一会儿没人动 → 默默把图鉴缓存建好（用户建议的「自动缓存」）
+  function scheduleCodexPrewarm() {
+    clearTimeout(cxPrewarmTimer);
+    cxPrewarmTimer = setTimeout(() => {
+      if (gameState !== 'title') return;                  // 已经进游戏了，不抢前台
+      const sig = cxSignature(cxTab);
+      if (cxCache.sig === sig && cxCache.frag) return;    // 已经是热的
+      const off = document.createDocumentFragment();
+      cxBuildInto(off, codexEntries(cxTab), () => { cxCache = { sig, frag: off }; });
+    }, CX_PREWARM_MS);
   }
 
   function showCodex() {
@@ -3488,7 +3573,10 @@ async function boot() {
   }
 
   document.getElementById('btnCodex').addEventListener('click', showCodex);
-  document.getElementById('cxBack').addEventListener('click', () => hideSub(codexScr));
+  document.getElementById('cxBack').addEventListener('click', () => {
+    if (cxBuild) { cancelAnimationFrame(cxBuild); cxBuild = 0; }   // 关面板就不建了
+    hideSub(codexScr);
+  });
 
   // ---------------- 礼包兑换（第 44 块）----------------
   // 纯前端：码表在 gift.js 里只存哈希；「用过没有」记在本机档案 profile.gifts。
@@ -3522,7 +3610,10 @@ async function boot() {
       row.className = 'gf-row';
       const tier = document.createElement('span');
       tier.className = 'gf-tier' + (info.tier === 'B' ? ' b' : '');
-      tier.textContent = info.tier === '?' ? '礼包' : `${info.tier} 类 · +${info.bones} 骨币`;
+      // 第 57 块：有组名（宣传礼包 / 推荐礼包）就报组名，第一批老码照旧报 A/B 类
+      tier.textContent = info.name
+        ? `${info.name} · +${info.bones} 骨币`
+        : (info.tier === '?' ? '礼包' : `${info.tier} 类 · +${info.bones} 骨币`);
       const when = document.createElement('span');
       when.className = 'gf-when';
       when.textContent = fmtSaveTime(r.at);
@@ -3550,7 +3641,9 @@ async function boot() {
     addBones(hit.bones);
     markGift(hit.hash);
     giftCode.value = '';
-    giftSay(`兑换成功 —— ${hit.tier} 类礼包，+${hit.bones} 骨币`, 'ok');
+    // 第 57 块：宣传礼包 / 推荐礼包直接报组名；第一批老码报「A 类 / B 类」
+    const what = hit.name || `${hit.tier} 类礼包`;
+    giftSay(`兑换成功 —— ${what}，+${hit.bones} 骨币`, 'ok');
     giftBoneNum.textContent = adminOn ? '∞' : String(bones());
     renderCampBadge();               // 主菜单篝火角标同步长钱
     renderGiftLog();
@@ -3620,6 +3713,11 @@ async function boot() {
     }
     noticeOv.classList.remove('on');
     noticeOv.setAttribute('aria-hidden', 'true');
+    // 第 57 块：公告关掉 → 350ms 后「宣传有礼」接着上场（艺术字特效 → 公告二）。
+    // 它自己也有「今日不再弹」挡着；只在标题页链，调试直开 / 游戏中都不走这。
+    setTimeout(() => {
+      if (gameState === 'title' && !promoOv.classList.contains('on')) showPromo(false, true);
+    }, 350);
   }
 
   // force=true = 从主菜单点「📢 公告」强制打开（忽略「今日不再弹出」）
@@ -3638,6 +3736,67 @@ async function boot() {
   document.getElementById('noticeOk').addEventListener('click', closeNotice);
   document.getElementById('noticeX').addEventListener('click', closeNotice);
   document.getElementById('btnNotice').addEventListener('click', () => showNotice(true));
+
+  // ---------------- 宣传有礼（第 57 块）----------------
+  // 用户原话：公告位置有限，关掉公告后先弹一记「宣传有礼」艺术字特效，
+  // 特效消散变成公告标题，再展开正文（公告二）。规则照搬公告那套：
+  // 「日期 + 版本」写本机，勾「今日不再弹出」当天不自动弹；
+  // 主菜单「🎁 宣传有礼」随时强制回看。两种拿码方式都要联系本人，
+  // 所以正文里带 QQ 和网址的一键复制（和公告同一个 copyText）。
+  const PROMO_VER = '1';   // v1：宣传有礼上线（推荐 100 / 发视频 300 / 赞评藏各 5）
+  const PROMO_KEY = 'naiwa_rouge_promo_v1';   // 与公告键分开，各记各的「今天」
+  const PROMO_ART_MS = 1500;                  // 艺术字特效时长（与 CSS 动画对齐）
+  const promoOv = document.getElementById('promoOv');
+  const promoHideToday = document.getElementById('promoHideToday');
+  let promoTimer = 0;
+
+  // 公告里那套复制按钮的 delegation 照搬一份（notice-copy 类复用）
+  promoOv.addEventListener('click', async (e) => {
+    const b = e.target.closest('.notice-copy');
+    if (!b) return;
+    const old = b.textContent;
+    const okCopy = await copyText(b.dataset.copy || '');
+    b.textContent = okCopy ? '✅ 已复制' : '❌ 复制失败';
+    if (okCopy) audio.sfx('card');
+    setTimeout(() => { b.textContent = old; }, 1600);
+  });
+
+  function closePromo() {
+    if (promoHideToday && promoHideToday.checked) {
+      try {
+        localStorage.setItem(PROMO_KEY, `${noticeToday()}|${PROMO_VER}`);
+      } catch (_) { /* 隐私模式写不进就算了，下次还会弹 */ }
+    }
+    clearTimeout(promoTimer);
+    promoOv.classList.remove('on', 'art');
+    promoOv.setAttribute('aria-hidden', 'true');
+  }
+
+  // force=true = 主菜单点开（忽略「今日不再弹」）；art=true = 先播艺术字特效
+  function showPromo(force, art) {
+    if (!force) {
+      let seen = '';
+      try { seen = localStorage.getItem(PROMO_KEY) || ''; } catch (_) { seen = ''; }
+      if (seen === `${noticeToday()}|${PROMO_VER}`) return false;   // 今天这一版已经关过
+    }
+    if (promoHideToday) promoHideToday.checked = false;
+    clearTimeout(promoTimer);
+    promoOv.classList.add('on');
+    promoOv.setAttribute('aria-hidden', 'false');
+    if (art) {
+      // 艺术字先上（盖在正文上），到点散去，标题和正文才亮相
+      promoOv.classList.add('art');
+      promoTimer = setTimeout(() => promoOv.classList.remove('art'), PROMO_ART_MS);
+    } else {
+      promoOv.classList.remove('art');
+    }
+    audio.sfx('boon');
+    return true;
+  }
+
+  document.getElementById('promoOk').addEventListener('click', closePromo);
+  document.getElementById('promoX').addEventListener('click', closePromo);
+  document.getElementById('btnPromo').addEventListener('click', () => showPromo(true, false));
 
   // ---------------- 音效包（第 46 块）----------------
   // 打通第一关后，奶蛙「把自己那 4 段叫声交出来」：结算面板之上弹一张卡，
@@ -4913,6 +5072,8 @@ async function boot() {
         entries: (tab) => codexEntries(tab),
         show: () => showCodex(),
         tab: () => cxTab,
+        // 第 57 块：分块渲染缓存状态（预热 / 秒开的证据）
+        cache: () => ({ sig: cxCache.sig, hot: !!(cxCache.sig && cxCache.frag) }),
       },
       ach: {
         try: (id) => tryAch(id),
@@ -5099,6 +5260,23 @@ async function boot() {
         key: () => { try { return localStorage.getItem(NOTICE_KEY) || ''; } catch (_) { return ''; } },
         clear: () => { try { localStorage.removeItem(NOTICE_KEY); } catch (_) { /* 忽略 */ } },
         copy: (t) => copyText(t),
+      },
+      // 第 57 块：宣传有礼（测试钩子）—— show(true, true) 强制打开并播艺术字特效
+      promo: {
+        show: (force, art) => showPromo(force !== false, art !== false),
+        hide: () => { closePromo(); return promoOv.classList.contains('on'); },
+        open: () => promoOv.classList.contains('on'),
+        art: () => promoOv.classList.contains('art'),
+        ver: () => PROMO_VER,
+        key: () => { try { return localStorage.getItem(PROMO_KEY) || ''; } catch (_) { return ''; } },
+        clear: () => { try { localStorage.removeItem(PROMO_KEY); } catch (_) { /* 忽略 */ } },
+      },
+      // 第 57 块：世界渲染闸门（测试钩子）—— 菜单期间 live()=false 且 frames 不再增长
+      render: {
+        live: () => worldLiveNow,
+        frames: () => renderFrames,
+        appH: () => appH(),
+        appHpx: () => { try { return getComputedStyle(document.documentElement).getPropertyValue('--app-h').trim(); } catch (_) { return ''; } },
       },
       // 第 44 块：礼包兑换（测试钩子）
       gift: {
@@ -5534,6 +5712,14 @@ async function boot() {
     // 也就是说：只有真的能动、能挨打、怪在动的那段时间，秒表才走。
     const inGame = (gameState === 'playing' || gameState === 'tutorial' || gameState === 'wtut')
       && !panelOpen && !bagOpen && !meetOpen && uiHold === 0;
+    // 第 57 块：世界渲染闸门 —— 不在「真的在打」的时候就停掉整屏 3D 渲染。
+    // 为什么：菜单 / 图鉴 / 夜行记忆 / 商店都盖在画布上，且 .tt-sub-scr 之类
+    // 带 backdrop-filter 模糊；画布每帧重绘 → 合成器每帧重新模糊整屏，
+    // 老手机上直接卡成幻灯片（用户报「图鉴和夜行记忆打开非常卡顿」）。
+    // 世界静态化后模糊结果被缓存，菜单才滑得起来；回到战斗第一帧即恢复。
+    // 结算面板只保留倒地那一下的动画（deadT < 1.4），之后也冻结。
+    const worldLive = inGame || (gameState === 'over' && deadT < 1.4);
+    worldLiveNow = worldLive;
     if (inGame) {
       elapsed += dt;
       updateCurse(dt);
@@ -5609,7 +5795,8 @@ async function boot() {
       frog.update(dt, 0);
     } else {
       // 标题页 / 三选一 / 武器卡 / 属性面板：世界全冻结，只留待机呼吸
-      frog.update(dt, 0);
+      // （第 57 块：不渲染时连呼吸也省了，见下面 worldLive 闸门）
+      if (worldLive) frog.update(dt, 0);
     }
 
     // 排着队的武器教程：等面板/结算都关掉、回到可操作状态再弹
@@ -5627,53 +5814,56 @@ async function boot() {
     // 管理员模式：跳过按钮跟着 gameState 自动显隐（不在打的时候收起来）
     renderSkipBtn();
 
-    // 脚下的攻击范围环：位置跟人走，半径跟属性走
-    playerRing.setRadius(stats.get('attackRange'));
-    playerRing.mesh.position.x = pos.x;
-    playerRing.mesh.position.z = pos.z;
-    playerRing.update(dt);
+    if (worldLive) {
+      // 脚下的攻击范围环：位置跟人走，半径跟属性走
+      playerRing.setRadius(stats.get('attackRange'));
+      playerRing.mesh.position.x = pos.x;
+      playerRing.mesh.position.z = pos.z;
+      playerRing.update(dt);
 
-    // 6) 相机：死区 + 平滑焦点（第 36 块重做，详见文件顶部常量处的说明）
-    //    - 角色在死区内走动：焦点不动 → 画面一动不动（眼睛有静止参考）
-    //    - 走出死区：把焦点往「角色刚好落回死区边缘」的位置缓动 → 屏幕匀速平移
-    //    - 注视点就是焦点，不做速度预测 → 急停急转时镜头不会甩
-    {
-      const fdx = pos.x - camFocus.x;
-      const fdz = pos.z - camFocus.z;
-      const fd = Math.hypot(fdx, fdz);
-      if (fd > CAM_DEADZONE) {
-        // 目标焦点 = 角色位置往回收「死区半径」那么多（角色正好贴在死区边缘）
-        const tx = pos.x - (fdx / fd) * CAM_DEADZONE;
-        const tz = pos.z - (fdz / fd) * CAM_DEADZONE;
-        const ck = 1 - Math.exp(-CAM_FOLLOW * dt);
-        camFocus.x += (tx - camFocus.x) * ck;
-        camFocus.z += (tz - camFocus.z) * ck;
+      // 6) 相机：死区 + 平滑焦点（第 36 块重做，详见文件顶部常量处的说明）
+      //    - 角色在死区内走动：焦点不动 → 画面一动不动（眼睛有静止参考）
+      //    - 走出死区：把焦点往「角色刚好落回死区边缘」的位置缓动 → 屏幕匀速平移
+      //    - 注视点就是焦点，不做速度预测 → 急停急转时镜头不会甩
+      {
+        const fdx = pos.x - camFocus.x;
+        const fdz = pos.z - camFocus.z;
+        const fd = Math.hypot(fdx, fdz);
+        if (fd > CAM_DEADZONE) {
+          // 目标焦点 = 角色位置往回收「死区半径」那么多（角色正好贴在死区边缘）
+          const tx = pos.x - (fdx / fd) * CAM_DEADZONE;
+          const tz = pos.z - (fdz / fd) * CAM_DEADZONE;
+          const ck = 1 - Math.exp(-CAM_FOLLOW * dt);
+          camFocus.x += (tx - camFocus.x) * ck;
+          camFocus.z += (tz - camFocus.z) * ck;
+        }
+        camera.position.set(camFocus.x + camOffset.x, camOffset.y, camFocus.z + camOffset.z);
+        camera.lookAt(camFocus.x, 0.95, camFocus.z);
+
+        // 速度感视野：跑满时 +CAM_FOV_ADD 度，停下慢慢回到原值；设置里可关
+        const fovTarget = CAM_FOV_BASE + (speedFovOn ? CAM_FOV_ADD * speed01 : 0);
+        camFov += (fovTarget - camFov) * (1 - Math.exp(-CAM_FOV_LERP * dt));
+        if (Math.abs(camFov - camera.fov) > 0.005) {
+          camera.fov = camFov;
+          camera.updateProjectionMatrix();
+        }
       }
-      camera.position.set(camFocus.x + camOffset.x, camOffset.y, camFocus.z + camOffset.z);
-      camera.lookAt(camFocus.x, 0.95, camFocus.z);
 
-      // 速度感视野：跑满时 +CAM_FOV_ADD 度，停下慢慢回到原值；设置里可关
-      const fovTarget = CAM_FOV_BASE + (speedFovOn ? CAM_FOV_ADD * speed01 : 0);
-      camFov += (fovTarget - camFov) * (1 - Math.exp(-CAM_FOV_LERP * dt));
-      if (Math.abs(camFov - camera.fov) > 0.005) {
-        camera.fov = camFov;
-        camera.updateProjectionMatrix();
+      // 受击震屏：只抖相机位置，注视点不变（旋转不动，比「连镜头一起转」舒服得多）
+      if (shake > 0) {
+        shake = Math.max(0, shake - dt * 2.0);
+        const s = shake * 0.16;
+        camera.position.x += (Math.random() - 0.5) * s;
+        camera.position.y += (Math.random() - 0.5) * s;
+        camera.position.z += (Math.random() - 0.5) * s;
       }
-    }
 
-    // 受击震屏：只抖相机位置，注视点不变（旋转不动，比「连镜头一起转」舒服得多）
-    if (shake > 0) {
-      shake = Math.max(0, shake - dt * 2.0);
-      const s = shake * 0.16;
-      camera.position.x += (Math.random() - 0.5) * s;
-      camera.position.y += (Math.random() - 0.5) * s;
-      camera.position.z += (Math.random() - 0.5) * s;
+      // 7) 特效 → 场景动画 → 渲染
+      fx.update(dt);
+      updateScene(dt);
+      renderFrames++;
+      renderer.render(scene, camera);
     }
-
-    // 7) 特效 → 场景动画 → 渲染
-    fx.update(dt);
-    updateScene(dt);
-    renderer.render(scene, camera);
 
     // 7) HUD（每 0.25 秒刷一次，别每帧动 DOM）
     frames++;
@@ -5701,21 +5891,29 @@ async function boot() {
     }
   }
 
-  // 加载完成 → 淡出遮罩 → 显示标题页（或调试模式直接开打）
+  // 加载完成 → 淡出遮罩 → 标题页同步淡入（或调试模式直接开打）
+  // 第 57 块：标题页在整个加载段都藏着（HTML 里 display:none + .off）——
+  // 以前它一直绘在遮罩背后，手机上两个全屏大图层互相抢合成器，
+  // 用户看到的就是「进度条还在走，主页面在后面闪」。现在到遮罩淡出
+  // 这一刻才让它淡入，加载段眼里只有进度条。
   setProgress(1);
   clock.start();
   tick();
-  showTitle();
   setTimeout(() => {
     loadingEl.classList.add('off');
     if (loadTipTimer) { clearInterval(loadTipTimer); loadTipTimer = null; }   // 第 48 块
     setTimeout(() => { loadingEl.style.display = 'none'; }, 500);
+    showTitle();               // 标题页随遮罩一起淡入
     if (AUTO_START) {
-      // 调试模式直接开打：公告不挡自动化测试（要测公告就手调 __game.notice.show()）
+      // 调试模式直接开打：公告 / 宣传有礼都不挡自动化测试
+      // （要测就手调 __game.notice.show() / __game.promo.show()）
       setTimeout(() => beginGame({ tutorial: false }), 300);
     } else {
       // 第 45 块：进主界面后弹一次公告 —— 等遮罩淡完再弹，不然像加载卡住了
-      setTimeout(() => showNotice(false), 700);
+      // 第 57 块：公告今天已经关过（勾了不再弹）→ 宣传有礼自己接着上场
+      setTimeout(() => {
+        if (!showNotice(false)) setTimeout(() => showPromo(false, true), 350);
+      }, 700);
       // 第 46 块补丁：老玩家追溯解锁（公告 z-index 46 盖着音效包卡 20，
       // 推到 1.6s 后弹，公告关掉后它正好还在）
       setTimeout(() => { if (!packState().unlocked && packRetroDue()) showPackGet(); }, 1600);

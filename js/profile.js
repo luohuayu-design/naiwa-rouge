@@ -24,7 +24,7 @@ const KEY = 'naiwa_rouge_profile_v1';
 //   naiwa_rouge_records_v1 / naiwa_rouge_wtut_v1
 export const RESET_KEYS = [
   KEY, 'naiwa_rouge_records_v1', 'naiwa_rouge_wtut_v1', 'naiwa_rouge_runs_v1',
-  'naiwa_rouge_notice_v1', 'naiwa_rouge_daily_v1', 'naiwa_rouge_seeds_v1',
+  'naiwa_rouge_notice_v1', 'naiwa_rouge_promo_v1', 'naiwa_rouge_daily_v1', 'naiwa_rouge_seeds_v1',
 ];
 
 export const DEFAULT_SETTINGS = {

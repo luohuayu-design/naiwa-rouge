@@ -99,6 +99,10 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     await ev(`__game.notice.hide(), 1`);
     await sleep(250);
     if (await ev(`__game.notice.open()`)) { await ev(`__game.notice.hide(), 1`); await sleep(250); }
+    // 第 57 块：关公告会触发「宣传有礼」链条（+350ms，仅标题页），它 z-index 47 盖全屏，
+    // 后面的命中判定会打到 promo 面板上 —— 一并收掉（不勾「今日不再弹」就不会写键）
+    await sleep(500);
+    if (await ev(`__game.promo && __game.promo.open()`)) { await ev(`__game.promo.hide(), 1`); await sleep(200); }
 
     // ============================================================
     // A. 主菜单排版（用户第 2 条）+ 篝火商店改名（第 3 条）
@@ -201,6 +205,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     await ev(`__game.camp.setBones(120), 1`);
     // 公告如果又冒出来了，会盖住 failTip 的按钮，先确认它闭着
     if (await ev(`__game.notice.open()`)) { await ev(`__game.notice.hide(), 1`); await sleep(250); }
+    if (await ev(`__game.promo && __game.promo.open()`)) { await ev(`__game.promo.hide(), 1`); await sleep(200); }
     ok(!(await ev(`__game.notice.open()`)), '公告弹窗已收起（不挡后面的判定）');
 
     // 先确认通关不弹：这里直接打死自己（失败）

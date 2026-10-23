@@ -1275,9 +1275,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
   color:rgba(214,188,120,.9);font-weight:800}
 .sr-line.me{align-self:flex-end;border-color:rgba(126,235,196,.3);background:rgba(24,54,46,.72)}
 .sr-line.me b{color:rgba(126,235,196,.9)}
-.sr-alt{margin-top:2px;font-size:10.5px;line-height:1.7;color:rgba(150,190,176,.58);
-  padding-left:2px;white-space:pre-wrap}
-.sr-alt b{font-weight:700;color:rgba(150,190,176,.8)}
+/* 「换一种说法」小字：第 57 块字号/颜色在文件末尾第 57 块段落里加厚（10.5→12.5px） */
 .sr-end{margin-top:6px;padding:11px 13px;border-radius:12px;
   border:1px dashed rgba(126,235,196,.42);background:rgba(126,235,196,.07)}
 .sr-end .sr-end-t{font-size:13px;font-weight:800;letter-spacing:.1em;color:#7ef0c6}
@@ -1468,3 +1466,101 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
 .st-row .st-name{font-size:12px;color:rgba(210,236,222,.85)}
 .st-row .st-val{margin-left:auto;font-size:13px;font-weight:800;color:#ffe9a8}
 .st-row .st-base{font-size:10px;color:rgba(150,190,174,.5);font-weight:400}
+
+/* ============================================================
+   第 57 块：宣传有礼 / 菜单卡顿优化 / 一摞 UI 修复
+   ============================================================ */
+
+/* ---------- 宣传有礼：公告二，先艺术字特效后正文 ---------- */
+#promoOv{position:fixed;inset:0;z-index:47;display:none;align-items:center;justify-content:center;
+  padding:12px;background:rgba(2,7,6,.8);overflow:auto;
+  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+#promoOv.on{display:flex}
+.promo-box{position:relative;width:min(440px,95vw);max-height:90vh;overflow:auto;margin:auto;
+  display:flex;flex-direction:column;gap:9px;padding:14px 15px 12px;border-radius:18px;
+  border:1px solid rgba(255,209,102,.36);
+  background:linear-gradient(160deg,rgba(48,37,15,.99),rgba(18,12,8,1));
+  box-shadow:0 26px 60px rgba(0,0,0,.66),inset 0 1px 0 rgba(255,232,170,.1);
+  animation:noticePop .34s cubic-bezier(.2,1.4,.4,1)}
+/* 艺术字特效层：盖在正文上（.art 期间），到点散去，标题/正文才亮相 */
+.promo-art{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:12px;border-radius:18px;pointer-events:none;opacity:0;transform:scale(1.04);
+  background:radial-gradient(circle at 50% 42%,rgba(74,55,17,.94),rgba(20,14,8,.98) 68%);
+  transition:opacity .36s ease,transform .36s ease}
+#promoOv.art .promo-art{opacity:1;transform:scale(1);
+  animation:promoArtIn 1.5s cubic-bezier(.16,1,.3,1) both}
+/* 特效期间正文藏起来，散去时淡入（标题就是艺术字「落」下来的位置） */
+#promoOv.art .promo-hd,#promoOv.art .promo-bd,#promoOv.art .notice-chk,#promoOv.art .notice-btn{opacity:0;pointer-events:none}
+.promo-hd{padding-right:32px;font-size:17px;font-weight:800;letter-spacing:.12em;color:#ffe9a8;
+  transition:opacity .3s ease .08s}
+.promo-bd{font-size:12.5px;line-height:1.85;color:rgba(214,226,206,.92);word-break:break-word;
+  -webkit-user-select:text;user-select:text;transition:opacity .3s ease .14s}
+.promo-bd .nb-p{margin-bottom:8px}
+.promo-bd b{color:#ffe9a8}
+.promo-row{display:flex;gap:9px;margin-bottom:8px;padding:8px 10px;border-radius:11px;
+  border:1px solid rgba(255,209,102,.22);background:rgba(46,34,12,.55)}
+.promo-no{flex-shrink:0;width:22px;height:22px;border-radius:50%;text-align:center;line-height:22px;
+  font-size:12px;font-weight:900;color:#3a2a08;background:linear-gradient(180deg,#ffe6a0,#f5bd4f)}
+.promo-txt{flex:1;min-width:0}
+.promo-txt b{display:block;margin-bottom:2px;font-size:12.5px;color:#ffe9a8}
+.promo-art b{font-size:clamp(40px,11vw,58px);font-weight:900;letter-spacing:.1em;line-height:1.1;
+  background:linear-gradient(180deg,#fff7dc 8%,#ffd873 46%,#f0a72c 88%);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(0 0 22px rgba(255,205,96,.5))}
+.promo-art i{font-size:11.5px;letter-spacing:.26em;color:rgba(255,224,150,.72);font-style:normal}
+@keyframes promoArtIn{
+  0%{opacity:0;transform:scale(.55)}
+  46%{opacity:1;transform:scale(1.06)}
+  72%{transform:scale(.99)}
+  100%{opacity:1;transform:scale(1)}
+}
+/* 主菜单宣传有礼入口：暖金色，和公告同排、同低调 */
+.tt-row .tt-promo-btn{color:#ffe9a8;border-color:rgba(255,209,102,.34);background:rgba(52,42,16,.4);
+  letter-spacing:.04em;font-size:12px}
+.tt-row .tt-promo-btn:hover{border-color:rgba(255,209,102,.68);background:rgba(70,56,20,.62)}
+
+/* ---------- 公告盒右下角被裁（第 57 块，用户报 bug + 截图实证） ----------
+   用户截图：公告/面板浮层只盖到屏幕约八成，底部露黑、盒底边框和按钮被切。
+   根因：WeChat / 安卓下 position:fixed + inset:0 按「布局视口」算，而工具栏
+   收起后的可视视口更高 —— vh 系列单位同理。解法见下面「全屏浮层真实高度」：
+   所有全屏浮层和卡片限高统一走 --app-h（JS 按 visualViewport 实时写）。
+   这里再补两道保险：遮罩自己可滚 + 盒用 margin:auto 居中（flex align-items
+   配 overflow 会把顶部也裁掉）。 */
+#noticeOv,#promoOv{overflow:auto}
+.notice-box,.promo-box{margin:auto}
+
+/* ---------- 全屏浮层真实高度（第 57 块，截图实证的根因修复） ----------
+   html,body 已是深色（#080f14），露出来的缝也是深的 —— 但浮层必须真的盖满。
+   JS 在 main.js 里按 visualViewport 把 --app-h 写到 :root（取 innerHeight 与
+   visualViewport.height 的较大值，绝不比原来矮）；这里给所有 position:fixed
+   的全屏层显式高度（inset:0 下 top+height 生效、bottom 被忽略），并把各卡片
+   的 vh 限高换成同一个变量。没有 JS / 老浏览器的退路：100vh → 有 dvh 用 dvh。 */
+:root{--app-h:100vh}
+@supports (height:100dvh){:root{--app-h:100dvh}}
+#app,#touchLayer,.attr-panel,#hurtFx,.result,#failTip,#meetCard,.upgrade,
+#loading,.title-scr,.tt-sub-scr,.modal,.wcard,.bag-panel,.event-card,.shop,
+.story-read,#noticeOv,.pack-get,#promoOv{height:var(--app-h,100vh)}
+
+/* ---------- 图鉴 / 夜行记忆卡顿（第 57 块，用户报「非常卡顿」） ----------
+   根因：.tt-sub-scr 带 backdrop-filter 模糊，而画布在菜单期间一直每帧重绘
+   （世界渲染闸门已拦掉渲染，这里再把遮挡做厚）+ 遮罩可滚 + margin:auto 防裁切。
+   模糊结果在静态画布上会被缓存，菜单才滑得起来。 */
+.tt-sub-scr{background:rgba(3,9,8,.88);overflow:auto}
+.tt-sub-scr > *{margin:auto}
+
+/* ---------- 夜行记忆「换一种说法」字号（第 57 块，用户报字太小） ---------- */
+.sr-alt{margin-top:2px;padding-left:2px;white-space:pre-wrap;
+  font-size:12.5px;line-height:1.75;color:rgba(168,206,190,.78)}
+.sr-alt b{font-weight:700;color:rgba(196,228,214,.92)}
+
+/* ---------- 各浮层卡片限高：vh → --app-h（同一变量，浮层多高卡片就多高） ---------- */
+.ap-card{max-height:calc(var(--app-h,100vh) - 48px)}
+.lv-card{max-height:calc(var(--app-h,100vh) - 48px)}
+.sh-card{max-height:calc(var(--app-h,100vh) - 36px)}
+.sr-box{max-height:calc(var(--app-h,100vh) - 40px)}
+.pg-card{max-height:calc(var(--app-h,100vh) - 24px)}
+.notice-box,.promo-box{max-height:calc(var(--app-h,100vh) - 24px)}
+.bag-panel .ap-card{max-height:calc(var(--app-h,100vh) - 20px)}
+.cx-list{max-height:calc(var(--app-h,100vh) * .52)}
+.st-list{max-height:calc(var(--app-h,100vh) * .44)}
+.ev-say{max-height:min(calc(var(--app-h,100vh) * .4),290px)}
