@@ -66,6 +66,14 @@ Three.js r160 的单摇杆幸存者肉鸽《奶蛙夜行》，纯静态站点（
 | **50** | 主菜单「属性」页（`js/statView.js` + `#statScr`）：独立小渲染器把 `loadFrog('assets/rigged.glb')` 摆在带呼吸描边环的展台上，拖动转视角（`setPointerCapture` 包 try-catch）、松手回正、定时蹦跶/拍掌；属性用**临时实例** `createStats+createWeaponStats` 重算（基础+篝火 `campApply`+火种 `applyBoons`），14 项按 4 组列出、加成行标「（基础 X）」；钩子 `__game.statPage` | v=59 |
 | **51** | 图鉴附怪物贴图：`enemy.js` 新增 `buildPreviewModel(type)`（克隆 + 按 sourceHeight 归一 + 换肤/染色/半透明 + Idle 定格），离线脚本 `.tmp-codex-shots.js` 按透明通道包围盒自动取景，输出 13 张 240×288 webp 到 `assets/codex/`（共 ~200KB）；`codex.js` 给怪物条目加 `thumb`，图鉴走「左图右文」（`.cx-item.has-thumb` / `.cx-thumb` / `.cx-body`）；运行时不加载模型 | v=60 |
 
+第 51 块上线后 hotfix（v=61，用户报「属性页返回按钮失效」）：
+
+- **根因：重复 id**。index.html 里「夜行记忆」的返回按钮和属性页的返回按钮**都叫 `stBack`**——`getElementById` 只认 DOM 里靠前的那个，于是两个监听（`hideSub(storyScr)` + `hideSub(statScr)`）全挂在了夜行记忆的按钮上，**属性页按钮一个监听都没有**。block50 测试此前「能过」是假绿：测试点的是全局 `getElementById('stBack')`（= 夜行记忆按钮），它身上的第二个监听恰好把属性页也关了。
+- **修法**：属性页返回按钮改名 `statBack`（index.html + main.js 各一处）。**顺带修掉第二个重复 id**：武器教程卡标题 `wtTitle` 与局内波次 toast 的 `wtTitle` 重名——教程卡自己的标题从来没被更新过（一直停在「剑会自己转」），改名 `wtutTitle`。
+- **防复发**：`.tmp-block50-cdp.js` 加了两条断言——① 点的必须是 `#statScr #statBack`（限定在面板内找）；② **全页遍历所有带 id 的元素，断言零重复**（这个检查能兜住以后所有同类的坑）。
+- **专项测试**：`.tmp-wtut-title-check.js` 4 项全绿（教程卡打开 / 标题随 3 步变化且写进 `#wtutTitle` / toast 的 `wtTitle` 不含教程文案）。回归 block50 **12**/0、block51 20/0。
+- **教训**：加新面板复制旧面板 HTML 时，**id 忘了改**就是这类 bug 的来源；以后每加一个面板跑一遍「重复 id 检查」（block50 里的通用断言可以直接抄）。
+
 第 51 块要点（图鉴附怪物贴图，2026-10-22，v=60）：
 
 - **用户要求**：「图鉴附贴图」——怪物页签要能看见怪长什么样，不只是文字。

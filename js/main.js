@@ -5,71 +5,71 @@
 // 目标是把三件事调顺：摇杆输入 → 角色速度/朝向 → 相机跟随。
 // 后续叠战斗时，只需要在 tick() 里加敌人更新与自动攻击，不用动输入层。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=60';
-import { buildNightScene } from './scene.js?v=60';
-import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=60';
-import { createInput } from './input.js?v=60';
-import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=60';
-import { createStatView } from './statView.js?v=60';
-import { createWeaponStats } from './weaponStats.js?v=60';
-import { createFx } from './fx.js?v=60';
-import { createEnemySystem } from './enemy.js?v=60';
+import * as THREE from '../lib/three.module.js?v=61';
+import { buildNightScene } from './scene.js?v=61';
+import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=61';
+import { createInput } from './input.js?v=61';
+import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=61';
+import { createStatView } from './statView.js?v=61';
+import { createWeaponStats } from './weaponStats.js?v=61';
+import { createFx } from './fx.js?v=61';
+import { createEnemySystem } from './enemy.js?v=61';
 import {
   createLevel, LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVELS_BY_ID, DIFFS, setDifficulty, getDifficulty, roundScale, levelStats,
-} from './wave.js?v=60';
-import { createRangeRing } from './rangeRing.js?v=60';
-import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=60';
-import { createWeaponSystem } from './weapon.js?v=60';
-import { createArrowRainSystem } from './arrowRain.js?v=60';
-import { SWORD_KINDS } from './swordKinds.js?v=60';
-import { createGoldSystem } from './gold.js?v=60';
-import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW } from './shop.js?v=60';
-import { createTurretSystem, TURRET } from './turret.js?v=60';
-import { createRelicSystem, RELIC_DEFS } from './relics.js?v=60';
-import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=60';
-import audio from './audio.js?v=60';
-import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=60';
+} from './wave.js?v=61';
+import { createRangeRing } from './rangeRing.js?v=61';
+import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=61';
+import { createWeaponSystem } from './weapon.js?v=61';
+import { createArrowRainSystem } from './arrowRain.js?v=61';
+import { SWORD_KINDS } from './swordKinds.js?v=61';
+import { createGoldSystem } from './gold.js?v=61';
+import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW } from './shop.js?v=61';
+import { createTurretSystem, TURRET } from './turret.js?v=61';
+import { createRelicSystem, RELIC_DEFS } from './relics.js?v=61';
+import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=61';
+import audio from './audio.js?v=61';
+import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=61';
 import {
   settings as readSettings, setSetting, save as saveProfile, profile,
   bumpStat, setStatMax, codexAdd, codexCount, countCard, unlockAch, hasAch, addBones, bones, resetAll,
   storyProgress, markStorySeen, markStoryRead, addStoryMark, setStoryEnding,
   setSaveSuppressed, reloadFromStorage,
   giftLog, giftRedeemed, markGift,
-} from './profile.js?v=60';
+} from './profile.js?v=61';
 // 第 44 块：礼包兑换（码表只有哈希，明细在 gift.js 顶部注释）
-import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=60';
+import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=61';
 // 第 46 块：音效包（抽象奶蛙音效包 —— 4 段奶蛙叫声，通关第一关解锁）
-import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=60';
-import * as runSave from './runSave.js?v=60';
+import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=61';
+import * as runSave from './runSave.js?v=61';
 import {
   CAMPFIRE, CAMP_STEP, campBuy, campOwned, campLevel,
   campCost, campApply, bonesFor, diffBoneMul, levelBoneMul, coinBones, BONE,
-} from './campfire.js?v=60';
+} from './campfire.js?v=61';
 // 第 23 块：永夜火种（通关白给的 3 次永久三选一）
 import {
   BOONS, BOON_BY_ID, BOON_PICKS, boonOwned, boonStacks, boonPending, boonTotalStacks,
   grantBoons, rollBoons, takeBoon, applyBoons, boonStackText,
-} from './boons.js?v=60';
+} from './boons.js?v=61';
 // 第 21 块：夜行诅咒（自选 debuff 换骨币倍率）
-import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=60';
+import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=61';
 // 第 22 块：种子与每日挑战
 import {
   DAILY_RULES, dayKey, dayText, dailySeed, seedCode, pickDailyCurses,
   seedFromText, pickSeedRules, loadSeedRecords, saveSeedRecord, pruneSeeds,
   dailyRecord, saveDailyRecord, pruneDaily, makeRng,
-} from './seed.js?v=60';
-import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=60';
-import { achById, ACHS } from './achievements.js?v=60';
+} from './seed.js?v=61';
+import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=61';
+import { achById, ACHS } from './achievements.js?v=61';
 import {
   EVENTS, ALL_EVENTS, getEventById, pickEvent, effectLines,
   choiceHint, canAfford, costShort, REP_MIN, REP_MAX, REP_START,
   isTalk, eventChoices, resolveRoll, mergeEffects,
-} from './events.js?v=60';
+} from './events.js?v=61';
 // 第 32 块：主线《笑不出来的那一夜》（18 夜，一夜一关，前 3 夜已有关卡）
 import {
   STORY_ARC, STORY_CHAPTERS, STORY_ENDINGS, MARK_INFO,
   storyChapterAt, storyChapterById, storyEndingKey,
-} from './story.js?v=60';
+} from './story.js?v=61';
 
 // 标记模块已经跑起来了：index.html 的兜底自检靠它判断
 // 「模块根本没执行」还是「执行了但加载慢」。
@@ -358,7 +358,9 @@ async function boot() {
   const wtEl = document.getElementById('weaponTut');
   const wtStepEl = document.getElementById('wtStep');
   const wtNameEl = document.getElementById('wtName');
-  const wtTitleEl = document.getElementById('wtTitle');
+  // wtutTitle 曾与局内波次 toast 的 wtTitle 重名 —— getElementById 只认靠前的
+  // 那个（toast），教程卡自己的标题从来没被更新过，一直停在「剑会自己转」。
+  const wtTitleEl = document.getElementById('wtutTitle');
   const wtTextEl = document.getElementById('wtText');
   const wtBarEl = document.getElementById('wtBar');
   const wtNextBtn = document.getElementById('wtNext');
@@ -4312,7 +4314,9 @@ async function boot() {
 
   const btnStats = document.getElementById('btnStats');
   btnStats.addEventListener('click', showStat);
-  document.getElementById('stBack').addEventListener('click', () => hideSub(statScr));
+  // 注意：id 是 statBack —— 曾和「夜行记忆」的 stBack 重名，重名时 getElementById
+  // 只认 DOM 里靠前的那个，结果属性页返回按钮一个监听都没挂上（用户报过这个 bug）。
+  document.getElementById('statBack').addEventListener('click', () => hideSub(statScr));
 
 
   // ---------------- 难度选择（关卡面板里，一局一选） ----------------

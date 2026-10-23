@@ -124,8 +124,21 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     await sleep(1200);
     const yaw2 = await ev('window.__game.statPage.yaw()');
     ok('松手后慢慢回正（|yaw| 变小）', Math.abs(yaw2) < Math.abs(yaw1), yaw1.toFixed(3) + ' → ' + yaw2.toFixed(3));
-    await ev("document.getElementById('stBack').click()");
+    // 回归（用户 bug：属性页返回按钮失效）——根因是 stBack 在「夜行记忆」和属性页
+    // 重复了 id，getElementById 只认靠前的那个，属性页按钮一个监听都没挂上。
+    // 修法：属性页改叫 statBack。这里点的是 statScr 内部的那个按钮，不再依赖全局 getElementById。
+    ok('属性页返回按钮 id 唯一（statBack）',
+      (await ev("document.querySelectorAll('#statScr #statBack').length")) === 1 &&
+      (await ev("document.getElementById('statBack')?.closest('#statScr')")) !== null);
+    await ev("document.querySelector('#statScr #statBack').click()");
     ok('返回按钮能关页', (await ev("document.getElementById('statScr').classList.contains('on')")) === false);
+    // 通用回归：整个 index.html 不允许再出现任何重复 id
+    const dupIds = await ev(`(function(){
+      const seen = new Set(), dup = new Set();
+      document.querySelectorAll('[id]').forEach((el) => { const id = el.id; if (seen.has(id)) dup.add(id); seen.add(id); });
+      return [...dup];
+    })()`);
+    ok('全页无重复 id', dupIds.length === 0, dupIds.join(','));
 
     // ============ B：预置篝火 + 火种 → 数值变大 ============
     console.log('\n[B] 局外加成计入：篝火铁壳 ×3 + 永夜火种厚皮 ×2');
