@@ -561,6 +561,25 @@ export function levelStats(level = LEVEL_1) {
   return sum;
 }
 
+// 第 72 块：按关预载 —— 这一关到底会用到哪几种怪。
+//
+// 以前加载页把 17 只怪（约 6MB glb）一次性全拉下来，手机上首屏要等很久，
+// 而玩家一局只会碰到其中一小半。现在**进关前只补这一关要用的模型**：
+//   · 以 order 为准（不能只看第 1 回合：弓手是第 12 回合才登场的）；
+//   · 剔除整关一只都不出的种（关卡表里占位 0 的不白下载）；
+//   · 已经在内存里的不会重复下载（enemy.js 的 loadType 幂等），
+//     所以「第一关 → 第五关」只会补差集那几只。
+// 返回值给 main.js 的 ensureLevelAssets 用；加载页进度也按这个数走。
+export function levelTypes(level = LEVEL_1) {
+  const out = [];
+  for (const [type] of level.order || []) {
+    if (out.includes(type)) continue;
+    const used = (level.rounds || []).some((r) => (r[type] || 0) > 0);
+    if (used) out.push(type);
+  }
+  return out;
+}
+
 // 把一回合的怪表展开成带延迟的生成列表。
 // 顺序与段间隔完全由关卡的 order 决定：
 //   近身先到 → 远程后到 → 巫师最后（先把贴脸的清掉，再面对后排的吟唱）。

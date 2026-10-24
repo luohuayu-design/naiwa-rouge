@@ -45,8 +45,9 @@ ok(!!L5 && L5.id === 5, 'LEVEL_5 存在且 id=5');
 ok(!!L6 && L6.id === 6, 'LEVEL_6 存在且 id=6');
 ok(L5.name.includes('第五关') && L5.name.includes('草甸路口'), '第五关叫「草甸路口」', L5.name);
 ok(L6.name.includes('第六关') && L6.name.includes('骨塔机房'), '第六关叫「骨塔机房」', L6.name);
-ok(wave.LEVELS_BY_ID[1] && wave.LEVELS_BY_ID[6] && Object.keys(wave.LEVELS_BY_ID).length === 6,
-  'LEVELS_BY_ID 1~6 全在', Object.keys(wave.LEVELS_BY_ID).join(','));
+// 第 71 块加了第七关「骨塔井底」
+ok(wave.LEVELS_BY_ID[1] && wave.LEVELS_BY_ID[7] && Object.keys(wave.LEVELS_BY_ID).length === 7,
+  'LEVELS_BY_ID 1~7 全在', Object.keys(wave.LEVELS_BY_ID).join(','));
 
 for (const [tag, L] of [['五', L5], ['六', L6]]) {
   ok(L.rounds.length === 20, `${tag}关 20 回合`, L.rounds.length);
@@ -129,7 +130,8 @@ ok(shop.itemLocked(lanternItem, { round: 20, relicLevels: {} }) === null, '不�
 ok(relics.RELIC_DEFS.lantern && relics.RELIC_DEFS.lantern.maxLevel === 3, '路口灯 3 级');
 ok(relics.RELIC_DEFS.insulator && relics.RELIC_DEFS.insulator.maxLevel === 3, '绝缘斗篷 3 级');
 ok(relics.RELIC_DEFS.lantern.desc.length === 3 && relics.RELIC_DEFS.insulator.desc.length === 3, '两件法器每级都有说明');
-ok(Object.keys(relics.RELIC_DEFS).length === 7, '法器一共 7 件', Object.keys(relics.RELIC_DEFS).join(','));
+// 第 71 块 +木鱼
+ok(Object.keys(relics.RELIC_DEFS).length === 8, '法器一共 8 件', Object.keys(relics.RELIC_DEFS).join(','));
 
 // ============================================================
 sec('D、怪物表：擦名者 / 重启体');
@@ -145,8 +147,9 @@ ok(ER && ER.height >= 1.8 && ER.height <= 2.1, '擦名者身高 1.8~2.1', ER.hei
 ok(RB && RB.reboot && RB.reboot.times === 2 && RB.reboot.delay === 4, '重启体：4 秒后重启、最多 2 次');
 ok(RB && RB.reboot.hpRatio >= 0.4 && RB.reboot.hpRatio <= 0.7, '重启后是半血左右', RB.reboot.hpRatio);
 ok(RB && RB.height >= 1.8 && RB.height <= 2.0, '重启体身高 1.8~2.0', RB.height);
-ok(enemy.ENEMY_TYPES.minion && Object.keys(enemy.ENEMY_TYPES).filter((k) => !enemy.ENEMY_TYPES[k].planned).length === 15,
-  '启用中的怪物 15 只');
+// 第 71 块 +井蛙 / 木鱼灵
+ok(enemy.ENEMY_TYPES.minion && Object.keys(enemy.ENEMY_TYPES).filter((k) => !enemy.ENEMY_TYPES[k].planned).length === 17,
+  '启用中的怪物 17 只');
 // 第 62 块定下的尺寸（盾兵/孢生按战士 1.4 倍，三只小的统一 1.8~1.9）
 const W = enemy.ENEMY_TYPES.warrior;
 // 战士 1.38 × 1.4 = 1.93，用户拍板取整到 1.9 —— 容差放到 0.06 而不是 0.02

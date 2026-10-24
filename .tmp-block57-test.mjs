@@ -173,7 +173,9 @@ ok(/line-height:1\.75/.test(srAlt), '行高 1.7 → 1.75');
 sec('E、boot 闪屏：加载期标题页彻底藏住');
 ok(/<div id="titleScr" class="title-scr off" style="display:none">/.test(htmlSrc),
   '标题页初始 display:none + .off（加载段不绘制）');
-ok(/showTitle\(\);/.test(mainSrc.split('loadingEl.classList.add')[1]?.slice(0, 200) || ''),
+// 第 72 块：ensureLevelAssets（按关补载）也会写一次 loadingEl.classList.add，
+// 而且它在文件里更靠前 —— 这里要的是 **boot 结尾** 那次，所以用 pop() 取最后一处。
+ok(/showTitle\(\);/.test(mainSrc.split('loadingEl.classList.add').pop()?.slice(0, 200) || ''),
   'showTitle 挪到遮罩淡出那一刻（同步淡入）');
 ok(/标题页在整个加载段都藏着/.test(mainSrc), '注释写清了为什么（两个全屏大图层抢合成器）');
 ok(/titleScr\.style\.display = '';/.test(mainSrc) && /requestAnimationFrame\(\(\) => titleScr\.classList\.remove\('off'\)\)/.test(mainSrc),

@@ -2,7 +2,7 @@
 
 > 新对话从这里开始读，不要先翻聊天记录。**先读 §0「给新对话的话」，再按需查后面章节。**
 >
-> 最后更新：2026-10-24 · 线上 **v=82** · 第 71 块（**第七关「骨塔井底」**：窄井 arena 13 + 井底滴水落点 hazard（`hazards.js` 新 `kind:'drip'`，青环预警后溅伤、随机/固定落点、不依赖某只怪在场）+ 两只新怪**井蛙**（吐舌头把主角拉过去、舌头独立血量要先砍断、砍断后短硬直，wolf 换绿占位）/**木鱼灵**（青圈减速、血薄站后排，tribal 换青占位）+ 法器**木鱼**（被动：挨打/击杀震一圈，身边怪击退 + 短暂定身）+ 深井 well 主题（`scene.js` THEMES）；`s07` 绑七关第 2 回合）已完成并推送；上一块第 70 块（民心专属事件换独立外观），再往前第 69 块（擦名者三改）。
+> 最后更新：2026-10-24 · 线上 **v=83** · 第 72 块（**按关预载**：首屏只拉第一关 4 只怪约 3MB，进关那一刻按差集补；`wave.js` 新增 `levelTypes()`，`enemy.js` 暴露 `loaded()`，`main.js` 新增 `levelAssetsReady()` / `ensureLevelAssets()`；`?debug=1` 例外照旧全量 17 只，因为自动化测试会直接 `__game.setLevel(6)` 等不了异步）已完成并推送；上一块第 71 块（第七关「骨塔井底」：窄井 arena 13 + 井底滴水落点 hazard（`hazards.js` 新 `kind:'drip'`，青环预警后溅伤、随机/固定落点、不依赖某只怪在场）+ 两只新怪**井蛙**（吐舌头把主角拉过去、舌头独立血量要先砍断、砍断后短硬直，wolf 换绿占位）/**木鱼灵**（青圈减速、血薄站后排，tribal 换青占位）+ 法器**木鱼**（被动：挨打/击杀震一圈，身边怪击退 + 短暂定身）+ 深井 well 主题（`scene.js` THEMES）；`s07` 绑七关第 2 回合）已完成并推送；上一块第 70 块（民心专属事件换独立外观），再往前第 69 块（擦名者三改）。
 
 ---
 
@@ -16,7 +16,7 @@
    ③ 公告在 loading 淡完 **+700ms** 才弹，测试截图先 `sleep(2600)` 再 `__game.notice.hide()`；
    ④ `jumpToRound/skipRound` **只在 adminOn 时生效**，不开管理员是静默 no-op；
    ⑤ 本地服务器必须 `run_in_background`；CDP 截图路径**不能含中文**；推送走 `git -c http.proxy=http://127.0.0.1:7897 ...`（先 curl 探代理，挂了改直连）。
-4. **最新绿基线**（动到相关文件后要回归）：Node 17 套约 1300 项 + CDP 57 套约 1950 项全绿（第 67 块新增 `.tmp-block67-test.mjs` 40 项 / `.tmp-block67-cdp.js` 25 项），具体套件与数字见 §6。仓库内 15 套的最新数字：block52 141 / block53 46 / block54 54 / block55 91 / block56 86 / block57 112 / block58 18 / block59 49 / block63 119 / block64 164 / block65 95 / block66 51 / **block67 40** / gift 18 / story 76，全部 0 失败。
+4. **最新绿基线**（动到相关文件后要回归）：Node 18 套约 1350 项 + CDP 58 套约 1980 项全绿（第 72 块新增 `.tmp-block72-test.mjs` 46 项 / `.tmp-block72-cdp.js` 12 项），具体套件与数字见 §6。仓库内 16 套的最新数字：block52 **157** / block53 46 / block54 54 / block55 91 / block56 86 / block57 112 / block58 18 / block59 49 / block63 119 / block64 164 / block65 95 / block66 51 / block67 40 / block69 33 / block70 49 / **block72 46** / gift 18 / story 76，全部 0 失败。上级目录：stats 70 / rogue-unit 144 / econ 80 / event 105 / rarity 71 / level2 **65** / level3 71 / level4 **90** / admin 28 / curse 84，全部 0 失败。
 5. **已知既有失败（过期断言，别浪费时间查）**：`.tmp-camp-test.mjs` 84/22、`.tmp-boon-test.mjs` 133/13（偶发抖动）、`.tmp-eventui-test.js` 35/2、`.tmp-block18-test.js` 34/1、`.tmp-start-test.js` 33/15、`.tmp-block30-cdp.js` 42/8、`.tmp-ui-test.js` 15/7。
    **第 63 块已修红的**（原来是过期断言，现已改成与实况一致，全 0 失败）：`.tmp-level4-test.mjs` 90/0（雾鬼取消显形距离 / 奶半径 8.0 / 怪 15 / 法器 8 / 成就 41）、`.tmp-level3-test.mjs` 71/0（法器 7）、`.tmp-event-test.mjs` 105/0（事件 121 / 连锁 22 / 民心 0~120）、`.tmp-block52/56/57/59-test.mjs`、`.tmp-story-test.mjs`（18 夜 = 18 关，前 6 夜已绑关）。
    **第 64 块又修红的**：`.tmp-block56-test.mjs` 77/7 → **84/0**（全是第 56 块写死的旧数值：frostTime 1.2→1.6、chainRatio 0.35→0.45、严寒 +0.3→+0.6、导电 +10%→+20%、冰剑 tagline / 雷剑 45% / 商店冰剑文案）、`.tmp-stats-test.mjs` 70/0、`.tmp-rogue-unit.mjs` 144/0、`.tmp-econ-test.mjs` 80/0、`.tmp-event-test.mjs` 105/0、`.tmp-event-test.mjs` 的事件数 121→**131**。
@@ -52,7 +52,11 @@
     ④ **模块级单例的 CD 不会自己清**：`arrowRain` 只有读档那条路 `reset()`，直接「重开一局」会把上一局没走完的 8 秒冷却带进新局。加 `resetCd()`（只清 cd、**不动 unlocked** —— 直接 `reset()` 会把 unlocked 也清掉，而 `prefillRing()` 见 `weapon.granted` 已是 true 会提前 return，箭雨就再也解锁不回来）。
     另：**测试里的 `?v=N` 别再写死**。`.tmp-block59` 因为写着 `?v=76` 和模块的 `?v=77` 形成两个实例（骨币读写打在不同对象上），这次改成**运行时从 index.html 读版本号再 `await import()`**，以后发版不用再改测试；`.tmp-block64/65` 的版本断言也统一成「以 index.html 为基准、全部一致」。
 
-17. **第 67 块：结算链是「回调套回调」，别在别处硬编码终点**。民心事件改时序时发现 `chooseUpgrade` 里有一段
+17. **第 72 块的三条新坑**：
+    ① **bash heredoc 会把反斜杠转成斜杠**：`cat > x.mjs <<'EOF'` 里写的正则元字符 `反斜杠 s` 落地成了 `/s`，node 直接报 `SyntaxError: Invalid regular expression`。**写测试文件一律用文件写入工具**，别用 heredoc（和「Python 改 js 要 newline=''」是同一类环境坑）；
+    ② **本地服务器不能用 `python -m http.server 8124 &` 起在 run_in_background 的 bash 里** —— 那条命令返回后子进程就被回收，CDP 全套「页面加载不出来」但**零报错**（我白跑了一轮 2m42s）。正确姿势：`run_in_background` 的命令**就是** `python -m http.server 8124`，不带 `&`；
+    ③ **curl 走系统代理，测 127.0.0.1 要加 `--noproxy 127.0.0.1`**，否则返回 502（「上游连接失败」）会让你误判成服务没起。另：断言「首屏到底拉了什么」用 CDP 的 `Network.requestWillBeSent` 过滤 `.glb`，比看加载时间靠谱得多。
+18. **第 67 块：结算链是「回调套回调」，别在别处硬编码终点**。民心事件改时序时发现 `chooseUpgrade` 里有一段
     `if (pendingRound >= level.totals.rounds) { endGame(true); return; }` —— **关底直接结算，`upgradeAfterCb` 根本没被调用**。
     于是「关底选完三选一 → 播民心事件 → 结算」这条链断在最后一步：队列里还留着 `repGoodNames`，玩家看不到。
     **教训：凡是 `if (...) { endGame(); return; }` 这种「提前收官」，都要问一句「它是不是绕过了本该调用的回调」**。
@@ -139,6 +143,7 @@ Three.js r160 的单摇杆幸存者肉鸽《奶蛙夜行》，纯静态站点（
 | **69** | **v=80** | **用户：「玩家还没找到擦名者就被偷了」**。三改 + 一补：**① 起手距离 9 → 7 格 + 「必须真的在画面里」**（`attackRange` 7.0 / `keepDistance` 3.0）。**先量了视野**（`.tmp-probe-view.js`）：竖屏横向只有约 4 格落在画面内、纵向上面 15 格 —— 所以只改距离挡不住「侧面 7 格在屏幕外偷偷读条」。现在 `main.js` 的 `onScreen(pos)`（`camera.project` + margin 0.9）通过 `combatCtx` 注入，`enemy.js` 的 chase 分支写成 `if (dist > attackRange || !viz) 朝玩家走` —— 看不见就往你身边挪，走到既可见又在 7 格内才起手；`keepDistance` 因此降到 3.0（必须小于横向可见的 4 格，否则反复横跳永不起手）；**② 读条 2.6 → 4.5 秒**（`windup` 4.5 / `attackDuration` 5.4 —— **后者必须大于前者**，否则读条被 `e.t >= attackDuration` 提前切断、偷剑永远不发生）；**③ 移速 1.15 → 0.55**（约玩家 1/8），`fleeSpeed` 1.85 → 3.9 让逃跑绝对速度仍 ~2.15；**④ 新增 `erase.holdAfterSteal: 1.4`**：`flee` 分支开头先累加 `fleeT`，未过 hold 就播 idle 并 `return`（真停住，不是边跑边等），之后才朝外跑。文案同步 `codex.js` / `wave.js` / `main.js` 讲解卡。**CDP 坑**：首次读到 attack 会弹「读条讲解卡」把 `gameState` 锁成 `hint`、世界暂停、`e.t` 停在 0 → 不关掉它，等偷剑必超时；另第一关场地小，偷完那只 2 秒内就出界回收（位移读数归 0），测「僵住/开跑/跑速」要另造干净的实例。测试：block69 契约 27 + CDP 15 全绿；block63 契约 119 / block63 CDP 同步改过靶子距离（7.4 → 6.4 格）。** |
 | **70** | **v=81** | **用户：「民心事件的提示框风格和随机事件完全一致，这个导致有点混，可以换一种样式吗」**。根因：民心事件本来就复用同一个 `#eventCard`（第 67 块为了调时序让它走 `openEvent`），所以长得一模一样。做法是**只换皮**：`openEvent` 加第 4 参 `opts`，`applyRepSkin(ev, rep)` 切 `.rep` / `.bad`，CSS 里把卡片从「居中暖黄木门」改成「**贴顶滑下的青绿横幅**、左对齐、顶上一道金线、`width:min(94vw,460px)`」，并用 `<span class="rb-seal">民</span>` 替掉 emoji 图标、右上角挂 `民心 +2 → 62` 胶囊徽章；掉民心那档 `.bad` 换暗红（底 / 边 / 印章 / 按钮一起换）。选项渲染、读秒锁、结果页**一行都没复制**（v=61 重复 id 的教训）。数值链路：`repEventQueue` 由 `string[]` 改 `{ id, delta, total }[]`，`queueRepEvent(t0, t1, delta)` 在跨档那一刻抓 `reputation - before` 与当前值；`playRep` 把快照透传给 `openEvent`。`repEv.queue()` 仍返回 id 数组、新增 `queueFull()`；`event.trigger(id, round, opts)` 可直接进民心版式（测试用）。**顺带修**：`.event-card` `z-index` 17 → 27，否则 `#waveToast`（26）的「第 N 回合」大字压在横幅正文上（截图抓到）。测试：`.tmp-block70-test.mjs` 49 + `.tmp-block70-cdp.js` 53（含良/恶性两套配色、位置、徽章文本、真实链路数值、随机事件回归、层级）；并更新 block65/67 里过期的实现正则、block69 的写死版本号。** |
 | **71** | **v=82** | **第七关「骨塔井底」**（剧情接 s07，已绑七关第 2 回合）。三只新增：**井蛙**（`enemy.js`：`file:wolf.glb` 绿染占位，吐舌头把主角拉过去；舌头有独立血量 `tongue.hp`、伸出期间对井蛙本体的挥击先扣舌头血、归零 `severTongue` 砍断并让井蛙短硬直 `freezeT=stun`；拉人经 `combatCtx.pullPlayer` 注入，在 `enemy.js` 的 `handleTongue` 里调）+ **木鱼灵**（`file:tribal.glb` 青染占位，复用 hexer 的 `spell.kind:'hex'` 改青色，脚下青圈减速）+ 法器**木鱼**（`relics.js`：被动 —— 主角挨打 / 击杀时震一圈，身边怪 `knockback` + `applyFreeze` 短定身，带 0.45s 冷却；`buyWoodfish` 在商店 `needLevel:7/needRound:8`）。场地 `arena:13` 窄井（转身空间紧）；招牌 hazard **井底滴水落点**（`hazards.js` 新 `kind:'drip'`，与漏电地板完全独立的分支：`warm` 青环预警呼吸 → `on` 溅伤、圈内掉血，落点固定或 `random` 在 `(cx,cz)` 周围 `spread` 内随机；`isPowered` 仍只服务漏电地板）；深井 **well 主题**（`scene.js` THEMES：蓝绿微光 / `makeWellTexture`）。难度乘子 `scale.hpMul 1.20 / dmgMul 1.45`（六关是 1.15 / 1.35）。版本 `?v=81→82`（index.html + 全 js 共 101 处），README 同步（7 关 / 17 只怪 / 木鱼法器 / well 主题 / 滴水机制），`assets/codex/` 补 `wellfrog.webp` / `woodfish.webp`（`.tmp-codex-shots.js` 的 `V` 改 82）。**验证**：全量语法检查 + Node 校验 LEVEL_7（20 回合 / 3 滴水 / 每回合不缺 order 键）+ 真实浏览器跑 codex（17 只怪全出图，含 2 新）+ 集成烟雾测试（?debug=1 加载全量模块图、零控制台/页面错误、`LEVELS_BY_ID[7]`/wellfrog/woodfish/木鱼法器与商店项全部就位、`hazards.build`+200 帧不抛错）全绿。** |
+| **72** | **v=83** | **用户「进入网址后加载非常慢」** → **按关预载**（用户三选一定案）。① `wave.js` 新增 `levelTypes(level)`：以 `order` 为准、**剔除整关 0 只的占位种**；第一关 4 种 / 二关 7 种 / 五关 10 种 / 七关 12 种。② `enemy.js` 的 `loadType` 本来就幂等，所以只需暴露 `loaded()` 算差集 —— **已加载的零请求**。③ 加载页只预载 `levelTypes(LEVEL_1)`（4 只 ≈ 2.7MB，原 17 只 ≈ 6MB）；`ensureLevelAssets(id)` 在**标题页淡出之后**才跑（点下去立刻有反馈），复用 `#loading` 那一层（不新造浮层，v=61 的教训），标题改成「正在进入第 N 关」。④ `beginGame` / `resumeGame` 转 async；**`levelAssetsReady()` 同步探一句，齐了就不 await** —— 否则 debug 下也会被插一个微任务，老测试 `__game.beginGame()` 会抢跑。⑤ **debug 例外照旧全量 17 只**（`DEBUG ? Object.keys(ENEMY_TYPES) : levelTypes(LEVEL_1)`），因为 block63/65 的 CDP 会直接 `__game.setLevel(6)`。实测（`.tmp-block72-cdp.js`）生产首屏 glb 请求 = rigged + 4 只怪 + 武器/道具，二~七关的怪一个都不拉。**顺带修红**：block52 157/0（17 条目 / 15 文件，井蛙·木鱼灵占位复用写进断言）、block57 112/0（`split('loadingEl.classList.add')` 现在有两处，改 `.pop()` 取 boot 那次）、block63 119/0（7 关 / 8 法器 / 17 怪）、story 76/0（7 夜绑 1~7 关）、level2 65/0、level3 71/0、level4 90/0 —— **全是第 71 块留下的过期数字**。测试：新增 `.tmp-block72-test.mjs` 46 + `.tmp-block72-cdp.js` 12；block58-cdp 29/0 复验开局链路 **|
 | **61** | **v=71** | **读取存档列表改成「最近的在上」**（原升序 + 面板头还写着「早的在上」，已同步改成「最近的在上」）；顺手修 `resumeGame()` 无 uid 兜底分支的同类错误（注释写取最近一次，实际升序 + `[0]` 拿到最旧的那份）** |
 
 > 每个块的实现细节、测试坑、真 bug 教训已沉淀进上面的铁律 / 调试钩子 / 文件地图与代码注释，不再单列。
@@ -191,6 +196,7 @@ Three.js r160 的单摇杆幸存者肉鸽《奶蛙夜行》，纯静态站点（
 9. **一件武器只教一次**（`localStorage['naiwa_rouge_wtut_v1']`）。
 10. **README.md 必须与实况同步**。
 11. **测试用 `?debug=1` 默认不落存档**（要落档加 `&keepsave=1`）。
+14. **新关卡必须至少带 2~3 只「前面出现过的特色怪」**（用户 2026-10-24 定）：现在 17 只怪里很多只在一关露脸，之后再没戏份，玩家记不住、图鉴也白做。做新关时从既有怪里挑几只混进回合表（第五关已经这么做了：擦名者是新的，但雾鬼/雾猎狼/缝补小巫是从第四关带过来的），**只新增 1~2 只新面孔**，其余靠老怪重排组合制造新鲜感。
 12. **新内容「先推送再交给用户测」**：功能做完 + 本地回归绿 → 立刻 commit & push，把线上地址和「改了什么 / 怎么试」交给用户。
 13. **发版必须同时 bump 两处版本号**（index.html + js 内所有 import 的 `?v=N`），否则旧缓存会让线上炸。
 
@@ -228,6 +234,7 @@ block65.buttons() / rainUnlocked() / rainObtained() / ringObtained() / prefill()
 fx.counts()                                                        ← { total, plus }：数屏上有几个绿加号
 enemies.eraseCast() / wraithCount() / hiddenCount() / menderCount()
 arrowRain.lastFail() / arrowRain.hasTarget()                       ← 第 66 块：箭雨为什么没放出去
+levelTypes(id) / loadedTypes() / levelAssetsReady(id) / ensureLevelAssets(id)   ← 第 72 块：按关预载
 ```
 
 常用：`__game.hurt(99)` 直接结算；`__game.enemies.all().forEach(e=>__game.enemies.takeDamage(e,999))` 清场（**注意：清光会弹三选一，挡住后续操作**）。
@@ -237,6 +244,8 @@ arrowRain.lastFail() / arrowRain.hasTarget()                       ← 第 66 �
 ## 6. 测试
 
 **Node 15 套（纯逻辑，秒级）**：`node .tmp-stats-test.mjs`（属性）/ `.tmp-rogue-unit.mjs`（回合升级概率）/ `.tmp-econ-test.mjs`（经济商店事件）/ `.tmp-event-test.mjs`（**131 事件** + 番外剧情门槛）/ `.tmp-rarity-test.mjs`（品质幸运）/ `.tmp-block64-test.mjs`（**164 项：武器属性表 / 剑系卡翻倍 / 元素说明 / 番外分布 / 技能元数据 / 攻略面板 / 教程 8 步 / 恢复顺序分布 / 版本号**）/ `.tmp-block65-test.mjs`（**95 项：pointer-events 遮挡回归 / 五六关难度乘数 / 回血键 SVG+环 / 提示卡文案与档案 / 雾鬼透明度 / 绿加号 / 关底民心队列 / 技能解锁脱钩 / 版本号**）/ `.tmp-block66-test.mjs`（**51 项：卡片 visibility 命中测试 / 按钮兜底规则 / 箭雨教程补靶子 / skillCtx 含 tutorial / lastFail+hasTarget / resetCd 不跨局 / 版本号**）/ `.tmp-block67-test.mjs`（**40 项：民心事件本回合播放 / 顺序 = 事件→三选一→民心 / 无三选一立刻弹 / 关底跑回调不绕过 / 队列递归 / debug 不留垃圾 / 池子 9 条 / 版本号**）/ `.tmp-camp-test.mjs`（篝火骨币）/ `.tmp-level2-test.mjs`（第二关）/ `.tmp-level3-test.mjs`（第三关）/ `.tmp-level4-test.mjs`（第四关）/ `.tmp-admin-test.mjs` / `.tmp-eventui-test.js` / `.tmp-curse-test.mjs` / `.tmp-boon-test.mjs`（永夜火种）。
+
+**第 72 块的加载验证**：`.tmp-block72-cdp.js` 用 CDP 的 `Network.requestWillBeSent` 数首屏到底请求了几个 `.glb`（生产应只有 4 只第一关的怪），再验 debug 全量 + `ensureLevelAssets` 只补差集。**改了预载策略就跑这套**。
 
 **CDP 端到端（需先起 8124；一次只跑一套，套间跑 `.tmp-cdp-clean.js`）**：开局/战斗/菜单/设置/存档续玩/图鉴/成就/武器教程/炮台法器/`block18~57` 各块专项/`admin`/`seed`/`pack`/`promo`/`start-test`/`block64`/`block65`/`block66`/`block67` 等共 **57 套**，约 1950 项。脚本在上级目录（第 32 块前）与 `naiwa-rouge/`（第 41 块起）。
 

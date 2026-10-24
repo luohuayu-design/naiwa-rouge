@@ -60,10 +60,11 @@ ok('每章正文 >= 700 字', CH.every((c) => {
 // ---------------- 3. 局内四夜：章节 ←→ 关卡 一对一 ----------------
 const live = CH.filter((c) => c.levelId != null);
 // 第 63 块：s05/s06 接上第五、六关 —— 局内从 4 夜变 6 夜（用户定：总共 18 夜 = 18 关）
-ok('局内只有 6 夜', live.length === 6, `实际 ${live.length}`);
-ok('局内六夜分别绑 1~6 关', live.map((c) => c.levelId).sort().join() === '1,2,3,4,5,6');
-ok('局内六夜都在第 2 回合结束触发', live.every((c) => c.atRound === 2));
-ok('其余 12 夜 levelId 为 null', CH.filter((c) => c.levelId == null).length === 12);
+// 第 71 块：第七关「骨塔井底」接了 s07，局内变成 7 夜绑 1~7 关
+ok('局内只有 7 夜', live.length === 7, `实际 ${live.length}`);
+ok('局内七夜分别绑 1~7 关', live.map((c) => c.levelId).sort().join() === '1,2,3,4,5,6,7');
+ok('局内七夜都在第 2 回合结束触发', live.every((c) => c.atRound === 2));
+ok('其余 11 夜 levelId 为 null', CH.filter((c) => c.levelId == null).length === 11);
 
 // ---------------- 4. 调度：storyChapterAt ----------------
 ok('第 1 关第 1 回合不播（还没到 2 回合）', storyChapterAt(1, 1, {}) === null);

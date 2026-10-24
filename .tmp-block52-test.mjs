@@ -44,13 +44,17 @@ function glbClipNames(abs) {
 const TYPES = Object.entries(ENEMY_TYPES).filter(([, t]) => !t.planned);
 const typeNames = TYPES.map(([k]) => k);
 
-sec('一、13 只怪 · 一只一个模型');
-ok(TYPES.length === 15, `怪物条目 15 只（实际 ${TYPES.length}）`);   // 第 63 块 +擦名者/重启体
+// 第 71 块：+井蛙/木鱼灵 = 17 条；这两只暂时复用 wolf / tribal 换色占位，
+// 所以「条目 17 / 文件 15」，重复的只允许是这两个已知占位。
+const KNOWN_PLACEHOLDER = ['assets/monsters/wolf.glb', 'assets/monsters/tribal.glb'];
+sec('一、17 只怪 · 一只一个模型');
+ok(TYPES.length === 17, `怪物条目 17 只（实际 ${TYPES.length}）`);   // 第 71 块 +井蛙/木鱼灵
 const files = TYPES.map(([, t]) => t.file);
 ok(files.every((f) => typeof f === 'string' && f.startsWith('assets/monsters/')), '每条都写了 assets/monsters/ 下的模型');
-ok(new Set(files).size === files.length,
-  `13 个模型文件互不重复（${files.length} 条目 / ${new Set(files).size} 文件）`,
-  `重复：${files.filter((f, i) => files.indexOf(f) !== i).join(', ')}`);
+const dupFiles = files.filter((f, i) => files.indexOf(f) !== i);
+ok(dupFiles.every((f) => KNOWN_PLACEHOLDER.includes(f)) && dupFiles.length === 2,
+  `15 个模型文件互不重复（${files.length} 条目 / ${new Set(files).size} 文件，仅井蛙/木鱼灵占位复用）`,
+  `重复：${dupFiles.join(', ')}`);
 const names = TYPES.map(([, t]) => t.name);
 ok(new Set(names).size === names.length, '13 个中文名互不重复');
 // 第一关四只维持 KayKit 骷髅（用户定案：只换后 9 只）
