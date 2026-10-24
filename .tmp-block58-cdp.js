@@ -90,10 +90,18 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     await waitFor("document.getElementById('titleScr').style.display !== 'none' && !document.getElementById('titleScr').classList.contains('off')", 15000, '标题页淡入完成');
 
     // ============================================================
-    console.log('\n[A] 商店 UI：主菜单 → 局外商店子界面');
+    console.log('\n[A] 商店 UI：主菜单 → 夜行商店 → 盲盒区');
     // ============================================================
     await ev("document.getElementById('btnShop').click()");
-    await waitFor("document.getElementById('msScr').classList.contains('on')", 8000, '局外商店打开');
+    await waitFor("document.getElementById('campScr').classList.contains('on')", 8000, '夜行商店打开');
+    // 第一次进店会弹「夜行商店是永久投资」告知（第 41 块），点掉它 —— 不点 uiHold 不清零
+    await ev("document.getElementById('caOk').click()");
+    await ev("document.getElementById('shopTabBox').click()");
+    await waitFor("!document.getElementById('shopBodyBox').hidden", 5000, '切到盲盒区');
+    // 第 74 块：局外商店并进「夜行商店」，且要先切到盲盒那一区才看得到宝箱
+    await waitFor("document.getElementById('campScr').classList.contains('on')", 8000, '夜行商店打开');
+    await ev("document.getElementById('shopTabBox').click()");
+    await waitFor("!document.getElementById('shopBodyBox').hidden", 5000, '切到盲盒区');
     const msItems = await ev("document.querySelectorAll('#msList .ms-item').length");
     ok(msItems === 3, '3 档宝箱渲染（木/银/金）', String(msItems));
     const msBonesTxt = await ev("document.getElementById('msBones').textContent");
@@ -102,9 +110,9 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     ok(/木匣/.test(names) && /银匣/.test(names) && /金匣/.test(names), '三档名字正确', names);
     const info = await ev("document.getElementById('msList').textContent");
     ok(/诅咒率/.test(info) && /强度/.test(info), '每项显示诅咒率与强度');
-    await ev("document.getElementById('msBack').click()");
+    await ev("document.getElementById('cfBack').click()");
     await sleep(150);
-    ok(await ev("document.getElementById('msScr').classList.contains('on')") === false, '返回能关掉');
+    ok(await ev("document.getElementById('campScr').classList.contains('on')") === false, '返回能关掉');
 
     // ============================================================
     console.log('\n[B] 开箱分布（纯随机，大样本）');
@@ -141,7 +149,12 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     // ============================================================
     await ev('window.__game.meta.addBones(50)');
     await ev("document.getElementById('btnShop').click()");
-    await waitFor("document.getElementById('msScr').classList.contains('on')", 8000, '重开商店');
+    await waitFor("document.getElementById('campScr').classList.contains('on')", 8000, '夜行商店打开');
+    // 第一次进店会弹「夜行商店是永久投资」告知（第 41 块），点掉它 —— 不点 uiHold 不清零
+    await ev("document.getElementById('caOk').click()");
+    await ev("document.getElementById('shopTabBox').click()");
+    await waitFor("!document.getElementById('shopBodyBox').hidden", 5000, '切到盲盒区');
+    await waitFor("document.getElementById('campScr').classList.contains('on')", 8000, '重开商店');
     await ev("document.querySelectorAll('#msList .ms-buy')[2].click()");  // 金匣（280 > 50）
     await sleep(200);
     ok(await ev('window.__game.meta.state().opened') === 0, '钱不够买金匣 → 不开箱（opened=0）');
@@ -149,10 +162,15 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     ok(bonesBefore === 50, '骨币没被扣', String(bonesBefore));
     // 补到够，再买金匣
     await ev('window.__game.meta.addBones(950)');
-    await ev("document.getElementById('msBack').click()");
+    await ev("document.getElementById('cfBack').click()");
     await sleep(120);
     await ev("document.getElementById('btnShop').click()");
-    await waitFor("document.getElementById('msScr').classList.contains('on')", 8000, '重开商店（钱够了）');
+    await waitFor("document.getElementById('campScr').classList.contains('on')", 8000, '夜行商店打开');
+    // 第一次进店会弹「夜行商店是永久投资」告知（第 41 块），点掉它 —— 不点 uiHold 不清零
+    await ev("document.getElementById('caOk').click()");
+    await ev("document.getElementById('shopTabBox').click()");
+    await waitFor("!document.getElementById('shopBodyBox').hidden", 5000, '切到盲盒区');
+    await waitFor("document.getElementById('campScr').classList.contains('on')", 8000, '重开商店（钱够了）');
     const openedBefore = await ev('window.__game.meta.state().opened');
     await ev("document.querySelectorAll('#msList .ms-buy')[2].click()");  // 金匣：开启·280
     await waitFor("document.getElementById('boxReveal').classList.contains('on')", 5000, '真实购买 → 揭示浮层弹出');
@@ -176,7 +194,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     ok(logLen >= 1, '开箱记录写入', String(logLen));
     const logTxt = await ev("document.getElementById('msLog').textContent");
     ok(/开箱记录|木匣|银匣|金匣/.test(logTxt), '商店内开箱记录区有内容');
-    await ev("document.getElementById('msBack').click()");
+    await ev("document.getElementById('cfBack').click()");
     await sleep(150);
 
     // ============================================================

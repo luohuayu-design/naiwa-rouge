@@ -5,37 +5,37 @@
 // 目标是把三件事调顺：摇杆输入 → 角色速度/朝向 → 相机跟随。
 // 后续叠战斗时，只需要在 tick() 里加敌人更新与自动攻击，不用动输入层。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=84';
-import { buildNightScene } from './scene.js?v=84';
-import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=84';
-import { createInput } from './input.js?v=84';
-import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=84';
-import { createStatView } from './statView.js?v=84';
-import { createWeaponStats } from './weaponStats.js?v=84';
-import { createFx } from './fx.js?v=84';
-import { createEnemySystem, ENEMY_TYPES } from './enemy.js?v=84';
+import * as THREE from '../lib/three.module.js?v=85';
+import { buildNightScene } from './scene.js?v=85';
+import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=85';
+import { createInput } from './input.js?v=85';
+import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=85';
+import { createStatView } from './statView.js?v=85';
+import { createWeaponStats } from './weaponStats.js?v=85';
+import { createFx } from './fx.js?v=85';
+import { createEnemySystem, ENEMY_TYPES } from './enemy.js?v=85';
 import {
   createLevel, LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVEL_5, LEVEL_6, LEVEL_7, LEVELS_BY_ID, DIFFS, setDifficulty, getDifficulty, roundScale, levelStats, levelTypes,
-} from './wave.js?v=84';
-import { createRangeRing } from './rangeRing.js?v=84';
-import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=84';
-import { createWeaponSystem } from './weapon.js?v=84';
-import { createArrowRainSystem } from './arrowRain.js?v=84';
-import { SWORD_KINDS } from './swordKinds.js?v=84';
-import { createGoldSystem } from './gold.js?v=84';
-import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW } from './shop.js?v=84';
-import { createTurretSystem, TURRET } from './turret.js?v=84';
-import { createRelicSystem, RELIC_DEFS } from './relics.js?v=84';
-import { createHazards } from './hazards.js?v=84';
-import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=84';
-import audio from './audio.js?v=84';
-import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=84';
+} from './wave.js?v=85';
+import { createRangeRing } from './rangeRing.js?v=85';
+import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=85';
+import { createWeaponSystem } from './weapon.js?v=85';
+import { createArrowRainSystem } from './arrowRain.js?v=85';
+import { SWORD_KINDS } from './swordKinds.js?v=85';
+import { createGoldSystem } from './gold.js?v=85';
+import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW } from './shop.js?v=85';
+import { createTurretSystem, TURRET } from './turret.js?v=85';
+import { createRelicSystem, RELIC_DEFS } from './relics.js?v=85';
+import { createHazards } from './hazards.js?v=85';
+import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=85';
+import audio from './audio.js?v=85';
+import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=85';
 // 第 62 块：回血技能（第四关通关后永久解锁，回 5 点 / CD 25 秒）
-import { createHealSkill, HEAL_AMOUNT, HEAL_CD } from './healSkill.js?v=84';
+import { createHealSkill, HEAL_AMOUNT, HEAL_CD } from './healSkill.js?v=85';
 // 第 62 块：民心专属事件（升档走良性池、掉档走恶性池）
-import { repPoolForTier, REP_GOOD, REP_BAD } from './repEvents.js?v=84';
+import { repPoolForTier, REP_GOOD, REP_BAD } from './repEvents.js?v=85';
 // 第 62 块：攻略面板（战败提示上的「查看攻略」，手风琴三组）
-import { renderGuide, GUIDE_SECTIONS } from './guide.js?v=84';
+import { renderGuide, GUIDE_SECTIONS } from './guide.js?v=85';
 import {
   settings as readSettings, setSetting, save as saveProfile, profile,
   bumpStat, setStatMax, codexAdd, codexCount, countCard, unlockAch, hasAch, addBones, bones, resetAll,
@@ -48,49 +48,51 @@ import {
   healUnlocked, markHealUnlocked,
   rainObtained, markRainObtained,          // 第 65 块：技能的「有没有」只跟解锁有关
   hintSeen, markHintSeen,                  // 第 65 块：一次性提示卡
-} from './profile.js?v=84';
+} from './profile.js?v=85';
 // 第 44 块：礼包兑换（码表只有哈希，明细在 gift.js 顶部注释）
-import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=84';
+import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=85';
 // 第 46 块：音效包（抽象奶蛙音效包 —— 4 段奶蛙叫声，通关第一关解锁）
-import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=84';
-import * as runSave from './runSave.js?v=84';
+import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=85';
+import * as runSave from './runSave.js?v=85';
 import {
   CAMPFIRE, CAMP_STEP, campBuy, campOwned, campLevel,
   campCost, campApply, bonesFor, diffBoneMul, levelBoneMul, coinBones, BONE,
-} from './campfire.js?v=84';
+} from './campfire.js?v=85';
 // 第 23 块：永夜火种（通关白给的 3 次永久三选一）
 import {
   BOONS, BOON_BY_ID, BOON_PICKS, boonOwned, boonStacks, boonPending, boonTotalStacks,
   grantBoons, rollBoons, takeBoon, applyBoons, boonStackText,
-} from './boons.js?v=84';
+} from './boons.js?v=85';
 // 第 21 块：夜行诅咒（自选 debuff 换骨币倍率）
-import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=84';
+import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=85';
 // 第 22 块：种子与每日挑战
 import {
   DAILY_RULES, dayKey, dayText, dailySeed, seedCode, pickDailyCurses,
   seedFromText, pickSeedRules, loadSeedRecords, saveSeedRecord, pruneSeeds,
   dailyRecord, saveDailyRecord, pruneDaily, makeRng,
-} from './seed.js?v=84';
-import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=84';
+} from './seed.js?v=85';
+import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=85';
 // 第 58 块：局外商店 · 宝箱（花骨币买，开箱随机给永久属性 / 永久法器 / 技能CD缩短）
 import {
   BOXES, BOX_BY_ID, buyBox, rollBox, metaApplyStats, applyMeta,
-} from './metaShop.js?v=84';
+  // 第 74 块：盲盒按购买次数加价（三种各自独立计数）
+  boxCost, boxPriceOf, boxBought, BOX_PRICE_STEP,
+} from './metaShop.js?v=85';
 // 第 59 块：每日签到（以周为单位，周一 00:00 重置）
 import {
   WEEK_TIERS, SIGN_BONES, weekCells, signSummary, signToday, signedToday,
-} from './signin.js?v=84';
-import { achById, ACHS } from './achievements.js?v=84';
+} from './signin.js?v=85';
+import { achById, ACHS } from './achievements.js?v=85';
 import {
   EVENTS, ALL_EVENTS, getEventById, pickEvent, effectLines,
   choiceHint, canAfford, costShort, REP_MIN, REP_MAX, REP_START,
   isTalk, eventChoices, resolveRoll, mergeEffects,
-} from './events.js?v=84';
+} from './events.js?v=85';
 // 第 32 块：主线《笑不出来的那一夜》（18 夜，一夜一关，前 3 夜已有关卡）
 import {
   STORY_ARC, STORY_CHAPTERS, STORY_ENDINGS, MARK_INFO,
   storyChapterAt, storyChapterById, storyEndingKey,
-} from './story.js?v=84';
+} from './story.js?v=85';
 
 // 标记模块已经跑起来了：index.html 的兜底自检靠它判断
 // 「模块根本没执行」还是「执行了但加载慢」。
@@ -311,7 +313,7 @@ async function boot() {
     '毒 / 冰 / 雷 / 血元素剑，商店买了就上环',
     '炮台 · 法器 · 金钟罩 · 背包，深夜装备库',
     '一百多条夜行奇遇，路边处处有故事',
-    '篝火商店与永夜火种：死掉也不白死，越打越强',
+    '夜行商店与永夜火种：死掉也不白死，越打越强',
     '自选诅咒换骨币倍率，胆子越大赚得越多',
     '提建议 / 报 bug 有礼包兑换码 —— 主菜单「公告」看详情',
     '祝你今夜走得比昨夜远',
@@ -2408,7 +2410,7 @@ async function boot() {
           if (!adminOn) return;
           applyAdmin(false);
           renderSettings();
-          showToast('管理员模式已关闭', '本局进度 / 永夜火种 / 篝火商店 / 记录全部还原到开启前');
+          showToast('管理员模式已关闭', '本局进度 / 永夜火种 / 夜行商店 / 记录全部还原到开启前');
         });
         seg.append(bOn, bOff);
         wrap.append(label, seg);
@@ -2558,7 +2560,7 @@ async function boot() {
     setTimeout(() => {
       renderCampBadge();
       const cs = document.getElementById('campScr');
-      if (cs && cs.classList.contains('on')) renderCampfire();
+      if (cs && cs.classList.contains('on')) renderShopPane();
     }, 0);
   }
 
@@ -4909,16 +4911,43 @@ async function boot() {
   // ---------------- 篝火 · 夜行骨币（第 19 块） ----------------
   // 局外成长只在这里发生：主菜单进入，站着看，不打断任何一局。
   // 骨币余额与已点燃的火种都存在 profile（bones / camp）。
+  // ⚠️ 第 74 块：篝火商店与局外商店合并成「夜行商店」——
+  //   容器仍是 #campScr（里面现在有「篝火 / 盲盒」两个分区，用 tab 切），
+  //   主菜单只留 #btnShop 一个入口。下面两套渲染函数（篝火 / 宝箱）都没动，
+  //   只多了「进来时落在哪一区」和「切区时重画哪一区」这两件事。
   const campScr = document.getElementById('campScr');
   const cfList = document.getElementById('cfList');
   const cfBones = document.getElementById('cfBones');
   const cfFoot = document.getElementById('cfFoot');
-  const btnCamp = document.getElementById('btnCamp');
-  const campBoneNum = document.getElementById('campBoneNum');
+  const btnShop = document.getElementById('btnShop');
+  const msBadge = document.getElementById('msBadge');
+  const shopTabCamp = document.getElementById('shopTabCamp');
+  const shopTabBox = document.getElementById('shopTabBox');
+  const shopBodyCamp = document.getElementById('shopBodyCamp');
+  const shopBodyBox = document.getElementById('shopBodyBox');
 
   // 主菜单按钮上的骨币角标（每次回标题都会重刷）
-  function renderCampBadge() {
-    if (campBoneNum) campBoneNum.textContent = adminOn ? '∞' : String(bones());
+  function renderShopBadge() {
+    if (msBadge) msBadge.textContent = adminOn ? '∞' : String(bones());
+  }
+  function renderCampBadge() { renderShopBadge(); }   // 老调用点留个同义名
+
+  // 切到哪一块：'camp' 篝火 / 'box' 盲盒
+  let shopTab = 'camp';
+  function setShopTab(which) {
+    shopTab = which === 'box' ? 'box' : 'camp';
+    const onCamp = shopTab === 'camp';
+    if (shopBodyCamp) shopBodyCamp.hidden = !onCamp;
+    if (shopBodyBox) shopBodyBox.hidden = onCamp;
+    if (shopTabCamp) shopTabCamp.classList.toggle('on', onCamp);
+    if (shopTabBox) shopTabBox.classList.toggle('on', !onCamp);
+    if (onCamp) renderCampfire(); else renderMetaShop();
+  }
+
+  // 面板正开着时（买东西 / 切管理员）重画当前那一区
+  // ⚠️ 别叫 renderShop —— 局内商店已经有一个同名函数了（第 74 块踩过一次）
+  function renderShopPane() {
+    if (shopTab === 'box') renderMetaShop(); else renderCampfire();
   }
 
   function renderCampfire() {
@@ -4989,33 +5018,31 @@ async function boot() {
   }
 
   function showCampfire() {
-    renderCampfire();
+    setShopTab('camp');
     showSub(campScr);
     // 第 41 块：第一次进篝火先把「这里买的东西是永久的」讲明白（每个存档只弹一次）
-    permNoticeOnce('campfire', '篝火商店是永久投资，不是这一局的装备',
-      '用夜行骨币点燃的每一簇火种，都会写进本机存档，' +
+    permNoticeOnce('campfire', '夜行商店是永久投资，不是这一局的装备',
+      '用夜行骨币点燃的每一簇火种、开出的每一条永久属性，都会写进本机存档，' +
       '之后每一关、每一局都带着它 —— 换关、重开、关掉网页再来，都还在。\n' +
       '花掉的骨币不会退回，点下去就改不回来了，请谨慎选择。');
   }
 
-  btnCamp.addEventListener('click', showCampfire);
+  // 第 74 块：主菜单只剩这一个商店入口
+  btnShop.addEventListener('click', showCampfire);
   document.getElementById('cfBack').addEventListener('click', () => hideSub(campScr));
+  if (shopTabCamp) shopTabCamp.addEventListener('click', () => { audio.sfx('uiSwitch'); setShopTab('camp'); });
+  if (shopTabBox) shopTabBox.addEventListener('click', () => { audio.sfx('uiSwitch'); setShopTab('box'); });
 
   // ---------------- 局外商店 · 宝箱（第 58 块） ----------------
   // 花夜行骨币买三种品质的宝箱，开箱直接随机给一次永久属性变化
   // （可能触发诅咒、强制负面；高品箱更不易踩雷，还能出永久法器 / 技能CD缩短）。
   // 永久效果落进 profile().metaShop，由 applyMeta 在每局开局注入。
-  const msScr = document.getElementById('msScr');
   const msList = document.getElementById('msList');
   const msBones = document.getElementById('msBones');
   const msFoot = document.getElementById('msFoot');
   const msLog = document.getElementById('msLog');
-  const btnShop = document.getElementById('btnShop');
-  const msBadge = document.getElementById('msBadge');
 
-  function renderMsBadge() {
-    if (msBadge) msBadge.textContent = adminOn ? '∞' : String(bones());
-  }
+  function renderMsBadge() { renderShopBadge(); }   // 第 74 块：两处角标其实是同一个按钮
 
   function renderMetaShop() {
     const have = adminOn ? Infinity : bones();
@@ -5023,9 +5050,13 @@ async function boot() {
     msBones.textContent = adminOn ? '∞' : String(have);
     msList.textContent = '';
     for (const box of BOXES) {
-      const poor = have < box.cost;
+      // 第 74 块：价格按「这个箱子买了几次」涨（首价 +6%/次，三种各自算）
+      const price = boxPriceOf(box.id);
+      const nth = boxBought(box.id);
+      const poor = have < price;
       const row = document.createElement('div');
       row.className = 'ms-item' + (poor ? ' poor' : '');
+      row.dataset.box = box.id;
 
       const head = document.createElement('div');
       head.className = 'ms-head';
@@ -5037,7 +5068,7 @@ async function boot() {
       name.textContent = box.name;
       const cost = document.createElement('span');
       cost.className = 'ms-cost' + (poor ? ' lack' : '');
-      cost.textContent = `${box.cost} 骨币`;
+      cost.textContent = `${price} 骨币`;
       head.append(icon, name, cost);
 
       const info = document.createElement('div');
@@ -5046,6 +5077,8 @@ async function boot() {
       let infoText = `${box.name}：诅咒率 ${cursePct}%`;
       if (box.special) infoText += ` · 有概率出永久法器 / 技能CD缩短`;
       infoText += ` · 强度 ×${box.mag}`;
+      // 买过就明说涨了多少 —— 玩家要能预判下一次多少钱
+      if (nth > 0) infoText += ` · 已开 ${nth} 次，现价 ${price}（首价 ${box.cost}，下次 ${boxCost(box.id, nth + 1)}）`;
       info.textContent = infoText;
 
       row.append(head, info);
@@ -5053,7 +5086,7 @@ async function boot() {
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'ms-buy' + (poor ? ' poor' : '');
-      btn.textContent = poor ? `还差 ${box.cost - have} 骨币` : `开启 · ${box.cost} 骨币`;
+      btn.textContent = poor ? `还差 ${price - have} 骨币` : `开启 · ${price} 骨币`;
       if (!poor) {
         btn.addEventListener('click', () => doBuyBox(box.id));
       }
@@ -5089,17 +5122,15 @@ async function boot() {
     }
     audio.sfx('uiSwitch');
     renderMetaShop();
-    renderMsBadge();
+    renderShopBadge();
     showBoxReveal(r.box, r.res);
   }
 
+  // 第 74 块：不再有独立的局外商店面板 —— 就是夜行商店的「盲盒」那一区
   function showMetaShop() {
-    renderMetaShop();
-    showSub(msScr);
+    setShopTab('box');
+    showSub(campScr);
   }
-
-  btnShop.addEventListener('click', showMetaShop);
-  document.getElementById('msBack').addEventListener('click', () => hideSub(msScr));
 
   // 开箱揭示浮层（第 58 块）：宝箱抖动→打开→展示结果卡片（正面绿 / 稀有金 / 诅咒红）
   const boxReveal = document.getElementById('boxReveal');
@@ -5755,7 +5786,7 @@ async function boot() {
       rsBone.textContent = `🔥 夜行骨币 +${boneGain}`
         + (parts.length ? `（${parts.join(' · ')}）` : '')
         + ` · 现有 ${boneTotal}`
-        + (boneTotal >= 90 ? ' —— 去篝火商店看看' : '');
+        + (boneTotal >= 90 ? ' —— 去夜行商店看看' : '');
     }
     // 通关才能拿永久火种：按钮直接改成「先领火种」，别让人错过
     if (rsBtn) {
@@ -5775,7 +5806,7 @@ async function boot() {
         if (gameState === 'over' && !boonOpen) showPackGet();
       }, 1400);
     }
-    // 第 54 块（用户定案）：倒下之后弹一句「去篝火商店看看」。
+    // 第 54 块（用户定案）：倒下之后弹一句「去夜行商店看看」。
     // 等结算卡淡入完再出 —— 两层面板同时糊上来，玩家不知道该先看哪个。
     if (!isWin) {
       setTimeout(() => {
@@ -5785,8 +5816,8 @@ async function boot() {
   }
 
   // ---------------- 失败提示（第 54 块） ----------------
-  // 只干一件事：把「这一局输了，但骨币进账了，去篝火商店能变强」讲明白。
-  // 「去篝火商店」直接回主菜单并把商店推到他面前；「下次吧」退回结算卡。
+  // 只干一件事：把「这一局输了，但骨币进账了，去夜行商店能变强」讲明白。
+  // 「去夜行商店」直接回主菜单并把商店推到他面前；「下次吧」退回结算卡。
   const failTipEl = document.getElementById('failTip');
   const ftSub = document.getElementById('ftSub');
   function showFailTip() {
@@ -6116,7 +6147,7 @@ async function boot() {
           profile().bones = Math.max(0, n | 0);
           saveProfile();
           renderCampBadge();
-          if (campScr.classList.contains('on')) renderCampfire();
+          if (campScr.classList.contains('on')) renderShopPane();
           return bones();
         },
         owned: () => ({ ...campOwned() }),
@@ -6136,7 +6167,7 @@ async function boot() {
           profile().bones = 0;
           saveProfile();
           renderCampBadge();
-          if (campScr.classList.contains('on')) renderCampfire();
+          if (campScr.classList.contains('on')) renderShopPane();
         },
       },
       // 第 54 块：失败提示（测试要看它什么时候弹、点了跳哪儿）
@@ -6927,6 +6958,10 @@ async function boot() {
         buy: (id, admin = false) => buyBox(id, Math.random, admin),
         bones: () => bones(),
         addBones: (n) => addBones(n),
+        // 第 74 块：盲盒按购买次数加价 —— 测试直接读「现在多少钱 / 买过几次」
+        price: (id) => boxPriceOf(id),
+        bought: (id) => boxBought(id),
+        costAt: (id, n) => boxCost(id, n),
         // 第 59 块：把永久效果注入当前 stats/wstats（测「负向真的扣属性、合并后条数很少」）
         apply: () => metaApplyStats(stats, wstats),
       },

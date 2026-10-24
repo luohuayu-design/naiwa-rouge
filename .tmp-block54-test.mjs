@@ -60,8 +60,8 @@ sec('二、主菜单两行并排');
 
 const iMain = htmlSrc.indexOf('tt-row tt-row-main');
 const iChal = htmlSrc.indexOf('tt-row tt-row-chal');
-const iCamp = htmlSrc.indexOf('id="btnCamp"');
-ok(iMain > 0 && iChal > iMain && iCamp > iChal, '三个块的出现顺序：主行 → 挑战行 → 篝火商店');
+const iCamp = htmlSrc.indexOf('id="btnShop"');   // 第 74 块：篝火/局外合成「夜行商店」，只剩这一个入口
+ok(iMain > 0 && iChal > iMain && iCamp > iChal, '三个块的出现顺序：主行 → 挑战行 → 夜行商店');
 
 const mainRow = htmlSrc.slice(iMain, iChal);
 ok(/id="btnStart"/.test(mainRow), '开始游戏在 tt-row-main 里');
@@ -85,17 +85,17 @@ ok(/\.tt-camp\{margin-top:0/.test(cssSrc), '篝火商店按钮不再额外顶一
 // ============================================================
 // 三、篝火 → 篝火商店
 // ============================================================
-sec('三、篝火改名叫篝火商店');
+sec('三、篝火商店 → 夜行商店（第 74 块：与局外商店合并）');
 
-ok(/<span class="tt-camp-name">篝火商店<\/span>/.test(htmlSrc), '主菜单按钮写「篝火商店」');
-ok(/<div class="lv-title">篝火商店<\/div>/.test(htmlSrc), '面板标题也写「篝火商店」');
-ok(/换来的骨币直接进篝火商店/.test(htmlSrc), '礼包兑换页脚同步');
-ok(/已计入篝火商店与永夜火种的局外加成/.test(htmlSrc), '属性页页脚同步');
+ok(/<span class="tt-camp-name">夜行商店<\/span>/.test(htmlSrc), '主菜单按钮写「夜行商店」');
+ok(/<div class="lv-title">夜行商店<\/div>/.test(htmlSrc), '面板标题也写「夜行商店」');
+ok(/换来的骨币直接进夜行商店/.test(htmlSrc), '礼包兑换页脚同步');
+ok(/已计入夜行商店（篝火 \/ 盲盒）与永夜火种的局外加成/.test(htmlSrc), '属性页页脚同步');
 ok(!/<div class="lv-title">篝火<\/div>/.test(htmlSrc), '旧的面板标题「篝火」已经没了');
 ok(!/<span class="tt-camp-name">篝 火<\/span>/.test(htmlSrc), '旧的主菜单按钮「篝 火」已经没了');
-ok(/篝火商店与永夜火种：死掉也不白死/.test(mainSrc), '加载轮播那条介绍语同步');
-ok(/篝火商店是永久投资/.test(mainSrc), '首次进店的永久说明标题同步');
-ok(/去篝火商店看看/.test(mainSrc), '结算页那句「去篝火商店看看」同步');
+ok(/夜行商店与永夜火种：死掉也不白死/.test(mainSrc), '加载轮播那条介绍语同步');
+ok(/夜行商店是永久投资/.test(mainSrc), '首次进店的永久说明标题同步');
+ok(/去夜行商店看看/.test(mainSrc), '结算页那句「去夜行商店看看」同步');
 ok(/\.tt-camp-name\{letter-spacing:\.1em\}/.test(cssSrc), '四个字收字距，别散成一排');
 // 剧情里的「篝火」不动：那是真的在篝火边讲故事
 ok(true, '夜行奇遇「篝火边的故事」保持原文（剧情场景，不是入口名）');
@@ -107,8 +107,8 @@ sec('四、倒下后弹「温馨提示」');
 
 ok(/id="failTip"/.test(htmlSrc), '#failTip 界面存在');
 ok(/<div class="ft-title">温馨提示<\/div>/.test(htmlSrc), '标题是「温馨提示」');
-ok(/想要提升实力？去篝火商店看看吧。/.test(htmlSrc), '正文与用户要的一字不差');
-ok(/id="ftGo"/.test(htmlSrc) && /去篝火商店<\/button>/.test(htmlSrc), '「去篝火商店」按钮在');
+ok(/想要提升实力？去夜行商店看看吧。/.test(htmlSrc), '正文与用户要的一字不差');
+ok(/id="ftGo"/.test(htmlSrc) && /去夜行商店<\/button>/.test(htmlSrc), '「去夜行商店」按钮在');
 ok(/id="ftLater"/.test(htmlSrc), '「下次吧」也在（别把人堵死在提示里）');
 ok(/id="ftSub"/.test(htmlSrc), '副文案位留出来了（写当前骨币）');
 
@@ -120,9 +120,9 @@ const failHits = (mainSrc.match(/showFailTip\(\);/g) || []).length;
 ok(failHits === 2, `showFailTip 的调用点只有 2 处（实际 ${failHits}）`);
 ok(/failTip: \{\s*show: \(\) => \{ showFailTip\(\);/.test(mainSrc), '第二处是调试钩子，不是第三个入口');
 
-// 4.3 点「去篝火商店」= 收结算 + 回主菜单 + 直接开商店
+// 4.3 点「去夜行商店」= 收结算 + 回主菜单 + 直接开商店
 ok(/ftGoBtn\.addEventListener\('click'[\s\S]{0,420}?hideFailTip\(\)[\s\S]{0,420}?resultEl\.classList\.remove\('on'\)[\s\S]{0,420}?showTitle\(\)[\s\S]{0,420}?showCampfire\(\)/.test(mainSrc),
-  '按钮链路：关提示 → 关结算 → 回标题页 → 开篝火商店');
+  '按钮链路：关提示 → 关结算 → 回标题页 → 开夜行商店');
 ok(/ftLaterBtn\.addEventListener\('click'[\s\S]{0,140}?hideFailTip\(\)/.test(mainSrc),
   '「下次吧」只关提示，退回结算卡');
 

@@ -1,4 +1,4 @@
-import { UPGRADES, FAMILIES, rarityOdds } from './js/upgrade.js?v=84';
+import { UPGRADES, FAMILIES, rarityOdds } from './js/upgrade.js?v=85';
 console.log('总卡数', UPGRADES.length, '族', FAMILIES.length);
 const byTag = {}; for (const u of UPGRADES) byTag[u.tag] = (byTag[u.tag] || 0) + 1;
 console.log('分系', byTag);

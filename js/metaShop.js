@@ -24,12 +24,13 @@
 import {
   profile, bones, addBones, metaShopState, metaAddMod, metaGrantRelic,
   metaGrantSkillCd, metaLog, metaBought, save,
-} from './profile.js?v=84';
-import { RELIC_DEFS } from './relics.js?v=84';
+} from './profile.js?v=85';
+import { RELIC_DEFS } from './relics.js?v=85';
 
 // ---------------- 三档宝箱 ----------------
 // tier 0/1/2 对应「最低可出现的池子档位」；mag 是木匣基准的强度倍率；
 // special / specialW 只有银、金能出稀有项；curse 是诅咒（强制负面）概率。
+// cost 是**首价**（第 74 块）：每买一次按首价 +6% 线性加价，三种各自独立计数。
 export const BOXES = [
   { id: 'wood',   tier: 0, name: '木匣', icon: '📦', cost: 30,  curse: 0.35, mag: 1.0, special: false, specialW: 0 },
   { id: 'silver', tier: 1, name: '银匣', icon: '🎁', cost: 100, curse: 0.18, mag: 1.6, special: true,  specialW: 0.12 },
@@ -37,6 +38,35 @@ export const BOXES = [
 ];
 
 export const BOX_BY_ID = Object.fromEntries(BOXES.map((b) => [b.id, b]));
+
+// ---------------- 第 74 块：按购买次数线性涨价 ----------------
+// 和篝火一个思路（篝火是每级 +35%）但**缓得多**：盲盒有 35% / 18% / 7% 的诅咒率，
+// 买的时候本来就在赌，加价再猛就没人开了。每买一次 +6% **首价**（不是复利）：
+//   木匣 30 → 第 10 次 48 → 第 20 次 66 → 第 30 次 84
+//   银匣 100 → 第 10 次 160 → 第 20 次 220
+//   金匣 280 → 第 10 次 448 → 第 20 次 616
+// 三种箱子各数各的（买木匣不会把金匣抬贵），否则玩家会被逼着只买便宜的。
+export const BOX_PRICE_STEP = 0.06;
+
+// 第 n 次买这个箱子要多少钱（n = 已经买过几次）
+export function boxCost(boxId, boughtN = 0) {
+  const box = typeof boxId === 'string' ? BOX_BY_ID[boxId] : boxId;
+  if (!box) return 0;
+  const n = Math.max(0, Math.floor(Number(boughtN) || 0));
+  return Math.round(box.cost * (1 + BOX_PRICE_STEP * n));
+}
+
+// 现在买这个箱子要多少钱（次数从存档里读）
+export function boxPriceOf(boxId) {
+  const s = metaShopState();
+  return boxCost(boxId, Number((s.bought || {})[boxId]) || 0);
+}
+
+// 这个箱子已经买过几次
+export function boxBought(boxId) {
+  const s = metaShopState();
+  return Number((s.bought || {})[boxId]) || 0;
+}
 
 // ---------------- 属性池 ----------------
 // 每条：stat（走 stats 的 key）/ flat 或 pct / scope（weapon 走武器表）/
@@ -53,7 +83,10 @@ const POS = [
   { stat: 'luck',        flat: 0.15, icon: '🍀', name: '鸿运', desc: '幸运',       minTier: 0, weight: 0.9 },
   { stat: 'swordDamage', pct: 0.04, scope: 'weapon', icon: '🗡️', name: '剑芒', desc: '环剑伤害', minTier: 0, weight: 1.0 },
   { stat: 'attackSpeed', pct: 0.02,  icon: '💨', name: '疾袭', desc: '攻击速度',   minTier: 0, weight: 0.9 },
-  { stat: 'hpRegen',     flat: 0.20, icon: '🌿', name: '回春', desc: '生命回复',   minTier: 1, weight: 0.7 },
+  // 第 74 块（用户：生命每秒恢复太强，很影响平衡性）：**概率和数值一起降**。
+  // 权重 0.7 → 0.25（不再是最容易抽到的那几档），数值 0.20 → 0.08（金匣 ×2.4
+  // 一次最多 0.19/秒，以前是 0.48/秒）。负面项同步降，正负依旧一一对应。
+  { stat: 'hpRegen',     flat: 0.08, icon: '🌿', name: '回春', desc: '生命回复',   minTier: 1, weight: 0.25 },
   { stat: 'lifesteal',   flat: 0.04, icon: '🩸', name: '嗜血', desc: '近战吸血',   minTier: 1, weight: 0.6 },
   { stat: 'multiHit',    flat: 1,    icon: '🎯', name: '连击', desc: '同时命中',   minTier: 1, weight: 0.45, int: true },
   { stat: 'critDamage',  pct: 0.10,  icon: '💥', name: '暴怒', desc: '暴击伤害',   minTier: 1, weight: 0.55 },
@@ -70,7 +103,7 @@ const NEG = [
   { stat: 'luck',        flat: 0.15, icon: '🥀', name: '厄运', desc: '幸运',       minTier: 0, weight: 0.9 },
   { stat: 'swordDamage', pct: 0.04, scope: 'weapon', icon: '🌫️', name: '剑锈', desc: '环剑伤害', minTier: 0, weight: 1.0 },
   { stat: 'attackSpeed', pct: 0.02,  icon: '🐌', name: '迟滞', desc: '攻击速度',   minTier: 0, weight: 0.9 },
-  { stat: 'hpRegen',     flat: 0.20, icon: '🥀', name: '枯萎', desc: '生命回复',   minTier: 1, weight: 0.7 },
+  { stat: 'hpRegen',     flat: 0.08, icon: '🥀', name: '枯萎', desc: '生命回复',   minTier: 1, weight: 0.25 },
 ];
 
 // 稀有项里可永久拥有的法器（不含任何一关才有的，全部 5 种都能常驻）
@@ -164,10 +197,13 @@ export function rollBox(boxId, rng = Math.random) {
 export function buyBox(boxId, rng = Math.random, admin = false) {
   const box = BOX_BY_ID[boxId];
   if (!box) return { ok: false, reason: 'nobox' };
-  if (!admin && bones() < box.cost) {
-    return { ok: false, reason: 'poor', cost: box.cost, have: bones() };
+  // 第 74 块：价格按「这个箱子已经买过几次」算（三种各自独立），不是固定价
+  const price = boxPriceOf(boxId);
+  const nth = boxBought(boxId) + 1;
+  if (!admin && bones() < price) {
+    return { ok: false, reason: 'poor', cost: price, have: bones() };
   }
-  if (!admin) addBones(-box.cost);     // 扣骨币只在这里做
+  if (!admin) addBones(-price);        // 扣骨币只在这里做
   metaBought(boxId);
 
   const res = rollBox(boxId, rng);
@@ -181,7 +217,7 @@ export function buyBox(boxId, rng = Math.random, admin = false) {
     icon: res.icon, name: res.name, effect: res.effectText, ts: Date.now(),
   });
   save();
-  return { ok: true, box, res, bones: bones() };
+  return { ok: true, box, res, bones: bones(), cost: price, nth };
 }
 
 // ---------------- 开局注入（纯属性，不碰任何实例） ----------------

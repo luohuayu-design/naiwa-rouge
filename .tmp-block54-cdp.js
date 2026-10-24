@@ -1,8 +1,8 @@
 // 第 54 块 CDP：用户报的四条，抓真实 DOM
 // 跑法：先 `python -m http.server 8124 --bind 127.0.0.1`（cwd=naiwa-rouge），再 `node .tmp-block54-cdp.js`
-//   A 主菜单排版（开始/读取一行、今日/种子一行、篝火商店改名）
-//   B 篝火商店（标题、布袋每级 10 金币）
-//   C 失败提示（自动弹 → 下次吧 → 去篝火商店）
+//   A 主菜单排版（开始/读取一行、今日/种子一行、商店改名「夜行商店」）
+//   B 夜行商店 · 篝火区（标题、布袋每级 10 金币）
+//   C 失败提示（自动弹 → 下次吧 → 去夜行商店）
 const { spawn } = require('child_process');
 const os = require('os');
 const path = require('path');
@@ -105,7 +105,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     if (await ev(`__game.promo && __game.promo.open()`)) { await ev(`__game.promo.hide(), 1`); await sleep(200); }
 
     // ============================================================
-    // A. 主菜单排版（用户第 2 条）+ 篝火商店改名（第 3 条）
+    // A. 主菜单排版（用户第 2 条）+ 商店改名「夜行商店」（第 3 条 / 第 74 块再改一次）
     // ============================================================
     console.log('\n[A] 主菜单排版与改名');
     ok(await ev(`document.getElementById('btnResume').hidden`), '没有存档时「读取存档」是藏着的');
@@ -118,9 +118,9 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
         return { t: Math.round(b.top), l: Math.round(b.left), r: Math.round(b.right), w: Math.round(b.width), h: Math.round(b.height) }; };
       return {
         start: box('btnStart'), resume: box('btnResume'),
-        daily: box('btnDaily'), seed: box('btnSeed'), camp: box('btnCamp'),
+        daily: box('btnDaily'), seed: box('btnSeed'), camp: box('btnShop'),
         menuTop: Math.round(el('titleScr').querySelector('.tt-menu').getBoundingClientRect().top),
-        campText: el('btnCamp').querySelector('.tt-camp-name').textContent.trim(),
+        campText: el('btnShop').querySelector('.tt-camp-name').textContent.trim(),
         startText: el('btnStart').textContent.trim(),
         resumeText: el('btnResume').textContent.trim(),
       };
@@ -136,7 +136,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     ok(lay.daily.r <= lay.seed.l + 2, `今日挑战在种子挑战左边（${lay.daily.r} ≤ ${lay.seed.l}）`);
     ok(lay.daily.w > 90 && lay.seed.w > 90, `两枚挑战按钮都撑得开（${lay.daily.w} / ${lay.seed.w}）`);
     ok(lay.seed.t > lay.start.t + 20, '挑战那一行在开始行下面，没有叠上去');
-    ok(lay.campText === '篝火商店', `主菜单按钮已改名：${lay.campText}`);
+    ok(lay.campText === '夜行商店', `主菜单按钮已改名：${lay.campText}`);
     // 盒模型自证：tt-body / tt-menu / 各行中心必须都对齐视口中心（图是缩放过的，别看图猜）
     const boxes = await ev(`(() => {
       const b = (sel) => { const e = document.querySelector(sel); if (!e) return null; const r = e.getBoundingClientRect();
@@ -148,11 +148,11 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     await shot('a-title');
 
     // ============================================================
-    // B. 篝火商店（第 1 条：布袋每级 10 金币）
+    // B. 夜行商店 · 篝火区（第 1 条：布袋每级 10 金币）
     // ============================================================
-    console.log('\n[B] 篝火商店');
+    console.log('\n[B] 夜行商店 · 篝火区');
     await ev(`document.getElementById('btnResume').hidden = true, 1`);
-    await ev(`document.getElementById('btnCamp').click(), 1`);
+    await ev(`document.getElementById('btnShop').click(), 1`);
     await sleep(400);
     // 首次进店有一张「永久投资」说明卡，先关掉
     if (await ev(`document.getElementById('confirmAsk').classList.contains('on')`)) {
@@ -161,7 +161,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     }
     ok(await ev(`document.getElementById('campScr').classList.contains('on')`), '点按钮打开了商店面板');
     const cfTitle = await ev(`document.querySelector('#campScr .lv-title').textContent.trim()`);
-    ok(cfTitle === '篝火商店', `面板标题是「篝火商店」（${cfTitle}）`);
+    ok(cfTitle === '夜行商店', `面板标题是「夜行商店」（${cfTitle}）`);
     const purseTxt = await ev(`(() => {
       const b = document.querySelector('#cfList [data-buy="purse"]');
       const row = b && b.closest('.cf-item');
@@ -214,7 +214,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     ok(await waitFor(`document.getElementById('failTip').classList.contains('on')`, 6000),
       '倒下 0.9 秒后自动弹温馨提示');
     const tipText = await ev(`document.getElementById('failTip').querySelector('.ft-text').textContent.trim()`);
-    ok(tipText === '想要提升实力？去篝火商店看看吧。', `正文一字不差：${tipText}`);
+    ok(tipText === '想要提升实力？去夜行商店看看吧。', `正文一字不差：${tipText}`);
     const tipTitle = await ev(`document.getElementById('failTip').querySelector('.ft-title').textContent.trim()`);
     ok(tipTitle === '温馨提示', `标题是「温馨提示」（${tipTitle}）`);
     const tipSub = await ev(`document.getElementById('ftSub').textContent`);
@@ -227,7 +227,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
       const t = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2);
       return t ? (t.id || t.className) : 'null';
     })()`);
-    ok(hit === 'ftGo', `「去篝火商店」在可点位置（命中 ${hit}）`);
+    ok(hit === 'ftGo', `「去夜行商店」在可点位置（命中 ${hit}）`);
     await shot('c-fail-tip');
 
     // C1 「下次吧」：只关提示，结算卡还在
@@ -245,7 +245,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     ok(!(await ev(`document.getElementById('failTip').classList.contains('on')`)), '点「去篝火商店」提示收掉');
     ok(!(await ev(`document.getElementById('result').classList.contains('on')`)), '结算卡也一起收掉（不叠两层遮罩）');
     ok(await ev(`!document.getElementById('titleScr').classList.contains('off')`), '回到了标题页');
-    ok(await ev(`document.getElementById('campScr').classList.contains('on')`), '篝火商店已经推到他面前');
+    ok(await ev(`document.getElementById('campScr').classList.contains('on')`), '夜行商店已经推到他面前');
     ok(await ev(`window.__game.state === 'title'`), `状态回到 title（${await ev('window.__game.state')}）`);
     await shot('d-after-jump');
 
