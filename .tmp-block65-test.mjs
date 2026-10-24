@@ -175,9 +175,12 @@ ok(/export function rainObtained/.test(profileSrc) && /export function markRainO
 // ============================================================
 sec('七、民心事件关底不丢');
 // ============================================================
-ok(/if \(isLast\) \{\s*while \(repEventQueue\.length\)/.test(mainSrc),
-  '关底先播民心队列再结算（原来直接跳过）');
-ok(/if \(rev\) \{ openEvent\(rev, roundNo, runUpgrade\); return; \}/.test(mainSrc), '播的事件仍接回三选一');
+// 第 67 块把这段统一进了 playRep（本回合、三选一之后再播），关底的临时 while 拆了。
+// 运行时「关底照样播」的覆盖在 .tmp-block67-cdp.js 的 C 组（真跑一遍第 20 回合）。
+ok(/if \(isLast\) \{ runUpgrade\(\); return; \}/.test(mainSrc),
+  '关底走 runUpgrade（民心事件在 playRep 里播，不再单独 while）');
+ok(/if \(rev\) \{ openEvent\(rev, roundNo, \(\) => playRep\(next\)\); return; \}/.test(mainSrc),
+  '播的事件仍接回后续（三选一 / 结算）');
 ok(/repEventQueue\.length = 0;/.test(mainSrc), '开局清上一局残留（保留）');
 
 // ============================================================

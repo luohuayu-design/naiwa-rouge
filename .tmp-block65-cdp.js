@@ -514,8 +514,14 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     await sleep(900);
     await ev('__game.enemies.killAll(), __game.skipRound(), 1');
     await sleep(1500);
+    // 第 67 块改了时序：关底也是「三选一 → 民心事件 → 结算」（用户定案）。
+    // 原来这条断言期望的是「关底直接弹民心」，现在关底先把三选一摆出来。
     const stH = await ev('__game.state');
-    ok(stH === 'event', '关底清完回合后弹出的是民心事件（原来直接被吞）', stH);
+    ok(stH === 'upgrade', '关底先弹三选一（第 67 块新时序）', stH);
+    await ev("document.querySelector('#upList .up-item').click(), 1");
+    await sleep(1400);
+    const stH2 = await ev('__game.state');
+    ok(stH2 === 'event', '三选一选完就弹民心事件（原来直接 endGame 吞掉）', stH2);
     const evTitle = await ev("(document.getElementById('evTitle') || {}).textContent || ''");
     const evStory = await ev("(document.getElementById('evStory') || {}).textContent || ''");
     console.log('     事件卡：' + evTitle + ' / ' + evStory.slice(0, 40));

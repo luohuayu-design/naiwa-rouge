@@ -5,37 +5,37 @@
 // 目标是把三件事调顺：摇杆输入 → 角色速度/朝向 → 相机跟随。
 // 后续叠战斗时，只需要在 tick() 里加敌人更新与自动攻击，不用动输入层。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=77';
-import { buildNightScene } from './scene.js?v=77';
-import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=77';
-import { createInput } from './input.js?v=77';
-import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=77';
-import { createStatView } from './statView.js?v=77';
-import { createWeaponStats } from './weaponStats.js?v=77';
-import { createFx } from './fx.js?v=77';
-import { createEnemySystem } from './enemy.js?v=77';
+import * as THREE from '../lib/three.module.js?v=78';
+import { buildNightScene } from './scene.js?v=78';
+import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=78';
+import { createInput } from './input.js?v=78';
+import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=78';
+import { createStatView } from './statView.js?v=78';
+import { createWeaponStats } from './weaponStats.js?v=78';
+import { createFx } from './fx.js?v=78';
+import { createEnemySystem } from './enemy.js?v=78';
 import {
   createLevel, LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVEL_5, LEVEL_6, LEVELS_BY_ID, DIFFS, setDifficulty, getDifficulty, roundScale, levelStats,
-} from './wave.js?v=77';
-import { createRangeRing } from './rangeRing.js?v=77';
-import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=77';
-import { createWeaponSystem } from './weapon.js?v=77';
-import { createArrowRainSystem } from './arrowRain.js?v=77';
-import { SWORD_KINDS } from './swordKinds.js?v=77';
-import { createGoldSystem } from './gold.js?v=77';
-import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW } from './shop.js?v=77';
-import { createTurretSystem, TURRET } from './turret.js?v=77';
-import { createRelicSystem, RELIC_DEFS } from './relics.js?v=77';
-import { createHazards } from './hazards.js?v=77';
-import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=77';
-import audio from './audio.js?v=77';
-import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=77';
+} from './wave.js?v=78';
+import { createRangeRing } from './rangeRing.js?v=78';
+import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=78';
+import { createWeaponSystem } from './weapon.js?v=78';
+import { createArrowRainSystem } from './arrowRain.js?v=78';
+import { SWORD_KINDS } from './swordKinds.js?v=78';
+import { createGoldSystem } from './gold.js?v=78';
+import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW } from './shop.js?v=78';
+import { createTurretSystem, TURRET } from './turret.js?v=78';
+import { createRelicSystem, RELIC_DEFS } from './relics.js?v=78';
+import { createHazards } from './hazards.js?v=78';
+import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=78';
+import audio from './audio.js?v=78';
+import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=78';
 // 第 62 块：回血技能（第四关通关后永久解锁，回 5 点 / CD 25 秒）
-import { createHealSkill, HEAL_AMOUNT, HEAL_CD } from './healSkill.js?v=77';
+import { createHealSkill, HEAL_AMOUNT, HEAL_CD } from './healSkill.js?v=78';
 // 第 62 块：民心专属事件（升档走良性池、掉档走恶性池）
-import { repPoolForTier, REP_GOOD, REP_BAD } from './repEvents.js?v=77';
+import { repPoolForTier, REP_GOOD, REP_BAD } from './repEvents.js?v=78';
 // 第 62 块：攻略面板（战败提示上的「查看攻略」，手风琴三组）
-import { renderGuide, GUIDE_SECTIONS } from './guide.js?v=77';
+import { renderGuide, GUIDE_SECTIONS } from './guide.js?v=78';
 import {
   settings as readSettings, setSetting, save as saveProfile, profile,
   bumpStat, setStatMax, codexAdd, codexCount, countCard, unlockAch, hasAch, addBones, bones, resetAll,
@@ -48,49 +48,49 @@ import {
   healUnlocked, markHealUnlocked,
   rainObtained, markRainObtained,          // 第 65 块：技能的「有没有」只跟解锁有关
   hintSeen, markHintSeen,                  // 第 65 块：一次性提示卡
-} from './profile.js?v=77';
+} from './profile.js?v=78';
 // 第 44 块：礼包兑换（码表只有哈希，明细在 gift.js 顶部注释）
-import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=77';
+import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=78';
 // 第 46 块：音效包（抽象奶蛙音效包 —— 4 段奶蛙叫声，通关第一关解锁）
-import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=77';
-import * as runSave from './runSave.js?v=77';
+import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=78';
+import * as runSave from './runSave.js?v=78';
 import {
   CAMPFIRE, CAMP_STEP, campBuy, campOwned, campLevel,
   campCost, campApply, bonesFor, diffBoneMul, levelBoneMul, coinBones, BONE,
-} from './campfire.js?v=77';
+} from './campfire.js?v=78';
 // 第 23 块：永夜火种（通关白给的 3 次永久三选一）
 import {
   BOONS, BOON_BY_ID, BOON_PICKS, boonOwned, boonStacks, boonPending, boonTotalStacks,
   grantBoons, rollBoons, takeBoon, applyBoons, boonStackText,
-} from './boons.js?v=77';
+} from './boons.js?v=78';
 // 第 21 块：夜行诅咒（自选 debuff 换骨币倍率）
-import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=77';
+import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=78';
 // 第 22 块：种子与每日挑战
 import {
   DAILY_RULES, dayKey, dayText, dailySeed, seedCode, pickDailyCurses,
   seedFromText, pickSeedRules, loadSeedRecords, saveSeedRecord, pruneSeeds,
   dailyRecord, saveDailyRecord, pruneDaily, makeRng,
-} from './seed.js?v=77';
-import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=77';
+} from './seed.js?v=78';
+import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=78';
 // 第 58 块：局外商店 · 宝箱（花骨币买，开箱随机给永久属性 / 永久法器 / 技能CD缩短）
 import {
   BOXES, BOX_BY_ID, buyBox, rollBox, metaApplyStats, applyMeta,
-} from './metaShop.js?v=77';
+} from './metaShop.js?v=78';
 // 第 59 块：每日签到（以周为单位，周一 00:00 重置）
 import {
   WEEK_TIERS, SIGN_BONES, weekCells, signSummary, signToday, signedToday,
-} from './signin.js?v=77';
-import { achById, ACHS } from './achievements.js?v=77';
+} from './signin.js?v=78';
+import { achById, ACHS } from './achievements.js?v=78';
 import {
   EVENTS, ALL_EVENTS, getEventById, pickEvent, effectLines,
   choiceHint, canAfford, costShort, REP_MIN, REP_MAX, REP_START,
   isTalk, eventChoices, resolveRoll, mergeEffects,
-} from './events.js?v=77';
+} from './events.js?v=78';
 // 第 32 块：主线《笑不出来的那一夜》（18 夜，一夜一关，前 3 夜已有关卡）
 import {
   STORY_ARC, STORY_CHAPTERS, STORY_ENDINGS, MARK_INFO,
   storyChapterAt, storyChapterById, storyEndingKey,
-} from './story.js?v=77';
+} from './story.js?v=78';
 
 // 标记模块已经跑起来了：index.html 的兜底自检靠它判断
 // 「模块根本没执行」还是「执行了但加载慢」。
@@ -855,9 +855,11 @@ async function boot() {
     else if (reputation <= 30) stats.addMod({ stat: 'goldRate', flat: -0.08, src: 'rep' });
   }
   // ---------------- 民心专属事件队列（第 62 块）----------------
-  // 民心跨档时把对应池子里的一条排进队列，在**下一次奇遇时**优先播放。
-  // 为什么不同步弹：跨档可能发生在事件结算里（一选完就立刻再弹一张卡，
-  // 玩家会以为选错了），排到下一回合结束的奇遇时段更顺。
+  // 民心跨档时把对应池子里的一条排进队列，在**这一回合结束时**播。
+  // 为什么不在选完那一瞬间就弹：跨档常常发生在事件结算里（一选完立刻再弹一张卡，
+  // 玩家会以为是自己点错了）。所以离开那一张卡再播 ——
+  // 第 67 块（用户定案）的口径：**属性选择在前、民心事件在后**，也就是
+  // 「随机事件 → 三选一 → 民心事件 → 商店」；这回合没有三选一就紧跟着事件弹。
   const repEventQueue = [];     // 待播的事件 id（FIFO，最多两份）
   const repEvFired = new Set(); // 本局已经触发过的档位（同一档不重复刷）
 
@@ -865,7 +867,7 @@ async function boot() {
     // 只在「从一个档跨到另一个档」时触发，而且只认升到 1/2/3、掉到 -1/-2
     if (t0 === t1) return null;
     const up = t1 > t0;
-    const tier = up ? t1 : t1;
+    const tier = t1;
     if (up && !(tier >= 1 && tier <= 3)) return null;
     if (!up && !(tier <= -1 && tier >= -2)) return null;
     const key = (up ? 'good' : 'bad') + tier;
@@ -888,7 +890,8 @@ async function boot() {
     // 跨过档位时给一句提示（不打断事件卡，走 toast）
     const t0 = repTierAt(before), t1 = repTier();
     if (t1 !== t0) {
-      // 第 62 块：跨档 → 排一条民心专属事件（下回合的奇遇时段播放）
+      // 第 62 块：跨档 → 排一条民心专属事件；第 67 块起在**本回合**属性选择之后播
+      // （见 handleRoundClear 的 playRep）
       const qid = queueRepEvent(t0, t1);
       if (qid) {
         const qev = getEventById(qid);
@@ -1404,8 +1407,14 @@ async function boot() {
       upgradeText(res) + (rIdx >= 2 ? ` · ${rarityInfo(up).name}` : ''));
 
     // 第 15 回合是最后一格：选完就结算，不用再等 2.6 秒的回合间隔
+    // 第 67 块：**但不能绕过回调** —— 关底的民心事件挂在 upgradeAfterCb 上
+    //（handleRoundClear 的 playRep），原来这里直接 endGame，排队的那条就丢在
+    // 队列里没人播（CDP 的 C 组抓到的）。现在先让回调跑完，它自己收尾进结算。
     if (pendingRound >= level.totals.rounds) {
-      endGame(true);
+      const next = upgradeAfterCb;
+      upgradeAfterCb = null;
+      if (next) next();
+      else endGame(true);
       return;
     }
     gameState = 'playing';
@@ -3575,39 +3584,47 @@ async function boot() {
     clearRoundBuffs();
     const isLast = roundNo >= level.totals.rounds;
 
+    // 第 67 块（用户定案）：民心跨档事件的口子 —— **本回合内、属性选择之后**播。
+    //   原来它排在「下一回合」的奇遇时段，还让位给主线：玩家选完事件得再打一整
+    //   回合才看到，万一下一回合撞上主线、或者干脆是关底，就一直往后推、甚至丢。
+    //   体感就是「民心升档根本没弹」。现在的口径：
+    //     随机事件 → 属性选择（这回合该有的话）→ 民心事件 → 商店 → 下一回合
+    //   这一回合本来就没有属性选择的，随机事件一关就立刻弹。
+    const playRep = (next) => {
+      if (DEBUG_SKIP_NARRATIVE) { repEventQueue.length = 0; next(); return; }
+      while (repEventQueue.length) {
+        const rid = repEventQueue.shift();
+        const rev = getEventById(rid);
+        // 民心事件自己的选项也可能再跨档 → 播完接着播，别把第二条丢了
+        if (rev) { openEvent(rev, roundNo, () => playRep(next)); return; }
+      }
+      next();
+    };
+
+    const runShop = () => {
+      // 关底：民心事件（若有）播完，这里就是终点 —— 真正的结算点。
+      // 原来结算硬编码在 chooseUpgrade 里、绕过回调，关底那条民心事件因此没人播。
+      if (isLast) { endGame(true); return; }
+      if (level.shouldShop(roundNo) && !DEBUG_SKIP_NARRATIVE) openShop(roundNo, null);
+    };
+    // 属性选择 →（选完）→ 民心事件 → 商店
     const runUpgrade = () => {
-      const runShop = () => {
-        if (!isLast && level.shouldShop(roundNo) && !DEBUG_SKIP_NARRATIVE) openShop(roundNo, null);
-      };
-      if (level.shouldUpgrade(roundNo)) showUpgrade(roundNo, runShop);
-      else runShop();
+      if (!DEBUG_SKIP_NARRATIVE && level.shouldUpgrade(roundNo)) {
+        showUpgrade(roundNo, () => playRep(runShop));
+        return;
+      }
+      playRep(runShop);
     };
 
     const runEvent = () => {
       if (DEBUG_SKIP_NARRATIVE) { runUpgrade(); return; }
-      // 第 65 块（用户报「民心升档没弹事件」）：**关底也要把队列播完**。
-      // 原来 isLast 直接跳结算，排队的那条既没播也没留 —— 进下一关开局又被清空，
-      // 等于永久丢掉。现在的顺序：民心事件 → 三选一 → 结算。
-      if (isLast) {
-        while (repEventQueue.length) {
-          const rid = repEventQueue.shift();
-          const rev = getEventById(rid);
-          if (rev) { openEvent(rev, roundNo, runUpgrade); return; }
-        }
-        runUpgrade();
-        return;
-      }
+      // 关底：不抽随机事件、不播主线（老规矩），但民心事件照样要播 ——
+      // 交给 runUpgrade 里的 playRep，不会像第 65 块之前那样被结算吞掉。
+      if (isLast) { runUpgrade(); return; }
       // 0) 主线优先（第 32 块）：这一关走到该播的那一夜，就先播夜。
       //    主线不占随机池、也不消耗「最近出过」的名额 —— 它是路，不是签。
       const chap = storyChapterAt(curLevelId, roundNo, storyProgress().seen);
       if (chap) { playStoryChapter(chap, roundNo, runUpgrade); return; }
-      // 0.5) 民心跨档的专属事件（第 62 块）：比随机事件优先，
-      //      但让位给主线（主线是路，不能被打断）
-      if (repEventQueue.length) {
-        const rid = repEventQueue.shift();
-        const rev = getEventById(rid);
-        if (rev) { openEvent(rev, roundNo, runUpgrade); return; }
-      }
       // 1) 到期的连锁优先兑现（剧情不能爽约）
       const dueIdx = laterQueue.findIndex((q) => q.due <= roundNo);
       if (dueIdx >= 0) {

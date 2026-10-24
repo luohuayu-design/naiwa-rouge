@@ -14,7 +14,7 @@
 //
 // 通电状态对外暴露 `isPowered(x, z)`：法器的「绝缘斗篷」靠它决定要不要把电引出去。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=77';
+import * as THREE from '../lib/three.module.js?v=78';
 
 export function createHazards({ scene, fx, playerPos, playerRadius = 0.32, hurtPlayer }) {
   // def: { x, z, r, cycle, on, warm, damage }

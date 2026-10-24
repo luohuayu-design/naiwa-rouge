@@ -153,7 +153,11 @@ sec('七、版本号');
 // ============================================================
 const ver = (htmlSrc.match(/main\.js\?v=(\d+)/) || [])[1];
 ok(!!ver, `index.html 带版本号（v=${ver}）`);
-ok(ver === '77', `版本推到 v=77（实际 v=${ver}）`);
+// 第 67 块起改成版本无关：只要求 js/*.js 的 import 跟 index.html 一致
+// （写死数字每发一版都要来改一次，纯噪声；真正的风险是「只 bump 了一半」）
+const jsFiles2 = fs.readdirSync(path.join(ROOT, 'js')).filter((f) => f.endsWith('.js'));
+const badVer2 = jsFiles2.filter((f) => new RegExp('\\?v=(?!' + ver + ')\\d+').test(read('js/' + f)));
+ok(badVer2.length === 0, `js/*.js 与 index.html 同版本（v=${ver}）`, badVer2.join(',') || '一致');
 const jsFiles = fs.readdirSync(path.join(ROOT, 'js')).filter((f) => f.endsWith('.js'));
 const badVer = jsFiles.filter((f) => new RegExp('\\?v=(?!' + ver + ')\\d+').test(read('js/' + f)));
 ok(badVer.length === 0, `js/*.js 的 import 全跟 index.html 同版本（${badVer.length ? badVer.join(',') : '一致'}）`);

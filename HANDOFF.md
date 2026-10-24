@@ -2,13 +2,13 @@
 
 > 新对话从这里开始读，不要先翻聊天记录。**先读 §0「给新对话的话」，再按需查后面章节。**
 >
-> 最后更新：2026-10-24 · 线上 **v=77** · 第 66 块（修「事件/三选一按钮很迟钝」= 隐形「知道了」按钮吃点击 + 箭雨教程卡死 + 技能栏在教程期间隐藏 + 箭雨 CD 跨局残留）已完成并推送。
+> 最后更新：2026-10-24 · 线上 **v=78** · 第 67 块（民心跨档事件改到**本回合**结算链里播：随机事件 → 三选一 → 民心事件 → 商店；顺带修好「关底选完三选一直接 endGame、绕过回调」把队列丢掉的坑）已完成并推送。
 
 ---
 
 ## 0. 给新对话的话（2026-10-23 交接）
 
-1. **当前基线**：v=77（第 66 块 = 用户实测两条：**① 箭雨刚出时在教程里按了没反应**（教程最后一步要玩家真放一次，但 wtut 期间波次停着、拿武器又在回合结算之后 → 场上 0 只怪，而箭雨空地按不动 → 永远等不到，教程卡死；现在这一步自动补靶子）+ **② 随机事件 / 三选一的按钮「很迟钝」**（第 65 块把 `.hi-ok` 写成 `pointer-events:auto`，卡片收起后一块 398×39 的隐形按钮压在屏幕正中，吃掉中间那张卡和事件选项约三分之一点击；现在 `.tut-card` 收起时 `visibility:hidden` + 卡片内按钮统一「只有 .on 才吃点击」）；顺带修了「新手教程期间技能栏整套 display:none，而教程第 5 步讲的就是技能栏」与「箭雨 8 秒冷却跨局残留」；再往前第 65 块 = 用户实测八条：回血键改绿色十字 + 外圈充能环并加一次性提示卡 / 擦名者读条时奶蛙头顶百分比 HUD + 首次讲解卡 / 五六关伤害 ×1.35 血量 ×1.15 / 缝补小巫绿加号雨 / 雾鬼显隐差别拉大 / **修「边移动边点技能无效」的真 bug（隐形教程按钮 pointer-events 挡着）** / 关底民心事件不再被吞 / 技能解锁与关卡脱钩；再往前第 64 块新手教程 8 步 + 元素剑群体化，第 63 块第五关「草甸路口」+ 第六关「骨塔机房」）已推送，git 工作区干净，**没有挂起的半成品**。用户新需求来了再开工，别主动找活。
+1. **当前基线**：v=78（第 67 块 = 用户报「民心提升的剧情还是没有弹」，定下新时序：**随机事件 → 三选一（这回合该有的话）→ 民心事件 → 商店**，没有三选一就随机事件一关立刻弹；原来它排在**下一回合**的奇遇时段、还让位给主线，玩家要多打一整回合才看到。改的时候抓出一个真 bug：`chooseUpgrade` 在关底**直接 `endGame(true)`**、绕过了 `upgradeAfterCb`，关底那条民心事件永远没人播（CDP 的 C 组抓到队列里还留着 `repGoodNames`）；再往前第 66 块 = 用户实测两条：**① 箭雨刚出时在教程里按了没反应**（教程最后一步要玩家真放一次，但 wtut 期间波次停着、拿武器又在回合结算之后 → 场上 0 只怪，而箭雨空地按不动 → 永远等不到，教程卡死；现在这一步自动补靶子）+ **② 随机事件 / 三选一的按钮「很迟钝」**（第 65 块把 `.hi-ok` 写成 `pointer-events:auto`，卡片收起后一块 398×39 的隐形按钮压在屏幕正中，吃掉中间那张卡和事件选项约三分之一点击；现在 `.tut-card` 收起时 `visibility:hidden` + 卡片内按钮统一「只有 .on 才吃点击」）；顺带修了「新手教程期间技能栏整套 display:none，而教程第 5 步讲的就是技能栏」与「箭雨 8 秒冷却跨局残留」；再往前第 65 块 = 用户实测八条：回血键改绿色十字 + 外圈充能环并加一次性提示卡 / 擦名者读条时奶蛙头顶百分比 HUD + 首次讲解卡 / 五六关伤害 ×1.35 血量 ×1.15 / 缝补小巫绿加号雨 / 雾鬼显隐差别拉大 / **修「边移动边点技能无效」的真 bug（隐形教程按钮 pointer-events 挡着）** / 关底民心事件不再被吞 / 技能解锁与关卡脱钩；再往前第 64 块新手教程 8 步 + 元素剑群体化，第 63 块第五关「草甸路口」+ 第六关「骨塔机房」）已推送，git 工作区干净，**没有挂起的半成品**。用户新需求来了再开工，别主动找活。
 2. **节奏**：用户偏好**小步块状推进**——一块功能 = 一次提交 = 一个版本号（v=N）。**做完回归绿就立刻推送交给用户测**，用户反馈比自测更快更准。
 3. **最容易翻车的五件事**：
    ① 发版**两处版本号**都要 bump（index.html 的 `main.js?v=N` / `style.css?v=N` + `js/*.js` 里所有 `import ...?v=N`）——漏一处就是「本地好线上炸」；
@@ -16,7 +16,7 @@
    ③ 公告在 loading 淡完 **+700ms** 才弹，测试截图先 `sleep(2600)` 再 `__game.notice.hide()`；
    ④ `jumpToRound/skipRound` **只在 adminOn 时生效**，不开管理员是静默 no-op；
    ⑤ 本地服务器必须 `run_in_background`；CDP 截图路径**不能含中文**；推送走 `git -c http.proxy=http://127.0.0.1:7897 ...`（先 curl 探代理，挂了改直连）。
-4. **最新绿基线**（动到相关文件后要回归）：Node 16 套约 1250 项 + CDP 54 套约 1850 项全绿（第 66 块新增 `.tmp-block66-test.mjs` 46 项 / `.tmp-block66-cdp.js` 26 项），具体套件与数字见 §6。仓库内 14 套的最新数字：block52 141 / block53 46 / block54 54 / block55 91 / block56 86 / block57 112 / block58 18 / block59 49 / block63 119 / block64 164 / block65 95 / **block66 46** / gift 18 / story 76，全部 0 失败。
+4. **最新绿基线**（动到相关文件后要回归）：Node 17 套约 1300 项 + CDP 57 套约 1950 项全绿（第 67 块新增 `.tmp-block67-test.mjs` 40 项 / `.tmp-block67-cdp.js` 25 项），具体套件与数字见 §6。仓库内 15 套的最新数字：block52 141 / block53 46 / block54 54 / block55 91 / block56 86 / block57 112 / block58 18 / block59 49 / block63 119 / block64 164 / block65 95 / block66 51 / **block67 40** / gift 18 / story 76，全部 0 失败。
 5. **已知既有失败（过期断言，别浪费时间查）**：`.tmp-camp-test.mjs` 84/22、`.tmp-boon-test.mjs` 133/13（偶发抖动）、`.tmp-eventui-test.js` 35/2、`.tmp-block18-test.js` 34/1、`.tmp-start-test.js` 33/15、`.tmp-block30-cdp.js` 42/8、`.tmp-ui-test.js` 15/7。
    **第 63 块已修红的**（原来是过期断言，现已改成与实况一致，全 0 失败）：`.tmp-level4-test.mjs` 90/0（雾鬼取消显形距离 / 奶半径 8.0 / 怪 15 / 法器 8 / 成就 41）、`.tmp-level3-test.mjs` 71/0（法器 7）、`.tmp-event-test.mjs` 105/0（事件 121 / 连锁 22 / 民心 0~120）、`.tmp-block52/56/57/59-test.mjs`、`.tmp-story-test.mjs`（18 夜 = 18 关，前 6 夜已绑关）。
    **第 64 块又修红的**：`.tmp-block56-test.mjs` 77/7 → **84/0**（全是第 56 块写死的旧数值：frostTime 1.2→1.6、chainRatio 0.35→0.45、严寒 +0.3→+0.6、导电 +10%→+20%、冰剑 tagline / 雷剑 45% / 商店冰剑文案）、`.tmp-stats-test.mjs` 70/0、`.tmp-rogue-unit.mjs` 144/0、`.tmp-econ-test.mjs` 80/0、`.tmp-event-test.mjs` 105/0、`.tmp-event-test.mjs` 的事件数 121→**131**。
@@ -51,6 +51,15 @@
     ③ **静默失败等于「按键坏了」**：`fire()` 原来只返回 `false`，玩家什么反馈都没有。现在 `lastFail`（`'lock' | 'cd' | 'notarget'`）+ `pressSkill` 里对 `notarget` 冒一句 `fx.text('附近没有怪')`。**任何「条件不满足就不做事」的技能键都该给一句话**。
     ④ **模块级单例的 CD 不会自己清**：`arrowRain` 只有读档那条路 `reset()`，直接「重开一局」会把上一局没走完的 8 秒冷却带进新局。加 `resetCd()`（只清 cd、**不动 unlocked** —— 直接 `reset()` 会把 unlocked 也清掉，而 `prefillRing()` 见 `weapon.granted` 已是 true 会提前 return，箭雨就再也解锁不回来）。
     另：**测试里的 `?v=N` 别再写死**。`.tmp-block59` 因为写着 `?v=76` 和模块的 `?v=77` 形成两个实例（骨币读写打在不同对象上），这次改成**运行时从 index.html 读版本号再 `await import()`**，以后发版不用再改测试；`.tmp-block64/65` 的版本断言也统一成「以 index.html 为基准、全部一致」。
+
+17. **第 67 块：结算链是「回调套回调」，别在别处硬编码终点**。民心事件改时序时发现 `chooseUpgrade` 里有一段
+    `if (pendingRound >= level.totals.rounds) { endGame(true); return; }` —— **关底直接结算，`upgradeAfterCb` 根本没被调用**。
+    于是「关底选完三选一 → 播民心事件 → 结算」这条链断在最后一步：队列里还留着 `repGoodNames`，玩家看不到。
+    **教训：凡是 `if (...) { endGame(); return; }` 这种「提前收官」，都要问一句「它是不是绕过了本该调用的回调」**。
+    现在关底也先跑 `upgradeAfterCb`，终点统一收在 `runShop` 的 `if (isLast) { endGame(true); return; }`。
+    另：**改「什么时候发生」不要从队列下手，要从编排下手**。`repEventQueue` 本身没错（第 62 块排得对），
+    错的是它被消费的位置（下一回合的 `runEvent` 里）。改成在 `handleRoundClear` 抽一个 `playRep(next)` 当唯一出口，
+    顺序问题就变成一行 `showUpgrade(roundNo, () => playRep(runShop))` 的事。
 
 ---
 
@@ -125,6 +134,7 @@ Three.js r160 的单摇杆幸存者肉鸽《奶蛙夜行》，纯静态站点（
 | **64** | **v=75** | **① 新手教程 4 步→8 步**（走路 / **判定环** / 打第一只 / 三选一 / 属性面板 / 技能栏与 CD 读秒 / 背包 / 开局），推进从「按下标」改成「按 `kind`」，讲解步用 `#tcNext` 手动翻；**② 环剑恢复顺序随机化**（导出纯函数 `pickMissingKind(owned, ringKinds, rng)`：从「库存减环上」的差集里随机挑，属性剑不再被先得的铁剑稀释）；**③ 元素剑群体化**（毒/冰/血/震统一「命中点 3.5 格内一圈」，直接命中那只不吃溅射，血剑按一圈总伤害回血；雷剑保持全场连锁并 `return`，不进圆圈分支；新增武器属性 `elementRadius` 3.5 格 / `elementRatio` 50%）；**④ 剑系 9 张卡约翻倍**（剑伤害 30→60% / 暴击 0.08→0.16 / 吸剑 40→80% / 转速 25→50% / 锻剑 −1→−2 秒 / 淬毒 0.05→0.12 / 严寒 0.3→0.6 / 导电 0.10→0.20 / 回春 0.05→0.10）；**⑤ 属性面板加第三页「技能」**（3 个技能 + CD 时长 + 当前状态 + 未解锁写清条件）；**⑥ 技能 CD 倒计时两位小数**（`skills.js` 的 `fmtCd`，原 `Math.ceil`）；**⑦ 主线番外事件 10 条**（`js/eventsSide.js`，全部带 `cond(ctx.story)`，看过对应夜才进池；事件总数 121→**131**）** |
 | **65** | **v=76** | **用户实测八条**：①（真 bug）**移动中点技能无效** —— 收起的教程卡 `opacity:0` 但 `#tcSkip/#wtNext` 仍 `pointer-events:auto`，正好压在技能栏最上两格；改成默认 `none`、只 `.tut-card.on` 时 `auto`；② **回血键改绿色十字 + 外圈充能环**（`skills.js` 新增 `art` 内联 SVG / `ring:true`，环周长 163.36）＋**一次性提示卡**（`HINTS` 表 + `hintPause` 式 `gameState='hint'`，世界真冻结，档案 `profile.tut`）；③ **擦名者读条百分比 HUD**（`enemies.eraseCast()` 取进度最高那只 → 奶蛙头顶 `#castHud`，≥65% 变 `warn` 粉 + 脉动；首次弹讲解卡）；④ **五六关难度**：`scale.hpMul 1.15 / dmgMul 1.35`（只抬这两关，前四关不动）；⑤ **缝补小巫绿加号雨**（`fx.plus()` 共享 96×96 贴图，每 0.16s 冒一个、连冒 1.4s，最多 10 只怪）；⑥ **雾鬼显隐差别**（隐身 `ghostOpacity 0.16→0.05` + 显形自发光 0.3→2.2）；⑦ **关底民心事件不再被吞**（`handleRoundClear` 的 `isLast` 分支先播 `repEventQueue` 再结算）；⑧ **技能解锁与关卡脱钩**（`prefillRing()` 重写 + 档案 `rainGot`：只要有记录 ≥ 第 2 关或 `rainGot` 就开局送环剑 + 箭雨，重打第一关也带着）** |
 | **66** | **v=77** | **用户实测两条（都是上一块留下的）**：① **箭雨刚出时在教程里按了没反应** —— `WEAPON_TUT.arrowrain` 最后一步要求真放一次，但 `wtut` 期间 `level.update` 不跑（波次停）、拿武器又发生在回合结算后 → 场上 0 只怪，而 `arrowRain.fire()` 需要射程内有活怪 → 永远等不到 `strikeCount>0`，教程卡死。修：`ensureRainTargets(dt)`（`wtTick(dt)` 里、只 `wait:'rain'` 那步、1.6s 节流、补 2 只 `warrior`）+ `lastFail`/`hasTarget` + 空地按下去冒「附近没有怪」；② **事件 / 三选一按钮「很迟钝」** —— 第 65 块把 `.hi-ok` 写成 `pointer-events:auto`，卡片收起后 398×39 的隐形按钮压在屏幕正中、吃掉中间那张卡和事件选项约三分之一点击。修：`.tut-card{visibility:hidden}` + `.tut-card button{pointer-events:none}` / `.tut-card.on button{auto}` 兜底 + `.hint-card.on{auto}`（能点空白关）；③ 顺带：`skillCtx().playing` 加 `tutorial` + `startTutorial()` 里 `prefillRing({ quiet: true })` / `healSkill.setUnlocked()` / `arrowRain.resetCd()`（开局初始化原先全在 `endTutorial → startPlay` 里，教程第 5 步讲技能栏时整栏是空的）；④ 顺带：`arrowRain.resetCd()`（8 秒冷却原来跨局残留）；⑤ 测试：`.tmp-block59` 改成运行时读版本号，`block64/65` 版本断言改成与版本无关 **|**
+| **67** | **v=78** | **用户：「民心提升的剧情还是没有弹」**。定案时序：**随机事件 → 三选一（这回合该有的话）→ 民心事件 → 商店**；这回合没有三选一的，随机事件一关就立刻弹。原来 `repEventQueue` 排在**下一回合**的奇遇时段、还让位给主线 —— 玩家要多打一整回合才看到，撞上主线还会一路往后推，体感就是「根本没弹」。实现：`handleRoundClear` 里抽出一个 `playRep(next)`（唯一出口，播完递归接队列里的下一条），`runUpgrade` 改成 `showUpgrade(roundNo, () => playRep(runShop))`、无三选一时直接 `playRep(runShop)`，`runEvent` 的关底分支简化为 `runUpgrade()`。**顺带抓出真 bug**：`chooseUpgrade` 在关底直接 `endGame(true)` 并 return，`upgradeAfterCb` 根本没被调用 → 关底那条民心事件永远留在队列里（CDP 抓到 `queue` 还是 `['repGoodNames']`）；现在关底先跑回调、由 `runShop` 的 `if (isLast) { endGame(true); return; }` 收尾 **|**
 | **61** | **v=71** | **读取存档列表改成「最近的在上」**（原升序 + 面板头还写着「早的在上」，已同步改成「最近的在上」）；顺手修 `resumeGame()` 无 uid 兜底分支的同类错误（注释写取最近一次，实际升序 + `[0]` 拿到最旧的那份）** |
 
 > 每个块的实现细节、测试坑、真 bug 教训已沉淀进上面的铁律 / 调试钩子 / 文件地图与代码注释，不再单列。
@@ -222,9 +232,9 @@ arrowRain.lastFail() / arrowRain.hasTarget()                       ← 第 66 �
 
 ## 6. 测试
 
-**Node 15 套（纯逻辑，秒级）**：`node .tmp-stats-test.mjs`（属性）/ `.tmp-rogue-unit.mjs`（回合升级概率）/ `.tmp-econ-test.mjs`（经济商店事件）/ `.tmp-event-test.mjs`（**131 事件** + 番外剧情门槛）/ `.tmp-rarity-test.mjs`（品质幸运）/ `.tmp-block64-test.mjs`（**164 项：武器属性表 / 剑系卡翻倍 / 元素说明 / 番外分布 / 技能元数据 / 攻略面板 / 教程 8 步 / 恢复顺序分布 / 版本号**）/ `.tmp-block65-test.mjs`（**95 项：pointer-events 遮挡回归 / 五六关难度乘数 / 回血键 SVG+环 / 提示卡文案与档案 / 雾鬼透明度 / 绿加号 / 关底民心队列 / 技能解锁脱钩 / 版本号**）/ `.tmp-block66-test.mjs`（**46 项：卡片 visibility 命中测试 / 按钮兜底规则 / 箭雨教程补靶子 / skillCtx 含 tutorial / lastFail+hasTarget / resetCd 不跨局 / 版本号**）/ `.tmp-camp-test.mjs`（篝火骨币）/ `.tmp-level2-test.mjs`（第二关）/ `.tmp-level3-test.mjs`（第三关）/ `.tmp-level4-test.mjs`（第四关）/ `.tmp-admin-test.mjs` / `.tmp-eventui-test.js` / `.tmp-curse-test.mjs` / `.tmp-boon-test.mjs`（永夜火种）。
+**Node 15 套（纯逻辑，秒级）**：`node .tmp-stats-test.mjs`（属性）/ `.tmp-rogue-unit.mjs`（回合升级概率）/ `.tmp-econ-test.mjs`（经济商店事件）/ `.tmp-event-test.mjs`（**131 事件** + 番外剧情门槛）/ `.tmp-rarity-test.mjs`（品质幸运）/ `.tmp-block64-test.mjs`（**164 项：武器属性表 / 剑系卡翻倍 / 元素说明 / 番外分布 / 技能元数据 / 攻略面板 / 教程 8 步 / 恢复顺序分布 / 版本号**）/ `.tmp-block65-test.mjs`（**95 项：pointer-events 遮挡回归 / 五六关难度乘数 / 回血键 SVG+环 / 提示卡文案与档案 / 雾鬼透明度 / 绿加号 / 关底民心队列 / 技能解锁脱钩 / 版本号**）/ `.tmp-block66-test.mjs`（**51 项：卡片 visibility 命中测试 / 按钮兜底规则 / 箭雨教程补靶子 / skillCtx 含 tutorial / lastFail+hasTarget / resetCd 不跨局 / 版本号**）/ `.tmp-block67-test.mjs`（**40 项：民心事件本回合播放 / 顺序 = 事件→三选一→民心 / 无三选一立刻弹 / 关底跑回调不绕过 / 队列递归 / debug 不留垃圾 / 池子 9 条 / 版本号**）/ `.tmp-camp-test.mjs`（篝火骨币）/ `.tmp-level2-test.mjs`（第二关）/ `.tmp-level3-test.mjs`（第三关）/ `.tmp-level4-test.mjs`（第四关）/ `.tmp-admin-test.mjs` / `.tmp-eventui-test.js` / `.tmp-curse-test.mjs` / `.tmp-boon-test.mjs`（永夜火种）。
 
-**CDP 端到端（需先起 8124；一次只跑一套，套间跑 `.tmp-cdp-clean.js`）**：开局/战斗/菜单/设置/存档续玩/图鉴/成就/武器教程/炮台法器/`block18~57` 各块专项/`admin`/`seed`/`pack`/`promo`/`start-test`/`block64`/`block65`/`block66` 等共 **56 套**，约 1920 项。脚本在上级目录（第 32 块前）与 `naiwa-rouge/`（第 41 块起）。
+**CDP 端到端（需先起 8124；一次只跑一套，套间跑 `.tmp-cdp-clean.js`）**：开局/战斗/菜单/设置/存档续玩/图鉴/成就/武器教程/炮台法器/`block18~57` 各块专项/`admin`/`seed`/`pack`/`promo`/`start-test`/`block64`/`block65`/`block66`/`block67` 等共 **57 套**，约 1950 项。脚本在上级目录（第 32 块前）与 `naiwa-rouge/`（第 41 块起）。
 
 **跑全量回归的正确姿势（2026-10-21 定）**：
 - 启动参数带 `--num-raster-threads=2 --renderer-process-limit=1` + 关后台节流（SwiftShader 会按核数开线程打满 CPU）。
