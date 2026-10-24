@@ -12,7 +12,7 @@
 //   text(pos, str, opts)  伤害飘字
 //   update(dt)            每帧推进
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=75';
+import * as THREE from '../lib/three.module.js?v=76';
 
 export function createFx(scene) {
   const live = [];
@@ -110,6 +110,53 @@ export function createFx(scene) {
     live.push({ kind: 'text', obj: spr, mat, tex, t: 0, life, rise, y0: y });
   }
 
+  // ---------------- 绿色加号（第 65 块） ----------------
+  // 缝补小巫给怪回血时要「绿色加号不断浮现」，用户明确要求这个观感。
+  // 和 text() 的区别：这里只画一个「＋」，所以**贴图缓存一份**就够 ——
+  // 一个加号一次 canvas 绘制的话，八只怪一起被奶会瞬间造几十张贴图。
+  // 颜色靠 SpriteMaterial.color 乘上去（贴图本身画成白色）。
+  let plusTex = null;
+  function plusTexture() {
+    if (plusTex) return plusTex;
+    const S = 96;
+    const cv = document.createElement('canvas');
+    cv.width = S; cv.height = S;
+    const g = cv.getContext('2d');
+    g.clearRect(0, 0, S, S);
+    // 描边一圈深色，暗场里压得住；主体纯白，靠材质 color 染成绿色
+    const draw = (w, color) => {
+      g.fillStyle = color;
+      g.fillRect(S / 2 - w / 2, S * 0.16, w, S * 0.68);
+      g.fillRect(S * 0.16, S / 2 - w / 2, S * 0.68, w);
+    };
+    draw(38, 'rgba(2,26,16,0.9)');
+    draw(28, '#ffffff');
+    plusTex = new THREE.CanvasTexture(cv);
+    plusTex.colorSpace = THREE.SRGBColorSpace;
+    return plusTex;
+  }
+
+  // 一朵往上飘的加号。size 是世界尺寸（加号的高度）。
+  function plus(pos, {
+    color = 0x7df0b0, size = 0.42, life = 0.85, rise = 0.95,
+    y = 0.9, spread = 0.45,
+  } = {}) {
+    const mat = new THREE.SpriteMaterial({
+      map: plusTexture(), transparent: true, depthWrite: false, depthTest: false,
+      blending: THREE.NormalBlending,
+    });
+    mat.color.setHex(color);
+    const spr = new THREE.Sprite(mat);
+    const a = Math.random() * Math.PI * 2;
+    const r = Math.random() * spread;
+    spr.scale.set(size, size, 1);
+    spr.position.set(pos.x + Math.cos(a) * r, y, pos.z + Math.sin(a) * r);
+    spr.renderOrder = 7;
+    scene.add(spr);
+    // kind:'plus' —— 只丢材质，贴图是共享的，千万别 dispose
+    live.push({ kind: 'plus', obj: spr, mat, t: 0, life, rise, y0: y, size });
+  }
+
   // ---------------- 常用组合 ----------------
   // 主角近战：两圈从身前扩散开，像拍了一掌
   function swing(pos, range) {
@@ -165,6 +212,12 @@ export function createFx(scene) {
       } else if (e.kind === 'text') {
         e.obj.position.y = e.y0 + e.rise * k;
         e.mat.opacity = k < 0.7 ? 1 : 1 - (k - 0.7) / 0.3;
+      } else if (e.kind === 'plus') {
+        // 加号：一边升一边轻轻放大，前 60% 实心、后面淡出
+        e.obj.position.y = e.y0 + e.rise * k;
+        const sc = 1 + 0.25 * k;
+        e.obj.scale.setScalar(e.size * sc);
+        e.mat.opacity = k < 0.6 ? 1 : 1 - (k - 0.6) / 0.4;
       }
     }
   }
@@ -172,5 +225,13 @@ export function createFx(scene) {
   // dotGeo 目前没用到，先留着给后续 Boss 碎裂用；显式引用避免被打包器当成死代码
   void dotGeo;
 
-  return { ring, burst, text, swing, hit, death, spawnRing, update, count: () => live.length };
+  // 第 65 块：counts() 给测试用 —— 只看「绿加号」有几张在屏上，
+  // 免得被同屏的伤害数字/粒子把总数搅浑。
+  function counts() {
+    let plus = 0;
+    for (const e of live) if (e.kind === 'plus') plus++;
+    return { total: live.length, plus };
+  }
+
+  return { ring, burst, text, plus, swing, hit, death, spawnRing, update, count: () => live.length, counts };
 }

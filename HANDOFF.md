@@ -8,7 +8,7 @@
 
 ## 0. 给新对话的话（2026-10-23 交接）
 
-1. **当前基线**：v=75（第 64 块 = 新手教程扩到 8 步讲透判定环与 UI / 环剑恢复顺序随机化 / 毒冰血震群体化（命中点 3.5 格）/ 剑系 9 张卡约翻倍 / 属性面板第三页「技能」/ 技能 CD 两位小数 / 10 条主线番外事件；再往前是第 63 块第五关「草甸路口」+ 第六关「骨塔机房」）已推送，git 工作区干净，**没有挂起的半成品**。用户新需求来了再开工，别主动找活。
+1. **当前基线**：v=76（第 65 块 = 用户实测八条：回血键改绿色十字 + 外圈充能环并加一次性提示卡 / 擦名者读条时奶蛙头顶百分比 HUD + 首次讲解卡 / 五六关伤害 ×1.35 血量 ×1.15 / 缝补小巫绿加号雨 / 雾鬼显隐差别拉大 / **修「边移动边点技能无效」的真 bug（隐形教程按钮 pointer-events 挡着）** / 关底民心事件不再被吞 / 技能解锁与关卡脱钩；再往前第 64 块新手教程 8 步 + 元素剑群体化，第 63 块第五关「草甸路口」+ 第六关「骨塔机房」）已推送，git 工作区干净，**没有挂起的半成品**。用户新需求来了再开工，别主动找活。
 2. **节奏**：用户偏好**小步块状推进**——一块功能 = 一次提交 = 一个版本号（v=N）。**做完回归绿就立刻推送交给用户测**，用户反馈比自测更快更准。
 3. **最容易翻车的五件事**：
    ① 发版**两处版本号**都要 bump（index.html 的 `main.js?v=N` / `style.css?v=N` + `js/*.js` 里所有 `import ...?v=N`）——漏一处就是「本地好线上炸」；
@@ -38,6 +38,14 @@
     ③ **测试文件自己的 `import '?v=N'` 也要跟着 bump**：模块升 v=75 后 `.tmp-block59/64` 直接 `TypeError: Cannot read properties of undefined`。批量 `sed -i 's/?v=74/?v=75/g' .tmp-*.mjs .tmp-*.js`（含上级目录）；
     ④ **改数值要全仓库扫旧文案**：商店 `shop.js` 的剑描述、图鉴 `codex.js`、`swordKinds.desc`、`guide.js`、武器教程 `WEAPON_TUT` 是五份独立的文案副本，改完数值只改一处 = 玩家看到「冻 1.2 秒」实际冻 1.6 秒。第 64 块就是靠 block56 的旧断言对拍才发现商店还写着 1.2 秒 / 35%。
 14. **改横向特性要回头跑老套件**（2026-10-23 教训）：读秒锁让 block32 静默挂；公告升 `NOTICE_VER` 让 block45 挂；**技能键常驻 DOM**（`renderSkill` 只切 `display`）让 weapon/talk-skill/econ-cdp 数技能格假绿（必须 `filter(b => b.style.display !== 'none')`）；乞丐/商队两拍对话 + 3s 读秒让 `choose` 点 disabled 静默失败（加 `sleep(3500)`）。
+15. **第 65 块的六条新坑**：
+    ① **「淡出但留在 DOM」的浮层必须显式 `pointer-events:none`**（本轮唯一的真 bug）：`.tut-card` 收起后只是 `opacity:0`，里面 `#tcSkip / #wtNext` 却一直是 `pointer-events:auto`，位置正好压在技能栏最上面两格 → **整局点不动回血和箭雨**，而被压在下面的按钮看起来毫无异常。定位手法（值得背下来）：`document.elementsFromPoint(x, y)` 打印整条链 + 每层 `getComputedStyle(el).pointerEvents`，再看哪个 `opacity:0` 的家伙在最上面。现在规则是 `.tc-skip,.wt-next{pointer-events:none}` + `.tut-card.on .tc-skip,.tut-card.on .wt-next{pointer-events:auto}`；
+    ② **`?debug=1` 会跳过叙述**（`DEBUG_SKIP_NARRATIVE`）：民心事件 / 主线剧情在 debug 下整段被吃，测它们必须加 **`&story`**。本轮「民心升档没弹事件」的第一现场就是这个假象，真正的问题只在关底；
+    ③ **用 Python 往 JS 里写 `'\n'` 会被解释成真换行**：普通三引号字符串里写 `text: '…。\n'` 直接把一行撕成两行 → `node --check` 报 `Invalid or unexpected token`。要么写成数组（`text: ['第一句', '第二句']` + `.map()` 渲染，本轮就是改成这样），要么用 `r'''...'''`；
+    ④ **`__game.arrowRain` 是调试壳子，不是系统本体**：`ready` 在包装对象的 **`state()`** 里（`__game.arrowRain.state().ready`），直接读 `.ready` 永远是 `undefined` → 断言假红怪，白等 3 分钟；
+    ⑤ **`heal.state().ready` 在满血时是 false**（故意的：满血不给按，免得白扔 25 秒 CD）。测「CD 转好」要等 `state().cd <= 0.05`，或者先 `hurt()` 掉几点血；
+    ⑥ **CDP 里造靶子别用 `minion`，且都要先钉血**：`minion` 是 `selfDestruct` 自爆怪，追到脸上就炸 —— 等了 8 秒 CD 再点箭雨时 `probe().n` 已经是 0，`fire()` 直接 return false，看起来像「点了没反应」（探针 v8 才抓出来：`pointerdown` 明明到了按钮上）。用 **`warrior`**（`selfDestruct:false`）+ `m.hp = m.maxHp = 9999`。雾鬼同理只有 2 点血，被拍死后**死亡淡出**会让 `mats[i].opacity` 停在 0.72 这种中间值，看起来像「显形不够亮」。
+    另：**headless 里游戏内 CD 基本等于真实时间**（high 档 60fps），25 秒 CD 就别用 40 秒预算硬扛，改用轮询 + 打进度日志（`.tmp-block65-cdp.js` 的 `waitCd()`），否则整套测试会被前台超时掐死。
 
 ---
 
@@ -110,6 +118,7 @@ Three.js r160 的单摇杆幸存者肉鸽《奶蛙夜行》，纯静态站点（
 | **62** | **v=72** | **阶段一：盾斧兽人 / 孢生菇缩到战士 1.4 倍（1.90）；雾鬼 / 雾猎狼 / 缝补小巫统一到 1.85；缝补小巫奶半径 3.2→8.0 且不再画判定圈（只给被治的怪冒绿光）；雾鬼删掉「贴脸强制显形」；奶蛙音效包感知音量 ×1.8（VOICE_GAIN）；民心上限 100→120 + 商店折扣下限放到 0.65；存档列表排序修正在块 61** |
 | **63** | **v=74** | **第五关「草甸路口」**（四向路口刷怪 `lanes:4`，可以提前站位；新怪**擦名者**读条 2.6s 擦走环上一把剑、得手后往场外跑，杀掉还回来 / 跑掉永久没；新法器**路口灯**每 3~4 秒照亮一圈，唯一反隐手段）+ **第六关「骨塔机房」**（地上 6 块**漏电地板**周期通电、通电前 0.8s 橙光预警，站上去每 0.6s 掉 1 血且不吃无敌帧；新怪**重启体**死后躺 4s 半血重启、最多 2 次；新法器**绝缘斗篷**免地板伤害并把电导给身边的怪）+ 第 62 块阶段二（**回血技能**第 4 关通关永久解锁 / **民心专属事件**涨跌档各一套 9 条 / **攻略面板**战败后可看）+ 骨币倍率补齐 4~6 关 + 商店新增 `needLevel` 门槛 + 右上角 HUD 关卡名不再写死** |
 | **64** | **v=75** | **① 新手教程 4 步→8 步**（走路 / **判定环** / 打第一只 / 三选一 / 属性面板 / 技能栏与 CD 读秒 / 背包 / 开局），推进从「按下标」改成「按 `kind`」，讲解步用 `#tcNext` 手动翻；**② 环剑恢复顺序随机化**（导出纯函数 `pickMissingKind(owned, ringKinds, rng)`：从「库存减环上」的差集里随机挑，属性剑不再被先得的铁剑稀释）；**③ 元素剑群体化**（毒/冰/血/震统一「命中点 3.5 格内一圈」，直接命中那只不吃溅射，血剑按一圈总伤害回血；雷剑保持全场连锁并 `return`，不进圆圈分支；新增武器属性 `elementRadius` 3.5 格 / `elementRatio` 50%）；**④ 剑系 9 张卡约翻倍**（剑伤害 30→60% / 暴击 0.08→0.16 / 吸剑 40→80% / 转速 25→50% / 锻剑 −1→−2 秒 / 淬毒 0.05→0.12 / 严寒 0.3→0.6 / 导电 0.10→0.20 / 回春 0.05→0.10）；**⑤ 属性面板加第三页「技能」**（3 个技能 + CD 时长 + 当前状态 + 未解锁写清条件）；**⑥ 技能 CD 倒计时两位小数**（`skills.js` 的 `fmtCd`，原 `Math.ceil`）；**⑦ 主线番外事件 10 条**（`js/eventsSide.js`，全部带 `cond(ctx.story)`，看过对应夜才进池；事件总数 121→**131**）** |
+| **65** | **v=76** | **用户实测八条**：①（真 bug）**移动中点技能无效** —— 收起的教程卡 `opacity:0` 但 `#tcSkip/#wtNext` 仍 `pointer-events:auto`，正好压在技能栏最上两格；改成默认 `none`、只 `.tut-card.on` 时 `auto`；② **回血键改绿色十字 + 外圈充能环**（`skills.js` 新增 `art` 内联 SVG / `ring:true`，环周长 163.36）＋**一次性提示卡**（`HINTS` 表 + `hintPause` 式 `gameState='hint'`，世界真冻结，档案 `profile.tut`）；③ **擦名者读条百分比 HUD**（`enemies.eraseCast()` 取进度最高那只 → 奶蛙头顶 `#castHud`，≥65% 变 `warn` 粉 + 脉动；首次弹讲解卡）；④ **五六关难度**：`scale.hpMul 1.15 / dmgMul 1.35`（只抬这两关，前四关不动）；⑤ **缝补小巫绿加号雨**（`fx.plus()` 共享 96×96 贴图，每 0.16s 冒一个、连冒 1.4s，最多 10 只怪）；⑥ **雾鬼显隐差别**（隐身 `ghostOpacity 0.16→0.05` + 显形自发光 0.3→2.2）；⑦ **关底民心事件不再被吞**（`handleRoundClear` 的 `isLast` 分支先播 `repEventQueue` 再结算）；⑧ **技能解锁与关卡脱钩**（`prefillRing()` 重写 + 档案 `rainGot`：只要有记录 ≥ 第 2 关或 `rainGot` 就开局送环剑 + 箭雨，重打第一关也带着）** |
 | **61** | **v=71** | **读取存档列表改成「最近的在上」**（原升序 + 面板头还写着「早的在上」，已同步改成「最近的在上」）；顺手修 `resumeGame()` 无 uid 兜底分支的同类错误（注释写取最近一次，实际升序 + `[0]` 拿到最旧的那份）** |
 
 > 每个块的实现细节、测试坑、真 bug 教训已沉淀进上面的铁律 / 调试钩子 / 文件地图与代码注释，不再单列。
@@ -193,6 +202,11 @@ sign.{show,hide,open,state,cells,signed,do,btn} / ui.perf{auto,state,setFps,tick
 block64.tut{step,total,kind,title,text,stepText,nextHidden,next,start,skip}   ← 教程 8 步（截图/断言用）
 block64.panel{open,close,tab,rows,notes,sub}                                  ← 属性面板三页
 block64.skillNums() / ringKinds() / ringOrder() / elemHit(kind,type) / weaponStats() / grantRing()
+block65.hint{open,queue,seen,show,close,pump,forget,text,visible}   ← 一次性提示卡（回血 / 读条）
+block65.cast{info,start(p),hud}                                    ← 擦名者读条：start 造一只并推进到 p 进度
+block65.buttons() / rainUnlocked() / rainObtained() / ringObtained() / prefill()
+fx.counts()                                                        ← { total, plus }：数屏上有几个绿加号
+enemies.eraseCast() / wraithCount() / hiddenCount() / menderCount()
 ```
 
 常用：`__game.hurt(99)` 直接结算；`__game.enemies.all().forEach(e=>__game.enemies.takeDamage(e,999))` 清场（**注意：清光会弹三选一，挡住后续操作**）。
@@ -201,9 +215,9 @@ block64.skillNums() / ringKinds() / ringOrder() / elemHit(kind,type) / weaponSta
 
 ## 6. 测试
 
-**Node 15 套（纯逻辑，秒级）**：`node .tmp-stats-test.mjs`（属性）/ `.tmp-rogue-unit.mjs`（回合升级概率）/ `.tmp-econ-test.mjs`（经济商店事件）/ `.tmp-event-test.mjs`（**131 事件** + 番外剧情门槛）/ `.tmp-rarity-test.mjs`（品质幸运）/ `.tmp-block64-test.mjs`（**164 项：武器属性表 / 剑系卡翻倍 / 元素说明 / 番外分布 / 技能元数据 / 攻略面板 / 教程 8 步 / 恢复顺序分布 / 版本号**）/ `.tmp-camp-test.mjs`（篝火骨币）/ `.tmp-level2-test.mjs`（第二关）/ `.tmp-level3-test.mjs`（第三关）/ `.tmp-level4-test.mjs`（第四关）/ `.tmp-admin-test.mjs` / `.tmp-eventui-test.js` / `.tmp-curse-test.mjs` / `.tmp-boon-test.mjs`（永夜火种）。
+**Node 15 套（纯逻辑，秒级）**：`node .tmp-stats-test.mjs`（属性）/ `.tmp-rogue-unit.mjs`（回合升级概率）/ `.tmp-econ-test.mjs`（经济商店事件）/ `.tmp-event-test.mjs`（**131 事件** + 番外剧情门槛）/ `.tmp-rarity-test.mjs`（品质幸运）/ `.tmp-block64-test.mjs`（**164 项：武器属性表 / 剑系卡翻倍 / 元素说明 / 番外分布 / 技能元数据 / 攻略面板 / 教程 8 步 / 恢复顺序分布 / 版本号**）/ `.tmp-block65-test.mjs`（**95 项：pointer-events 遮挡回归 / 五六关难度乘数 / 回血键 SVG+环 / 提示卡文案与档案 / 雾鬼透明度 / 绿加号 / 关底民心队列 / 技能解锁脱钩 / 版本号**）/ `.tmp-camp-test.mjs`（篝火骨币）/ `.tmp-level2-test.mjs`（第二关）/ `.tmp-level3-test.mjs`（第三关）/ `.tmp-level4-test.mjs`（第四关）/ `.tmp-admin-test.mjs` / `.tmp-eventui-test.js` / `.tmp-curse-test.mjs` / `.tmp-boon-test.mjs`（永夜火种）。
 
-**CDP 端到端（需先起 8124；一次只跑一套，套间跑 `.tmp-cdp-clean.js`）**：开局/战斗/菜单/设置/存档续玩/图鉴/成就/武器教程/炮台法器/`block18~57` 各块专项/`admin`/`seed`/`pack`/`promo`/`start-test`/`block64` 等共 **54 套**，约 1820 项。脚本在上级目录（第 32 块前）与 `naiwa-rouge/`（第 41 块起）。
+**CDP 端到端（需先起 8124；一次只跑一套，套间跑 `.tmp-cdp-clean.js`）**：开局/战斗/菜单/设置/存档续玩/图鉴/成就/武器教程/炮台法器/`block18~57` 各块专项/`admin`/`seed`/`pack`/`promo`/`start-test`/`block64`/`block65` 等共 **55 套**，约 1890 项。脚本在上级目录（第 32 块前）与 `naiwa-rouge/`（第 41 块起）。
 
 **跑全量回归的正确姿势（2026-10-21 定）**：
 - 启动参数带 `--num-raster-threads=2 --renderer-process-limit=1` + 关后台节流（SwiftShader 会按核数开线程打满 CPU）。
@@ -219,6 +233,7 @@ block64.skillNums() / ringKinds() / ringOrder() / elemHit(kind,type) / weaponSta
 
 - [x] 第 19~57 块全部完成并推送（见 §2）
 - [x] 第五关「草甸路口」/ 第六关「骨塔机房」（第 63 块）
+- [x] 第 58~65 块（宝箱 / 签到 / 帧率自适应 / 新手教程 8 步 / 回血键与提示卡 / 读条百分比 / 五六关难度）
 - [ ] **主菜单 3D 背景**（场景和模型都在，只是没跑 render）
 - [ ] 第七关（主线 s07 起还有 12 夜的 `levelId:null` 等接）
 - [ ] 更多武器/技能（`skills.js` 的 SKILLS 表，技能栏还剩 5 格）

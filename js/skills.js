@@ -32,7 +32,7 @@
 //
 // ctx 由 main.js 每帧拼好传进来：{ playing, weapon, playerPos, stats, coins }
 // ============================================================
-import audio from './audio.js?v=75';
+import audio from './audio.js?v=76';
 
 // 冷却数字统一两位小数（第 64 块用户需求：倒计时精确到两位小数）。
 // 不补零会跳字（3.4 → 3.35 期间宽度变化），toFixed(2) 宽度恒定。
@@ -104,12 +104,22 @@ export const SKILLS = [
     id: 'heal',
     name: '回血',
     icon: 'assets/skills/icon-heal.svg',
-    hint: '瞬间回复 5 点生命（不超上限），冷却 25 秒；满血时按不动',
+    // 第 65 块（用户：回血键太丑）：技能键不再用那张灰扑扑的小图，
+    // 直接画一个粗一点的**绿色十字**，冷却走外圈进度环（ring:true）。
+    // art 是内联 SVG（跟着 CSS 一起缩放，不糊），icon 留着给属性面板/长按提示用。
+    art: '<svg viewBox="0 0 40 40" aria-hidden="true">'
+      + '<rect x="15.6" y="5.4" width="8.8" height="29.2" rx="4.2" fill="#7df0b0"/>'
+      + '<rect x="5.4" y="15.6" width="29.2" height="8.8" rx="4.2" fill="#7df0b0"/>'
+      + '<rect x="17.4" y="9" width="2.4" height="10" rx="1.2" fill="#d8ffe9" opacity=".75"/>'
+      + '</svg>',
+    ring: true,
+    hint: '绿色十字：瞬间回复 5 点生命（不超上限），冷却 25 秒；满血时按不动',
     key: '3',
     cd: 25.0,
     cdNow: (ctx) => (ctx.heal && ctx.heal.cdTotal ? ctx.heal.cdTotal : 25.0),
-    desc: '按下的瞬间立刻回 5 点生命，不会超过上限。25 秒冷却，满血时按不动（不浪费 CD）。'
-      + '不回血的角色在第四关往后很难靠药水撑住，这个技能的价值是「不用回城、不用找商店」。',
+    desc: '绿十字键：按下的瞬间立刻回 5 点生命，不会超过上限。25 秒冷却（外圈那条环走完就回满），'
+      + '满血时按不动 —— 不让你白扔一次 CD。第四关往后怪越打越疼、药水不一定在手边，'
+      + '这个技能的价值是「不用回城、不用找商店」的兜底。',
     unlockNote: '第四关通关后永久解锁（局外档案，跨局有效）',
     state: (ctx) => {
       if (!ctx.heal || !ctx.heal.unlocked) return 'lock';

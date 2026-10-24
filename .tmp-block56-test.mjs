@@ -64,10 +64,15 @@ ok(again === false, '重复标记返回 false（幂等，不会反复写档）')
 const pre = (mainSrc.match(/function prefillRing\(\)[\s\S]*?\n  }/) || [''])[0];
 ok(pre.length > 50, 'main.js 里有 prefillRing()');
 ok(/if \(weapon\.granted\) return;/.test(pre), '闸 1：这一局已经有了就不送');
-ok(/if \(curLevelId < 2\) return;/.test(pre), '闸 2：第一关不送（保留第 5 回合的获得时刻）');
+// 第 65 块（用户第 8 条）：技能的「有 / 无」不再看现在打第几关，只看**有没有解锁过**。
+// 所以原来那条「第一关不送」的闸拆了 —— 反过来断言它已经不在。
+ok(!/curLevelId < 2/.test(pre), '闸 2 已拆：不再按关卡判断（重打第一关也带着，第 65 块）');
 ok(/if \(!ringObtained\(\)\) return;/.test(pre), '闸 3：没拿到过就不送');
 ok(/weapon\.grant\(\);/.test(pre), '送的就是最初那 3 把铁剑（weapon.grant）');
-ok(/if \(curLevelId >= 2\) arrowRain\.unlock\(\);/.test(pre), '第二关起顺带解锁箭雨');
+ok(/if \(rainUnlockedBefore\(\)\) \{[\s\S]{0,80}?arrowRain\.unlock\(\);/.test(pre),
+  '箭雨改按「解锁过没有」判断（rainUnlockedBefore）');
+ok(/function rainUnlockedBefore\(\)/.test(mainSrc), 'main.js 有 rainUnlockedBefore()');
+ok(/markRainObtained\(\);/.test(pre), '送箭雨时把「已获得」记进档案');
 ok(/renderSkill\(\);/.test(pre), '送完立刻刷技能栏');
 ok(/queueWeaponTut\('ring'\)/.test(pre), '没看教程的补教（看过的会被 wtSeen 拦下）');
 ok(/setLevel\(pendingLevelId\);[\s\S]{0,400}?prefillRing\(\);/.test(mainSrc), 'startPlay 里 setLevel 之后调用 prefillRing');
@@ -161,7 +166,9 @@ ok(/bottom:calc\(16px \+ var\(--sk-lift,0px\) \+ env\(safe-area-inset-bottom\)\)
 ok(/transition:bottom \.22s ease/.test(cssSrc), '上移有 0.22s 过渡（平滑滑上去，不跳变）');
 ok(/function syncSkillLift\(\)/.test(mainSrc), 'main.js 有 syncSkillLift()');
 const lift = (mainSrc.match(/function syncSkillLift\(\)[\s\S]*?\n  \}/) || [''])[0];
-ok(/document\.querySelector\('\.tut-card\.on'\)/.test(lift), '只认 .tut-card.on（新手教程 + 武器教程共用此类）');
+// 第 65 块：居中的提示卡（.hint-card）不参与抬升计算，否则技能栏会被顶到屏幕中间
+ok(/document\.querySelector\('\.tut-card\.on:not\(\.hint-card\)'\)/.test(lift),
+  '只认 .tut-card.on 且排除居中的 .hint-card（新手教程 + 武器教程共用此类）');
 ok(/skillBar\.style\.setProperty\('--sk-lift', '0px'\)/.test(lift), '没有卡片时归零（平时仍贴右下角）');
 ok(/\(window\.innerHeight - top\) \+ 12 - 16/.test(lift), '抬升量 = 卡片顶边换算出来的差值 + 12px 间距');
 ok(/Math\.min\(lift, Math\.max\(0, window\.innerHeight - barH - 24\)\)/.test(lift), '有上限保护（横屏矮屏不许把整栏顶出屏幕）');

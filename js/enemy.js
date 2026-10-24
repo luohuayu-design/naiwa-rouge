@@ -25,11 +25,11 @@
 // 第四关三只（wraith/leaper/mender，第 35 块，第 52 块换模型），
 // 各自在下面 ENEMY_TYPES 里有详细注释。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=75';
-import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=75';
-import { clone as cloneSkinned } from '../lib/jsm/utils/SkeletonUtils.js?v=75';
-import { distance2D } from './stats.js?v=75';
-import { createRangeRing } from './rangeRing.js?v=75';
+import * as THREE from '../lib/three.module.js?v=76';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=76';
+import { clone as cloneSkinned } from '../lib/jsm/utils/SkeletonUtils.js?v=76';
+import { distance2D } from './stats.js?v=76';
+import { createRangeRing } from './rangeRing.js?v=76';
 
 // KayKit 模型正面朝 +Z；如果哪天换模型发现怪倒着走，把这里改成 Math.PI
 export const ENEMY_MODEL_YAW = 0;
@@ -553,7 +553,11 @@ export const ENEMY_TYPES = {
       hidden: 2.5,         // 隐身时长
       visible: 3.0,        // 显形时长
       firstHidden: 1.4,    // 出生后多久第一次隐身
-      ghostOpacity: 0.16,  // 隐身时的材质透明度（留一点影子，浓雾里若隐若现）
+      // 第 65 块（用户：现身状态和隐身差别太小）：
+      //   隐身 0.16 → **0.05**（几乎只剩一点轮廓，看得见「有东西」但看不清它）
+      //   显形同时把自发光拉到 2.2（见 update 里的 ghost 分支）——
+      //   在雾里，亮起来比「变不透明」更容易被一眼认出。
+      ghostOpacity: 0.05,
     },
     spawnTime: 1.0,
     deathTime: 1.4,
@@ -1865,6 +1869,28 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
   //   孵骨逼你比谁清得快，缝补小巫逼你比谁拆得快 —— 不先拆它，血全白打。
   // 奶量随回合成长（跟着生成时的 damageScale 走），后期一口奶小半管。
   // ============================================================
+  // 治疗特效的「加号雨」（第 65 块）：{ x,z,h,left,next }
+  //   left 还剩多久、next 距下一个加号还有多久 —— 由 update 每帧推进
+  const mendFx = [];
+
+  function updateMendFx(dt) {
+    for (let i = mendFx.length - 1; i >= 0; i--) {
+      const f = mendFx[i];
+      f.left -= dt;
+      f.next -= dt;
+      if (f.next <= 0) {
+        f.next = 0.16;
+        if (fx) {
+          fx.plus({ x: f.x, z: f.z }, {
+            color: 0x7df0b0, size: 0.44, life: 0.8, rise: 1.05,
+            y: f.h * 0.55, spread: 0.42,
+          });
+        }
+      }
+      if (f.left <= 0) mendFx.splice(i, 1);
+    }
+  }
+
   function mendWounds(e) {
     const sp = e.cfg.spell;
     const amt = sp.heal * ((e.summonScale && e.summonScale.dmg) ?? 1);
@@ -1889,6 +1915,13 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
         fx.burst({ x: o.pos.x, z: o.pos.z }, {
           color: 0x8ef0b8, count: 6, speed: 1.2, life: 0.5, size: 0.09, y: 0.25, up: 1.5,
         });
+        // 第 65 块（用户：治疗特效太短、不明显）：改成**一串绿加号不断往上浮**，
+        // 持续 1.4 秒、每 0.16 秒冒一个 —— 一秒钟里连着七八个加号往上走，
+        // 隔半个场地说也能一眼看出「那只在回血」。数量按被奶的怪封顶 10 只，
+        // 防止小巫一奶半场时刷出上百个精灵。
+        if (mendFx.length < 10) {
+          mendFx.push({ x: o.pos.x, z: o.pos.z, h: o.height, left: 1.4, next: 0 });
+        }
       }
     }
     // 施法者自己身上只冒一点点（表示「它在施法」，不要大圈）
@@ -2317,6 +2350,15 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
       const k = Math.min(1, dt * 7);
       for (const m of e.mats) {
         if (m.transparent) m.opacity += (targetO - m.opacity) * k;
+      }
+      // 第 65 块：显形时把自发光拉亮（1.0 → 2.2），隐身时压到 0.3。
+      // 光靠 opacity 在浓雾里分不清「它出来了」还是「雾动了一下」；
+      // 亮度差比透明度差更容易在余光里被抓住。霜牢光环只改 emissive 颜色，
+      // 不改 intensity，两边不打架。
+      const targetE = e.ghostHidden ? 0.3 : 2.2;
+      for (const m of e.mats) {
+        if (!m.emissive) continue;
+        m.emissiveIntensity += (targetE - m.emissiveIntensity) * Math.min(1, dt * 6);
       }
     }
 
@@ -3028,6 +3070,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
   function update(dt, ctx) {
     collectAuras(ctx);
     for (const e of list) updateOne(e, dt, ctx);
+    updateMendFx(dt);
     updateShots(dt, ctx);
     updateZones(dt, ctx);
     updateArrows(dt, ctx);
@@ -3245,6 +3288,18 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     // 第 63 块：
     //   擦名者 —— 场上还有几只（含正在逃跑的）；stolenCount = 一共被偷走几把剑还没还
     eraserCount: () => list.filter((e) => e.cfg.erase && e.state !== 'dead').length,
+    //   擦名者读条进度（第 65 块）：给「奶蛙头顶百分比」用。
+    //   返回 null = 现在没有人在读条；否则 { progress 0~1, who }。
+    //   多只同时读条取进度最高的那只 —— 最危险的那一只才该占着头顶。
+    eraseCast: () => {
+      let best = 0, who = null;
+      for (const e of list) {
+        if (!e.cfg.erase || e.state !== 'attack') continue;
+        const p = Math.max(0, Math.min(1, e.t / Math.max(0.01, e.cfg.windup)));
+        if (p >= best) { best = p; who = e; }
+      }
+      return who ? { progress: best, who } : null;
+    },
     fleeingCount: () => list.filter((e) => e.state === 'flee').length,
     stolenCount: () => list.filter((e) => e.stolen).length,
     //   重启体 —— 正躺在地上等重启的数量（>0 时这一波清不掉）

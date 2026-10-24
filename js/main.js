@@ -5,37 +5,37 @@
 // 目标是把三件事调顺：摇杆输入 → 角色速度/朝向 → 相机跟随。
 // 后续叠战斗时，只需要在 tick() 里加敌人更新与自动攻击，不用动输入层。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=75';
-import { buildNightScene } from './scene.js?v=75';
-import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=75';
-import { createInput } from './input.js?v=75';
-import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=75';
-import { createStatView } from './statView.js?v=75';
-import { createWeaponStats } from './weaponStats.js?v=75';
-import { createFx } from './fx.js?v=75';
-import { createEnemySystem } from './enemy.js?v=75';
+import * as THREE from '../lib/three.module.js?v=76';
+import { buildNightScene } from './scene.js?v=76';
+import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=76';
+import { createInput } from './input.js?v=76';
+import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=76';
+import { createStatView } from './statView.js?v=76';
+import { createWeaponStats } from './weaponStats.js?v=76';
+import { createFx } from './fx.js?v=76';
+import { createEnemySystem } from './enemy.js?v=76';
 import {
   createLevel, LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVEL_5, LEVEL_6, LEVELS_BY_ID, DIFFS, setDifficulty, getDifficulty, roundScale, levelStats,
-} from './wave.js?v=75';
-import { createRangeRing } from './rangeRing.js?v=75';
-import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=75';
-import { createWeaponSystem } from './weapon.js?v=75';
-import { createArrowRainSystem } from './arrowRain.js?v=75';
-import { SWORD_KINDS } from './swordKinds.js?v=75';
-import { createGoldSystem } from './gold.js?v=75';
-import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW } from './shop.js?v=75';
-import { createTurretSystem, TURRET } from './turret.js?v=75';
-import { createRelicSystem, RELIC_DEFS } from './relics.js?v=75';
-import { createHazards } from './hazards.js?v=75';
-import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=75';
-import audio from './audio.js?v=75';
-import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=75';
+} from './wave.js?v=76';
+import { createRangeRing } from './rangeRing.js?v=76';
+import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=76';
+import { createWeaponSystem } from './weapon.js?v=76';
+import { createArrowRainSystem } from './arrowRain.js?v=76';
+import { SWORD_KINDS } from './swordKinds.js?v=76';
+import { createGoldSystem } from './gold.js?v=76';
+import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW } from './shop.js?v=76';
+import { createTurretSystem, TURRET } from './turret.js?v=76';
+import { createRelicSystem, RELIC_DEFS } from './relics.js?v=76';
+import { createHazards } from './hazards.js?v=76';
+import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=76';
+import audio from './audio.js?v=76';
+import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=76';
 // 第 62 块：回血技能（第四关通关后永久解锁，回 5 点 / CD 25 秒）
-import { createHealSkill, HEAL_AMOUNT, HEAL_CD } from './healSkill.js?v=75';
+import { createHealSkill, HEAL_AMOUNT, HEAL_CD } from './healSkill.js?v=76';
 // 第 62 块：民心专属事件（升档走良性池、掉档走恶性池）
-import { repPoolForTier, REP_GOOD, REP_BAD } from './repEvents.js?v=75';
+import { repPoolForTier, REP_GOOD, REP_BAD } from './repEvents.js?v=76';
 // 第 62 块：攻略面板（战败提示上的「查看攻略」，手风琴三组）
-import { renderGuide, GUIDE_SECTIONS } from './guide.js?v=75';
+import { renderGuide, GUIDE_SECTIONS } from './guide.js?v=76';
 import {
   settings as readSettings, setSetting, save as saveProfile, profile,
   bumpStat, setStatMax, codexAdd, codexCount, countCard, unlockAch, hasAch, addBones, bones, resetAll,
@@ -46,49 +46,51 @@ import {
   enemyMet, markEnemyMet,
   ringObtained, markRingObtained,
   healUnlocked, markHealUnlocked,
-} from './profile.js?v=75';
+  rainObtained, markRainObtained,          // 第 65 块：技能的「有没有」只跟解锁有关
+  hintSeen, markHintSeen,                  // 第 65 块：一次性提示卡
+} from './profile.js?v=76';
 // 第 44 块：礼包兑换（码表只有哈希，明细在 gift.js 顶部注释）
-import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=75';
+import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=76';
 // 第 46 块：音效包（抽象奶蛙音效包 —— 4 段奶蛙叫声，通关第一关解锁）
-import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=75';
-import * as runSave from './runSave.js?v=75';
+import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=76';
+import * as runSave from './runSave.js?v=76';
 import {
   CAMPFIRE, CAMP_STEP, campBuy, campOwned, campLevel,
   campCost, campApply, bonesFor, diffBoneMul, levelBoneMul, coinBones, BONE,
-} from './campfire.js?v=75';
+} from './campfire.js?v=76';
 // 第 23 块：永夜火种（通关白给的 3 次永久三选一）
 import {
   BOONS, BOON_BY_ID, BOON_PICKS, boonOwned, boonStacks, boonPending, boonTotalStacks,
   grantBoons, rollBoons, takeBoon, applyBoons, boonStackText,
-} from './boons.js?v=75';
+} from './boons.js?v=76';
 // 第 21 块：夜行诅咒（自选 debuff 换骨币倍率）
-import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=75';
+import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=76';
 // 第 22 块：种子与每日挑战
 import {
   DAILY_RULES, dayKey, dayText, dailySeed, seedCode, pickDailyCurses,
   seedFromText, pickSeedRules, loadSeedRecords, saveSeedRecord, pruneSeeds,
   dailyRecord, saveDailyRecord, pruneDaily, makeRng,
-} from './seed.js?v=75';
-import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=75';
+} from './seed.js?v=76';
+import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=76';
 // 第 58 块：局外商店 · 宝箱（花骨币买，开箱随机给永久属性 / 永久法器 / 技能CD缩短）
 import {
   BOXES, BOX_BY_ID, buyBox, rollBox, metaApplyStats, applyMeta,
-} from './metaShop.js?v=75';
+} from './metaShop.js?v=76';
 // 第 59 块：每日签到（以周为单位，周一 00:00 重置）
 import {
   WEEK_TIERS, SIGN_BONES, weekCells, signSummary, signToday, signedToday,
-} from './signin.js?v=75';
-import { achById, ACHS } from './achievements.js?v=75';
+} from './signin.js?v=76';
+import { achById, ACHS } from './achievements.js?v=76';
 import {
   EVENTS, ALL_EVENTS, getEventById, pickEvent, effectLines,
   choiceHint, canAfford, costShort, REP_MIN, REP_MAX, REP_START,
   isTalk, eventChoices, resolveRoll, mergeEffects,
-} from './events.js?v=75';
+} from './events.js?v=76';
 // 第 32 块：主线《笑不出来的那一夜》（18 夜，一夜一关，前 3 夜已有关卡）
 import {
   STORY_ARC, STORY_CHAPTERS, STORY_ENDINGS, MARK_INFO,
   storyChapterAt, storyChapterById, storyEndingKey,
-} from './story.js?v=75';
+} from './story.js?v=76';
 
 // 标记模块已经跑起来了：index.html 的兜底自检靠它判断
 // 「模块根本没执行」还是「执行了但加载慢」。
@@ -452,6 +454,15 @@ async function boot() {
   const boonScr = document.getElementById('boonScr');
   const rcList = document.getElementById('rcList');
   const tutCard = document.getElementById('tutCard');
+  // 第 65 块：一次性提示卡（暂停世界）+ 读条百分比 HUD
+  const hintCard = document.getElementById('hintCard');
+  const hiKicker = document.getElementById('hiKicker');
+  const hiTitle = document.getElementById('hiTitle');
+  const hiText = document.getElementById('hiText');
+  const hiOk = document.getElementById('hiOk');
+  const castHudEl = document.getElementById('castHud');
+  const castFillEl = document.getElementById('castFill');
+  const castNumEl = document.getElementById('castNum');
   const tcStep = document.getElementById('tcStep');
   const tcTitle = document.getElementById('tcTitle');
   const tcText = document.getElementById('tcText');
@@ -1420,15 +1431,51 @@ async function boot() {
       btn.setAttribute('aria-label', sk.name);
       btn.title = sk.name + (sk.key ? `（键盘 ${sk.key}）` : '') + '\n' + (sk.hint || '');
 
-      const img = document.createElement('img');
-      img.src = sk.icon;
-      img.alt = '';
-      img.draggable = false;
+      // 第 65 块：图标可以是内联 SVG（sk.art）—— 回血键就是一支绿色十字，
+      // 比原来那张灰扑扑的 icon-heal.svg 在暗底上显眼得多。
+      let art;
+      if (sk.art) {
+        art = document.createElement('span');
+        art.className = 'sk-art';
+        art.innerHTML = sk.art;
+      } else {
+        art = document.createElement('img');
+        art.src = sk.icon;
+        art.alt = '';
+        art.draggable = false;
+      }
       const cd = document.createElement('i');
       cd.className = 'sk-cd';
       const num = document.createElement('b');    // 冷却倒计时数字（箭雨用，第 47 块）
       num.className = 'sk-num';
-      btn.append(img, cd, num);
+      btn.append(art, cd, num);
+
+      // 外圈冷却环（第 65 块）：只有声明了 ring:true 的技能画（回血）。
+      // 半径 26 的圆，周长 ≈163.36 —— dasharray 写死成它，dashoffset 从满到 0
+      // 就是「冷却走完」，比底部竖条更像「充能」。
+      let ringEl = null;
+      if (sk.ring) {
+        btn.classList.add('ringed');
+        if (sk.id === 'heal') btn.classList.add('heal');
+        const NS = 'http://www.w3.org/2000/svg';
+        const svg = document.createElementNS(NS, 'svg');
+        svg.setAttribute('class', 'sk-ring');
+        svg.setAttribute('viewBox', '0 0 56 56');
+        const mk = (cls, off) => {
+          const c = document.createElementNS(NS, 'circle');
+          c.setAttribute('class', cls);
+          c.setAttribute('cx', '28');
+          c.setAttribute('cy', '28');
+          c.setAttribute('r', '26');
+          c.setAttribute('stroke-dasharray', '163.36');
+          c.setAttribute('stroke-dashoffset', String(off));
+          svg.appendChild(c);
+          return c;
+        };
+        mk('sr-bg', 0);
+        ringEl = mk('sr-fg', 0);
+        btn.appendChild(svg);
+      }
 
       // 技能键用 pointerdown 而不是 click：
       // 手机上一根手指正在推摇杆时，第二根手指点按钮，iOS Safari 不会派发 click。
@@ -1444,7 +1491,7 @@ async function boot() {
       if (!window.PointerEvent) btn.addEventListener('click', onPress);
 
       skillBar.appendChild(btn);
-      skillBtns.set(sk.id, { btn, cd, num, sk });
+      skillBtns.set(sk.id, { btn, cd, num, sk, ringEl });
     }
     renderSkill();      // 先把该藏起来的藏起来（没环剑时第一格也不该露头）
   }
@@ -1459,7 +1506,8 @@ async function boot() {
     const ctx = skillCtx();
     const list = visibleSkills(ctx);
     skillBar.classList.toggle('on', list.length > 0);
-    for (const { btn, cd, num, sk } of skillBtns.values()) {
+    for (const rec of skillBtns.values()) {
+      const { btn, cd, num, sk } = rec;
       const shown = list.includes(sk);
       btn.style.display = shown ? '' : 'none';
       if (!shown) continue;
@@ -1468,6 +1516,8 @@ async function boot() {
       btn.classList.toggle('spent', !ready);
       const p = sk.progress ? Math.max(0, Math.min(1, sk.progress(ctx) || 0)) : 0;
       cd.style.height = (p * 100).toFixed(1) + '%';
+      // 外圈环（第 65 块）：p 是「已经充了多少」——环从空走到满。
+      if (rec.ringEl) rec.ringEl.setAttribute('stroke-dashoffset', (163.36 * (1 - p)).toFixed(1));
       // 冷却倒计时数字（第 47 块）：ready 时藏起来，冷却中显示剩余秒数
       if (num) {
         const txt = (!ready && sk.cdText) ? sk.cdText(ctx) : '';
@@ -1484,7 +1534,9 @@ async function boot() {
   // 16px 起有 126px 高 —— 上面那个按钮正好被盖住 56px，箭雨教程最后一步
   // 要按的那个按钮首当其冲。
   function syncSkillLift() {
-    const card = document.querySelector('.tut-card.on');
+    // 第 65 块：居中的提示卡（.hint-card）不参与 —— 它在屏幕正中，
+    // 按它算会把技能栏顶到半空去。
+    const card = document.querySelector('.tut-card.on:not(.hint-card)');
     if (!card) { skillBar.style.setProperty('--sk-lift', '0px'); return; }
     // 卡片有 .22s 滑入过渡（translateY 12px→0）：刚加 .on 时读 rect 会量到动画中间态，
     // 抬升量算少一截（实测差 12px，收卡时技能栏短一截、离卡片只剩 0px）。
@@ -1504,6 +1556,130 @@ async function boot() {
   }
   window.addEventListener('resize', syncSkillLift);
   window.addEventListener('orientationchange', () => setTimeout(syncSkillLift, 120));
+
+  // ============================================================
+  // 一次性提示卡（第 65 块，用户要求）
+  // 用途一：第一次拥有「回血」技能那一局的开局，讲清那个绿十字是什么。
+  // 用途二：第一次看见擦名者读条时，讲清头顶那个百分比是什么。
+  // 做法：把世界真的冻住（gameState='hint'，主循环只对 playing/tutorial/wtut 推进），
+  //       点「知道了」回到 playing。每种一辈子只弹一次（档案 tut）。
+  // ============================================================
+  let hintOpen = false;
+  let hintBack = 'playing';       // 关掉后回哪个状态（正常都是 playing）
+  const hintQueue = [];           // 待弹的 key（FIFO）
+
+  const HINTS = {
+    heal: {
+      kicker: '新技能 · 回血',
+      title: '技能栏最上面那个绿十字',
+      text: [
+        '你刚拿到的这个技能叫「回血」：按一下<b>立刻回 5 点生命</b>，不会超过上限。',
+        '冷却 25 秒 —— 外圈那条绿环走完一圈就好了，中间的数字是还差几秒。',
+        '<b>满血时按不动</b>（不会白扔一次冷却）。它不占背包、不用回商店，'
+          + '打不过想跑的时候，这一口常常就是能不能活着走掉的区别。',
+      ],
+    },
+    cast: {
+      kicker: '地图知识 · 读条',
+      title: '头顶这个百分比，是它还要多久得手',
+      text: [
+        '戴兜帽的那只叫<b>擦名者</b>。它不还手，只在远处站定读条 —— 读满之后，'
+          + '会把你环上的一把剑擦掉，然后转身往场外跑。',
+        '所以奶蛙头顶这条紫色进度条就是<b>它这一下还要多久</b>：越接近 100% 越危险，'
+          + '过 65% 会变粉、还会一跳一跳地催你。',
+        '应对只有一条：<b>冲过去打断它</b>（打死，或者把它打退），条没读满它就白读一次。',
+      ],
+    },
+  };
+
+  function showHint(key, back) {
+    const cfg = HINTS[key];
+    if (!cfg || hintOpen) return false;
+    hintOpen = true;
+    hintBack = back || 'playing';
+    hiKicker.textContent = cfg.kicker;
+    hiTitle.textContent = cfg.title;
+    hiText.innerHTML = cfg.text.map((t) => `<div>${t}</div>`).join('');
+    hintCard.classList.add('on');
+    hintCard.setAttribute('aria-hidden', 'false');
+    markHintSeen(key);
+    // 真的停：摇杆归零、世界这一帧起不再推进
+    input.joystick.release();
+    vel.set(0, 0, 0);
+    gameState = 'hint';
+    syncSkillLift();
+    audio.sfx('event');
+    return true;
+  }
+
+  function closeHint() {
+    if (!hintOpen) return;
+    hintOpen = false;
+    hintCard.classList.remove('on');
+    hintCard.setAttribute('aria-hidden', 'true');
+    gameState = hintBack === 'hint' ? 'playing' : hintBack;
+    syncSkillLift();
+  }
+  hiOk.addEventListener('click', closeHint);
+  hintCard.addEventListener('pointerdown', (e) => { if (e.target === hintCard) closeHint(); });
+
+  // 排队：只有在真的能玩的时候才弹（教程 / 三选一 / 商店期间不插队）
+  function queueHint(key) {
+    if (hintSeen(key)) return false;
+    if (hintQueue.includes(key)) return false;
+    hintQueue.push(key);
+    return true;
+  }
+  function hintPump() {
+    if (hintOpen || !hintQueue.length) return false;
+    if (gameState !== 'playing') return false;
+    return showHint(hintQueue.shift());
+  }
+
+  // 第一局「已经解锁回血」的开局：教一次那个绿十字（用户第 1 条）
+  function queueHealHint() {
+    if (!healUnlocked()) return false;
+    if (hintSeen('heal')) return false;
+    return queueHint('heal');
+  }
+
+  // ============================================================
+  // 奶蛙头顶的读条百分比（第 65 块，用户要求）
+  //   谁在读条：擦名者（enemies.eraseCast，取进度最高的那只）
+  //   显示什么：「擦名者正在擦你的剑」+ 紫色进度条 + 百分比数字
+  //   位置：把世界坐标 (pos.x, 头顶, pos.z) 投影到屏幕，然后往上挪一点
+  //   首次出现：排队弹一次提示卡，讲清这条百分比是什么意思
+  // ============================================================
+  const _castV = new THREE.Vector3();
+  let castShown = false;
+  let castPct = -1;
+  function updateCastHud() {
+    const liveNow = gameState === 'playing' || gameState === 'wtut' || gameState === 'tutorial';
+    const c = liveNow && enemies.eraseCast ? enemies.eraseCast() : null;
+    if (!c) {
+      if (castShown) {
+        castHudEl.classList.remove('on', 'warn');
+        castShown = false;
+        castPct = -1;
+      }
+      return;
+    }
+    // 第一次看见这种东西：排一张卡讲一次（只讲一次，档案里记着）
+    if (!hintSeen('cast') && !hintOpen) queueHint('cast');
+    const pct = Math.max(0, Math.min(100, Math.round(c.progress * 100)));
+    if (pct !== castPct) {
+      castPct = pct;
+      castFillEl.style.width = pct + '%';
+      castNumEl.textContent = pct + '%';
+      castHudEl.classList.toggle('warn', pct >= 65);
+    }
+    if (!castShown) { castHudEl.classList.add('on'); castShown = true; }
+    _castV.set(pos.x, pos.y + 2.05, pos.z).project(camera);
+    const x = (_castV.x * 0.5 + 0.5) * window.innerWidth;
+    const y = (-_castV.y * 0.5 + 0.5) * window.innerHeight;
+    castHudEl.style.left = x.toFixed(1) + 'px';
+    castHudEl.style.top = (y - 8).toFixed(1) + 'px';
+  }
 
   function pressSkill(sk) {
     const ctx = skillCtx();
@@ -1646,6 +1822,10 @@ async function boot() {
       showToast('夜行诅咒生效', `${curseNames(pendingCurses)} —— 属性已扣 · 骨币 ×${rc.mul.toFixed(2)}`);
     }
     level.start();
+    // 第 65 块（用户：获得回血技能时没有提示）：
+    // 在「已经有回血」的第一局开局讲一次那个绿十字 —— 它在技能栏最上面，
+    // 玩家很容易以为那是个装饰。只讲一次（档案 tut.heal），之后不再拦路。
+    queueHealHint();
     perfReset();                      // 第 59 块：新一局从玩家选的画质档重新开始（清掉上一局的自动降档）
   }
 
@@ -3361,7 +3541,19 @@ async function boot() {
     };
 
     const runEvent = () => {
-      if (isLast || DEBUG_SKIP_NARRATIVE) { runUpgrade(); return; }
+      if (DEBUG_SKIP_NARRATIVE) { runUpgrade(); return; }
+      // 第 65 块（用户报「民心升档没弹事件」）：**关底也要把队列播完**。
+      // 原来 isLast 直接跳结算，排队的那条既没播也没留 —— 进下一关开局又被清空，
+      // 等于永久丢掉。现在的顺序：民心事件 → 三选一 → 结算。
+      if (isLast) {
+        while (repEventQueue.length) {
+          const rid = repEventQueue.shift();
+          const rev = getEventById(rid);
+          if (rev) { openEvent(rev, roundNo, runUpgrade); return; }
+        }
+        runUpgrade();
+        return;
+      }
       // 0) 主线优先（第 32 块）：这一关走到该播的那一夜，就先播夜。
       //    主线不占随机池、也不消耗「最近出过」的名额 —— 它是路，不是签。
       const chap = storyChapterAt(curLevelId, roundNo, storyProgress().seen);
@@ -3413,23 +3605,34 @@ async function boot() {
     runEvent();
   }
 
-  // 第 56 块（用户定案）：后续关卡开局自带环剑。
-  // 条件：以前拿到过（profile.ringGot）+ 这一关不是第一关 + 现在手上没有。
-  // 送的就是最初的 3 把铁剑；第二关起顺带把箭雨一并解锁（它本来就是「第二关起」的武器）。
-  // 教程不重播 —— queueWeaponTut 内部看 wtSeen，老玩家早就看过了；
-  // 真没看过的（比如清过教程记录）会补教，比让他拿着一格不会用的技能栏好。
+  // 第 65 块（用户定案）：**技能的「有没有」只跟解锁有关，跟当前打第几关无关**。
+  //   环剑   —— 以前拿到过（profile.ringGot）→ 任何关卡开局都送 3 把铁剑，
+  //              包括回头重打第一关；没拿到过 → 第一关仍走第 5 回合的仪式时刻。
+  //   箭雨   —— 解锁过就有。档案里记了 rainGot；没有这条的旧档案按
+  //              「打过第二关」推断（那时候第二关开局就会送给环剑 + 箭雨）。
+  //   回血   —— 本来就是档案层（heal.unlocked），与关卡无关。
+  // 教程不重播 —— queueWeaponTut 内部看 wtSeen，老玩家早就看过了。
+  function rainUnlockedBefore() {
+    if (rainObtained()) return true;
+    // 旧档案兼容：只要在第二关或更后面留下过任何记录，就说明它当年已经解锁过
+    const recs = loadRecords();
+    return Object.keys(recs).some((k) => Number(k) >= 2);
+  }
+
   function prefillRing() {
     if (weapon.granted) return;            // 这一局已经有了（续读的存档在这里之前已 restore）
-    if (curLevelId < 2) return;            // 第一关保留「第 5 回合获得」的仪式时刻
-    if (!ringObtained()) return;           // 没拿到过就不送
+    if (!ringObtained()) return;           // 没拿到过就不送（第一关首次仍走第 5 回合）
     weapon.grant();
-    if (curLevelId >= 2) arrowRain.unlock();
+    if (rainUnlockedBefore()) {
+      arrowRain.unlock();
+      markRainObtained();
+    }
     renderSkill();
     codexAdd('swords', 'ring');
     tryAch('first_sword');
     showToast('环剑已在手', '这一关开局就带着 3 把铁剑，技能栏第 1 格就是万剑齐发');
     queueWeaponTut('ring');
-    if (curLevelId >= 2) queueWeaponTut('arrowrain');
+    if (arrowRain.unlocked) queueWeaponTut('arrowrain');
   }
 
   // 第一次拿到环剑：武器卡 → 用法教程 → 接续回合链
@@ -3441,6 +3644,7 @@ async function boot() {
     const withRain = curLevelId >= 2;
     if (withRain) {
       arrowRain.unlock();
+      markRainObtained();     // 第 65 块：记下来，之后任何关卡（含第一关重打）都带着
       renderSkill();
       showToast('新武器 · 箭雨', '技能栏第 2 格：在最近的怪物头顶落一阵箭雨，冷却 8 秒');
     }
@@ -5408,7 +5612,8 @@ async function boot() {
     // 第 62 块：第四关通关 → 永久解锁「回血」技能（档案里记一个布尔，之后每局都带着）
     if (isWin && curLevelId === 4 && markHealUnlocked()) {
       setTimeout(() => {
-        showToast('解锁新技能：回血', `技能栏多一格 · 按下瞬间回 ${HEAL_AMOUNT} 点血，冷却 ${HEAL_CD} 秒`);
+        // 第 65 块：点明「下一关开局会教你」，别让人只看到一条 toast 就过去了
+        showToast('解锁新技能：回血', `技能栏最上面多一个绿十字 · 下一关开局会教你怎么用`);
       }, 900);
     }
     // 第 46 块：第一关首通 → 结算面板之上弹「获得新音效包」（等结算淡完、成就 toast 看完再弹）
@@ -6078,6 +6283,75 @@ async function boot() {
           chainRatio: wstats.get('chainRatio'),
         }),
       },
+      // 第 65 块：提示卡 / 读条百分比 / 回血键外观 / 技能解锁脱钩
+      block65: {
+        // ---- 一次性提示卡（回血技能 / 读条） ----
+        hint: {
+          open: () => hintOpen,
+          queue: () => hintQueue.slice(),
+          seen: (k) => hintSeen(k),
+          // 直接弹（绕过排队；测试「卡片长得对不对」用）
+          show: (k) => showHint(k),
+          close: () => { closeHint(); return gameState; },
+          pump: () => hintPump(),
+          // 把「教过」的标记抹掉（模拟新玩家 / 重新体验）
+          forget: (k) => {
+            const p = profile();
+            if (p.tut) p.tut[k] = false;
+            saveProfile();
+            return !hintSeen(k);
+          },
+          text: () => ({ kicker: hiKicker.textContent, title: hiTitle.textContent, body: hiText.textContent }),
+          visible: () => {
+            const cs = getComputedStyle(hintCard);
+            return hintCard.classList.contains('on') && cs.opacity !== '0' && hintCard.getClientRects().length > 0;
+          },
+        },
+        // ---- 擦名者读条百分比 ----
+        cast: {
+          info: () => {
+            const c = enemies.eraseCast ? enemies.eraseCast() : null;
+            return c ? { progress: +c.progress.toFixed(3), who: c.who ? c.who.type : null } : null;
+          },
+          // 直接让一只擦名者进入读条（测试入口）：没擦名者就现造一只
+          start: (progress = 0) => {
+            let e = enemies.list.find((x) => x.cfg.erase && x.state !== 'dead');
+            if (!e) { e = enemies.spawn('eraser', { x: pos.x + 3, z: pos.z }); }
+            if (!e) return null;
+            e.state = 'attack';
+            e.t = Math.max(0, Math.min(1, progress)) * e.cfg.windup;
+            e.hitDone = false;
+            return { type: e.type, t: +e.t.toFixed(2), windup: e.cfg.windup };
+          },
+          hud: () => ({
+            visible: castHudEl.classList.contains('on'),
+            pct: castNumEl.textContent,
+            warn: castHudEl.classList.contains('warn'),
+            width: castFillEl.style.width,
+            left: castHudEl.style.left,
+            top: castHudEl.style.top,
+          }),
+        },
+        // ---- 技能键外观（回血 = 绿色十字 + 外圈环） ----
+        buttons: () => [...skillBar.querySelectorAll('.sk')].map((b) => {
+          const fg = b.querySelector('.sk-ring .sr-fg');
+          return {
+            id: b.dataset.skill,
+            shown: b.style.display !== 'none',
+            art: !!b.querySelector('.sk-art'),
+            img: !!b.querySelector('img'),
+            ring: !!b.querySelector('.sk-ring'),
+            offset: fg ? +fg.getAttribute('stroke-dashoffset') : null,
+            cls: b.className,
+            num: (b.querySelector('.sk-num') || {}).textContent || '',
+          };
+        }),
+        // ---- 技能解锁与关卡脱钩 ----
+        rainUnlocked: () => arrowRain.unlocked,
+        rainObtained: () => rainObtained(),
+        ringObtained: () => ringObtained(),
+        prefill: () => { prefillRing(); return { ring: weapon.granted, rain: arrowRain.unlocked }; },
+      },
       // 第 62 块：民心专属事件（测试钩子）
       repEv: {
         queue: () => repEventQueue.slice(),
@@ -6651,6 +6925,7 @@ async function boot() {
       // 金币：攻击范围圈就是拾取范围（第 23 块，进圈即吸），圈外的 3 秒后自动入账
       gold.update(dt, pos, stats.get('attackRange'));
       renderSkill();
+      updateCastHud();            // 第 65 块：擦名者读条百分比（挂在奶蛙头顶）
       if (stats.hp.cur < stats.get('maxHp')) stats.heal(stats.get('hpRegen') * dt);
       // 事件造成的持续流失（乞丐吐痰）：绕过回复直接扣，能磨死人也只作用于本回合
       if (roundDrain > 0 && gameState === 'playing') {
@@ -6677,6 +6952,8 @@ async function boot() {
 
     // 排着队的武器教程：等面板/结算都关掉、回到可操作状态再弹
     if (wtQueue.length > 0 && gameState === 'playing') wtPump();
+    // 第 65 块：一次性提示卡（回血技能 / 读条百分比）—— 排在武器教程之后
+    if (hintQueue.length > 0 && !hintOpen && gameState === 'playing') hintPump();
 
     frog.root.position.x = pos.x;
     frog.root.position.z = pos.z;

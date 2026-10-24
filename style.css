@@ -216,6 +216,73 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
   background:linear-gradient(0deg,rgba(110,240,210,.30),rgba(110,240,210,.06));
   pointer-events:none;transition:height .1s linear}
 
+/* ---- 第 65 块：技能键可以画内联 SVG（回血键 = 绿色十字），冷却走外圈进度环 ---- */
+.sk-art{width:38px;height:38px;display:block;opacity:.42;
+  transition:opacity .15s ease,filter .15s ease;pointer-events:none}
+.sk-art svg{width:100%;height:100%;display:block}
+.sk.ready .sk-art{opacity:1;filter:drop-shadow(0 0 9px rgba(125,240,176,.65))}
+.sk.spent .sk-art{opacity:.26}
+.sk.heal{border-color:rgba(125,240,176,.34);background:rgba(6,26,18,.68)}
+.sk.heal.ready{border-color:rgba(125,240,176,.8);
+  box-shadow:0 4px 14px rgba(0,0,0,.4),0 0 22px rgba(110,240,160,.38)}
+.sk.heal.ready:active{transform:scale(.92)}
+/* 外圈冷却环：SVG 圆，dashoffset 由 renderSkill 每帧写 */
+.sk-ring{position:absolute;inset:-2px;width:calc(100% + 4px);height:calc(100% + 4px);
+  transform:rotate(-90deg);pointer-events:none;overflow:visible}
+.sk-ring circle{fill:none;stroke-width:2.6}
+.sk-ring .sr-bg{stroke:rgba(180,255,225,.12)}
+.sk-ring .sr-fg{stroke:#7df0b0;stroke-linecap:round;
+  filter:drop-shadow(0 0 5px rgba(125,240,176,.85))}
+.sk.heal .sk-cd{display:none}          /* 回血走外圈，不再用底部竖条 */
+.sk.heal .sk-num{font-size:12px}       /* 中间留十字，数字压小一点 */
+
+/* ---------------- 读条百分比（奶蛙头顶，第 65 块） ----------------
+   擦名者开始读条时挂在他头上：紫色进度条 + 百分比数字，越接近读完越亮、
+   还会整块轻轻脉冲 —— 用户要求「提示和进度条要明显」。 */
+#castHud{position:fixed;left:0;top:0;z-index:11;width:158px;
+  transform:translate(-50%,-100%);display:none;flex-direction:column;align-items:center;gap:4px;
+  pointer-events:none;text-align:center}
+#castHud.on{display:flex}
+.ch-who{font-size:10px;letter-spacing:.1em;color:#e3c8ff;
+  text-shadow:0 2px 8px rgba(0,0,0,.9);white-space:nowrap}
+.ch-bar{width:100%;height:10px;border-radius:999px;background:rgba(18,8,30,.86);
+  border:1px solid rgba(190,150,255,.55);overflow:hidden;
+  box-shadow:0 3px 12px rgba(0,0,0,.65),0 0 16px rgba(140,80,255,.35)}
+.ch-bar i{display:block;height:100%;width:0%;border-radius:999px;
+  background:linear-gradient(90deg,#8a5cff,#d8b4ff);
+  box-shadow:0 0 14px rgba(170,120,255,.9);transition:width .08s linear}
+.ch-num{font:800 13px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-variant-numeric:tabular-nums;color:#f2e6ff;text-shadow:0 2px 8px rgba(0,0,0,.95)}
+#castHud.warn .ch-bar{border-color:rgba(255,160,225,.95);
+  box-shadow:0 0 26px rgba(255,110,205,.6)}
+#castHud.warn .ch-bar i{background:linear-gradient(90deg,#c65cff,#ffb0ee);
+  box-shadow:0 0 18px rgba(255,140,230,.95)}
+#castHud.warn .ch-num{color:#ffd9f4;font-size:15px}
+#castHud.warn .ch-who{color:#ffbff0;font-weight:700}
+@keyframes castPulse{
+  0%,100%{transform:translate(-50%,-100%) scale(1)}
+  50%{transform:translate(-50%,-100%) scale(1.07)}
+}
+#castHud.warn{animation:castPulse .42s ease-in-out infinite}
+
+/* ---------------- 暂停说明卡（第 65 块） ----------------
+   复用 .tut-card 的外观，但要居中、且带一层暗底 —— 它会真的把世界冻住
+   （gameState='hint'），所以得像一张「先看一眼」的卡。 */
+.tut-card.hint-card{top:50%;bottom:auto;z-index:18;
+  transform:translate(-50%,-46%);width:min(90vw,430px);
+  border-color:rgba(150,225,255,.34);
+  background:linear-gradient(180deg,rgba(12,32,38,.98),rgba(4,14,18,.99))}
+.tut-card.hint-card.on{transform:translate(-50%,-50%)}
+.hint-card .hi-kicker{font-size:10px;font-weight:800;letter-spacing:.24em;color:#8fe4f2}
+.hint-card .hi-title{margin-top:7px;font-size:16px;font-weight:800;letter-spacing:.06em;color:#eafcff}
+.hint-card .hi-text{margin-top:7px;font-size:12px;line-height:1.82;color:rgba(186,222,230,.82)}
+.hint-card .hi-text b{color:#a8f0ff;font-weight:800}
+.hint-card .hi-ok{margin-top:12px;width:100%;padding:11px 0;border-radius:11px;font:inherit;
+  font-size:13px;font-weight:800;letter-spacing:.12em;color:#04211f;cursor:pointer;border:0;
+  background:linear-gradient(180deg,#9ff0e2,#5fd8c0);
+  box-shadow:0 6px 18px rgba(80,220,190,.3);pointer-events:auto;-webkit-tap-highlight-color:transparent}
+.hint-card .hi-ok:active{transform:scale(.985)}
+
 /* ---------------- 受击红闪 ---------------- */
 #hurtFx{position:fixed;inset:0;z-index:9;pointer-events:none;opacity:0;
   background:radial-gradient(circle at 50% 50%,rgba(255,40,20,0) 40%,rgba(255,28,8,.58) 100%);
@@ -937,7 +1004,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
 .tc-step{font-size:10px;letter-spacing:.16em;color:rgba(150,205,188,.7);
   font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
 .tc-skip{padding:5px 10px;border-radius:999px;font:inherit;font-size:10.5px;letter-spacing:.08em;
-  color:rgba(180,222,206,.72);cursor:pointer;pointer-events:auto;
+  color:rgba(180,222,206,.72);cursor:pointer;pointer-events:none;
   border:1px solid rgba(126,235,196,.2);background:rgba(126,235,196,.06);
   -webkit-tap-highlight-color:transparent}
 .tc-title{margin-top:6px;font-size:14px;font-weight:700;letter-spacing:.08em;color:#e6fff5}
@@ -997,13 +1064,17 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
 .wt-next{margin-top:9px;width:100%;padding:9px 0;border-radius:10px;font:inherit;
   font-size:12px;font-weight:700;letter-spacing:.12em;color:#04211f;cursor:pointer;
   border:0;background:linear-gradient(180deg,#9ff0e2,#5fd8c0);
-  box-shadow:0 6px 16px rgba(80,220,190,.25);pointer-events:auto;
+  box-shadow:0 6px 16px rgba(80,220,190,.25);pointer-events:none;
   -webkit-tap-highlight-color:transparent;display:none;transition:transform .1s ease}
 .wt-next.on{display:block}
 .wt-next:active{transform:scale(.985)}
 /* 第 64 块：新手教程的讲解步也用这个按钮（复用外观），但默认显示 ——
    显不显示由 JS 切 hidden 决定（全局 [hidden] 兜底会压住 display） */
 #tutCard .wt-next{display:block}
+/* 第 65 块（真 bug）：卡片收起后它是 opacity:0，但里面这两个按钮原来一直
+   pointer-events:auto —— 位置正好压在技能栏最上面两格（回血 / 箭雨）上，
+   于是那两个技能整局点不动。只有卡片亮着（.on）才让它们接收点击。 */
+.tut-card.on .tc-skip,.tut-card.on .wt-next{pointer-events:auto}
 
 /* ============================================================
    金币 / 随机事件卡 / 商店

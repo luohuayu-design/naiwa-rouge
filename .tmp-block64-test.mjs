@@ -325,14 +325,16 @@ ok(pick([], []) === null, '空库存返回 null');
 // ============================================================
 sec('九、版本号一致');
 // ============================================================
+// 第 65 块起改成「版本无关」：拿 index.html 里的版本当基准，再要求全部 import 跟它一致。
+// 原来这里写死 '75'，每发一次版都要来改一次，纯属噪声（真正的风险是「只 bump 了一半」）。
 const ver = (read('index.html').match(/main\.js\?v=(\d+)/) || [])[1];
-ok(ver === '75', `index.html 的 main.js 版本 v=75（实际 v=${ver}）`);
+ok(!!ver, `index.html 的 main.js 带版本号（v=${ver}）`);
 const jsFiles = fs.readdirSync(path.join(ROOT, 'js')).filter((f) => f.endsWith('.js'));
 const badVer = jsFiles.filter((f) => {
   const s = read('js/' + f);
-  return /\?v=(?!75)\d+/.test(s);
+  return new RegExp('\\?v=(?!' + ver + ')\\d+').test(s);
 });
-ok(badVer.length === 0, `js/*.js 的 import 全是 v=75（${badVer.length ? badVer.join(',') : '一致'}）`);
+ok(badVer.length === 0, `js/*.js 的 import 全跟 index.html 同版本（v=${ver}；${badVer.length ? badVer.join(',') : '一致'}）`);
 
 console.log(`\n结果：${pass} 通过 / ${fails.length} 失败`);
 if (fails.length) { console.log('\n失败项：'); for (const f of fails) console.log('  - ' + f); }

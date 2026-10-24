@@ -327,7 +327,8 @@ export const LEVEL_5 = {
   upgradeAfter: [1, 2, 3, 4, 5, 8, 10, 12, 15, 17, 19, 20],
   shopAfter: [3, 6, 9, 12, 15, 18],
   weaponAt: 4,
-  scale: { hp: 0.28, damage: 0.16, speed: 0.035 },
+  // 第 65 块：用户实测「五六关偏软」→ 伤害 ×1.35、血量 ×1.15（整关一起乘）
+  scale: { hp: 0.28, damage: 0.16, speed: 0.035, hpMul: 1.15, dmgMul: 1.35 },
   rounds: [
     // ---- 第一幕（R1~R3）：路口 · 油灯还亮着 ----
     { minion: 3,  warrior: 0, leaper: 0, archer: 0, bowman: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, eraser: 0, gap: 0.90, tip: '草甸路口：四条路，油灯还亮着' },
@@ -395,7 +396,8 @@ export const LEVEL_6 = {
   upgradeAfter: [1, 2, 3, 4, 5, 8, 10, 12, 15, 17, 19, 20],
   shopAfter: [3, 6, 9, 12, 15, 18],
   weaponAt: 4,
-  scale: { hp: 0.30, damage: 0.17, speed: 0.035 },
+  // 第 65 块：同第五关 —— 伤害 ×1.35、血量 ×1.15
+  scale: { hp: 0.30, damage: 0.17, speed: 0.035, hpMul: 1.15, dmgMul: 1.35 },
   // 漏电地板：位置固定，相位错开（每一块的通电时间点不一样，
   // 否则整片地板会一起亮，玩家只能干等 —— 那是罚站，不是走位）
   hazards: [
@@ -460,9 +462,13 @@ export function getDifficulty() { return diff; }
 export function roundScale(roundNo, level = LEVEL_1) {
   const s = level.scale || LEVEL_1.scale;
   const k = Math.max(0, roundNo - 1);
+  // 第 65 块：额外整体系数 hpMul / dmgMul（默认 1，只有五、六关用）。
+  // 用户嫌后两关太软，要「伤害 +35%、血量 +15%」——加在乘数上比改 slope 直观：
+  //   slope 是「每回合长多少」，改它会顺带把 R1 也一起抬起来；
+  //   mul 是「整关一起乘」，晚期的疼度线性可预测。
   return {
-    hp: (1 + s.hp * k) * diff.hp,
-    damage: (1 + s.damage * k) * diff.damage,
+    hp: (1 + s.hp * k) * diff.hp * (s.hpMul || 1),
+    damage: (1 + s.damage * k) * diff.damage * (s.dmgMul || 1),
     speed: (1 + s.speed * k) * diff.speed,
   };
 }

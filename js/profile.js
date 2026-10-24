@@ -79,6 +79,13 @@ const DEFAULT_PROFILE = {
   // 回血技能（第 62 块）：第四关通关后永久解锁，之后每局技能栏都多一格。
   // 只记解锁不看次数 —— 冷却归 healSkill.js 管，属于「本局状态」不进档案。
   heal: { unlocked: false },
+  // 箭雨「已经解锁过」（第 65 块，用户要求「技能的有没有只跟解锁有关」）：
+  // 第二关起开局送环剑时一并解锁，记下来之后**任何关卡**开局都带着，
+  // 包括回头重打第一关。没有这条的旧档案会按「打过第二关」推断（见 main.js）。
+  rainGot: false,
+  // 一次性提示卡（第 65 块）：{ heal: 回血技能获得说明, cast: 读条百分比说明 }
+  // 都是「一辈子教一次」，教过就不再拦路。
+  tut: { heal: false, cast: false },
   // 局外商店（第 58 块）：花骨币买宝箱，开箱直接随机给一次永久属性变化。
   //   bought  { wood:n, silver:n, gold:n }  各档买过多少次
   //   opened  累计开箱数
@@ -246,6 +253,35 @@ export function markHealUnlocked() {
   if (!p.heal) p.heal = { unlocked: false };
   if (p.heal.unlocked) return false;
   p.heal.unlocked = true;
+  save();
+  return true;
+}
+
+// ---------------- 箭雨「已解锁过」（第 65 块） ----------------
+export function rainObtained() {
+  return !!profile().rainGot;
+}
+
+export function markRainObtained() {
+  const p = profile();
+  if (p.rainGot) return false;
+  p.rainGot = true;
+  save();
+  return true;
+}
+
+// ---------------- 一次性提示卡（第 65 块） ----------------
+// 教过就记下；和武器教程一个思路（「一种只教一次」），但不走 wtut 那套队列。
+export function hintSeen(key) {
+  const t = profile().tut;
+  return !!(t && t[key]);
+}
+
+export function markHintSeen(key) {
+  const p = profile();
+  if (!p.tut) p.tut = { heal: false, cast: false };
+  if (p.tut[key]) return false;
+  p.tut[key] = true;
   save();
   return true;
 }
