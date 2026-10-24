@@ -283,7 +283,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
 .hint-card .hi-ok{margin-top:12px;width:100%;padding:11px 0;border-radius:11px;font:inherit;
   font-size:13px;font-weight:800;letter-spacing:.12em;color:#04211f;cursor:pointer;border:0;
   background:linear-gradient(180deg,#9ff0e2,#5fd8c0);
-  box-shadow:0 6px 18px rgba(80,220,190,.3);pointer-events:auto;-webkit-tap-highlight-color:transparent}
+  box-shadow:0 6px 18px rgba(80,220,190,.3);-webkit-tap-highlight-color:transparent}
 .hint-card .hi-ok:active{transform:scale(.985)}
 
 /* ---------------- 受击红闪 ---------------- */
@@ -998,11 +998,26 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
 .tut-card{position:fixed;left:50%;bottom:calc(86px + env(safe-area-inset-bottom));z-index:12;
   width:min(92vw,520px);padding:12px 15px 11px;border-radius:16px;
   transform:translateX(-50%) translateY(12px);opacity:0;pointer-events:none;
+  /* 第 66 块（用户报「事件 / 三选一按钮变得很迟钝」）：收起的卡片只是 opacity:0，
+     它和里面的按钮仍在参与命中测试 —— 一块隐形的大按钮正好压在屏幕正中，
+     把事件卡选项、三选一中间那张卡都吃掉了一半点击。
+     visibility:hidden 让整块连命中测试都不参加（比逐个子元素 pointer-events 稳），
+     收起时延迟 .22s 生效，保住淡出动画。 */
+  visibility:hidden;
   background:linear-gradient(180deg,rgba(17,40,34,.97),rgba(6,16,14,.98));
   border:1px solid rgba(126,235,196,.3);
   box-shadow:0 18px 44px rgba(0,0,0,.6),inset 0 1px 0 rgba(180,255,228,.08);
+  transition:opacity .22s ease,transform .22s ease,visibility 0s linear .22s}
+.tut-card.on{opacity:1;transform:translateX(-50%);visibility:visible;
   transition:opacity .22s ease,transform .22s ease}
-.tut-card.on{opacity:1;transform:translateX(-50%)}
+/* 卡片里的按钮一律默认不吃点击，只有卡片亮着才吃。
+   第 65 块只补了 .tc-skip / .wt-next 两个（当时把它当成一次性事故），
+   第 66 块发现 .hi-ok「知道了」犯了同一个错 —— 改成一条兜底规则，
+   以后往卡片里加按钮也不会再踩。 */
+.tut-card button{pointer-events:none}
+.tut-card.on button{pointer-events:auto}
+/* 提示卡还要能点卡片空白关掉（main.js 里 hintCard 的 pointerdown 判 e.target === hintCard） */
+.tut-card.hint-card.on{pointer-events:auto}
 .tc-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .tc-step{font-size:10px;letter-spacing:.16em;color:rgba(150,205,188,.7);
   font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}

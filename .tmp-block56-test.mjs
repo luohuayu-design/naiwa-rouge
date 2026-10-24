@@ -61,7 +61,8 @@ const again = markRingObtained();
 ok(again === false, '重复标记返回 false（幂等，不会反复写档）');
 
 // main.js 的 prefillRing：四道闸 + 送的东西
-const pre = (mainSrc.match(/function prefillRing\(\)[\s\S]*?\n  }/) || [''])[0];
+// 第 66 块给 prefillRing 加了参数（{ quiet }），正则不能写死空括号
+const pre = (mainSrc.match(/function prefillRing\([^)]*\)[\s\S]*?\n  }/) || [''])[0];
 ok(pre.length > 50, 'main.js 里有 prefillRing()');
 ok(/if \(weapon\.granted\) return;/.test(pre), '闸 1：这一局已经有了就不送');
 // 第 65 块（用户第 8 条）：技能的「有 / 无」不再看现在打第几关，只看**有没有解锁过**。

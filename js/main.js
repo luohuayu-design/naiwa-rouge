@@ -5,37 +5,37 @@
 // 目标是把三件事调顺：摇杆输入 → 角色速度/朝向 → 相机跟随。
 // 后续叠战斗时，只需要在 tick() 里加敌人更新与自动攻击，不用动输入层。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=76';
-import { buildNightScene } from './scene.js?v=76';
-import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=76';
-import { createInput } from './input.js?v=76';
-import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=76';
-import { createStatView } from './statView.js?v=76';
-import { createWeaponStats } from './weaponStats.js?v=76';
-import { createFx } from './fx.js?v=76';
-import { createEnemySystem } from './enemy.js?v=76';
+import * as THREE from '../lib/three.module.js?v=77';
+import { buildNightScene } from './scene.js?v=77';
+import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=77';
+import { createInput } from './input.js?v=77';
+import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=77';
+import { createStatView } from './statView.js?v=77';
+import { createWeaponStats } from './weaponStats.js?v=77';
+import { createFx } from './fx.js?v=77';
+import { createEnemySystem } from './enemy.js?v=77';
 import {
   createLevel, LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVEL_5, LEVEL_6, LEVELS_BY_ID, DIFFS, setDifficulty, getDifficulty, roundScale, levelStats,
-} from './wave.js?v=76';
-import { createRangeRing } from './rangeRing.js?v=76';
-import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=76';
-import { createWeaponSystem } from './weapon.js?v=76';
-import { createArrowRainSystem } from './arrowRain.js?v=76';
-import { SWORD_KINDS } from './swordKinds.js?v=76';
-import { createGoldSystem } from './gold.js?v=76';
-import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW } from './shop.js?v=76';
-import { createTurretSystem, TURRET } from './turret.js?v=76';
-import { createRelicSystem, RELIC_DEFS } from './relics.js?v=76';
-import { createHazards } from './hazards.js?v=76';
-import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=76';
-import audio from './audio.js?v=76';
-import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=76';
+} from './wave.js?v=77';
+import { createRangeRing } from './rangeRing.js?v=77';
+import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=77';
+import { createWeaponSystem } from './weapon.js?v=77';
+import { createArrowRainSystem } from './arrowRain.js?v=77';
+import { SWORD_KINDS } from './swordKinds.js?v=77';
+import { createGoldSystem } from './gold.js?v=77';
+import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW } from './shop.js?v=77';
+import { createTurretSystem, TURRET } from './turret.js?v=77';
+import { createRelicSystem, RELIC_DEFS } from './relics.js?v=77';
+import { createHazards } from './hazards.js?v=77';
+import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=77';
+import audio from './audio.js?v=77';
+import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=77';
 // 第 62 块：回血技能（第四关通关后永久解锁，回 5 点 / CD 25 秒）
-import { createHealSkill, HEAL_AMOUNT, HEAL_CD } from './healSkill.js?v=76';
+import { createHealSkill, HEAL_AMOUNT, HEAL_CD } from './healSkill.js?v=77';
 // 第 62 块：民心专属事件（升档走良性池、掉档走恶性池）
-import { repPoolForTier, REP_GOOD, REP_BAD } from './repEvents.js?v=76';
+import { repPoolForTier, REP_GOOD, REP_BAD } from './repEvents.js?v=77';
 // 第 62 块：攻略面板（战败提示上的「查看攻略」，手风琴三组）
-import { renderGuide, GUIDE_SECTIONS } from './guide.js?v=76';
+import { renderGuide, GUIDE_SECTIONS } from './guide.js?v=77';
 import {
   settings as readSettings, setSetting, save as saveProfile, profile,
   bumpStat, setStatMax, codexAdd, codexCount, countCard, unlockAch, hasAch, addBones, bones, resetAll,
@@ -48,49 +48,49 @@ import {
   healUnlocked, markHealUnlocked,
   rainObtained, markRainObtained,          // 第 65 块：技能的「有没有」只跟解锁有关
   hintSeen, markHintSeen,                  // 第 65 块：一次性提示卡
-} from './profile.js?v=76';
+} from './profile.js?v=77';
 // 第 44 块：礼包兑换（码表只有哈希，明细在 gift.js 顶部注释）
-import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=76';
+import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=77';
 // 第 46 块：音效包（抽象奶蛙音效包 —— 4 段奶蛙叫声，通关第一关解锁）
-import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=76';
-import * as runSave from './runSave.js?v=76';
+import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=77';
+import * as runSave from './runSave.js?v=77';
 import {
   CAMPFIRE, CAMP_STEP, campBuy, campOwned, campLevel,
   campCost, campApply, bonesFor, diffBoneMul, levelBoneMul, coinBones, BONE,
-} from './campfire.js?v=76';
+} from './campfire.js?v=77';
 // 第 23 块：永夜火种（通关白给的 3 次永久三选一）
 import {
   BOONS, BOON_BY_ID, BOON_PICKS, boonOwned, boonStacks, boonPending, boonTotalStacks,
   grantBoons, rollBoons, takeBoon, applyBoons, boonStackText,
-} from './boons.js?v=76';
+} from './boons.js?v=77';
 // 第 21 块：夜行诅咒（自选 debuff 换骨币倍率）
-import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=76';
+import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=77';
 // 第 22 块：种子与每日挑战
 import {
   DAILY_RULES, dayKey, dayText, dailySeed, seedCode, pickDailyCurses,
   seedFromText, pickSeedRules, loadSeedRecords, saveSeedRecord, pruneSeeds,
   dailyRecord, saveDailyRecord, pruneDaily, makeRng,
-} from './seed.js?v=76';
-import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=76';
+} from './seed.js?v=77';
+import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=77';
 // 第 58 块：局外商店 · 宝箱（花骨币买，开箱随机给永久属性 / 永久法器 / 技能CD缩短）
 import {
   BOXES, BOX_BY_ID, buyBox, rollBox, metaApplyStats, applyMeta,
-} from './metaShop.js?v=76';
+} from './metaShop.js?v=77';
 // 第 59 块：每日签到（以周为单位，周一 00:00 重置）
 import {
   WEEK_TIERS, SIGN_BONES, weekCells, signSummary, signToday, signedToday,
-} from './signin.js?v=76';
-import { achById, ACHS } from './achievements.js?v=76';
+} from './signin.js?v=77';
+import { achById, ACHS } from './achievements.js?v=77';
 import {
   EVENTS, ALL_EVENTS, getEventById, pickEvent, effectLines,
   choiceHint, canAfford, costShort, REP_MIN, REP_MAX, REP_START,
   isTalk, eventChoices, resolveRoll, mergeEffects,
-} from './events.js?v=76';
+} from './events.js?v=77';
 // 第 32 块：主线《笑不出来的那一夜》（18 夜，一夜一关，前 3 夜已有关卡）
 import {
   STORY_ARC, STORY_CHAPTERS, STORY_ENDINGS, MARK_INFO,
   storyChapterAt, storyChapterById, storyEndingKey,
-} from './story.js?v=76';
+} from './story.js?v=77';
 
 // 标记模块已经跑起来了：index.html 的兜底自检靠它判断
 // 「模块根本没执行」还是「执行了但加载慢」。
@@ -1169,7 +1169,8 @@ async function boot() {
     {
       kind: 'info',
       title: '右下角：技能栏',
-      text: '一格一个技能，按下去不用瞄准。第一格「万剑齐发」要「第 5 回合拿到环剑之后」才出现；第二关起还会多一格「箭雨」。'
+      text: '一格一个技能，按下去不用瞄准。第一格「万剑齐发」要「第 5 回合拿到环剑之后」才出现；'
+        + '第二关起还会多一格「箭雨」；打过第四关的，最上面还有一格绿十字「回血」。'
         + '格子上那串小字是剩余冷却，精确到 0.01 秒；底下那道竖光是冷却进度，满了就说明能放了。',
     },
     {
@@ -1498,8 +1499,25 @@ async function boot() {
 
   // 传给技能的条件/上下文（每帧现拼，技能自己决定看不看）
   function skillCtx() {
-    // 'wtut'（武器教程）也算能操作：教程最后一步要玩家真的放一次万剑齐发
-    return { playing: gameState === 'playing' || gameState === 'wtut', weapon, arrowRain, heal: healSkill, playerPos: pos, stats, coins };
+    // 'wtut'（武器教程）也算能操作：教程最后一步要玩家真的放一次万剑齐发。
+    // 第 66 块（用户：新手教程时期技能键像是坏的）：'tutorial' 也要算 ——
+    // 八步教程第 5 步讲的就是「右下角技能栏」，原来那一刻整栏是 display:none，
+    // 等于对着空气讲；老玩家重打第一关时明明有剑，更会觉得键不见了。
+    return { playing: gameState === 'playing' || gameState === 'wtut' || gameState === 'tutorial', weapon, arrowRain, heal: healSkill, playerPos: pos, stats, coins };
+  }
+
+  // 第 66 块（用户：箭雨刚出时按键像没反应）：箭雨在空地按不动是刻意的
+  // （不让人白扔 8 秒 CD），但**静默失败 = 玩家以为按键坏了**。
+  // 教程里靠「补靶子」解决（见 ensureRainTargets），教程外至少给一句话。
+  function pressSkill(sk) {
+    const ctx = skillCtx();
+    if (!sk.ready(ctx)) return false;
+    const okPressed = sk.press(ctx);
+    if (!okPressed && sk.id === 'arrowRain' && arrowRain.lastFail === 'notarget') {
+      fx.text(pos, '附近没有怪', { color: '#ffd28a', size: 0.46, life: 0.95, y: 1.75 });
+    }
+    renderSkill();
+    return !!okPressed;
   }
 
   function renderSkill() {
@@ -1681,14 +1699,6 @@ async function boot() {
     castHudEl.style.top = (y - 8).toFixed(1) + 'px';
   }
 
-  function pressSkill(sk) {
-    const ctx = skillCtx();
-    if (!sk.ready(ctx)) return false;
-    const okPressed = sk.press(ctx);
-    renderSkill();
-    return !!okPressed;
-  }
-
   function pressSkillById(id) {
     const sk = SKILLS.find((s) => s.id === id);
     return sk ? pressSkill(sk) : false;
@@ -1793,6 +1803,8 @@ async function boot() {
     // 第 56 块（用户定案）：第一关第 5 回合拿到过环剑之后，之后的关卡开局就送 3 把铁剑
     // （「后续关卡默认拥有该技能」）。第一关自己仍走 weaponAt 那一回合的获得时刻，
     // 那是全游戏的仪式瞬间，不预送。读档不走这里（存档里的 weapon 直接 restore）。
+    // 第 66 块：箭雨冷却每局从 0 起（原来重开一局会带着上一局没走完的 8 秒）
+    arrowRain.resetCd();
     prefillRing();
     // 第 62 块：回血技能 —— 解锁状态取档案（永久），冷却每局从 0 起
     healSkill.setUnlocked(healUnlocked());
@@ -1848,6 +1860,18 @@ async function boot() {
       startPlay();
       return;
     }
+    // 第 66 块（用户：新手教程时期箭雨那格点了没反应）：开局初始化（setLevel /
+    // prefillRing / 篝火 / 诅咒 …）全在 endTutorial → startPlay 里，所以教程期间
+    // 世界还是 boot 时的样子 —— 技能栏一把剑都没有。可第 5 步讲的就是技能栏
+    // （「第一格万剑齐发，第二格箭雨」），老玩家重打第一关时明明有剑，讲解那一刻
+    // 栏里却空着。这里先静默预置（不弹 toast、不排队武器教程），
+    // 等 startPlay 里的 prefillRing() 看到 granted 已 true 就自己 return，不会重复。
+    arrowRain.resetCd();
+    prefillRing({ quiet: true });
+    // 回血键同理：它的「解锁」也只在 startPlay 里设，教程期间整格是空的。
+    // setUnlocked 是幂等的，startPlay 里会再设一次。
+    healSkill.setUnlocked(healUnlocked());
+    renderSkill();
     gameState = 'tutorial';
     tutStep = 0;
     tutMoved = 0;
@@ -2862,7 +2886,26 @@ async function boot() {
   wtSkipBtn.addEventListener('click', () => wtFinish());
 
   // 每帧看万剑齐发 / 箭雨有没有真的放出去（教程最后一步的过关条件）
-  function wtTick() {
+  // 第 66 块（用户：箭雨刚出的时候技能键像没反应）：武器教程最后一步要求玩家
+  // 「现在就按一次试试」，但 wtut 期间 level.update 不跑（波次是停的），而拿到武器
+  // 那一刻正好是回合结算之后 / 关卡刚开局 —— 场上一只怪都没有。箭雨「空地上按不动」
+  // 是刻意的（不让人白扔 8 秒 CD），于是这一步永远等不到 strikeCount > 0：
+  // 玩家按半天什么都没有，教程当场卡死，只能跳过。
+  // 解法：这一步替你放两只靶子（真怪、能被箭射死），打完没按就再补。
+  let rainTargetCd = 0;
+  function ensureRainTargets(dt) {
+    rainTargetCd -= dt;
+    if (rainTargetCd > 0) return;
+    rainTargetCd = 1.6;                 // 留够 spawn 动画时间，别一秒补两波
+    if (arrowRain.hasTarget(pos)) return;
+    for (let i = 0; i < 2; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const r = 4.2 + i * 1.0;
+      enemies.spawn('warrior', { x: pos.x + Math.cos(a) * r, z: pos.z + Math.sin(a) * r });
+    }
+  }
+
+  function wtTick(dt) {
     if (!wtOpen) return;
     const t = WEAPON_TUT[wtKind];
     const s = t && t.steps[wtStepIdx];
@@ -2870,9 +2913,9 @@ async function boot() {
     if (s.wait === 'fire' && weapon.flyingCount > 0) {
       wtFired = true;
       wtAdvance();
-    } else if (s.wait === 'rain' && arrowRain.strikeCount > 0) {
-      wtFired = true;
-      wtAdvance();
+    } else if (s.wait === 'rain') {
+      if (arrowRain.strikeCount > 0) { wtFired = true; wtAdvance(); return; }
+      ensureRainTargets(dt);
     }
   }
 
@@ -3619,7 +3662,9 @@ async function boot() {
     return Object.keys(recs).some((k) => Number(k) >= 2);
   }
 
-  function prefillRing() {
+  // 第 66 块：quiet = 教程期间「静默预置」——只把剑和技能键放上去，
+  // 不弹 toast、不排队武器教程（那时候正开着新手教程卡，再叠一张就乱了）。
+  function prefillRing({ quiet = false } = {}) {
     if (weapon.granted) return;            // 这一局已经有了（续读的存档在这里之前已 restore）
     if (!ringObtained()) return;           // 没拿到过就不送（第一关首次仍走第 5 回合）
     weapon.grant();
@@ -3628,6 +3673,7 @@ async function boot() {
       markRainObtained();
     }
     renderSkill();
+    if (quiet) return;
     codexAdd('swords', 'ring');
     tryAch('first_sword');
     showToast('环剑已在手', '这一关开局就带着 3 把铁剑，技能栏第 1 格就是万剑齐发');
@@ -6081,6 +6127,9 @@ async function boot() {
         state: () => ({ unlocked: arrowRain.unlocked, ready: arrowRain.ready, cdLeft: +arrowRain.cdLeft.toFixed(2), strikes: arrowRain.strikeCount }),
         unlock: () => { arrowRain.unlock(); renderSkill(); return true; },
         fire: (px, pz) => arrowRain.fire(px != null ? { x: px, z: pz } : pos),
+        // 第 66 块：箭雨「空地按不动」的原因（'notarget' / 'cd' / 'lock'）
+        lastFail: () => arrowRain.lastFail,
+        hasTarget: () => arrowRain.hasTarget(pos),
         // 活怪数与总血量（验证箭雨真的造成伤害）；nearest 用于「远程目标」隔离验证
         probe: () => {
           const live = enemies.list.filter((e) => e.state !== 'dead' && e.state !== 'spawn');
@@ -6934,7 +6983,7 @@ async function boot() {
       }
       if (iframe > 0) iframe -= dt;
       if (gameState === 'tutorial') tutorialTick(Math.hypot(pos.x - prevX, pos.z - prevZ));
-      if (gameState === 'wtut') wtTick();
+      if (gameState === 'wtut') wtTick(dt);
     } else if (gameState === 'over') {
       // 结算后：失败就慢慢侧倒，胜利保持站姿待机
       deadT += dt;

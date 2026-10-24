@@ -1,19 +1,28 @@
 // 第 59 块 Node 契约测试：每日签到（周为单位）
 // 覆盖：默认态 / 单日签到 / 重复签到 / 3 天与 6 天里程碑 / 跨周清零 /
 //       脏数据过滤 / 一周封顶 / 七格与「今天」标记
-import { profile, resetAll, bones } from './js/profile.js?v=76';
-import {
-  SIGN_BONES, WEEK_TIERS, SIGN_BONES as SB, weekCells, signSummary,
-  signToday, signedToday, signState, weekKeyOf, weekStartOf, dayKey,
-} from './js/signin.js?v=76';
+import fs from 'node:fs';
 
-// localStorage 桩（profile.js 只在函数体内访问它）
+// localStorage 桩（profile.js 只在函数体内访问它）—— 必须在 import 之前装好
 const store = new Map();
 globalThis.localStorage = {
   getItem: (k) => (store.has(k) ? store.get(k) : null),
   setItem: (k, v) => store.set(k, String(v)),
   removeItem: (k) => store.delete(k),
 };
+
+// 版本号从 index.html 读，不写死：写死的话每次发版都要来改这一行；
+// 而且一旦和模块内部的 ?v= 不一致，profile.js 会被当成两个模块各加载一次
+// （骨币读写打在不同对象上，症状是「签到没加骨币」）。
+const VER = (fs.readFileSync(new URL('./index.html', import.meta.url), 'utf8')
+  .match(/main\.js\?v=(\d+)/) || [])[1] || '';
+const { profile, resetAll, bones } = await import('./js/profile.js?v=' + VER);
+const signMod = await import('./js/signin.js?v=' + VER);
+const {
+  SIGN_BONES, WEEK_TIERS, weekCells, signSummary,
+  signToday, signedToday, signState, weekKeyOf, weekStartOf, dayKey,
+} = signMod;
+const SB = signMod.SIGN_BONES;      // 原 import 里的别名
 
 let pass = 0, fail = 0;
 const fails = [];

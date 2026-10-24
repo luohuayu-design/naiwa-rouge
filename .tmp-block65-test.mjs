@@ -198,9 +198,13 @@ const allVers = [...ver(htmlSrc), ...fs.readdirSync(path.join(ROOT, 'js'))
   .filter((f) => f.endsWith('.js'))
   .flatMap((f) => ver(read('js/' + f)))];
 ok(allVers.length > 90, '版本号数量正常', String(allVers.length));
-ok(allVers.every((v) => v === 76), 'index.html + js/*.js 全部 v=76（无遗漏）',
+// 第 66 块起改成「版本无关」：拿 index.html 当基准，只要求全部一致
+// （写死数字的话每发一版都要来改一次，纯噪声）
+const baseVer = (htmlSrc.match(/main\.js\?v=(\d+)/) || [])[1];
+ok(allVers.every((v) => String(v) === baseVer), `index.html + js/*.js 全部 v=${baseVer}（无遗漏）`,
   [...new Set(allVers)].join(','));
-ok(!/\?v=75/.test(htmlSrc + mainSrc + enemySrc + fxSrc + waveSrc + skillsSrc), '没有 v=75 残留');
+ok(!new RegExp('\\?v=(?!' + baseVer + ')\\d+').test(htmlSrc + mainSrc + enemySrc + fxSrc + waveSrc + skillsSrc),
+  '没有旧版本号残留');
 
 // ============================================================
 console.log(`\n结果：${pass} 通过 / ${fails.length} 失败`);

@@ -164,8 +164,12 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
       const d = __game.enemies.list.filter((e) => e.type === 'minion' && e.damage === 0);
       return JSON.stringify({ n: d.length, hp: d[0] ? d[0].hp : null, max: d[0] ? d[0].maxHp : null });
     })()`));
-    // hp 可能是 0：靶子会自己走过来，进圈后玩家自动拍它一下 —— 那正是第 3 步要演示的事
-    ok(dummy.n >= 1 && dummy.max === 1, '打怪步生成了 1 血的 0 伤害靶子', JSON.stringify(dummy));
+    // hp 可能是 0：靶子会自己走过来，进圈后玩家自动拍它一下 —— 那正是第 3 步要演示的事。
+    // 第 66 块起教程入场会静默预置环剑（老玩家重打第一关），剑会抢在玩家之前
+    // 把这只 1 血靶子拍掉 → n 可能是 0。所以改成「靶子在场，或者这一步已经过了」。
+    const killKind = await ev('__game.block64.tut.kind()');
+    ok(dummy.n >= 1 && dummy.max === 1 ? true : killKind !== 'kill',
+      '打怪步生成了 1 血的 0 伤害靶子（或已被环剑提前拍掉）', JSON.stringify(dummy) + ' kind=' + killKind);
 
     // 后面依次走完：panel（要开关面板）→ info → info → bag（开关背包）→ info
     const seen = [];
@@ -226,10 +230,16 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     ok(rows[0].val === 'CD 6.00 秒', '万剑齐发 CD 6.00 秒', rows[0].val);
     ok(rows.every((r) => r.status && r.status.length > 2), '每行都有状态说明',
       JSON.stringify(rows.map((r) => r.status)));
-    // 箭雨在第 1 关没解锁（要第二关起）→ 状态是未解锁，并且写着解锁条件
-    ok(rows[1].state === 'lock', '箭雨这一局没解锁 → lock', rows[1].state);
-    ok(rows[1].status.includes('未解锁') && rows[1].status.includes('第二关'), '未解锁的写着解锁条件',
-      rows[1].status);
+    // 第 65 块改了规格（用户第 8 条）：技能的「有 / 无」只看解锁过没有，不再看
+    // 这一局打第几关。这里造了 1~4 关的记录 + ringGot → 箭雨开局就解锁，
+    // 所以不再是 lock，而是 ready / cd。
+    ok(rows[1].state === 'ready' || rows[1].state === 'cd',
+      '箭雨按「解锁过」判断 → ready / cd（第 65 块新规格）', rows[1].state);
+    ok(rows[1].status.includes('就绪') || rows[1].status.includes('冷却'),
+      '状态说明跟着走（不再写「未解锁」）', rows[1].status);
+    // 说明：原来这里还有一条「未解锁时写着解锁条件」。第 65 块把箭雨改成「解锁过就有」，
+    // 这三行在这个档案下全是已解锁，锁态文案在这里已经测不到了 ——
+    // 那条覆盖搬到 .tmp-block66-test.mjs（断言 SKILLS 里每条的 unlockNote 都在）。
     // 回血在档案里解锁了 → 就绪或冷却中，反正不是 lock
     ok(rows[2].state !== 'lock', '回血已解锁（档案造的）', rows[2].state);
     ok((await ev('__game.block64.panel.sub()')).includes('3 个技能'), '副标题报「3 个技能」',
@@ -256,7 +266,12 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
       await sleep(600);
     }
     ok(await ev('__game.weapon.granted') === true, '环剑已到手（技能键才会出现）');
-    ok(await ev('__game.weapon.count') >= 3, '环上至少 3 把剑', String(await ev('__game.weapon.count')));
+    // 环上可能少一两把：剑会自己射出去打进入范围的怪（flying），那期间 orbiting 少。
+    // 下限放宽到 2，并同时看 owned（拥有数，不会因为飞出去而变）。
+    const wCount = await ev('__game.weapon.count');
+    const wOwned = (await ev('JSON.stringify(__game.weapon.owned)'));
+    ok(wCount >= 2 && wOwned.length >= 3, '环上至少 2 把 / 拥有 3 把（有剑飞出去打怪是正常的）',
+      'count=' + wCount + ' owned=' + wOwned);
     await ev(`document.querySelector('.sk[data-skill="swordRain"]')?.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })), 1`);
     await sleep(500);
     const cdAfter = await ev('__game.fireCdLeft()');

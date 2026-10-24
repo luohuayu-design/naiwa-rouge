@@ -13,9 +13,9 @@
 // 数值：伤害吃武器属性表 wstats（swordDamage / 暴击），× ARROW_DMG_MUL ——
 //   商店的剑油 / 磨剑石同样强化箭雨，升级卡不白买。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=76';
-import { mitigate } from './stats.js?v=76';
-import audio from './audio.js?v=76';
+import * as THREE from '../lib/three.module.js?v=77';
+import { mitigate } from './stats.js?v=77';
+import audio from './audio.js?v=77';
 
 const AIM_TIME = 0.85;      // 警告圈亮起到第一支箭落地（给怪走位、给玩家预判）
 const SPREAD_TIME = 1.0;    // 全部箭落完的时间窗（每支箭在这个窗内错开）
@@ -67,8 +67,10 @@ export function createArrowRainSystem({ scene, fx, enemies, wstats }) {
 
   // ---------------- 施放 ----------------
   // 返回 true = 真的放出去了（进冷却）；false = 没放出去（没解锁 / 冷却中 / 视野内没有怪）
+  let lastFail = '';           // 'lock' | 'cd' | 'notarget'（第 66 块：给玩家一句提示用）
   function fire(playerPos) {
-    if (!unlocked || cd > 0) return false;
+    if (!unlocked) { lastFail = 'lock'; return false; }
+    if (cd > 0) { lastFail = 'cd'; return false; }
 
     // 找最近的活怪（不含正在生成 / 已死 / 隐身的雾鬼 —— 别对着空气放箭）
     const list = enemies.list.filter((e) => e.state !== 'dead' && e.state !== 'spawn' && !e.ghostHidden);
@@ -78,7 +80,8 @@ export function createArrowRainSystem({ scene, fx, enemies, wstats }) {
       const d = (e.pos.x - p.x) ** 2 + (e.pos.z - p.z) ** 2;
       if (d < bestD) { bestD = d; best = e; }
     }
-    if (!best) return false;
+    if (!best) { lastFail = 'notarget'; return false; }
+    lastFail = '';
 
     // 以怪当前位置为中心设界（预判就交给 AIM_TIME 的延迟让玩家自己挪）
     const x = best.pos.x, z = best.pos.z;
@@ -197,12 +200,19 @@ export function createArrowRainSystem({ scene, fx, enemies, wstats }) {
     if (saved && saved.unlocked) unlocked = true;
   }
 
+  // 第 66 块：只清冷却、不动解锁状态。beginGame 里用 ——
+  // 箭雨是模块级单例，原来只有读档那条路会 reset()，直接「重开一局」会把上一局
+  // 没走完的 8 秒冷却带进新局（玩家：刚开局箭雨就是灰的，像坏了）。
+  // 不能直接 reset()：它会把 unlocked 也清掉，而 prefillRing() 见 weapon.granted
+  // 已为 true 会提前 return，箭雨就再也解锁不回来了。
+  function resetCd() { cd = 0; }
+
   function snapshot() {
     return { unlocked };
   }
 
   return {
-    unlock, reset, restore, snapshot, update, fire,
+    unlock, reset, resetCd, restore, snapshot, update, fire,
     // 结算后隐藏 / 回合开始显示（与 weapon.setVisible 同款）
     setVisible(v) {
       for (const s of strikes) {
@@ -221,5 +231,14 @@ export function createArrowRainSystem({ scene, fx, enemies, wstats }) {
       if (cd > 0) cd = Math.min(cd, CD_MAX * cdMul);
     },
     get strikeCount() { return strikes.length; },
+    // 第 66 块：上一次 fire() 为什么没放出去（'' = 成功了）
+    get lastFail() { return lastFail; },
+    // 第 66 块：射程内有没有可落箭的活怪（技能键的灰/亮已经用不上它，
+    // 教程「补靶子」和玩家提示要问这个）
+    hasTarget(p) {
+      const q = p || { x: 0, z: 0 };
+      return enemies.list.some((e) => e.state !== 'dead' && e.state !== 'spawn' && !e.ghostHidden
+        && ((e.pos.x - q.x) ** 2 + (e.pos.z - q.z) ** 2) < SEARCH_R * SEARCH_R);
+    },
   };
 }
