@@ -5,37 +5,37 @@
 // 目标是把三件事调顺：摇杆输入 → 角色速度/朝向 → 相机跟随。
 // 后续叠战斗时，只需要在 tick() 里加敌人更新与自动攻击，不用动输入层。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=80';
-import { buildNightScene } from './scene.js?v=80';
-import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=80';
-import { createInput } from './input.js?v=80';
-import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=80';
-import { createStatView } from './statView.js?v=80';
-import { createWeaponStats } from './weaponStats.js?v=80';
-import { createFx } from './fx.js?v=80';
-import { createEnemySystem } from './enemy.js?v=80';
+import * as THREE from '../lib/three.module.js?v=81';
+import { buildNightScene } from './scene.js?v=81';
+import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=81';
+import { createInput } from './input.js?v=81';
+import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=81';
+import { createStatView } from './statView.js?v=81';
+import { createWeaponStats } from './weaponStats.js?v=81';
+import { createFx } from './fx.js?v=81';
+import { createEnemySystem } from './enemy.js?v=81';
 import {
   createLevel, LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVEL_5, LEVEL_6, LEVELS_BY_ID, DIFFS, setDifficulty, getDifficulty, roundScale, levelStats,
-} from './wave.js?v=80';
-import { createRangeRing } from './rangeRing.js?v=80';
-import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=80';
-import { createWeaponSystem } from './weapon.js?v=80';
-import { createArrowRainSystem } from './arrowRain.js?v=80';
-import { SWORD_KINDS } from './swordKinds.js?v=80';
-import { createGoldSystem } from './gold.js?v=80';
-import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW } from './shop.js?v=80';
-import { createTurretSystem, TURRET } from './turret.js?v=80';
-import { createRelicSystem, RELIC_DEFS } from './relics.js?v=80';
-import { createHazards } from './hazards.js?v=80';
-import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=80';
-import audio from './audio.js?v=80';
-import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=80';
+} from './wave.js?v=81';
+import { createRangeRing } from './rangeRing.js?v=81';
+import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=81';
+import { createWeaponSystem } from './weapon.js?v=81';
+import { createArrowRainSystem } from './arrowRain.js?v=81';
+import { SWORD_KINDS } from './swordKinds.js?v=81';
+import { createGoldSystem } from './gold.js?v=81';
+import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW } from './shop.js?v=81';
+import { createTurretSystem, TURRET } from './turret.js?v=81';
+import { createRelicSystem, RELIC_DEFS } from './relics.js?v=81';
+import { createHazards } from './hazards.js?v=81';
+import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=81';
+import audio from './audio.js?v=81';
+import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=81';
 // 第 62 块：回血技能（第四关通关后永久解锁，回 5 点 / CD 25 秒）
-import { createHealSkill, HEAL_AMOUNT, HEAL_CD } from './healSkill.js?v=80';
+import { createHealSkill, HEAL_AMOUNT, HEAL_CD } from './healSkill.js?v=81';
 // 第 62 块：民心专属事件（升档走良性池、掉档走恶性池）
-import { repPoolForTier, REP_GOOD, REP_BAD } from './repEvents.js?v=80';
+import { repPoolForTier, REP_GOOD, REP_BAD } from './repEvents.js?v=81';
 // 第 62 块：攻略面板（战败提示上的「查看攻略」，手风琴三组）
-import { renderGuide, GUIDE_SECTIONS } from './guide.js?v=80';
+import { renderGuide, GUIDE_SECTIONS } from './guide.js?v=81';
 import {
   settings as readSettings, setSetting, save as saveProfile, profile,
   bumpStat, setStatMax, codexAdd, codexCount, countCard, unlockAch, hasAch, addBones, bones, resetAll,
@@ -48,49 +48,49 @@ import {
   healUnlocked, markHealUnlocked,
   rainObtained, markRainObtained,          // 第 65 块：技能的「有没有」只跟解锁有关
   hintSeen, markHintSeen,                  // 第 65 块：一次性提示卡
-} from './profile.js?v=80';
+} from './profile.js?v=81';
 // 第 44 块：礼包兑换（码表只有哈希，明细在 gift.js 顶部注释）
-import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=80';
+import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=81';
 // 第 46 块：音效包（抽象奶蛙音效包 —— 4 段奶蛙叫声，通关第一关解锁）
-import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=80';
-import * as runSave from './runSave.js?v=80';
+import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=81';
+import * as runSave from './runSave.js?v=81';
 import {
   CAMPFIRE, CAMP_STEP, campBuy, campOwned, campLevel,
   campCost, campApply, bonesFor, diffBoneMul, levelBoneMul, coinBones, BONE,
-} from './campfire.js?v=80';
+} from './campfire.js?v=81';
 // 第 23 块：永夜火种（通关白给的 3 次永久三选一）
 import {
   BOONS, BOON_BY_ID, BOON_PICKS, boonOwned, boonStacks, boonPending, boonTotalStacks,
   grantBoons, rollBoons, takeBoon, applyBoons, boonStackText,
-} from './boons.js?v=80';
+} from './boons.js?v=81';
 // 第 21 块：夜行诅咒（自选 debuff 换骨币倍率）
-import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=80';
+import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=81';
 // 第 22 块：种子与每日挑战
 import {
   DAILY_RULES, dayKey, dayText, dailySeed, seedCode, pickDailyCurses,
   seedFromText, pickSeedRules, loadSeedRecords, saveSeedRecord, pruneSeeds,
   dailyRecord, saveDailyRecord, pruneDaily, makeRng,
-} from './seed.js?v=80';
-import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=80';
+} from './seed.js?v=81';
+import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=81';
 // 第 58 块：局外商店 · 宝箱（花骨币买，开箱随机给永久属性 / 永久法器 / 技能CD缩短）
 import {
   BOXES, BOX_BY_ID, buyBox, rollBox, metaApplyStats, applyMeta,
-} from './metaShop.js?v=80';
+} from './metaShop.js?v=81';
 // 第 59 块：每日签到（以周为单位，周一 00:00 重置）
 import {
   WEEK_TIERS, SIGN_BONES, weekCells, signSummary, signToday, signedToday,
-} from './signin.js?v=80';
-import { achById, ACHS } from './achievements.js?v=80';
+} from './signin.js?v=81';
+import { achById, ACHS } from './achievements.js?v=81';
 import {
   EVENTS, ALL_EVENTS, getEventById, pickEvent, effectLines,
   choiceHint, canAfford, costShort, REP_MIN, REP_MAX, REP_START,
   isTalk, eventChoices, resolveRoll, mergeEffects,
-} from './events.js?v=80';
+} from './events.js?v=81';
 // 第 32 块：主线《笑不出来的那一夜》（18 夜，一夜一关，前 3 夜已有关卡）
 import {
   STORY_ARC, STORY_CHAPTERS, STORY_ENDINGS, MARK_INFO,
   storyChapterAt, storyChapterById, storyEndingKey,
-} from './story.js?v=80';
+} from './story.js?v=81';
 
 // 标记模块已经跑起来了：index.html 的兜底自检靠它判断
 // 「模块根本没执行」还是「执行了但加载慢」。
@@ -860,10 +860,13 @@ async function boot() {
   // 玩家会以为是自己点错了）。所以离开那一张卡再播 ——
   // 第 67 块（用户定案）的口径：**属性选择在前、民心事件在后**，也就是
   // 「随机事件 → 三选一 → 民心事件 → 商店」；这回合没有三选一就紧跟着事件弹。
-  const repEventQueue = [];     // 待播的事件 id（FIFO，最多两份）
+  // 第 70 块：队列里存 { id, delta, total } 而不是只有 id ——
+  // 民心事件的横幅要打出「民心 +2 → 62」，这两个数必须在**跨档那一刻**抓，
+  // 等回合末真的播出来时 reputation 可能已经被别的事改过了。
+  const repEventQueue = [];     // 待播（FIFO，最多两份）
   const repEvFired = new Set(); // 本局已经触发过的档位（同一档不重复刷）
 
-  function queueRepEvent(t0, t1) {
+  function queueRepEvent(t0, t1, delta) {
     // 只在「从一个档跨到另一个档」时触发，而且只认升到 1/2/3、掉到 -1/-2
     if (t0 === t1) return null;
     const up = t1 > t0;
@@ -876,8 +879,13 @@ async function boot() {
     if (!pool || !pool.length) return null;
     repEvFired.add(key);
     const pick = pool[(rngOf('event')() * pool.length) | 0];
-    if (repEventQueue.length < 2) repEventQueue.push(pick.id);
-    return pick.id;
+    const item = {
+      id: pick.id,
+      delta: Math.round(delta || 0),
+      total: Math.round(reputation),
+    };
+    if (repEventQueue.length < 2) repEventQueue.push(item);
+    return item;
   }
 
   function addRep(n) {
@@ -892,10 +900,10 @@ async function boot() {
     if (t1 !== t0) {
       // 第 62 块：跨档 → 排一条民心专属事件；第 67 块起在**本回合**属性选择之后播
       // （见 handleRoundClear 的 playRep）
-      const qid = queueRepEvent(t0, t1);
-      if (qid) {
-        const qev = getEventById(qid);
-        if (qev) codexAdd('events', qid);
+      const q = queueRepEvent(t0, t1, reputation - before);
+      if (q) {
+        const qev = getEventById(q.id);
+        if (qev) codexAdd('events', q.id);
       }
       const msg = {
         3: '整个草原都知道你的名字了，孩子们在夜里喊「奶蛙来了」',
@@ -2947,6 +2955,13 @@ async function boot() {
   const evResultLines = document.getElementById('evResultLines');
   const evTalk = document.getElementById('evTalk');       // 对话记录（第 10 块）
   const evNext = document.getElementById('evNext');
+  // 第 70 块：民心专属事件的独立头栏（印章 / 标题 / 民心数值）与可换脚注
+  const repBarEl = document.getElementById('repBar');
+  const rbTitleEl = document.getElementById('rbTitle');
+  const rbDeltaEl = document.getElementById('rbDelta');
+  const evFootEl = document.getElementById('evFoot');
+  const EV_FOOT_DEFAULT = evFootEl ? evFootEl.textContent : '';
+  const EV_FOOT_REP = '民心记在村里的账上 · 这一档，一局只会来一次';
 
   let eventOpen = false;
   let eventNextCb = null;      // 事件关掉后继续（→ 三选一 → 商店）
@@ -3310,17 +3325,38 @@ async function boot() {
   }
 
   // 打开事件卡：世界冻结，等玩家看完 / 选完 / 聊完
-  function openEvent(ev, endedRound, next) {
+  function openEvent(ev, endedRound, next, opts) {
     gameState = 'event';
     input.joystick.release();
     vel.set(0, 0, 0);
     currentEventRound = endedRound;
     eventNextCb = next || null;
+    applyRepSkin(ev, opts && opts.rep ? opts : null);   // 第 70 块：民心专用外观
     renderEventUI(ev);
     audio.sfx('event');            // 木门吱呀一声，故事开始
     evCard.classList.add('on');
     evCard.setAttribute('aria-hidden', 'false');
     eventOpen = true;
+  }
+
+  // ---------------- 民心专属事件的版式（第 70 块）----------------
+  // 用户：「民心事件的提示框风格和随机事件完全一致，这个导致有点混」。
+  // 玩法逻辑照旧复用 #eventCard（选项 / 读秒锁 / 结果页一行不改），
+  // 只在这里换一层皮：贴顶的青绿横幅 + 「民」字印章 + 民心数值徽章；
+  // 掉民心的那档换成暗红。rep 为空时（随机事件 / 连锁事件）全部还原。
+  function applyRepSkin(ev, rep) {
+    evCard.classList.toggle('rep', !!rep);
+    evCard.classList.toggle('bad', !!(rep && rep.delta < 0));
+    if (evFootEl) evFootEl.textContent = rep ? EV_FOOT_REP : EV_FOOT_DEFAULT;
+    if (!rep) return;
+    if (rbTitleEl) rbTitleEl.textContent = ev.title || '夜行奇遇';
+    if (!rbDeltaEl) return;
+    const d = Math.round(rep.delta || 0);
+    const total = Math.round(rep.total);
+    // 「民心 +2 → 62」= 跨进这一档一共涨了多少、现在停在哪个数
+    rbDeltaEl.innerHTML = d === 0
+      ? `民心 <b>${total}</b>`
+      : `民心 <b>${d > 0 ? '+' : '−'}${Math.abs(d)}</b> → <b>${total}</b>`;
   }
 
   // 选完一个选项：扣代价 → 结算 → 排连锁 → 切到「角色的回应」结果页
@@ -3370,6 +3406,8 @@ async function boot() {
     eventOpen = false;
     clearTalkCountdown();          // 第 42 块：关掉事件卡时把读秒停下
     evCard.classList.remove('on');
+    evCard.classList.remove('rep', 'bad');   // 第 70 块：民心版式不带到下一张卡
+    if (evFootEl) evFootEl.textContent = EV_FOOT_DEFAULT;
     evCard.setAttribute('aria-hidden', 'true');
     evResult.classList.remove('on');
     evTalk.classList.remove('on');
@@ -3593,10 +3631,15 @@ async function boot() {
     const playRep = (next) => {
       if (DEBUG_SKIP_NARRATIVE) { repEventQueue.length = 0; next(); return; }
       while (repEventQueue.length) {
-        const rid = repEventQueue.shift();
-        const rev = getEventById(rid);
+        const item = repEventQueue.shift();
+        const rev = getEventById(item.id);
         // 民心事件自己的选项也可能再跨档 → 播完接着播，别把第二条丢了
-        if (rev) { openEvent(rev, roundNo, () => playRep(next)); return; }
+        if (rev) {
+          openEvent(rev, roundNo, () => playRep(next), {
+            rep: true, delta: item.delta, total: item.total,   // 第 70 块：横幅上的民心数值
+          });
+          return;
+        }
       }
       next();
     };
@@ -6441,7 +6484,8 @@ async function boot() {
       },
       // 第 62 块：民心专属事件（测试钩子）
       repEv: {
-        queue: () => repEventQueue.slice(),
+        queue: () => repEventQueue.map((q) => q.id),        // 老语义：id 字符串
+        queueFull: () => repEventQueue.map((q) => ({ ...q })),   // 第 70 块：带上 delta / total
         fired: () => [...repEvFired],
         clear: () => { repEventQueue.length = 0; repEvFired.clear(); },
         pools: () => ({
@@ -6454,7 +6498,10 @@ async function boot() {
           return ev || null;
         },
         // 把某一条塞进队列（模拟跨档，不真的改民心）
-        push: (id) => { repEventQueue.push(id); return repEventQueue.length; },
+        push: (id, delta = 0, total = reputation) => {
+          repEventQueue.push({ id, delta, total });
+          return repEventQueue.length;
+        },
       },
       // 第 62 块：回血技能（测试钩子）
       heal: {
@@ -6649,11 +6696,12 @@ async function boot() {
       event: {
         // 传事件 id 手动触发（绕过抽取，便于确定性测试）。
         // 注意：新结构的效果在每个选项里，触发后要用 choose(idx) 选一项才会结算。
-        trigger: (id, endedRound = level.roundNo) => {
+        // 第 70 块：opts 可传 { rep: true, delta, total } 直接进民心版式。
+        trigger: (id, endedRound = level.roundNo, opts = null) => {
           const ev = getEventById(id);
           if (!ev) return null;
           seenEvents.push(id);
-          openEvent(ev, endedRound, null);
+          openEvent(ev, endedRound, null, opts);
           return ev;
         },
         choose: (idx) => {

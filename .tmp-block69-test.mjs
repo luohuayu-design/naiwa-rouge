@@ -114,7 +114,8 @@ const html = read('index.html');
 const vm = html.match(/main\.js\?v=(\d+)/);
 ok(!!vm, 'index.html 的 main.js 带版本号');
 const v = vm ? vm[1] : '';
-ok(v === '80', '本块版本号是 v=80', v);
+// 第 70 块起不再写死：只要还在 v=80 之后（每发一块都会 bump）
+ok(Number(v) >= 80, '版本号 ≥ v=80（本块上线时的基线）', v);
 const files = ['index.html', ...fs.readdirSync(path.join(ROOT, 'js')).filter((f) => f.endsWith('.js')).map((f) => 'js/' + f)];
 const bad = [];
 for (const f of files) {

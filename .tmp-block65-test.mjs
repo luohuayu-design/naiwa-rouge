@@ -179,7 +179,8 @@ sec('七、民心事件关底不丢');
 // 运行时「关底照样播」的覆盖在 .tmp-block67-cdp.js 的 C 组（真跑一遍第 20 回合）。
 ok(/if \(isLast\) \{ runUpgrade\(\); return; \}/.test(mainSrc),
   '关底走 runUpgrade（民心事件在 playRep 里播，不再单独 while）');
-ok(/if \(rev\) \{ openEvent\(rev, roundNo, \(\) => playRep\(next\)\); return; \}/.test(mainSrc),
+// 第 70 块给 openEvent 加了第 4 个参数（民心版式），这里只认「回调还是 playRep(next)」
+ok(/if \(rev\) \{[\s\S]{0,200}?openEvent\(rev, roundNo, \(\) => playRep\(next\)/.test(mainSrc),
   '播的事件仍接回后续（三选一 / 结算）');
 ok(/repEventQueue\.length = 0;/.test(mainSrc), '开局清上一局残留（保留）');
 

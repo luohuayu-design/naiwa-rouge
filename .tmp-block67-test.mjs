@@ -50,10 +50,11 @@ sec('一、民心事件挪进本回合的结算链');
 ok(hrc.length > 0, 'handleRoundClear 抓到了（正则没失效）');
 ok(playRep.length > 0, 'handleRoundClear 里定义了 playRep()（民心事件的唯一出口）');
 ok(/while \(repEventQueue\.length\) \{/.test(playRep), 'playRep 会把队列里的都播完');
-ok(/const rid = repEventQueue\.shift\(\);/.test(playRep), '从队列头部取（FIFO）');
-ok(/const rev = getEventById\(rid\)/.test(playRep), '取到的是事件本体');
+// 第 70 块起队列元素是 { id, delta, total }（横幅要打民心数值），从队列头部取的是这一条
+ok(/const item = repEventQueue\.shift\(\);/.test(playRep), '从队列头部取（FIFO）');
+ok(/const rev = getEventById\(item\.id\)/.test(playRep), '取到的是事件本体');
 ok(/openEvent\(rev, roundNo, /.test(playRep), '用 openEvent 播，回合号传的是本回合');
-ok(/if \(rev\) \{ openEvent/.test(playRep), '查不到的事件跳过，不会卡住链子');
+ok(/if \(rev\) \{[\s\S]{0,220}?openEvent\(/.test(playRep), '查不到的事件跳过，不会卡住链子');
 
 // 旧实现：在 runEvent 里「0.5) 民心跨档的专属事件」优先播，而且排到**下一回合**
 ok(!/0\.5\) 民心跨档/.test(mainSrc), '旧的「0.5 民心优先」段已删掉');
@@ -113,10 +114,10 @@ ok(/if \(isLast\) \{ endGame\(true\); return; \}/.test(runShop),
 // ============================================================
 sec('五、民心事件自身再跨档 → 第二条接着播');
 // ============================================================
-ok(/openEvent\(rev, roundNo, \(\) => playRep\(next\)\)/.test(playRep),
+ok(/openEvent\(rev, roundNo, \(\) => playRep\(next\)/.test(playRep),
   '播完一条继续看队列（民心事件也可能让民心再跨一档）');
 ok(/最多两份/.test(mainSrc), '队列上限 2，递归最多两层（不会死循环）');
-const pushGuard = /if \(repEventQueue\.length < 2\) repEventQueue\.push\(pick\.id\);/.test(mainSrc);
+const pushGuard = /if \(repEventQueue\.length < 2\) repEventQueue\.push\(item\);/.test(mainSrc);
 ok(pushGuard, '入队时仍然守着「最多两份」');
 
 // ============================================================

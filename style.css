@@ -1181,7 +1181,9 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
 .bg-empty{padding:26px 10px;text-align:center;font-size:12px;color:#7d97a4}
 
 /* ---------------- 随机事件卡 ---------------- */
-.event-card{position:fixed;inset:0;z-index:17;display:flex;align-items:center;justify-content:center;
+/* z-index 27：第 70 块发现「第 N 回合」的飘字（#waveToast 是 26）会压在事件卡上面 ——
+   事件卡是全屏浮层，临时提示不该盖在它正文上。原来 17 一直被压，只是一直没人提。 */
+.event-card{position:fixed;inset:0;z-index:27;display:flex;align-items:center;justify-content:center;
   padding:24px;background:rgba(2,7,6,.86);
   opacity:0;pointer-events:none;transition:opacity .22s ease}
 .event-card.on{opacity:1;pointer-events:auto}
@@ -1266,6 +1268,70 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
 .ev-btn.primary{border-color:rgba(150,255,200,.45);background:rgba(120,240,180,.12);color:#d8ffec}
 .ev-btn.primary:hover{background:rgba(120,240,180,.2)}
 .ev-foot{margin-top:12px;font-size:10px;letter-spacing:.06em;color:rgba(190,175,140,.42)}
+
+/* ---------------- 民心专属事件：顶部横幅版式（第 70 块）----------------
+   用户反馈「民心事件的提示框风格和随机事件完全一致，混」。
+   随机事件 = 居中、暖黄木门、圆角大卡；
+   民心事件 = 贴顶滑下、青绿底、顶部一道金线、左边「民」字印章、右边数值徽章。
+   玩法逻辑完全复用 #eventCard（选项 / 读秒锁 / 结果页），这里只覆盖外观，
+   所以不用再复制一套事件引擎（v=61 的重复 id 教训）。 */
+.rep-bar{display:none}
+.event-card.rep{align-items:flex-start;background:rgba(2,10,8,.9);
+  padding:calc(10px + env(safe-area-inset-top)) 12px 12px}
+.event-card.rep .ev-box{width:min(94vw,460px);max-height:calc(100dvh - 26px);
+  text-align:left;border-radius:14px;
+  border:1px solid rgba(118,214,186,.36);
+  box-shadow:0 18px 46px rgba(0,0,0,.66),inset 0 1px 0 rgba(200,255,236,.09);
+  background:
+    linear-gradient(90deg,rgba(224,196,120,0),rgba(224,196,120,.85) 22%,rgba(224,196,120,.85) 78%,rgba(224,196,120,0)) top/100% 2px no-repeat,
+    linear-gradient(180deg,rgba(16,40,36,.99),rgba(6,15,13,1));
+  transform:translateY(-18px);transition:transform .26s cubic-bezier(.2,.9,.3,1)}
+.event-card.rep.on .ev-box{transform:none}
+.event-card.rep .ev-icon,
+.event-card.rep .ev-title{display:none}
+.event-card.rep .rep-bar{display:flex;align-items:center;gap:10px;
+  padding-bottom:10px;border-bottom:1px solid rgba(118,214,186,.18)}
+.rb-seal{flex:0 0 auto;width:34px;height:34px;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:17px;font-weight:800;color:#0b1e1a;letter-spacing:0;
+  background:linear-gradient(160deg,#e6cf92,#c9a961);
+  box-shadow:0 2px 10px rgba(200,170,90,.32);transform:rotate(-4deg)}
+.rb-title{flex:1 1 auto;min-width:0;font-size:16px;font-weight:800;
+  letter-spacing:.1em;color:#dff7ec;text-shadow:0 0 16px rgba(110,230,190,.26)}
+.rb-delta{flex:0 0 auto;font-size:11px;letter-spacing:.04em;white-space:nowrap;
+  padding:3px 9px;border-radius:999px;color:rgba(180,235,215,.74);
+  border:1px solid rgba(118,214,186,.3);background:rgba(60,180,140,.12)}
+.rb-delta b{color:#8ff0c6;font-weight:800}
+.event-card.rep .ev-who{margin-top:9px;color:rgba(150,210,190,.6)}
+.event-card.rep .ev-story{color:rgba(216,238,228,.82)}
+.event-card.rep .ev-say{color:rgba(222,244,234,.92);border-left-color:rgba(118,214,186,.45)}
+.event-card.rep .ev-btn{border-color:rgba(118,214,186,.28);
+  background:rgba(58,160,132,.1);color:rgba(214,238,228,.88)}
+.event-card.rep .ev-btn:hover{border-color:rgba(150,255,215,.5);background:rgba(90,220,175,.16)}
+.event-card.rep .ev-btn b{color:#dff7ec}
+.event-card.rep .ev-btn i{color:rgba(170,225,205,.7)}
+.event-card.rep .ev-btn.primary{border-color:rgba(150,255,200,.45);
+  background:rgba(90,220,175,.18);color:#d8ffec}
+.event-card.rep .ev-foot{color:rgba(140,200,180,.46)}
+/* 掉民心那一档（恶性事件）换暗红，同一版式两种色调 */
+.event-card.rep.bad .ev-box{border-color:rgba(228,126,116,.4);
+  box-shadow:0 18px 46px rgba(0,0,0,.66),inset 0 1px 0 rgba(255,206,196,.09);
+  background:
+    linear-gradient(90deg,rgba(226,150,120,0),rgba(226,150,120,.8) 22%,rgba(226,150,120,.8) 78%,rgba(226,150,120,0)) top/100% 2px no-repeat,
+    linear-gradient(180deg,rgba(44,22,22,.99),rgba(14,7,7,1))}
+.event-card.rep.bad .rep-bar{border-bottom-color:rgba(228,126,116,.2)}
+.event-card.rep.bad .rb-seal{background:linear-gradient(160deg,#e8b6a6,#c97a68);
+  box-shadow:0 2px 10px rgba(200,110,90,.32)}
+.event-card.rep.bad .rb-title{color:#ffddd6;text-shadow:0 0 16px rgba(230,120,110,.26)}
+.event-card.rep.bad .rb-delta{color:rgba(255,205,195,.8);
+  border-color:rgba(228,126,116,.36);background:rgba(190,80,70,.16)}
+.event-card.rep.bad .rb-delta b{color:#ff9d90}
+.event-card.rep.bad .ev-who{color:rgba(226,160,150,.6)}
+.event-card.rep.bad .ev-story{color:rgba(238,216,212,.82)}
+.event-card.rep.bad .ev-btn{border-color:rgba(228,126,116,.26);background:rgba(170,70,62,.12)}
+.event-card.rep.bad .ev-btn:hover{border-color:rgba(255,170,160,.5);background:rgba(210,90,80,.18)}
+.event-card.rep.bad .ev-btn b{color:#ffe4de}
+.event-card.rep.bad .ev-btn i{color:rgba(235,180,170,.7)}
 
 /* ---------------- 商店 ---------------- */
 .shop{position:fixed;inset:0;z-index:16;display:flex;align-items:center;justify-content:center;

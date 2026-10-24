@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#080f14">
 <link rel="icon" href="data:,">
 <title>蛙步 · 夜行</title>
-<link rel="stylesheet" href="style.css?v=80">
+<link rel="stylesheet" href="style.css?v=81">
 </head>
 <body>
 
@@ -174,6 +174,13 @@
 <!-- 回合开始前：随机事件（夜行奇遇，有好事有坏事，有的要做选择） -->
 <div id="eventCard" class="event-card" aria-hidden="true">
   <div class="ev-box">
+    <!-- 第 70 块：民心专属事件用另一套「顶部横幅」版式（用户反映跟随机事件长得一样、容易混）。
+         默认隐藏，只有 #eventCard 带 .rep 时才出现；标题 / 数值都从这里读。 -->
+    <div class="rep-bar" id="repBar">
+      <span class="rb-seal" aria-hidden="true">民</span>
+      <span class="rb-title" id="rbTitle">—</span>
+      <span class="rb-delta" id="rbDelta"></span>
+    </div>
     <div class="ev-icon" id="evIcon">❄</div>
     <div class="ev-title" id="evTitle">—</div>
     <div class="ev-who" id="evWho"></div>
@@ -188,7 +195,7 @@
       <div class="ev-lines" id="evResultLines"></div>
       <button class="ev-btn primary" id="evNext" type="button"><b>继续</b></button>
     </div>
-    <div class="ev-foot">抉择之后，效果落在下一回合 · 只有民心会跟着你走完这一夜</div>
+    <div class="ev-foot" id="evFoot">抉择之后，效果落在下一回合 · 只有民心会跟着你走完这一夜</div>
   </div>
 </div>
 
@@ -827,7 +834,7 @@
 <!-- 不用 importmap：老手机浏览器（iOS 16.4 以下、旧版微信/安卓 WebView）
      不支持 import maps，会让整个模块解析失败、加载页永远停在 0%。
      项目内所有 import 都写成相对路径，直接靠原生 ES Module 解析。 -->
-<script type="module" src="js/main.js?v=80"></script>
+<script type="module" src="js/main.js?v=81"></script>
 
 <!-- 兜底自检：模块没跑起来时把原因写出来，别让用户对着 0% 干等 -->
 <script>
