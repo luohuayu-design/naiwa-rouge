@@ -16,10 +16,10 @@
 // 与环剑（自动索敌、消耗制）和炮台（固定点位）互补；价格定在
 // 商店里「买得起但要攒一攒」的档，让 9/12/15/18 回合的商店有取舍。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=81';
-import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=81';
-import { distance2D } from './stats.js?v=81';
-import audio from './audio.js?v=81';
+import * as THREE from '../lib/three.module.js?v=82';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=82';
+import { distance2D } from './stats.js?v=82';
+import audio from './audio.js?v=82';
 
 export const RELIC_DEFS = {
   spikes: {
@@ -106,11 +106,25 @@ export const RELIC_DEFS = {
     desc: ['站在漏电地板上不掉血；通电时身边 2.4 内的怪每 0.5 秒吃 0.5 伤',
       '半径 2.7、0.7 伤', '半径 3.0、0.9 伤 —— 你踩的那块地板就是你的武器'],
   },
+  // ---------------- 第七关新增（第 71 块） ----------------
+  // 木鱼：井底捡的木鱼槌（木鱼灵 knock 出来的法器）。被动 —— 主角**挨打 / 击杀**时
+  // 震一圈，把身边怪击退 + 短暂定身（冰冻）。不占操作、专解围，是井底窄场地的救命底牌。
+  // 带短冷却（0.45 秒），避免群怪里一下触发太多次。
+  woodfish: {
+    name: '木鱼',
+    maxLevel: 3,
+    radius: [2.8, 3.2, 3.6],
+    knock: [1.4, 1.7, 2.0],
+    stun: [0.5, 0.65, 0.8],
+    desc: ['挨打/击杀时身边 2.8 内怪击退 1.4、定身 0.5 秒',
+      '半径 3.2、击退 1.7、定身 0.65 秒',
+      '半径 3.6、击退 2.0、定身 0.8 秒 —— 木鱼一响，井蛙退避'],
+  },
 };
 
 export function createRelicSystem({ scene, fx, enemies, onLanternReveal }) {
-  const levels = { spikes: 0, frost: 0, bell: 0, thorns: 0, stove: 0, lantern: 0, insulator: 0 };
-  const cds = { spikes: 0, frost: 0, bell: 0, thorns: 0, stove: 0, lantern: 0, insulator: 0 };
+  const levels = { spikes: 0, frost: 0, bell: 0, thorns: 0, stove: 0, lantern: 0, insulator: 0, woodfish: 0 };
+  const cds = { spikes: 0, frost: 0, bell: 0, thorns: 0, stove: 0, lantern: 0, insulator: 0, woodfish: 0 };
 
   // ---------------- 视觉 ----------------
   // 地刺（第 24 块）：KayKit「尖刺地板」里只取尖刺部分（CC0，带手绘贴图），
@@ -461,6 +475,37 @@ export function createRelicSystem({ scene, fx, enemies, onLanternReveal }) {
     return n;
   }
 
+  // ============================================================
+  // 木鱼（第 71 块）：被动 —— 主角挨打 / 击杀时震一圈，把身边怪击退 + 短暂定身。
+  // 带 0.45 秒冷却：群怪里一下挨好几下也不至于把定身刷爆。返回震到的怪数。
+  // ============================================================
+  function woodfishHit(at) {
+    const lv = levels.woodfish;
+    if (lv <= 0) return 0;
+    if (cds.woodfish > 0) return 0;          // 冷却中
+    cds.woodfish = 0.45;
+    const def = RELIC_DEFS.woodfish;
+    const radius = def.radius[lv - 1];
+    const knock = def.knock[lv - 1];
+    const stun = def.stun[lv - 1];
+    let n = 0;
+    for (const e of enemies.list) {
+      if (e.state === 'dead' || e.state === 'spawn') continue;
+      if (distance2D(at, e.pos) > radius) continue;
+      n++;
+      if (e.state !== 'dead') {
+        enemies.knockback(e, at.x, at.z, knock);
+        enemies.applyFreeze(e, stun);
+      }
+    }
+    if (n && fx) {
+      fx.ring(at, { from: 0.3, to: radius, color: 0x57e6d0, life: 0.34, opacity: 0.7, y: 0.07 });
+      fx.ring(at, { from: 0.15, to: radius * 0.5, color: 0xaef6ec, life: 0.22, opacity: 0.55, y: 0.09 });
+    }
+    if (n) audio.sfx('aegis');    // 借用金钟罩的木鱼声（素材里没有第二口木鱼）
+    return n;
+  }
+
   function update(dt, { playerPos, hazards } = {}) {
     // 石刺起落动画（模型尖刺：整丛从地下顶出来再缩回去）
     for (let i = eruptions.length - 1; i >= 0; i--) {
@@ -475,6 +520,9 @@ export function createRelicSystem({ scene, fx, enemies, onLanternReveal }) {
         eruptions.splice(i, 1);
       }
     }
+
+    // 木鱼冷却（挨打/击杀触发的震圈，0.45 秒一发）
+    if (cds.woodfish > 0) cds.woodfish -= dt;
 
     // 霜环盘子跟人走、呼吸
     const fl = levels.frost;
@@ -601,6 +649,7 @@ export function createRelicSystem({ scene, fx, enemies, onLanternReveal }) {
     levels.stove = 0;
     levels.lantern = 0;
     levels.insulator = 0;
+    levels.woodfish = 0;
     cds.spikes = 0;
     cds.frost = 0;
     cds.bell = 0;
@@ -608,6 +657,7 @@ export function createRelicSystem({ scene, fx, enemies, onLanternReveal }) {
     cds.stove = 0;
     cds.lantern = 0;
     cds.insulator = 0;
+    cds.woodfish = 0;
     thornPulse = 0;
     stovePulse = 0;
     stoveAngle = 0;
@@ -639,7 +689,7 @@ export function createRelicSystem({ scene, fx, enemies, onLanternReveal }) {
   }
 
   return {
-    buy, update, reset, restore, thornsHit,
+    buy, update, reset, restore, thornsHit, woodfishHit,
     levels: () => ({ ...levels }),
     DEF: RELIC_DEFS,
     // 调试（第 29 块）：手动敲一次钟（截图/测试用）

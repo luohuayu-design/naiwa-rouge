@@ -902,7 +902,7 @@ export const STORY_CHAPTERS = [
   },
 
   {
-    id: 's07', no: 7, act: 2, levelId: null, atRound: null,
+    id: 's07', no: 7, act: 2, levelId: 7, atRound: 2,
     icon: '🪵', title: '井底的哲学课', who: '阿井', place: '骨塔井底',
     story:
       '第七夜，你下到井底。\n'

@@ -8,7 +8,7 @@
 // 两套配色集中在 THEMES 里，buildNightScene({ theme }) 建哪套，
 // 局中要换就调返回的 setTheme('crypt')（不改几何，只改颜色和贴图）。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=81';
+import * as THREE from '../lib/three.module.js?v=82';
 
 export const THEMES = {
   // 第一关 · 荒草地：冷月光 + 青绿边圈 + 萤火虫
@@ -94,6 +94,19 @@ export const THEMES = {
     tuft: 0x2a3238, tuftVisible: false,
     fly: 0x8ff0ff, flyCount: 84,            // 飘着的电尘
     ground: 'server',
+  },
+  // 第七关 · 骨塔井底（第 71 块）：深井蓝绿微光 + 湿壁 + 滴落水珠，纯配色零新几何
+  well: {
+    bg: 0x07131a,
+    fog: 0x0c2630, fogDensity: 0.019,
+    hemiSky: 0x3a7a86, hemiGround: 0x08171c, hemiIntensity: 1.0,
+    moon: 0xbfeef0, moonIntensity: 2.4, moonBase: 2.2,
+    rim: 0x2a7a86, rimIntensity: 0.70,
+    edge: 0x57e6d0, edgeOpacity: 0.32,      // 井壁渗出的青绿微光
+    stone: 0x2a3a40,
+    tuft: 0x2a4a48, tuftVisible: false,
+    fly: 0x8fe8e0, flyCount: 70,            // 井里的水珠 / 浮尘
+    ground: 'well',
   },
 };
 
@@ -428,6 +441,7 @@ function makeGroundTexture(kind) {
   if (kind === 'fog') return makeFogTexture();
   if (kind === 'crossroad') return makeCrossroadTexture();
   if (kind === 'server') return makeServerTexture();
+  if (kind === 'well') return makeWellTexture();
   return makeGrassTexture();
 }
 
@@ -640,6 +654,69 @@ function makeServerTexture() {
       g.lineTo(x, y);
     }
     g.stroke();
+  }
+
+  const tex = new THREE.CanvasTexture(cv);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+// 第七关 · 骨塔井底（第 71 块）：湿冷井底 —— 深青黑底 + 湿痕 + 同心水纹 + 细裂缝，
+// 不画新几何，纯 canvas 程序化（和 server/crypt 同一套做法）。
+function makeWellTexture() {
+  const S = 512;
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = S;
+  const g = cv.getContext('2d');
+
+  let seed = 710241;
+  const rnd = () => {
+    seed = (seed * 1103515245 + 12345) % 2147483648;
+    return seed / 2147483648;
+  };
+
+  // 湿冷井底：深青黑底
+  g.fillStyle = '#0a1c20';
+  g.fillRect(0, 0, S, S);
+
+  // 不规则湿痕（更亮的青绿斑块，像渗水）
+  for (let i = 0; i < 28; i++) {
+    const x = rnd() * S, y = rnd() * S, r = 30 + rnd() * 90;
+    const rg = g.createRadialGradient(x, y, 0, x, y, r);
+    rg.addColorStop(0, 'rgba(40,120,120,0.12)');
+    rg.addColorStop(1, 'rgba(40,120,120,0)');
+    g.fillStyle = rg;
+    g.fillRect(x - r, y - r, r * 2, r * 2);
+  }
+
+  // 同心水纹：井底一圈圈荡开的涟漪
+  g.strokeStyle = 'rgba(70,200,190,0.06)';
+  g.lineWidth = 1.5;
+  for (let i = 1; i <= 6; i++) {
+    g.beginPath();
+    g.arc(S / 2, S / 2, i * 38, 0, Math.PI * 2);
+    g.stroke();
+  }
+
+  // 细裂缝
+  g.strokeStyle = 'rgba(8,26,30,0.55)';
+  g.lineWidth = 1;
+  for (let i = 0; i < 16; i++) {
+    let x = rnd() * S, y = rnd() * S;
+    g.beginPath();
+    g.moveTo(x, y);
+    for (let s = 0; s < 4; s++) {
+      x += (rnd() - 0.5) * 60; y += (rnd() - 0.5) * 60;
+      g.lineTo(x, y);
+    }
+    g.stroke();
+  }
+
+  // 零星的青绿水光点（井壁渗出的微光）
+  for (let i = 0; i < 70; i++) {
+    const x = rnd() * S, y = rnd() * S, r = 0.8 + rnd() * 1.8;
+    g.fillStyle = `rgba(120,236,220,${0.12 + rnd() * 0.30})`;
+    g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
   }
 
   const tex = new THREE.CanvasTexture(cv);

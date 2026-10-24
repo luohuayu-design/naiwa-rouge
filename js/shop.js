@@ -26,9 +26,9 @@
 // 第 11 块：每件货都带 rarity（0 普通 ~ 4 传说），店里按品质加权抽取 ——
 // 幸运越高，摆出来的货越往金/红那一头走（见 rarity.js）。
 // ============================================================
-import { rarityWeight } from './rarity.js?v=81';
-import { TURRET } from './turret.js?v=81';
-import { RELIC_DEFS } from './relics.js?v=81';
+import { rarityWeight } from './rarity.js?v=82';
+import { TURRET } from './turret.js?v=82';
+import { RELIC_DEFS } from './relics.js?v=82';
 
 export const SHOP_ITEMS = [
   // ---------------- 生命药水（第 13 块起：买进背包，作战中随时用） ----------------
@@ -186,6 +186,13 @@ export const SHOP_ITEMS = [
     rarity: 3,
     glyph: '🧥', name: '绝缘斗篷',
     desc: '站在漏电地板上不掉血，反而把电导给身边的怪（每 0.5 秒结算一次）。第六关的地板本来是惩罚，穿上它就是武器。再买可升级（最多 3 级）。',
+  },
+  // ---------------- 第七关新增（第 71 块）：木鱼 ----------------
+  {
+    id: 'buyWoodfish', type: 'relic', relic: 'woodfish', price: 32, needRound: 8, needLevel: 7,
+    rarity: 3,
+    glyph: '🪵', name: '木鱼图样',
+    desc: '井底捡的木鱼槌：主角挨打 / 击杀时震一圈，把身边怪击退并短暂定身。窄井里被围时的救命底牌。再买可升级（最多 3 级）。',
   },
 ];
 

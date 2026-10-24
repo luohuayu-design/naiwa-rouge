@@ -25,11 +25,11 @@
 // 第四关三只（wraith/leaper/mender，第 35 块，第 52 块换模型），
 // 各自在下面 ENEMY_TYPES 里有详细注释。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=81';
-import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=81';
-import { clone as cloneSkinned } from '../lib/jsm/utils/SkeletonUtils.js?v=81';
-import { distance2D } from './stats.js?v=81';
-import { createRangeRing } from './rangeRing.js?v=81';
+import * as THREE from '../lib/three.module.js?v=82';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=82';
+import { clone as cloneSkinned } from '../lib/jsm/utils/SkeletonUtils.js?v=82';
+import { distance2D } from './stats.js?v=82';
+import { createRangeRing } from './rangeRing.js?v=82';
 
 // KayKit 模型正面朝 +Z；如果哪天换模型发现怪倒着走，把这里改成 Math.PI
 export const ENEMY_MODEL_YAW = 0;
@@ -754,6 +754,87 @@ export const ENEMY_TYPES = {
       death: 'death', spawn: 'spawn',
     },
   },
+
+  // ============================================================
+  // 第七关 · 骨塔井底（第 71 块）—— 井蛙
+  // ============================================================
+  // 占位模型：复用 wolf.glb（雾猎狼的模型），整体压一层绿（tint），后续换真·CC0 只改 file。
+  // 行为：站桩「吐舌头」—— 瞬向主角位置吐舌、把主角往自己方向拉，舌头有独立血量，
+  // 需砍断（舌头伸出期间对井蛙的挥击先扣舌头血量，逻辑见 updateOne 的 handleTongue）。
+  wellfrog: {
+    name: '井蛙',
+    file: 'assets/monsters/wolf.glb',
+    sourceHeight: 2.707,   // 复用 wolf.glb 的实测身高（和雾猎狼一致，缩放才准）
+    height: 1.70,
+    radius: 0.55,
+    hp: 5,
+    armor: 0,
+    speed: 1.05,
+    // 占桩施法：不主动贴脸，保持距离好吐舌
+    attackRange: 9.0,       // 舌头的最大够得到距离
+    keepDistance: 6.0,      // 比这个近就后退
+    attackInterval: 4.5,    // 两次吐舌之间的间隔基准（收回后的冷却见 tongue.recover）
+    tongue: {
+      hp: 4,                // 舌头的独立血量（需砍断）
+      range: 9.0,           // 和 attackRange 一致：够得到才吐
+      keepDistance: 6.0,
+      pull: 3.0,            // 伸出期间每秒把主角往井蛙方向拉 3.0 格
+      extend: 1.6,          // 伸出持续 1.6 秒（到点没砍断就收回）
+      recover: 2.2,         // 收回（没砍断）后的冷却
+      stun: 1.3,            // 被砍断后的硬直（冰冻式定身）
+      radius: 0.16,         // 舌头视觉粗细
+      color: 0x8fd86a,      // 舌头青绿
+    },
+    spawnTime: 1.0,
+    deathTime: 1.6,
+    selfDestruct: false,
+    color: 0x4fae6a,        // 蛙身绿
+    tint: 0x3f9a5a,         // 给 wolf 模型压一层绿（占位换色）
+    animFamily: 'quad',
+    glow: { color: 0x1f6a3a, intensity: 0.5 },
+    anim: {
+      walk: 'walk', idle: 'idle', attack: 'attack',
+      death: 'death', spawn: 'spawn',
+    },
+  },
+
+  // ============================================================
+  // 第七关 · 骨塔井底（第 71 块）—— 木鱼灵
+  // ============================================================
+  // 占位模型：复用 tribal.glb（咒面图腾的模型），整体压一层青（tint）。
+  // 行为：直接复用 hexer 的「回声声波圈」（spell.kind:'hex'），只是换成青色。
+  woodfish: {
+    name: '木鱼灵',
+    file: 'assets/monsters/tribal.glb',
+    sourceHeight: 4.238,   // 复用 tribal.glb 的实测身高（和咒面图腾一致）
+    height: 2.52,
+    radius: 0.60,
+    hp: 4,
+    armor: 0,
+    speed: 1.05,
+    attackRange: 8.0,
+    keepDistance: 5.0,
+    damage: 1,
+    attackInterval: 3.4,
+    windup: 1.5,
+    attackDuration: 2.0,
+    castTime: 1.5,
+    spell: { kind: 'hex', radius: 2.4, color: 0x57e6d0 },   // 青色回声圈（复用 hexer 方案）
+    debuff: { factor: 0.62, duration: 2.6 },
+    spawnTime: 1.0,
+    deathTime: 1.6,
+    selfDestruct: false,
+    color: 0x57e6d0,
+    tint: 0x4aa89a,        // 给 tribal 模型压一层青（占位换色，和紫色咒面图腾区分）
+    footY: 0.246,
+    animFamily: 'flying',
+    clipOverrides: { cast: 'Punch' },
+    glow: { color: 0x1a8a7a, intensity: 0.55 },
+    anim: {
+      walk: 'walk', idle: 'idle', cast: 'cast',
+      death: 'death', spawn: 'spawn',
+    },
+  },
 };
 
 // ------------------------------------------------------------
@@ -1390,6 +1471,12 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
       leapRing: null,                                      // 雾猎狼的落点红圈（按需创建）
       leapFromX: 0, leapFromZ: 0, leapToX: 0, leapToZ: 0,   // 起跳点 / 锁定的落点
       leapHitDone: false,
+      // ---- 第七关 · 井蛙的舌头状态（第 71 块）----
+      tongueState: 'idle',   // 'idle' | 'out'
+      tongueT: 0,            // 舌头伸出计时
+      tongueHp: 0,           // 舌头当前血量（伸出时有效）
+      tongueMesh: null,      // 舌头网格（按需创建）
+      tongueTip: null,       // 舌头末端小球
     };
 
     // 弓手：往右手塞一把弓（受击闪白要连弓一起，所以材质也进 mats）。
@@ -1451,6 +1538,14 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     // 雾鬼隐身（第 35 块）：无形之物不受击 —— 近战、剑、炮台、法器全部打空。
     // 想打它只有两条路：等它显形，或者贴脸逼它显形。
     if (e.ghostHidden) return false;
+    // 第七关 · 井蛙：舌头伸出期间，对井蛙的挥击先扣「舌头」的独立血量（需砍断）。
+    // 舌头没断之前井蛙本体打不动 —— 逼玩家先处理舌头。
+    if (e.cfg.tongue && e.tongueState === 'out' && e.tongueHp > 0) {
+      e.tongueHp -= amount;
+      if (fx) fx.hit(new THREE.Vector3(e.pos.x, e.height * 0.55, e.pos.z), e.cfg.tongue.color);
+      if (e.tongueHp <= 0) severTongue(e);
+      return false;   // 井蛙本体此刻不受击
+    }
     // 减伤有两个来源，乘法叠加：
     //   auraArmor —— 主祭霜牢环（第 28 块）
     //   shieldUp  —— 盾斧兽人举盾（第 29 块，举盾时减伤 70%）
@@ -2168,6 +2263,92 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     }
   }
 
+  // ------------------------------------------------------------
+  // 第七关 · 井蛙的舌头（第 71 块）
+  // 伸出期间：把主角朝井蛙方向拉（combatCtx.pullPlayer）、舌头有独立血量、
+  // 被砍断后井蛙短硬直。舌头网格从「嘴」连到主角，逐帧更新。
+  // ------------------------------------------------------------
+  const _tongueUp = new THREE.Vector3(0, 1, 0);
+  const _tongueMat = new THREE.MeshBasicMaterial({ color: 0x8fd86a, transparent: true, opacity: 0.92, depthWrite: false });
+  function ensureTongueMesh(e) {
+    if (e.tongueMesh) return;
+    const geo = new THREE.CylinderGeometry(0.14, 0.18, 1, 8);
+    e.tongueMesh = new THREE.Mesh(geo, _tongueMat);
+    e.tongueMesh.frustumCulled = false;
+    e.tongueTip = new THREE.Mesh(new THREE.SphereGeometry(0.20, 10, 8), _tongueMat);
+    e.tongueTip.frustumCulled = false;
+    scene.add(e.tongueMesh, e.tongueTip);
+  }
+  function updateTongueMesh(e, pp) {
+    if (!e.tongueMesh) return;
+    const ax = e.pos.x, ay = e.height * 0.55, az = e.pos.z;   // 嘴（井蛙身上约一半高）
+    const bx = pp.x, by = 0.7, bz = pp.z;                     // 末端（主角胸口）
+    const a = new THREE.Vector3(ax, ay, az), b = new THREE.Vector3(bx, by, bz);
+    const mid = a.clone().add(b).multiplyScalar(0.5);
+    const dir = b.clone().sub(a);
+    const len = Math.max(0.01, dir.length());
+    e.tongueMesh.position.copy(mid);
+    e.tongueMesh.scale.set(1, len, 1);
+    e.tongueMesh.quaternion.setFromUnitVectors(_tongueUp, dir.clone().normalize());
+    e.tongueTip.position.set(bx, by, bz);
+  }
+  function removeTongueMesh(e) {
+    if (e.tongueMesh) {
+      scene.remove(e.tongueMesh, e.tongueTip);
+      e.tongueMesh.geometry.dispose();
+      e.tongueMesh = null; e.tongueTip = null;
+    }
+  }
+  function extendTongue(e, ctx) {
+    const tg = e.cfg.tongue;
+    e.tongueState = 'out';
+    e.tongueT = 0;
+    e.tongueHp = tg.hp;
+    ensureTongueMesh(e);
+    e.tongueMesh.visible = true;
+    e.tongueTip.visible = true;
+    updateTongueMesh(e, ctx.playerPos);
+  }
+  function retractTongue(e) {
+    e.tongueState = 'idle';
+    if (e.tongueMesh) { e.tongueMesh.visible = false; e.tongueTip.visible = false; }
+    e.bar.spr.visible = false;     // 舌头血量条收掉（回到井蛙本体不显示）
+  }
+  function severTongue(e) {
+    // 被砍断：收回 + 短硬直（冰冻式定身）+ 较长冷却
+    retractTongue(e);
+    const tg = e.cfg.tongue;
+    e.freezeT = Math.max(e.freezeT, tg.stun);
+    e.attackCd = tg.recover + tg.stun;
+    if (fx) {
+      fx.ring(e.pos, { from: 0.3, to: e.radius + 1.4, color: 0x8fd86a, life: 0.4, opacity: 0.7, y: 0.06 });
+      fx.burst(e.pos, { color: 0x8fd86a, count: 12, speed: 2.4, life: 0.5, size: 0.12, y: 0.5, up: 1.5 });
+    }
+  }
+  function handleTongue(e, dt, ctx) {
+    const tg = e.cfg.tongue;
+    if (e.tongueState === 'out') {
+      e.tongueT += dt;
+      if (ctx.pullPlayer) ctx.pullPlayer(e.pos.x, e.pos.z, tg.pull * dt);
+      updateTongueMesh(e, ctx.playerPos);
+      // 舌头伸出期间：井蛙本体那根血条复用语为「舌头血量」提示
+      e.bar.spr.visible = true;
+      e.bar.draw(e.tongueHp / tg.hp, e.tongueHp, tg.hp);
+      if (e.tongueT >= tg.extend) { retractTongue(e); e.attackCd = tg.recover; }
+      return;
+    }
+    // idle：靠近到 keepDistance 再站定；冷却好了且主角在射程内就吐舌
+    e.attackCd -= dt;
+    const dx = ctx.playerPos.x - e.pos.x;
+    const dz = ctx.playerPos.z - e.pos.z;
+    const dist = Math.hypot(dx, dz);
+    if (dist > tg.keepDistance) {
+      moveToward(e, dx, dz, dist, dt, ctx);
+    }
+    if (dist > 0.001) e.root.rotation.y = lerpAngle(e.root.rotation.y, Math.atan2(dx, dz), 1 - Math.exp(-9 * dt));
+    if (e.attackCd <= 0 && dist <= tg.range) extendTongue(e, ctx);
+  }
+
   function updateOne(e, dt, ctx) {
     e.mixer.update(dt);
     e.t += dt;
@@ -2338,6 +2519,9 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
       }
       return;
     }
+
+    // ---- 第七关 · 井蛙：吐舌头拉人（第 71 块）----
+    if (e.cfg.tongue) { handleTongue(e, dt, ctx); return; }
 
     const dx = ctx.playerPos.x - e.pos.x;
     const dz = ctx.playerPos.z - e.pos.z;
@@ -3126,6 +3310,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
       const e = list[i];
       if (e.state !== 'dead') continue;
       if (e.deathT < e.cfg.deathTime) continue;
+      if (e.tongueMesh) removeTongueMesh(e);
       scene.remove(e.root);
       for (const m of e.mats) m.dispose();
       e.bar.tex.dispose();
@@ -3247,6 +3432,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
 
   function reset() {
     for (const e of list) {
+      if (e.tongueMesh) removeTongueMesh(e);
       scene.remove(e.root);
       for (const m of e.mats) m.dispose();
       e.bar.tex.dispose();
@@ -3329,6 +3515,8 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     //   重启体 —— 正躺在地上等重启的数量（>0 时这一波清不掉）
     downCount: () => list.filter((e) => e.state === 'down').length,
     rebootCount: () => list.filter((e) => e.cfg.reboot && e.state !== 'dead').length,
+    // 第七关 · 井蛙：当前伸出舌头的井蛙数量（测试用）
+    tongueOut: () => list.filter((e) => e.cfg.tongue && e.tongueState === 'out').length,
     //   反隐（第 63 块，路口灯）：强行把一圈里的隐身雾鬼点亮，返回点亮了几只
     revealInRadius: (at, radius) => {
       let n = 0;

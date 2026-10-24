@@ -437,9 +437,84 @@ export const LEVEL_6 = {
   ],
 };
 
+// ============================================================
+// 第七关 · 骨塔井底（第 71 块）
+//
+// 剧情接 s07《井底的哲学课》：阿井躺平的井，不深，但里面全是戏。
+//
+// 这一关换了**场地的形状**：不是开阔地，是**窄井**——场地从六关的 19 缩到 13，
+// 转身不方便、贴边就撞墙。配合头顶的**滴水落点**（见 hazards.js 的 kind:'drip'），
+// 走位空间被压得很死：你既要躲怪，又要躲青蓝预警圈落下来的水。
+//
+// 两只新怪（enemy.js）：
+//   wellfrog 井蛙 —— 吐舌头把主角拉过去，舌头有**独立血量**，必须先砍断舌头，
+//                    井蛙本体才吃伤害；砍断后井蛙进入短硬直。这是「换血换机制」：
+//                    它不靠更高数值压你，靠「拉你进怪堆」制造麻烦。
+//   woodfish 木鱼灵 —— 青色法器精魄，读条在你脚下钉青圈（hex 改青）：圈里掉血 + 减速。
+//                    血薄、站后排，优先点掉。它敲的木鱼后来成了法器「木鱼」（见 relics.js）。
+//
+// 数值：hp 0.32 / dmg 0.19，再乘整关系数 hpMul 1.20 / dmgMul 1.45（六关是 1.15 / 1.35），
+// 因为场地更小、走位更难，数值上不必再加太多；威胁来自机制而非堆数值。
+// ============================================================
+export const LEVEL_7 = {
+  id: 7,
+  name: '第七关 · 骨塔井底',
+  theme: 'well',            // 第 71 块：深井蓝绿微光皮肤（scene.js 的 THEMES）
+  arena: 13,               // 窄井：比六关的 19 小一截，转身空间很紧
+  order: [
+    ['minion', 1], ['warrior', 1.6], ['wellfrog', 1.8],
+    ['archer', 2.0], ['bowman', 2.2], ['woodfish', 2.4],
+    ['leaper', 2.0], ['wraith', 2.2], ['shielder', 2.4], ['brood', 2.6], ['mender', 2.6], ['reboot', 2.6],
+  ],
+  spawnRadius: 11.4,       // 跟着窄场地走（13 − 余量）
+  spawnJitter: 0.5,
+  minPlayerDistance: 6.5,  // 井小，出生点离人也更近一点
+  minSpawnGap: 2.0,
+  gapScale: 1.35,          // 生成放缓，窄井里别让怪叠成一坨
+  gap: 2.6,
+  upgradeAfter: [1, 2, 3, 4, 5, 8, 10, 12, 15, 17, 19, 20],
+  shopAfter: [3, 6, 9, 12, 15, 18],
+  weaponAt: 4,
+  // 第 71 块：延续六关的整体系数再略加（hp 1.20 / dmg 1.45）
+  scale: { hp: 0.32, damage: 0.19, speed: 0.035, hpMul: 1.20, dmgMul: 1.45 },
+  // 滴水落点：井底的水从头顶滴下来，三滴错相、随机落点（不依赖某只怪在场）
+  hazards: [
+    { kind: 'drip', random: true, cx: 0, cz: 0, spread: 8.5, r: 1.7, cycle: 3.4, on: 0.5, warm: 1.1, damage: 1, off: 0.0 },
+    { kind: 'drip', random: true, cx: 0, cz: 0, spread: 8.5, r: 1.7, cycle: 3.4, on: 0.5, warm: 1.1, damage: 1, off: 1.7 },
+    { kind: 'drip', random: true, cx: 0, cz: 0, spread: 8.5, r: 1.7, cycle: 3.4, on: 0.5, warm: 1.1, damage: 1, off: 2.5 },
+  ],
+  rounds: [
+    // ---- 第一幕（R1~R3）：井底 · 水还在滴 ----
+    { minion: 3, warrior: 0, wellfrog: 0, archer: 0, bowman: 0, woodfish: 0, leaper: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, reboot: 0, gap: 0.90, tip: '骨塔井底：头顶有水滴下来，看到青环就挪开' },
+    { minion: 4, warrior: 1, wellfrog: 0, archer: 0, bowman: 0, woodfish: 0, leaper: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, reboot: 0, gap: 0.80, tip: '窄井里转身不方便，别贴着边走' },
+    { minion: 4, warrior: 1, wellfrog: 0, archer: 1, bowman: 0, woodfish: 0, leaper: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, reboot: 0, gap: 0.80, tip: '还是横着走躲骨刀' },
+    // ---- 第二幕（R4~R7）：井蛙登场 ----
+    { minion: 5, warrior: 1, wellfrog: 1, archer: 1, bowman: 0, woodfish: 0, leaper: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, reboot: 0, gap: 0.75, tip: '那只绿蛙会吐舌头拉你 —— 舌头有独立血量，砍断它才能脱身' },
+    { minion: 5, warrior: 2, wellfrog: 1, archer: 1, bowman: 1, woodfish: 0, leaper: 0, wraith: 1, shielder: 0, brood: 0, mender: 0, reboot: 0, gap: 0.72, tip: '舌头伸出来时打它本体不掉血：先把舌头砍断' },
+    { minion: 5, warrior: 2, wellfrog: 2, archer: 1, bowman: 1, woodfish: 0, leaper: 1, wraith: 1, shielder: 0, brood: 0, mender: 0, reboot: 0, gap: 0.70, tip: '两只井蛙会轮流拉你：别被拽到怪堆里' },
+    { minion: 6, warrior: 2, wellfrog: 2, archer: 2, bowman: 1, woodfish: 0, leaper: 1, wraith: 1, shielder: 1, brood: 0, mender: 0, reboot: 0, gap: 0.66, tip: '盾兵也来了：等它放盾再打' },
+    // ---- 第三幕（R8~R11）：木鱼灵登场 ----
+    { minion: 6, warrior: 3, wellfrog: 2, archer: 2, bowman: 1, woodfish: 1, leaper: 1, wraith: 2, shielder: 1, brood: 0, mender: 0, reboot: 0, gap: 0.62, tip: '那只青色木鱼灵在念咒：脚下出青圈掉血又减速，走开' },
+    { minion: 7, warrior: 3, wellfrog: 2, archer: 2, bowman: 2, woodfish: 1, leaper: 2, wraith: 2, shielder: 1, brood: 1, mender: 0, reboot: 0, gap: 0.60, tip: '木鱼灵血薄但会减速你，优先点掉' },
+    { minion: 7, warrior: 4, wellfrog: 3, archer: 3, bowman: 2, woodfish: 1, leaper: 2, wraith: 2, shielder: 2, brood: 1, mender: 1, reboot: 0, gap: 0.58, tip: '它敲的木鱼会震你 —— 井底的法器之一，之后能在商店买到' },
+    { minion: 7, warrior: 4, wellfrog: 3, archer: 3, bowman: 2, woodfish: 2, leaper: 2, wraith: 3, shielder: 2, brood: 1, mender: 1, reboot: 1, gap: 0.56, tip: '重启体也钻进井里了：躺下时守着它' },
+    // ---- 第四幕（R12~R15）：混编加压 ----
+    { minion: 7, warrior: 4, wellfrog: 3, archer: 3, bowman: 2, woodfish: 2, leaper: 3, wraith: 3, shielder: 2, brood: 1, mender: 1, reboot: 1, gap: 0.54, tip: '井蛙、木鱼、滴水和怪一起上 —— 先保走位' },
+    { minion: 8, warrior: 4, wellfrog: 4, archer: 3, bowman: 3, woodfish: 2, leaper: 3, wraith: 3, shielder: 2, brood: 2, mender: 1, reboot: 1, gap: 0.52, tip: '两只木鱼灵的青圈会叠，别站一块' },
+    { minion: 8, warrior: 5, wellfrog: 4, archer: 4, bowman: 3, woodfish: 2, leaper: 3, wraith: 4, shielder: 3, brood: 2, mender: 1, reboot: 2, gap: 0.50, tip: '井蛙四只：舌头拉扯里别被拽出安全区' },
+    { minion: 8, warrior: 5, wellfrog: 4, archer: 4, bowman: 3, woodfish: 3, leaper: 4, wraith: 4, shielder: 3, brood: 2, mender: 2, reboot: 2, gap: 0.48, tip: '第 15 回合：井底的水滴得最密' },
+    // ---- 第五幕（R16~R20）：井底长夜 · 毕业考 ----
+    { minion: 8, warrior: 5, wellfrog: 5, archer: 4, bowman: 3, woodfish: 3, leaper: 4, wraith: 4, shielder: 3, brood: 2, mender: 2, reboot: 2, gap: 0.46, tip: '第 16 回合：井底长夜，全来了' },
+    { minion: 8, warrior: 5, wellfrog: 5, archer: 4, bowman: 4, woodfish: 3, leaper: 4, wraith: 4, shielder: 3, brood: 2, mender: 2, reboot: 3, gap: 0.44, tip: '木鱼法器该上了：挨打/击杀震一圈，把井蛙震退' },
+    { minion: 9, warrior: 6, wellfrog: 5, archer: 5, bowman: 4, woodfish: 4, leaper: 5, wraith: 5, shielder: 3, brood: 2, mender: 2, reboot: 3, gap: 0.42, tip: '还剩三回合：舌头拉人和滴水一起躲' },
+    { minion: 9, warrior: 6, wellfrog: 6, archer: 5, bowman: 4, woodfish: 4, leaper: 5, wraith: 5, shielder: 4, brood: 2, mender: 2, reboot: 4, gap: 0.40, tip: '倒数第二波：砍断舌头、躲开青圈' },
+    { minion: 9, warrior: 6, wellfrog: 6, archer: 5, bowman: 4, woodfish: 4, leaper: 5, wraith: 5, shielder: 4, brood: 2, mender: 2, reboot: 4, gap: 0.38, tip: '最后一波：把井底的东西全拍碎，爬出去' },
+  ],
+};
+
 // 关卡号 → 关卡表（主流程 / 选关 / 测试都从这里取）
 export const LEVELS_BY_ID = {
-  1: LEVEL_1, 2: LEVEL_2, 3: LEVEL_3, 4: LEVEL_4, 5: LEVEL_5, 6: LEVEL_6,
+  1: LEVEL_1, 2: LEVEL_2, 3: LEVEL_3, 4: LEVEL_4, 5: LEVEL_5, 6: LEVEL_6, 7: LEVEL_7,
 };
 
 // 第 roundNo 回合（从 1 开始）的怪物属性倍率

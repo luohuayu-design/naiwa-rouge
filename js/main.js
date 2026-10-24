@@ -5,37 +5,37 @@
 // 目标是把三件事调顺：摇杆输入 → 角色速度/朝向 → 相机跟随。
 // 后续叠战斗时，只需要在 tick() 里加敌人更新与自动攻击，不用动输入层。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=81';
-import { buildNightScene } from './scene.js?v=81';
-import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=81';
-import { createInput } from './input.js?v=81';
-import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=81';
-import { createStatView } from './statView.js?v=81';
-import { createWeaponStats } from './weaponStats.js?v=81';
-import { createFx } from './fx.js?v=81';
-import { createEnemySystem } from './enemy.js?v=81';
+import * as THREE from '../lib/three.module.js?v=82';
+import { buildNightScene } from './scene.js?v=82';
+import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=82';
+import { createInput } from './input.js?v=82';
+import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=82';
+import { createStatView } from './statView.js?v=82';
+import { createWeaponStats } from './weaponStats.js?v=82';
+import { createFx } from './fx.js?v=82';
+import { createEnemySystem } from './enemy.js?v=82';
 import {
-  createLevel, LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVEL_5, LEVEL_6, LEVELS_BY_ID, DIFFS, setDifficulty, getDifficulty, roundScale, levelStats,
-} from './wave.js?v=81';
-import { createRangeRing } from './rangeRing.js?v=81';
-import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=81';
-import { createWeaponSystem } from './weapon.js?v=81';
-import { createArrowRainSystem } from './arrowRain.js?v=81';
-import { SWORD_KINDS } from './swordKinds.js?v=81';
-import { createGoldSystem } from './gold.js?v=81';
-import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW } from './shop.js?v=81';
-import { createTurretSystem, TURRET } from './turret.js?v=81';
-import { createRelicSystem, RELIC_DEFS } from './relics.js?v=81';
-import { createHazards } from './hazards.js?v=81';
-import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=81';
-import audio from './audio.js?v=81';
-import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=81';
+  createLevel, LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVEL_5, LEVEL_6, LEVEL_7, LEVELS_BY_ID, DIFFS, setDifficulty, getDifficulty, roundScale, levelStats,
+} from './wave.js?v=82';
+import { createRangeRing } from './rangeRing.js?v=82';
+import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=82';
+import { createWeaponSystem } from './weapon.js?v=82';
+import { createArrowRainSystem } from './arrowRain.js?v=82';
+import { SWORD_KINDS } from './swordKinds.js?v=82';
+import { createGoldSystem } from './gold.js?v=82';
+import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW } from './shop.js?v=82';
+import { createTurretSystem, TURRET } from './turret.js?v=82';
+import { createRelicSystem, RELIC_DEFS } from './relics.js?v=82';
+import { createHazards } from './hazards.js?v=82';
+import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=82';
+import audio from './audio.js?v=82';
+import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=82';
 // 第 62 块：回血技能（第四关通关后永久解锁，回 5 点 / CD 25 秒）
-import { createHealSkill, HEAL_AMOUNT, HEAL_CD } from './healSkill.js?v=81';
+import { createHealSkill, HEAL_AMOUNT, HEAL_CD } from './healSkill.js?v=82';
 // 第 62 块：民心专属事件（升档走良性池、掉档走恶性池）
-import { repPoolForTier, REP_GOOD, REP_BAD } from './repEvents.js?v=81';
+import { repPoolForTier, REP_GOOD, REP_BAD } from './repEvents.js?v=82';
 // 第 62 块：攻略面板（战败提示上的「查看攻略」，手风琴三组）
-import { renderGuide, GUIDE_SECTIONS } from './guide.js?v=81';
+import { renderGuide, GUIDE_SECTIONS } from './guide.js?v=82';
 import {
   settings as readSettings, setSetting, save as saveProfile, profile,
   bumpStat, setStatMax, codexAdd, codexCount, countCard, unlockAch, hasAch, addBones, bones, resetAll,
@@ -48,49 +48,49 @@ import {
   healUnlocked, markHealUnlocked,
   rainObtained, markRainObtained,          // 第 65 块：技能的「有没有」只跟解锁有关
   hintSeen, markHintSeen,                  // 第 65 块：一次性提示卡
-} from './profile.js?v=81';
+} from './profile.js?v=82';
 // 第 44 块：礼包兑换（码表只有哈希，明细在 gift.js 顶部注释）
-import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=81';
+import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=82';
 // 第 46 块：音效包（抽象奶蛙音效包 —— 4 段奶蛙叫声，通关第一关解锁）
-import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=81';
-import * as runSave from './runSave.js?v=81';
+import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=82';
+import * as runSave from './runSave.js?v=82';
 import {
   CAMPFIRE, CAMP_STEP, campBuy, campOwned, campLevel,
   campCost, campApply, bonesFor, diffBoneMul, levelBoneMul, coinBones, BONE,
-} from './campfire.js?v=81';
+} from './campfire.js?v=82';
 // 第 23 块：永夜火种（通关白给的 3 次永久三选一）
 import {
   BOONS, BOON_BY_ID, BOON_PICKS, boonOwned, boonStacks, boonPending, boonTotalStacks,
   grantBoons, rollBoons, takeBoon, applyBoons, boonStackText,
-} from './boons.js?v=81';
+} from './boons.js?v=82';
 // 第 21 块：夜行诅咒（自选 debuff 换骨币倍率）
-import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=81';
+import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=82';
 // 第 22 块：种子与每日挑战
 import {
   DAILY_RULES, dayKey, dayText, dailySeed, seedCode, pickDailyCurses,
   seedFromText, pickSeedRules, loadSeedRecords, saveSeedRecord, pruneSeeds,
   dailyRecord, saveDailyRecord, pruneDaily, makeRng,
-} from './seed.js?v=81';
-import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=81';
+} from './seed.js?v=82';
+import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=82';
 // 第 58 块：局外商店 · 宝箱（花骨币买，开箱随机给永久属性 / 永久法器 / 技能CD缩短）
 import {
   BOXES, BOX_BY_ID, buyBox, rollBox, metaApplyStats, applyMeta,
-} from './metaShop.js?v=81';
+} from './metaShop.js?v=82';
 // 第 59 块：每日签到（以周为单位，周一 00:00 重置）
 import {
   WEEK_TIERS, SIGN_BONES, weekCells, signSummary, signToday, signedToday,
-} from './signin.js?v=81';
-import { achById, ACHS } from './achievements.js?v=81';
+} from './signin.js?v=82';
+import { achById, ACHS } from './achievements.js?v=82';
 import {
   EVENTS, ALL_EVENTS, getEventById, pickEvent, effectLines,
   choiceHint, canAfford, costShort, REP_MIN, REP_MAX, REP_START,
   isTalk, eventChoices, resolveRoll, mergeEffects,
-} from './events.js?v=81';
+} from './events.js?v=82';
 // 第 32 块：主线《笑不出来的那一夜》（18 夜，一夜一关，前 3 夜已有关卡）
 import {
   STORY_ARC, STORY_CHAPTERS, STORY_ENDINGS, MARK_INFO,
   storyChapterAt, storyChapterById, storyEndingKey,
-} from './story.js?v=81';
+} from './story.js?v=82';
 
 // 标记模块已经跑起来了：index.html 的兜底自检靠它判断
 // 「模块根本没执行」还是「执行了但加载慢」。
@@ -709,6 +709,8 @@ async function boot() {
       // 第五/六关的两只新怪（第 63 块）
       if (e.type === 'eraser' && codexCount('enemies', 'eraser') >= 10) tryAch('eraser_10');
       if (e.type === 'reboot' && codexCount('enemies', 'reboot') >= 10) tryAch('reboot_10');
+      // 木鱼法器（第 71 块）：击杀时也震一圈（挨打/击杀都触发）
+      if (relics.woodfishHit) relics.woodfishHit(e.pos);
       // 小兵是自爆 → 爆炸声；其他怪是被打死 → 骨头散架声
       audio.sfx(e.cfg.selfDestruct ? 'explode' : 'die');
       // 第 63 块：擦名者临死前还没来得及跑 —— 被擦走的那把剑还回环上
@@ -1239,6 +1241,8 @@ async function boot() {
     stats.damage(amount * (1 + runCurseDmg));
     // 棘甲法器（第 29 块）：挨打时对身边一圈怪反伤（被动解场，不需要操作）
     if (!isHazard && relics.thornsHit) relics.thornsHit(pos);
+    // 木鱼法器（第 71 块）：挨打时震一圈，把身边怪击退 + 短暂定身（解围用）
+    if (!isHazard && relics.woodfishHit) relics.woodfishHit(pos);
     if (!isHazard) iframe = IFRAME;
     shake = readSettings().shake ? 0.55 : 0;   // 设置里可以关掉抖屏
     audio.sfx('hurt');
@@ -1984,6 +1988,7 @@ async function boot() {
     { id: 4, name: LEVEL_4.name, playable: true },   // 第 35 块：第四关 · 雾堤服务区
     { id: 5, name: LEVEL_5.name, playable: true },   // 第 63 块：第五关 · 草甸路口
     { id: 6, name: LEVEL_6.name, playable: true },   // 第 63 块：第六关 · 骨塔机房
+    { id: 7, name: LEVEL_7.name, playable: true },   // 第 71 块：第七关 · 骨塔井底
   ];
   // 选关面板点了哪一关 —— beginGame 时按它切关卡（点的时候还没进战斗）
   let pendingLevelId = 1;
@@ -6985,6 +6990,21 @@ async function boot() {
       const nm = (SWORD_KINDS[kind] && SWORD_KINDS[kind].name) || '剑';
       showToast('名字被擦干净了', `擦名者带着你的${nm}消失在雾里 —— 这一局再也拿不回来了`);
       audio.sfx('die');
+    },
+    // 第 71 块：井蛙吐舌把主角拉过来。amount = 这一帧要拖拽的距离（已乘 dt）。
+    // 直接把 pos 朝 (x,z) 拽过去，并夹回场地内（边界约束在外面那块已跑过，这里补一刀）。
+    pullPlayer: (x, z, amount) => {
+      const dx = x - pos.x, dz = z - pos.z;
+      const d = Math.hypot(dx, dz) || 1;
+      const step = Math.min(amount, d);
+      pos.x += (dx / d) * step;
+      pos.z += (dz / d) * step;
+      const limit = ARENA_R - BODY_R;
+      const dist2 = Math.hypot(pos.x, pos.z);
+      if (dist2 > limit) {
+        pos.x = (pos.x / dist2) * limit;
+        pos.z = (pos.z / dist2) * limit;
+      }
     },
   };
 
