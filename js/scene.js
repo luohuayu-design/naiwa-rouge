@@ -8,7 +8,7 @@
 // 两套配色集中在 THEMES 里，buildNightScene({ theme }) 建哪套，
 // 局中要换就调返回的 setTheme('crypt')（不改几何，只改颜色和贴图）。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=72';
+import * as THREE from '../lib/three.module.js?v=74';
 
 export const THEMES = {
   // 第一关 · 荒草地：冷月光 + 青绿边圈 + 萤火虫
@@ -65,6 +65,35 @@ export const THEMES = {
     tuft: 0x3a5a58, tuftVisible: true,    // 霜打过的枯草还立着
     fly: 0x9fe8e0, flyCount: 110,         // 雾珠
     ground: 'fog',
+  },
+  // 第五关 · 草甸路口：土黄路面 + 油灯的黄，边圈是蛙爷摊子那盏灯的暖色（第 63 块）
+  // 和前四关最大的不同：这一关画**四条路**（见 buildLanes）—— 刷怪只从路上来。
+  crossroad: {
+    bg: 0x0e1410,
+    fog: 0x1b2a22, fogDensity: 0.0162,
+    hemiSky: 0x6a8f7a, hemiGround: 0x141d16, hemiIntensity: 1.14,
+    moon: 0xd6e8d8, moonIntensity: 2.80, moonBase: 2.60,
+    rim: 0x6a8a52, rimIntensity: 0.74,
+    edge: 0xd8c46a, edgeOpacity: 0.34,      // 油灯黄，不是草圈的青
+    stone: 0x4a4436,
+    tuft: 0x4a6a3a, tuftVisible: true,
+    fly: 0xffe08a, flyCount: 96,            // 灯蛾
+    ground: 'crossroad',
+    lanes: 4,                               // 画四条路 + 四盏路口灯
+  },
+  // 第六关 · 骨塔机房：冷灰格栅 + 服务器指示灯的蓝绿（第 63 块）
+  // 这一关没有地表（一路往下都是铁），所以草丛关掉、石头换成机柜的灰。
+  server: {
+    bg: 0x0a0e12,
+    fog: 0x16222a, fogDensity: 0.0148,
+    hemiSky: 0x4a7a8a, hemiGround: 0x0c1216, hemiIntensity: 1.06,
+    moon: 0xbfe8ff, moonIntensity: 2.60, moonBase: 2.40,
+    rim: 0x2a6a8a, rimIntensity: 0.88,
+    edge: 0x5fd8ff, edgeOpacity: 0.34,
+    stone: 0x2a3238,
+    tuft: 0x2a3238, tuftVisible: false,
+    fly: 0x8ff0ff, flyCount: 84,            // 飘着的电尘
+    ground: 'server',
   },
 };
 
@@ -152,6 +181,80 @@ export function buildNightScene({ arenaRadius = 15, theme = 'meadow' } = {}) {
   placeStones(arenaRadius);
   scene.add(stones);
 
+  // ---------------- 四向路口（第 63 块，第五关） ----------------
+  // 一组「路」：从中心往四个方向铺出去的光带 + 路尽头的一盏油灯。
+  // 它不是装饰 —— 第五关的怪**只从这四条路上来**（wave.js 的 lanes: 4），
+  // 所以这四条光带就是「它们会从哪来」的预告。玩家看懂了就知道该背对哪边。
+  let laneGroup = null;
+  let laneTex = null;
+  function makeLaneTexture() {
+    // 沿路方向渐亮：路口（中心）最亮，越远越淡 —— 像一盏灯的余光铺在地上
+    const W = 32, H = 256;
+    const cv = document.createElement('canvas');
+    cv.width = W; cv.height = H;
+    const g = cv.getContext('2d');
+    const grad = g.createLinearGradient(0, 0, 0, H);
+    grad.addColorStop(0, 'rgba(255,255,255,0.05)');   // 远端
+    grad.addColorStop(0.72, 'rgba(255,255,255,0.30)');
+    grad.addColorStop(1, 'rgba(255,255,255,0.78)');   // 中心
+    g.fillStyle = grad;
+    g.fillRect(0, 0, W, H);
+    // 两侧压暗一点，光带中间亮、边缘散
+    const side = g.createLinearGradient(0, 0, W, 0);
+    side.addColorStop(0, 'rgba(0,0,0,0.55)');
+    side.addColorStop(0.5, 'rgba(0,0,0,0)');
+    side.addColorStop(1, 'rgba(0,0,0,0.55)');
+    g.globalCompositeOperation = 'destination-out';
+    g.fillStyle = side;
+    g.fillRect(0, 0, W, H);
+    const tex = new THREE.CanvasTexture(cv);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    return tex;
+  }
+
+  function buildLanes(radius, TH) {
+    if (laneGroup) {
+      scene.remove(laneGroup);
+      laneGroup.traverse((o) => { if (o.isMesh && o.geometry) o.geometry.dispose(); });
+      laneGroup = null;
+    }
+    const n = TH.lanes | 0;
+    if (!n) return null;
+    if (!laneTex) laneTex = makeLaneTexture();
+    laneGroup = new THREE.Group();
+    const mat = new THREE.MeshBasicMaterial({
+      map: laneTex, transparent: true, opacity: 0.5, depthWrite: false,
+      blending: THREE.AdditiveBlending, color: TH.edge, side: THREE.DoubleSide,
+    });
+    // 灯柱：一根细柱 + 顶端一颗发光的灯球（程序化，不额外下模型）
+    const postGeo = new THREE.CylinderGeometry(0.055, 0.075, 3.0, 6);
+    const postMat = new THREE.MeshStandardMaterial({ color: 0x3a352a, roughness: 0.9 });
+    const bulbGeo = new THREE.SphereGeometry(0.20, 10, 8);
+    const bulbMat = new THREE.MeshBasicMaterial({ color: TH.edge });
+
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2;
+      const g = new THREE.Group();
+      g.rotation.y = a;
+      // 路面：宽 5.4，从中心铺到场地边缘
+      const strip = new THREE.Mesh(new THREE.PlaneGeometry(5.4, radius * 1.04), mat);
+      strip.rotation.x = -Math.PI / 2;
+      strip.position.set(0, 0.028, -radius * 0.52);
+      g.add(strip);
+      // 灯柱立在路口外侧
+      const post = new THREE.Mesh(postGeo, postMat);
+      post.position.set(0, 1.5, -radius - 0.4);
+      post.castShadow = true;
+      const bulb = new THREE.Mesh(bulbGeo, bulbMat);
+      bulb.position.set(0, 3.02, -radius - 0.4);
+      g.add(post, bulb);
+      laneGroup.add(g);
+    }
+    laneGroup.visible = true;
+    scene.add(laneGroup);
+    return laneGroup;
+  }
+
   // ---------------- 草丛（细锥体，纯粹是地面细节） ----------------
   const tuftGeo = new THREE.ConeGeometry(0.055, 0.34, 4, 1, true);
   const tuftMat = new THREE.MeshStandardMaterial({
@@ -230,9 +333,12 @@ export function buildNightScene({ arenaRadius = 15, theme = 'meadow' } = {}) {
   let edgeBase = TH.edgeOpacity;
   let moonBase = TH.moonBase;
   const texCache = { [TH.ground]: groundMat.map };
+  let curArena = arenaRadius;
+  let curTheme = TH;
 
   function setTheme(name) {
     const t = THEMES[name] || THEMES.meadow;
+    curTheme = t;
     scene.background.set(t.bg);
     scene.fog.color.set(t.fog);
     scene.fog.density = t.fogDensity;
@@ -253,12 +359,16 @@ export function buildNightScene({ arenaRadius = 15, theme = 'meadow' } = {}) {
     if (!texCache[t.ground]) texCache[t.ground] = makeGroundTexture(t.ground);
     groundMat.map = texCache[t.ground];
     groundMat.needsUpdate = true;
+    // 第 63 块：只有第五关（TH.lanes）画四条路；切到别的关就藏起来
+    if (t.lanes) buildLanes(curArena, t);
+    else if (laneGroup) laneGroup.visible = false;
     return name;
   }
 
   // ---------------- 场地半径（第 33 块）：第三关场地更大 ----------------
   // 只重摆边界圈、石头、草丛和萤火虫的分布；灯光 / 雾 / 地面（半径 90 的大圆）不动。
   function setArena(radius) {
+    curArena = radius;
     ring.geometry.dispose();
     ring.geometry = new THREE.RingGeometry(radius - 0.22, radius + 0.02, 160);
     placeStones(radius);
@@ -273,6 +383,8 @@ export function buildNightScene({ arenaRadius = 15, theme = 'meadow' } = {}) {
       flyPos[i * 3 + 2] = d.bz;
     }
     flyGeo.attributes.position.needsUpdate = true;
+    // 路是「铺到场地边缘」的，场地变大变小要重铺（第五关 arena 20）
+    if (laneGroup && laneGroup.visible) buildLanes(radius, curTheme);
     return radius;
   }
 
@@ -300,7 +412,11 @@ export function buildNightScene({ arenaRadius = 15, theme = 'meadow' } = {}) {
     moonLight.intensity = moonBase + Math.sin(t * 0.35) * 0.15;
   }
 
-  return { scene, update, moonLight, setTheme, setArena };
+  return {
+    scene, update, moonLight, setTheme, setArena,
+    // 第 63 块：四向路口铺了几条路（0 = 这一关没有路口）
+    get lanes() { return laneGroup && laneGroup.visible ? laneGroup.children.length : 0; },
+  };
 }
 
 // ------------------------------------------------------------
@@ -310,6 +426,8 @@ function makeGroundTexture(kind) {
   if (kind === 'crypt') return makeCryptTexture();
   if (kind === 'ash') return makeAshTexture();
   if (kind === 'fog') return makeFogTexture();
+  if (kind === 'crossroad') return makeCrossroadTexture();
+  if (kind === 'server') return makeServerTexture();
   return makeGrassTexture();
 }
 
@@ -386,7 +504,149 @@ function makeFogTexture() {
   return tex;
 }
 
-// 焦土钟楼的地面：暗红褐土 + 烧裂的缝 + 余烬亮点（第 29 块）。
+// 草甸路口的地面（第 63 块）：被踩了四十年的土路 + 车辙 + 路边的草。
+// 和荒草地（草为主）的区别：这里是**土** —— 草只从裂缝里钻出来一点点。
+function makeCrossroadTexture() {
+  const S = 512;
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = S;
+  const g = cv.getContext('2d');
+
+  g.fillStyle = '#3a3324';       // 压实的黄土
+  g.fillRect(0, 0, S, S);
+
+  let seed = 632024;
+  const rnd = () => {
+    seed = (seed * 1103515245 + 12345) % 2147483648;
+    return seed / 2147483648;
+  };
+
+  // 大块明暗：被踩实的地方发亮，草根处发暗
+  for (let i = 0; i < 150; i++) {
+    const x = rnd() * S, y = rnd() * S, r = 22 + rnd() * 76;
+    const rad = g.createRadialGradient(x, y, 0, x, y, r);
+    const light = rnd() > 0.5;
+    rad.addColorStop(0, light ? 'rgba(120,104,70,0.26)' : 'rgba(14,18,10,0.34)');
+    rad.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = rad;
+    g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+  }
+
+  // 车辙：两道压出来的深色带（横竖各一组，像被车碾过很多年）
+  g.lineCap = 'round';
+  const rut = (vert) => {
+    for (const off of [-26, 26]) {
+      g.strokeStyle = 'rgba(24,22,14,0.30)';
+      g.lineWidth = 9 + rnd() * 4;
+      g.beginPath();
+      if (vert) { g.moveTo(S / 2 + off, 0); g.lineTo(S / 2 + off + (rnd() - 0.5) * 16, S); }
+      else { g.moveTo(0, S / 2 + off); g.lineTo(S, S / 2 + off + (rnd() - 0.5) * 16); }
+      g.stroke();
+    }
+  };
+  rut(true);
+  rut(false);
+
+  // 颗粒：土渣 + 小石子
+  for (let i = 0; i < 2800; i++) {
+    const x = rnd() * S, y = rnd() * S;
+    const r = 0.6 + rnd() * 1.5;
+    const a = 0.10 + rnd() * 0.22;
+    if (rnd() > 0.93) g.fillStyle = `rgba(168,158,120,${0.20 + rnd() * 0.24})`;
+    else g.fillStyle = rnd() > 0.5 ? `rgba(96,86,58,${a})` : `rgba(10,12,8,${a + 0.10})`;
+    g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+  }
+
+  // 草根：从土缝里钻出来的短草（比荒草地稀、比焦土多）
+  for (let i = 0; i < 130; i++) {
+    const x = rnd() * S, y = rnd() * S;
+    g.strokeStyle = `rgba(74,108,54,${0.30 + rnd() * 0.34})`;
+    g.lineWidth = 1 + rnd() * 1.4;
+    for (let k = 0; k < 3; k++) {
+      g.beginPath();
+      g.moveTo(x + k * 2 - 2, y);
+      g.lineTo(x + k * 2 - 2 + (rnd() - 0.5) * 8, y - 4 - rnd() * 9);
+      g.stroke();
+    }
+  }
+
+  const tex = new THREE.CanvasTexture(cv);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+// 骨塔机房的地面（第 63 块）：拆下来的机柜格栅 + 检修孔的蓝绿指示灯。
+// 走「工业」路线：底色是冷灰，格栅是规整的方孔 —— 和前面四关的「土地」完全不同。
+function makeServerTexture() {
+  const S = 512;
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = S;
+  const g = cv.getContext('2d');
+
+  g.fillStyle = '#1b2226';
+  g.fillRect(0, 0, S, S);
+
+  let seed = 632025;
+  const rnd = () => {
+    seed = (seed * 1103515245 + 12345) % 2147483648;
+    return seed / 2147483648;
+  };
+
+  // 格栅：一层方块阵列（孔是黑的，框是冷的金属灰）
+  const cell = 16;
+  for (let y = 0; y < S; y += cell) {
+    for (let x = 0; x < S; x += cell) {
+      g.fillStyle = 'rgba(10,14,16,0.55)';
+      g.fillRect(x + 2, y + 2, cell - 4, cell - 4);
+      g.strokeStyle = 'rgba(88,104,110,0.20)';
+      g.lineWidth = 1;
+      g.strokeRect(x + 1.5, y + 1.5, cell - 3, cell - 3);
+    }
+  }
+
+  // 大块明暗：油渍、被拖过的痕迹
+  for (let i = 0; i < 120; i++) {
+    const x = rnd() * S, y = rnd() * S, r = 20 + rnd() * 70;
+    const rad = g.createRadialGradient(x, y, 0, x, y, r);
+    rad.addColorStop(0, rnd() > 0.5 ? 'rgba(6,10,12,0.42)' : 'rgba(78,110,120,0.16)');
+    rad.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = rad;
+    g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+  }
+
+  // 指示灯：零星的蓝绿小点（机房地上那种「还在通电」的暗示）
+  for (let i = 0; i < 90; i++) {
+    const x = rnd() * S, y = rnd() * S;
+    const r = 0.9 + rnd() * 1.6;
+    const cyan = rnd() > 0.3;
+    g.fillStyle = cyan
+      ? `rgba(120,236,255,${0.20 + rnd() * 0.45})`
+      : `rgba(255,140,90,${0.18 + rnd() * 0.34})`;
+    g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+  }
+
+  // 线缆：几根贴着地面走的黑线
+  g.lineCap = 'round';
+  for (let i = 0; i < 10; i++) {
+    let x = rnd() * S, y = rnd() * S;
+    g.strokeStyle = `rgba(6,8,10,${0.55 + rnd() * 0.3})`;
+    g.lineWidth = 1.6 + rnd() * 2.2;
+    g.beginPath();
+    g.moveTo(x, y);
+    for (let k = 0; k < 6; k++) {
+      x += (rnd() - 0.5) * 90;
+      y += (rnd() - 0.5) * 90;
+      g.lineTo(x, y);
+    }
+    g.stroke();
+  }
+
+  const tex = new THREE.CanvasTexture(cv);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
 // 和枯土同一套做法（大块明暗 + 细碎颗粒 + 裂缝），只是配色走炭红。
 function makeAshTexture() {
   const S = 512;

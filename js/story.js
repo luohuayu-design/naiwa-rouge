@@ -661,7 +661,7 @@ export const STORY_CHAPTERS = [
   },
 
   {
-    id: 's05', no: 5, act: 2, levelId: null, atRound: null,
+    id: 's05', no: 5, act: 2, levelId: 5, atRound: 2,
     icon: '📋', title: '一百只蛙的名单', who: '蛙爷', place: '草甸路口',
     story:
       '第五夜你折回了草甸。\n'
@@ -769,7 +769,7 @@ export const STORY_CHAPTERS = [
   },
 
   {
-    id: 's06', no: 6, act: 2, levelId: null, atRound: null,
+    id: 's06', no: 6, act: 2, levelId: 6, atRound: 2,
     icon: '🧾', title: '生母弃我', who: '阿速', place: '骨塔机房',
     story:
       '第六夜，阿速带你钻进骨塔的地下机房。\n'

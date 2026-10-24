@@ -1750,3 +1750,79 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
   will-change:scroll-position}
 /* 滚动区里的排版卡片别再各带一层 box-shadow：滚一屏就要重画几十个阴影 */
 .sr-body .sr-line,.sr-body .sr-end{box-shadow:none}
+
+/* ============================================================
+   第 62 块 · 夜行攻略（手风琴）
+   战败提示上的「查看攻略」打开。三组：武器 / 属性 / 技能。
+   注意：全站不再用 backdrop-filter（第 59 块的性能决定），
+   遮罩一律走不透明纯色。
+   ============================================================ */
+.ft-guide{width:100%;margin-top:14px;padding:11px;border-radius:12px;cursor:pointer;font-family:inherit;
+  font-size:13px;font-weight:800;letter-spacing:.1em;color:#cfe8ff;
+  border:1px solid rgba(140,196,255,.4);background:rgba(28,48,74,.9);transition:filter .15s,border-color .15s}
+.ft-guide:hover{border-color:rgba(160,210,255,.72);filter:brightness(1.08)}
+.ft-guide:active{transform:scale(.98)}
+
+#guideOv{position:fixed;inset:0;z-index:49;display:none;align-items:center;justify-content:center;
+  padding:12px;background:rgba(2,7,6,.94)}
+#guideOv.on{display:flex}
+.gd-box{width:min(460px,96vw);max-height:calc(var(--app-h,100vh) - 24px);display:flex;flex-direction:column;
+  border-radius:18px;border:1px solid rgba(126,235,196,.28);
+  background:linear-gradient(170deg,rgba(18,32,28,.995),rgba(8,14,12,1));
+  box-shadow:0 26px 60px rgba(0,0,0,.6);animation:noticePop .28s cubic-bezier(.2,1.4,.4,1);overflow:hidden}
+
+.gd-hd{display:flex;align-items:flex-start;gap:10px;padding:15px 15px 11px;
+  border-bottom:1px solid rgba(126,235,196,.14)}
+.gd-hd-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.gd-title{font-size:16px;font-weight:800;letter-spacing:.16em;color:#e6fff5}
+.gd-sub{font-size:10.5px;letter-spacing:.04em;color:rgba(150,196,180,.7)}
+.gd-x{flex:0 0 auto;width:30px;height:30px;border-radius:9px;cursor:pointer;font-family:inherit;
+  font-size:17px;line-height:1;color:rgba(200,232,220,.75);
+  border:1px solid rgba(126,235,196,.2);background:rgba(255,255,255,.04)}
+.gd-x:hover{color:#fff;border-color:rgba(126,235,196,.5)}
+
+.gd-body{flex:1;min-height:0;overflow:auto;padding:10px 12px 4px;
+  overscroll-behavior:contain;-webkit-overflow-scrolling:touch;will-change:scroll-position}
+
+/* ---- 组（手风琴第一层） ---- */
+.gd-sec{border-radius:13px;border:1px solid rgba(126,235,196,.16);
+  background:rgba(255,255,255,.025);margin-bottom:9px;overflow:hidden}
+.gd-sec.open{border-color:rgba(126,235,196,.42);background:rgba(126,235,196,.05)}
+.gd-sec-hd{display:flex;align-items:center;gap:9px;width:100%;padding:12px 12px;
+  cursor:pointer;font-family:inherit;background:none;border:0;text-align:left;color:inherit}
+.gd-sec-ic{font-size:15px;line-height:1;color:#9ef0c4}
+.gd-sec-t{flex:1;font-size:13.5px;font-weight:800;letter-spacing:.1em;color:#dffff2}
+.gd-sec-c{font-size:10px;letter-spacing:.04em;color:rgba(150,196,180,.6)}
+.gd-sec-ar{font-size:15px;color:rgba(150,196,180,.7);transition:transform .18s ease}
+.gd-sec.open .gd-sec-ar{transform:rotate(90deg);color:#7ef0c6}
+.gd-sec-bd{display:none;padding:2px 10px 10px}
+.gd-sec.open .gd-sec-bd{display:block}
+.gd-lead{margin:2px 2px 9px;font-size:11px;line-height:1.75;color:rgba(168,206,190,.72)}
+
+/* ---- 条目（手风琴第二层） ---- */
+.gd-item{border-radius:10px;border:1px solid rgba(126,235,196,.12);
+  background:rgba(8,16,14,.55);margin-bottom:6px;overflow:hidden}
+.gd-item.open{border-color:rgba(126,235,196,.34);background:rgba(126,235,196,.07)}
+.gd-item-hd{display:flex;align-items:center;gap:8px;width:100%;padding:9px 10px;
+  cursor:pointer;font-family:inherit;background:none;border:0;text-align:left;color:inherit}
+.gd-item-n{flex:0 0 auto;font-size:12.5px;font-weight:800;letter-spacing:.06em;color:#eafff4}
+.gd-item-s{flex:1;min-width:0;font-size:10px;line-height:1.5;color:rgba(150,196,180,.66);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gd-item-ar{flex:0 0 auto;width:16px;text-align:center;font-size:13px;font-weight:800;
+  color:rgba(126,235,196,.7);transition:transform .18s ease}
+.gd-item.open .gd-item-ar{transform:rotate(45deg)}
+.gd-item-bd{display:none;padding:0 10px 9px}
+.gd-item.open .gd-item-bd{display:block}
+.gd-p{margin:0 0 6px;font-size:11px;line-height:1.85;color:rgba(206,232,222,.82)}
+.gd-p b{font-weight:800}
+.gd-p-what b{color:#9fd8ff}
+.gd-p-best b{color:#7ef0c6}
+.gd-p-warn b{color:#ffb987}
+
+.gd-ft{display:flex;align-items:center;gap:10px;padding:10px 13px 12px;
+  border-top:1px solid rgba(126,235,196,.14)}
+.gd-tip{flex:1;font-size:10px;line-height:1.6;color:rgba(150,196,180,.6)}
+.gd-ok{flex:0 0 auto;padding:9px 18px;border-radius:11px;cursor:pointer;font-family:inherit;
+  font-size:12px;font-weight:800;letter-spacing:.12em;color:#0d1a16;
+  border:1px solid rgba(126,235,196,.6);background:linear-gradient(180deg,#b8f5d8,#63d9a8)}
+.gd-ok:active{transform:scale(.98)}

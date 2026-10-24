@@ -93,7 +93,7 @@ ok(/flyers\.push\(\{ kind: owned\[i\], holder: acquire\(owned\[i\]\), a, ox: p\.
   '辐射的剑按 owned 顺序取元素、全走对象池');
 ok(!/orbiting\.length = 0;/.test((weaponSrc.match(/function fire\([\s\S]*?\n  }/) || [''])[0]),
   'fire 不再清空环绕（释放技能不改变正在环绕的数量）');
-ok(/fireCd = FIRE_CD;/.test(weaponSrc), '放完进入冷却');
+ok(/fireCd = FIRE_CD \* cdMul;/.test(weaponSrc), '放完进入冷却（乘冷却缩减属性）');
 ok(/if \(fireCd > 0\) fireCd = Math\.max\(0, fireCd - dt\);/.test(weaponSrc), 'update 里冷却走表');
 ok(/get fireReady\(\)/.test(weaponSrc) && /get fireCdLeft\(\)/.test(weaponSrc)
   && /get fireCdTotal\(\)/.test(weaponSrc) && /get fireCdProgress\(\)/.test(weaponSrc),

@@ -16,10 +16,10 @@
 // 与环剑（自动索敌、消耗制）和炮台（固定点位）互补；价格定在
 // 商店里「买得起但要攒一攒」的档，让 9/12/15/18 回合的商店有取舍。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=72';
-import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=72';
-import { distance2D } from './stats.js?v=72';
-import audio from './audio.js?v=72';
+import * as THREE from '../lib/three.module.js?v=74';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=74';
+import { distance2D } from './stats.js?v=74';
+import audio from './audio.js?v=74';
 
 export const RELIC_DEFS = {
   spikes: {
@@ -77,11 +77,40 @@ export const RELIC_DEFS = {
     desc: ['每秒灼烧 2.2 内的怪 0.5 伤 —— 高频低伤，专门磨小怪',
       '每秒 0.7 伤、半径 2.4', '每秒 0.9 伤、半径 2.6 —— 站在炉边就是一片火'],
   },
+  // ---------------- 第五关新增（第 63 块） ----------------
+  // 路口灯：草甸路口摊子上那盏油灯，被蛙爷塞给你了。
+  // 每 4.2 秒亮一次，把一圈里**隐身的雾鬼强行点亮** —— 这是全游戏唯一的反隐手段。
+  // 雾鬼从第 61 块起「隐身也能咬你、你却打不着它」，只靠等它自己露头太被动了；
+  // 有了灯，玩家第一次能主动把雾里的东西拽出来。
+  // 顺带减速 35%（灯下它看不清路），伤害很低（它本来就不是输出装）。
+  lantern: {
+    name: '路口灯',
+    maxLevel: 3,
+    radius: [4.2, 4.8, 5.4],
+    interval: [4.2, 3.8, 3.4],
+    slow: [0.30, 0.38, 0.45],
+    damage: [0.3, 0.45, 0.6],
+    desc: ['每 4.2 秒亮一次：4.2 内的雾鬼被迫显形、怪减速 30%、0.3 伤',
+      '每 3.8 秒：半径 4.8、减速 38%、0.45 伤',
+      '每 3.4 秒：半径 5.4、减速 45%、0.6 伤 —— 灯下没有影子'],
+  },
+  // 绝缘斗篷：从机房报废机柜上拆下来的绝缘布。
+  // 被动：站在漏电地板上不掉血（第六关的核心反制），而且电会顺着斗篷
+  // 导到身边的怪身上 —— 你踩着电，周围的怪替你挨。这是**以毒攻毒**型法器：
+  // 只有第六关（有漏电地板）它才真正发力，别的关等于一件薄披风。
+  insulator: {
+    name: '绝缘斗篷',
+    maxLevel: 3,
+    radius: [2.4, 2.7, 3.0],
+    dps: [0.5, 0.7, 0.9],
+    desc: ['站在漏电地板上不掉血；通电时身边 2.4 内的怪每 0.5 秒吃 0.5 伤',
+      '半径 2.7、0.7 伤', '半径 3.0、0.9 伤 —— 你踩的那块地板就是你的武器'],
+  },
 };
 
-export function createRelicSystem({ scene, fx, enemies }) {
-  const levels = { spikes: 0, frost: 0, bell: 0, thorns: 0, stove: 0 };
-  const cds = { spikes: 0, frost: 0, bell: 0, thorns: 0, stove: 0 };
+export function createRelicSystem({ scene, fx, enemies, onLanternReveal }) {
+  const levels = { spikes: 0, frost: 0, bell: 0, thorns: 0, stove: 0, lantern: 0, insulator: 0 };
+  const cds = { spikes: 0, frost: 0, bell: 0, thorns: 0, stove: 0, lantern: 0, insulator: 0 };
 
   // ---------------- 视觉 ----------------
   // 地刺（第 24 块）：KayKit「尖刺地板」里只取尖刺部分（CC0，带手绘贴图），
@@ -206,6 +235,42 @@ export function createRelicSystem({ scene, fx, enemies }) {
   warmRim.renderOrder = 2;
   scene.add(warmRim);
 
+  // ---------------- 路口灯（第 63 块，第五关）----------------
+  // 一盏提在手里的油灯：铁皮框 + 暖黄芯，绕主角慢慢转（和暖炉错开相位）。
+  // 每次「点亮」在地上摊开一大圈暖光，把雾鬼拽出来 —— 灯下没有影子。
+  const lanternGroup = new THREE.Group();
+  {
+    const frameMat = new THREE.MeshLambertMaterial({ color: 0x4a4234, emissive: 0x1a1408 });
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.10, 0.20, 8, 1, true), frameMat);
+    const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.035, 8), frameMat);
+    cap.position.y = 0.115;
+    const foot = new THREE.Mesh(new THREE.CylinderGeometry(0.10, 0.085, 0.035, 8), frameMat);
+    foot.position.y = -0.115;
+    const coreMat = new THREE.MeshBasicMaterial({
+      color: 0xffd06a, transparent: true, opacity: 0.95,
+      depthWrite: false, blending: THREE.AdditiveBlending,
+    });
+    const core = new THREE.Mesh(new THREE.SphereGeometry(0.072, 10, 8), coreMat);
+    lanternGroup.add(body, cap, foot, core);
+    lanternGroup.userData.core = core;
+  }
+  lanternGroup.visible = false;
+  scene.add(lanternGroup);
+  let lanternAngle = 0.9;   // 和暖炉的 0 相位错开
+  let lanternPulse = 0;
+
+  // 灯照范围（贴地暖圈）：只在「亮起来的那一下」看得见，平时很淡
+  const lanternRim = new THREE.Mesh(
+    new THREE.RingGeometry(0.97, 1, 64).rotateX(-Math.PI / 2),
+    new THREE.MeshBasicMaterial({
+      color: 0xffd06a, transparent: true, opacity: 0.14,
+      depthWrite: false, blending: THREE.AdditiveBlending,
+    })
+  );
+  lanternRim.visible = false;
+  lanternRim.renderOrder = 2;
+  scene.add(lanternRim);
+
   function buy(kind) {
     const def = RELIC_DEFS[kind];
     if (!def || levels[kind] >= def.maxLevel) return levels[kind] || 0;
@@ -217,6 +282,10 @@ export function createRelicSystem({ scene, fx, enemies }) {
     if (kind === 'stove') {
       stoveGroup.visible = true;
       warmRim.visible = true;
+    }
+    if (kind === 'lantern') {
+      lanternGroup.visible = true;
+      lanternRim.visible = true;
     }
     return levels[kind];
   }
@@ -337,7 +406,62 @@ export function createRelicSystem({ scene, fx, enemies }) {
     return n;
   }
 
-  function update(dt, { playerPos } = {}) {
+  // ============================================================
+  // 路口灯（第 63 块）：每几秒点亮一次
+  //   · 强行让圈里的隐身雾鬼显形（全游戏唯一的反隐手段）
+  //   · 圈里所有怪减速 + 少量伤害（灯下它们看不清路）
+  // ============================================================
+  function lanternFlare(lv, at) {
+    const def = RELIC_DEFS.lantern;
+    const radius = def.radius[lv - 1];
+    const dmg = def.damage[lv - 1];
+    let shown = 0;
+    let hit = 0;
+    if (enemies.revealInRadius) shown = enemies.revealInRadius(at, radius);
+    for (const e of enemies.list) {
+      if (e.state === 'dead' || e.state === 'spawn') continue;
+      if (distance2D(at, e.pos) > radius) continue;
+      hit++;
+      enemies.takeDamage(e, dmg, false, { dot: true });
+      if (e.state !== 'dead') enemies.applySlow(e, { factor: def.slow[lv - 1], time: 0.9 });
+    }
+    lanternPulse = 1;
+    if (fx) {
+      // 两圈暖光：一圈摊到边界，一圈更亮收在里面 —— 像灯芯炸了一下
+      fx.ring(at, { from: 0.3, to: radius, color: 0xffd06a, life: 0.42, opacity: 0.75, y: 0.07 });
+      fx.ring(at, { from: 0.2, to: radius * 0.6, color: 0xfff0c0, life: 0.3, opacity: 0.55, y: 0.08 });
+    }
+    if (shown) {
+      audio.sfx('aegis');                      // 有东西被照亮才响（没鬼的时候不吵）
+      onLanternReveal?.(shown);                // 成就用：累计照出多少只
+    }
+    return { shown, hit };
+  }
+
+  // ============================================================
+  // 绝缘斗篷（第 63 块）：不是主动法器，是被动
+  //   · 站上通电地板不掉血（这个由 main.js 在扣血前问 relic 拿到的减伤倍率）
+  //   · 站在通电地板上时，把电导给身边一圈的怪（0.5 秒一拍）
+  // 「以毒攻毒」：第六关的地板本来是惩罚，穿上它就是武器。
+  // ============================================================
+  function insulatorTick(lv, at) {
+    const def = RELIC_DEFS.insulator;
+    const radius = def.radius[lv - 1];
+    const dmg = def.dps[lv - 1];
+    let n = 0;
+    for (const e of enemies.list) {
+      if (e.state === 'dead' || e.state === 'spawn') continue;
+      if (distance2D(at, e.pos) > radius) continue;
+      enemies.takeDamage(e, dmg, false, { dot: true });
+      n++;
+    }
+    if (n && fx) {
+      fx.ring(at, { from: 0.3, to: radius, color: 0x9ff4ff, life: 0.26, opacity: 0.6, y: 0.06 });
+    }
+    return n;
+  }
+
+  function update(dt, { playerPos, hazards } = {}) {
     // 石刺起落动画（模型尖刺：整丛从地下顶出来再缩回去）
     for (let i = eruptions.length - 1; i >= 0; i--) {
       const er = eruptions[i];
@@ -394,9 +518,42 @@ export function createRelicSystem({ scene, fx, enemies }) {
       warmRim.material.opacity = 0.13 + 0.10 * stovePulse + Math.sin(performance.now() / 430) * 0.02;
     }
 
+    // 路口灯（第 63 块）：提着绕人转；每次点亮后暖光呼吸一下
+    const ll = levels.lantern;
+    if (ll > 0) {
+      const r = RELIC_DEFS.lantern.radius[ll - 1];
+      lanternAngle += dt * 0.7;
+      const sway = Math.sin(performance.now() / 700) * 0.05;
+      lanternGroup.position.set(
+        playerPos.x + Math.cos(lanternAngle) * 0.82,
+        1.35 + sway,
+        playerPos.z + Math.sin(lanternAngle) * 0.82,
+      );
+      lanternPulse = Math.max(0, lanternPulse - dt * 2.6);
+      const core = lanternGroup.userData.core;
+      if (core) {
+        core.material.opacity = 0.62 + 0.3 * lanternPulse + Math.sin(performance.now() / 110) * 0.06;
+        core.scale.setScalar(1 + lanternPulse * 0.5);
+      }
+      lanternRim.position.set(playerPos.x, 0.05, playerPos.z);
+      lanternRim.scale.setScalar(r * (1 + Math.sin(performance.now() / 700) * 0.02));
+      lanternRim.material.opacity = 0.10 + 0.32 * lanternPulse;
+    }
+
+    // 绝缘斗篷（第 63 块）：被动，只有踩在**通电**的地板上才发力
+    const il = levels.insulator;
+    if (il > 0 && hazards && hazards.isPowered && hazards.isPowered(playerPos.x, playerPos.z)) {
+      cds.insulator -= dt;
+      if (cds.insulator <= 0) {
+        cds.insulator = 0.5;
+        insulatorTick(il, playerPos);
+      }
+    } else {
+      cds.insulator = 0;
+    }
+
     // 冷却与触发
-    const sl = levels.spikes;
-    if (sl > 0) {
+    const sl = levels.spikes;    if (sl > 0) {
       cds.spikes -= dt;
       if (cds.spikes <= 0) {
         cds.spikes = RELIC_DEFS.spikes.interval;
@@ -426,6 +583,14 @@ export function createRelicSystem({ scene, fx, enemies }) {
         stoveTick(st, playerPos);
       }
     }
+    const ltn = levels.lantern;
+    if (ltn > 0) {
+      cds.lantern -= dt;
+      if (cds.lantern <= 0) {
+        cds.lantern = RELIC_DEFS.lantern.interval[ltn - 1];
+        lanternFlare(ltn, playerPos);
+      }
+    }
   }
 
   function reset() {
@@ -434,11 +599,15 @@ export function createRelicSystem({ scene, fx, enemies }) {
     levels.bell = 0;
     levels.thorns = 0;
     levels.stove = 0;
+    levels.lantern = 0;
+    levels.insulator = 0;
     cds.spikes = 0;
     cds.frost = 0;
     cds.bell = 0;
     cds.thorns = 0;
     cds.stove = 0;
+    cds.lantern = 0;
+    cds.insulator = 0;
     thornPulse = 0;
     stovePulse = 0;
     stoveAngle = 0;
@@ -448,6 +617,9 @@ export function createRelicSystem({ scene, fx, enemies }) {
     thornRim.visible = false;
     stoveGroup.visible = false;
     warmRim.visible = false;
+    lanternGroup.visible = false;
+    lanternRim.visible = false;
+    lanternPulse = 0;
   }
 
   // 存档续玩（第 17 块）：按存档重放等级（buy 不扣钱，扣钱在外层）
@@ -457,6 +629,8 @@ export function createRelicSystem({ scene, fx, enemies }) {
     thornRim.visible = false;
     stoveGroup.visible = false;
     warmRim.visible = false;
+    lanternGroup.visible = false;
+    lanternRim.visible = false;
     let n = 0;
     for (const [k, lv] of Object.entries(saved || {})) {
       for (let i = 0; i < (lv | 0); i++) { buy(k); n++; }
@@ -472,6 +646,9 @@ export function createRelicSystem({ scene, fx, enemies }) {
     debugBell: (at) => ringBell(Math.max(1, levels.bell), at),
     // 调试（第 35 块）：手动烧一次暖炉（测试灼烧半径/伤害用，不依赖 1 秒节拍）
     debugStove: (at) => stoveTick(Math.max(1, levels.stove), at),
+    // 调试（第 63 块）：手动点亮一次路口灯 / 手动电一次绝缘斗篷
+    debugLantern: (at) => lanternFlare(Math.max(1, levels.lantern), at),
+    debugInsulator: (at) => insulatorTick(Math.max(1, levels.insulator), at),
     // 调试（第 24 块）：在指定位置常驻一丛尖刺，供截图/检查
     debugShow: (x = 1.5, z = 0) => {
       if (!spikeTpl) return 'tpl-not-ready';

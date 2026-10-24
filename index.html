@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#080f14">
 <link rel="icon" href="data:,">
 <title>蛙步 · 夜行</title>
-<link rel="stylesheet" href="style.css?v=72">
+<link rel="stylesheet" href="style.css?v=74">
 </head>
 <body>
 
@@ -64,7 +64,7 @@
 <!-- 右上角：波次进度 -->
 <div id="waveHud">
   <div class="wh-top">
-    <span class="wh-level">第 1 关</span>
+    <span class="wh-level" id="whLevel">第 1 关</span>
     <span class="wh-wave" id="whWave">准备</span>
   </div>
   <div class="wh-sub" id="whSub">荒草地</div>
@@ -634,8 +634,28 @@
     <div class="ft-title">温馨提示</div>
     <div class="ft-text">想要提升实力？去篝火商店看看吧。</div>
     <div class="ft-sub" id="ftSub">这一局结算的骨币已经进账 · 火里点过的东西，下一局就带着</div>
+    <button class="ft-guide" id="ftGuide" type="button">查看攻略</button>
     <button class="ft-go" id="ftGo" type="button">去篝火商店</button>
     <button class="ft-later" id="ftLater" type="button">下次吧</button>
+  </div>
+</div>
+
+<!-- 攻略面板（第 62 块）：战败提示上的「查看攻略」打开。
+     手风琴三组 —— 武器类 / 属性加成类 / 技能类，点组展开、点条目看详情。 -->
+<div id="guideOv" aria-hidden="true">
+  <div class="gd-box">
+    <div class="gd-hd">
+      <div class="gd-hd-txt">
+        <span class="gd-title">夜行攻略</span>
+        <span class="gd-sub">武器 · 属性 · 技能 —— 什么时候该用哪一个</span>
+      </div>
+      <button class="gd-x" id="guideX" type="button" aria-label="关闭">×</button>
+    </div>
+    <div class="gd-body" id="guideBody"></div>
+    <div class="gd-ft">
+      <span class="gd-tip">打不过不是手气问题，多半是这一局「该买的东西没买」。</span>
+      <button class="gd-ok" id="guideOk" type="button">知道了</button>
+    </div>
   </div>
 </div>
 
@@ -783,7 +803,7 @@
 <!-- 不用 importmap：老手机浏览器（iOS 16.4 以下、旧版微信/安卓 WebView）
      不支持 import maps，会让整个模块解析失败、加载页永远停在 0%。
      项目内所有 import 都写成相对路径，直接靠原生 ES Module 解析。 -->
-<script type="module" src="js/main.js?v=72"></script>
+<script type="module" src="js/main.js?v=74"></script>
 
 <!-- 兜底自检：模块没跑起来时把原因写出来，别让用户对着 0% 干等 -->
 <script>

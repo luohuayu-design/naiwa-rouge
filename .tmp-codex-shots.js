@@ -2,6 +2,7 @@
 // 跑法：先起 `python -m http.server 8124`（cwd = naiwa-rouge），再 `node .tmp-codex-shots.js`
 // 换怪物模型 / 换皮肤后重跑一次即可；图鉴只读这些 webp，运行时不加载任何模型。
 // 第 52 块：9 只怪换了模型（Quaternius），13 张图全部重出过。
+// 第 63 块：新增擦名者（KayKit Rogue_Hooded）/ 重启体（three.js RobotExpressive），15 张。
 const { spawn } = require('child_process');
 const os = require('os');
 const path = require('path');
@@ -10,9 +11,9 @@ const fs = require('fs');
 const CHROME = 'C:/Program Files/Google/Chrome/Application/chrome.exe';
 const PORT = 9356;
 const PAGE = 'http://127.0.0.1:8124/?debug=1&title';
-const UD = path.join(os.tmpdir(), 'naiwa-cdp-51shot');
+const UD = path.join(os.tmpdir(), 'naiwa-cdp-51shot63');
 const OUT = path.join(__dirname, 'assets', 'codex');
-const V = '65';
+const V = '74';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 (async () => {

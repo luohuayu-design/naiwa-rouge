@@ -51,6 +51,10 @@ export const ACHS = [
   { id: 'wraith_30', name: '雾散了', desc: '累计击倒 30 只雾鬼' },
   { id: 'leaper_30', name: '别站在圈里', desc: '累计击倒 30 只雾猎狼' },
   { id: 'mender_10', name: '拆手术台', desc: '累计击倒 10 只缝补小巫' },
+  // 第 63 块：第五/六关的两只新怪
+  { id: 'eraser_10', name: '名字还在', desc: '累计击倒 10 只擦名者' },
+  { id: 'reboot_10', name: '彻底拆了', desc: '累计击倒 10 只重启体' },
+  { id: 'lantern_50', name: '灯下没有影子', desc: '用路口灯照出 50 只隐身的雾鬼' },
   // 第 32 块：主线十八夜
   { id: 'story_first', name: '第一夜', desc: '在关卡里撞见主线《笑不出来的那一夜》' },
   { id: 'story_all', name: '夜行人', desc: '在夜行记忆里读完十八夜' },

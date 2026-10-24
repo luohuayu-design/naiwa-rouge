@@ -26,9 +26,9 @@
 // 第 11 块：每件货都带 rarity（0 普通 ~ 4 传说），店里按品质加权抽取 ——
 // 幸运越高，摆出来的货越往金/红那一头走（见 rarity.js）。
 // ============================================================
-import { rarityWeight } from './rarity.js?v=72';
-import { TURRET } from './turret.js?v=72';
-import { RELIC_DEFS } from './relics.js?v=72';
+import { rarityWeight } from './rarity.js?v=74';
+import { TURRET } from './turret.js?v=74';
+import { RELIC_DEFS } from './relics.js?v=74';
 
 export const SHOP_ITEMS = [
   // ---------------- 生命药水（第 13 块起：买进背包，作战中随时用） ----------------
@@ -173,12 +173,31 @@ export const SHOP_ITEMS = [
     glyph: '🔥', name: '暖炉图样',
     desc: '推着一只烧炭的油桶走：每秒灼烧身边一圈怪。高频低伤，专治雾里那种血少量大的小怪。再买可升级（最多 3 级）。',
   },
+  // ---------------- 第五关新增（第 63 块）：路口灯 ----------------
+  {
+    id: 'buyLantern', type: 'relic', relic: 'lantern', price: 34, needRound: 9, needLevel: 5,
+    rarity: 3,
+    glyph: '🏮', name: '路口灯',
+    desc: '每几秒点亮一圈：圈里的雾鬼被迫显形、所有怪减速。全游戏唯一的反隐手段 —— 雾鬼隐身时能咬你，你却打不着它。再买可升级（最多 3 级）。',
+  },
+  // ---------------- 第六关新增（第 63 块）：绝缘斗篷 ----------------
+  {
+    id: 'buyInsulator', type: 'relic', relic: 'insulator', price: 32, needRound: 8, needLevel: 6,
+    rarity: 3,
+    glyph: '🧥', name: '绝缘斗篷',
+    desc: '站在漏电地板上不掉血，反而把电导给身边的怪（每 0.5 秒结算一次）。第六关的地板本来是惩罚，穿上它就是武器。再买可升级（最多 3 级）。',
+  },
 ];
 
 // 商店里买不到 / 已卖光时给出原因（渲染禁用态用）
-// ctx: hasWeapon / round（当前回合）/ turretCount（场上炮台数）/ relicLevels（{spikes, frost}）
+// ctx: hasWeapon / round（当前回合）/ level（第几关）/ turretCount / relicLevels
+// needLevel（第 63 块）：只在某几关起出现的货（路口灯、绝缘斗篷）。
+//   缺省 99 = 不限制，老调用与老测试不用动。
 export function itemLocked(item, ctx = {}) {
   if (item.needWeapon && !ctx.hasWeapon) return '第 5 回合获得环剑后解锁';
+  if (item.needLevel != null && (ctx.level ?? 99) < item.needLevel) {
+    return `第 ${item.needLevel} 关起才会出现`;
+  }
   if (item.needRound != null && (ctx.round ?? 99) < item.needRound) {
     return `第 ${item.needRound} 回合后解锁`;
   }
@@ -201,10 +220,11 @@ export const SHOP_SHOW = 4;
 // luck      = 幸运：按品质加权（第 11 块），幸运高更容易摆出金/红货
 // rng 可注入，测试里能固定结果。
 export function rollShopItems(rng = Math.random, {
-  hasWeapon = false, round = 99, turretCount = 0, relicLevels = null, count = SHOP_SHOW, luck = 0,
+  hasWeapon = false, round = 99, level = 99, turretCount = 0, relicLevels = null, count = SHOP_SHOW, luck = 0,
 } = {}) {
   const usable = SHOP_ITEMS.filter((it) => {
     if (it.needWeapon && !hasWeapon) return false;
+    if (it.needLevel != null && level < it.needLevel) return false;
     if (it.needRound != null && round < it.needRound) return false;
     if (it.type === 'turret' && turretCount >= TURRET.MAX_COUNT) return false;
     if (it.type === 'relic' && (relicLevels?.[it.relic] || 0) >= RELIC_DEFS[it.relic].maxLevel) return false;

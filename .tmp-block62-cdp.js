@@ -218,6 +218,134 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     await ev('__game.addRep(-500), 1');
     ok(await ev('__game.rep') === 0, '跌到下限是 0', String(await ev('__game.rep')));
 
+    // ============================================================
+    console.log('\n[E] 回血技能（CD 25s / 回 5 点 / 满血按不动）');
+    // ============================================================
+    const heal0 = JSON.parse(await ev('JSON.stringify(__game.heal.state())'));
+    ok(heal0.unlocked === false || heal0.unlocked === true, '读得到回血技能状态', JSON.stringify(heal0));
+    ok(await ev('__game.heal.visible() === false'), '没解锁时技能栏里没有这一格', JSON.stringify(heal0));
+    await ev('__game.heal.unlock(), 1');
+    ok(await ev('__game.heal.visible() === true'), '解锁后技能栏多一格');
+
+    // 满血：按不动，而且不该浪费一次冷却
+    await ev('__game.heal.fill(), 1');
+    const full0 = JSON.parse(await ev('JSON.stringify(__game.heal.state())'));
+    ok(full0.status === 'full' && full0.cd === 0, '满血时状态是 full、冷却还是 0', JSON.stringify(full0));
+    const noop = await ev('__game.heal.press()');
+    ok(noop === false, '满血按下去什么都不发生', String(noop));
+    ok(await ev('__game.heal.state().cd') === 0, '满血空按不吃冷却');
+
+    const hp0 = JSON.parse(await ev('JSON.stringify(__game.heal.hp())'));
+    await ev('__game.heal.hurt(6), 1');
+    const hp1 = JSON.parse(await ev('JSON.stringify(__game.heal.hp())'));
+    ok(Math.abs(hp1.cur - (hp0.max - 6)) < 0.05 || hp1.cur < hp0.max - 0.5,
+      '先把血打掉一截', `${hp0.cur}/${hp0.max} → ${hp1.cur}/${hp1.max}`);
+    const got = await ev('__game.heal.press()');
+    ok(got === true, '按下技能键真的放出回血', String(got));
+    const hp2 = JSON.parse(await ev('JSON.stringify(__game.heal.hp())'));
+    ok(Math.abs(hp2.cur - Math.min(hp2.max, hp1.cur + 5)) < 0.05, '回 5 点血、且不超过上限', `${hp1.cur} → ${hp2.cur}/${hp2.max}`);
+    const heal1 = JSON.parse(await ev('JSON.stringify(__game.heal.state())'));
+    ok(heal1.status === 'cd' && Math.abs(heal1.cd - 25) < 0.6, '进 25 秒冷却', JSON.stringify(heal1));
+    // CD 中再按：无效
+    const hp3 = JSON.parse(await ev('JSON.stringify(__game.heal.hp())'));
+    await ev('__game.heal.press(), 1');
+    const hp4 = JSON.parse(await ev('JSON.stringify(__game.heal.hp())'));
+    ok(Math.abs(hp4.cur - hp3.cur) < 0.01, '冷却中按不动（血量不变）', `${hp3.cur} → ${hp4.cur}`);
+    // 走真实技能键：第 3 格存在且键位是 3
+    const sk = JSON.parse(await ev('JSON.stringify(__game.skillList())'));
+    const healSk = sk.find((x) => x.id === 'heal');
+    ok(!!healSk && healSk.key === '3', '技能栏第 3 格是回血、快捷键 3', JSON.stringify(healSk));
+    // 冷却会自己往下走（不是卡死在 25）
+    await sleep(1200);
+    const cdLater = await ev('__game.heal.state().cd');
+    ok(cdLater < 25, '冷却在走（1.2 秒后小于 25）', String(cdLater));
+
+    // ============================================================
+    console.log('\n[F] 民心专属事件（良性池 / 恶性池）');
+    // ============================================================
+    const pools = JSON.parse(await ev('JSON.stringify(__game.repEv.pools())'));
+    ok(pools.good.length >= 4, `良性池有 ${pools.good.length} 条`, JSON.stringify(pools.good.map((x) => x.tier)));
+    ok(pools.bad.length >= 3, `恶性池有 ${pools.bad.length} 条`, JSON.stringify(pools.bad.map((x) => x.tier)));
+    ok(pools.good.some((x) => x.tier === 3), '最高档（拥戴 100）有自己的专属事件');
+    ok(pools.bad.every((x) => x.tier < 0), '恶性池全在负档位');
+
+    // 每一条：有剧情、有选项、有真正的收益（permanent / mods）
+    const richness = JSON.parse(await ev(`(() => {
+      const ids = __game.repEv.pools().good.concat(__game.repEv.pools().bad).map((x) => x.id);
+      const bad = [];
+      for (const id of ids) {
+        const ev = __game.repEv.get(id);
+        if (!ev) { bad.push(id + ':缺内容'); continue; }
+        const storyOk = (ev.story || '').length >= 60;
+        const chOk = (ev.choices || []).length >= 2;
+        const effOk = (ev.choices || []).every((c) => {
+          const e = c.effects || {};
+          return !!(e.permanent || e.mods || e.rep || e.gold || e.drain || e.hp);
+        });
+        const sayOk = (ev.choices || []).every((c) => (c.say || '').length >= 20);
+        if (!storyOk) bad.push(id + ':剧情太短');
+        if (!chOk) bad.push(id + ':选项不足');
+        if (!effOk) bad.push(id + ':没有实际收益');
+        if (!sayOk) bad.push(id + ':缺回话');
+      }
+      return JSON.stringify({ n: ids.length, bad: bad });
+    })()`));
+    ok(richness.bad.length === 0, `${richness.n} 条民心事件都有剧情 / 选项 / 收益 / 回话`, JSON.stringify(richness.bad));
+
+    // 跨档 → 入队
+    await ev('__game.repEv.clear(), 1');
+    await ev('__game.addRep(120), 1');            // 一路涨到顶：只算一次跨档（0 → 3）
+    const qUp = JSON.parse(await ev('JSON.stringify(__game.repEv.queue())'));
+    ok(qUp.length === 1, '民心上到顶档 → 队列里排了一条良性事件', JSON.stringify(qUp));
+    ok(/repGood/.test(qUp[0] || ''), '排进来的是良性池的那条', String(qUp[0]));
+
+    await ev('__game.repEv.clear(), 1');
+    await ev('__game.addRep(-120), 1');            // 一路跌到底
+    const qDown = JSON.parse(await ev('JSON.stringify(__game.repEv.queue())'));
+    ok(qDown.length === 1 && /repBad/.test(qDown[0] || ''), '民心跌到敌视 → 队列里排了一条恶性事件', JSON.stringify(qDown));
+
+    // 同一档一局只触发一次
+    const once = JSON.parse(await ev(`(() => {
+      __game.repEv.clear();
+      __game.addRep(120);           // 涨到拥戴：排一条
+      __game.addRep(-120);          // 跌回谷底：排一条
+      const first = __game.repEv.fired().length;
+      __game.addRep(120);           // 再涨到拥戴：这一档已经用过，不该再排
+      return JSON.stringify({ fired: first, queue: __game.repEv.queue().length, firedAfter: __game.repEv.fired().length });
+    })()`));
+    ok(once.firedAfter === once.fired, '同一档位一局只触发一次（反复上下不会再排）', JSON.stringify(once));
+
+    // ============================================================
+    console.log('\n[G] 攻略面板（手风琴）');
+    // ============================================================
+    const secs = JSON.parse(await ev('JSON.stringify(__game.guide.sections())'));
+    ok(secs.length === 3, '三组：武器 / 属性 / 技能', JSON.stringify(secs.map((x) => x.title)));
+    ok(secs.map((x) => x.title).join('/') === '武器类/属性加成类/技能类', '组名和顺序正确', secs.map((x) => x.title).join('/'));
+    ok(secs.every((x) => x.n >= 3), '每组至少 3 条', JSON.stringify(secs.map((x) => x.n)));
+
+    await ev('__game.guide.open(), 1');
+    await sleep(400);
+    ok(await ev('__game.guide.open_()') === true, '点开能打开');
+    const dom = JSON.parse(await ev('JSON.stringify(__game.guide.dom())'));
+    ok(dom.built === true && dom.secs.length === 3, '面板真的渲染出三组', JSON.stringify(dom.secs));
+    ok(dom.secs.filter((x) => x.open).length === 1, '默认只展开第一组（手风琴）', JSON.stringify(dom.secs));
+    ok(dom.secs[0].items >= 6, '武器组里有 6 种剑 + 法器', String(dom.secs[0].items));
+    ok(dom.text > 1200, '攻略正文足够长（不是占位空壳）', String(dom.text));
+
+    // 点第二组：它展开、第一组收起
+    await ev("document.querySelectorAll('#guideBody .gd-sec-hd')[1].click(), 1");
+    await sleep(200);
+    const dom2 = JSON.parse(await ev('JSON.stringify(__game.guide.dom())'));
+    ok(dom2.secs[1].open === true && dom2.secs[0].open === false, '点第二组：它展开、第一组收起', JSON.stringify(dom2.secs));
+    // 点条目：展开正文
+    await ev("document.querySelectorAll('#guideBody .gd-sec')[1].querySelector('.gd-item-hd').click(), 1");
+    await sleep(200);
+    ok(await ev("document.querySelectorAll('#guideBody .gd-sec')[1].querySelector('.gd-item').classList.contains('open')") === true,
+      '点条目能展开详情');
+    await shot('guide.png');
+    await ev('__game.guide.close(), 1');
+    ok(await ev('__game.guide.open_()') === false, '能关掉');
+
     await shot('sizes_after.png');
 
     // ============================================================

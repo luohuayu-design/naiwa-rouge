@@ -280,7 +280,165 @@ export const LEVEL_4 = {
   ],
 };
 
-export const LEVELS_BY_ID = { 1: LEVEL_1, 2: LEVEL_2, 3: LEVEL_3, 4: LEVEL_4 };
+// ============================================================
+// 第五关 · 草甸路口（第 63 块）
+//
+// 剧情接 s05《一百只蛙的名单》：蛙爷在草甸路口摆了四十年摊，
+// 一本册子记着这条草甸上住过谁。名字被擦掉的人「人还在，魂没了」。
+//
+// 这一关换了**压力的形状**：不是更密、不是更多技能，而是
+// **怪从哪来变了**。
+//   前四关怪从一整圈随机位置涌进来，你只能原地转圈迎。
+//   这一关是十字路口 —— 怪只从东南西北四条路上来（lanes: 4），
+//   每条路的角度固定、只带一点抖动。于是你**可以提前站位**：
+//   背对没有路的方向，把正面留给两条路，就不会被四面夹。
+//   这是全游戏第一次「地形站在你这边」的关卡。
+//
+// 新怪：擦名者（见 enemy.js）—— 它偷你环上的剑，得手就跑。
+//   它不伤人，收益全记在你那本账上：丢一把剑 = 输出掉一截，
+//   而且这一局永远拿不回来（除非当场杀了它）。
+//
+// 新法器：路口灯（见 relics.js）—— 每 4 秒点亮一圈，反隐 + 减速。
+//   这条草甸夜里下雾，雾鬼（wraith）从第 4 回合就在场上了，
+//   而这版本雾鬼隐身时能咬你、你却打不着它 —— 路口灯是唯一的反制。
+//
+// 数值比四关略高（hp 0.28 / dmg 0.16），怪的密度反而比四关低一点：
+// 四向路口本身已经是压力，别再叠密度。
+// ============================================================
+export const LEVEL_5 = {
+  id: 5,
+  name: '第五关 · 草甸路口',
+  theme: 'crossroad',
+  arena: 20,
+  // 四向路口：刷怪只从这 4 条路上来（角度均分，带 ±6% 的抖动）
+  lanes: 4,
+  order: [
+    ['minion', 1], ['warrior', 1.6], ['leaper', 1.9],
+    ['archer', 2.0], ['bowman', 2.2], ['wraith', 2.2],
+    ['shielder', 2.4], ['brood', 2.6], ['mender', 2.6],
+    ['eraser', 3.0],       // 擦名者最后进来：它是这一关的主菜，别跟小兵一起挤
+  ],
+  spawnRadius: 18.2,
+  spawnJitter: 0.5,
+  minPlayerDistance: 8.0,
+  minSpawnGap: 2.4,
+  gapScale: 1.35,
+  gap: 2.6,
+  upgradeAfter: [1, 2, 3, 4, 5, 8, 10, 12, 15, 17, 19, 20],
+  shopAfter: [3, 6, 9, 12, 15, 18],
+  weaponAt: 4,
+  scale: { hp: 0.28, damage: 0.16, speed: 0.035 },
+  rounds: [
+    // ---- 第一幕（R1~R3）：路口 · 油灯还亮着 ----
+    { minion: 3,  warrior: 0, leaper: 0, archer: 0, bowman: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, eraser: 0, gap: 0.90, tip: '草甸路口：四条路，油灯还亮着' },
+    { minion: 4,  warrior: 1, leaper: 0, archer: 0, bowman: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, eraser: 0, gap: 0.80, tip: '它们只从四条路上来 —— 背对没路的方向' },
+    { minion: 4,  warrior: 1, leaper: 0, archer: 1, bowman: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, eraser: 0, gap: 0.80, tip: '路口的好处：你知道它们会从哪来' },
+    // ---- 第二幕（R4~R7）：雾从东边漫过来 ----
+    { minion: 5,  warrior: 1, leaper: 0, archer: 0, bowman: 0, wraith: 1, shielder: 0, brood: 0, mender: 0, eraser: 0, gap: 0.75, tip: '起雾了：半透明那只隐身时打不着，但它能咬你' },
+    { minion: 5,  warrior: 2, leaper: 0, archer: 1, bowman: 1, wraith: 1, shielder: 0, brood: 0, mender: 0, eraser: 0, gap: 0.72, tip: '盯着雾里那道影子 —— 它显形的那一瞬最脆' },
+    { minion: 6,  warrior: 2, leaper: 1, archer: 1, bowman: 1, wraith: 1, shielder: 0, brood: 0, mender: 0, eraser: 0, gap: 0.70, tip: '雾狼跳的是你刚才站的地方，别原地不动' },
+    { minion: 6,  warrior: 3, leaper: 1, archer: 2, bowman: 1, wraith: 2, shielder: 0, brood: 0, mender: 0, eraser: 0, gap: 0.66, tip: '两只雾鬼：别背对着雾开怪' },
+    // ---- 第三幕（R8~R12）：擦名者 ----
+    { minion: 6,  warrior: 3, leaper: 1, archer: 2, bowman: 1, wraith: 2, shielder: 0, brood: 0, mender: 0, eraser: 1, gap: 0.64, tip: '戴兜帽的那个在擦东西 —— 它要偷你一把剑，先砍它' },
+    { minion: 7,  warrior: 3, leaper: 1, archer: 2, bowman: 2, wraith: 2, shielder: 0, brood: 0, mender: 0, eraser: 1, gap: 0.60, tip: '它读条 2.6 秒：脚下出紫圈就冲过去，来得及' },
+    { minion: 7,  warrior: 3, leaper: 2, archer: 3, bowman: 2, wraith: 2, shielder: 1, brood: 0, mender: 0, eraser: 1, gap: 0.58, tip: '得手之后它会往外跑：追出去，不然剑就没了' },
+    { minion: 7,  warrior: 4, leaper: 2, archer: 3, bowman: 2, wraith: 3, shielder: 1, brood: 0, mender: 1, eraser: 1, gap: 0.56, tip: '缝补小巫在给怪回血：绿的先拆' },
+    { minion: 8,  warrior: 4, leaper: 2, archer: 3, bowman: 2, wraith: 3, shielder: 1, brood: 1, mender: 1, eraser: 1, gap: 0.54, tip: '冰剑冻住擦名者最好用：它跑不动就只能站着等你' },
+    // ---- 第四幕（R13~R16）：路口挤满了 ----
+    { minion: 8,  warrior: 4, leaper: 3, archer: 3, bowman: 2, wraith: 3, shielder: 2, brood: 1, mender: 1, eraser: 1, gap: 0.52, tip: '四条路上都有东西在动' },
+    { minion: 8,  warrior: 5, leaper: 3, archer: 3, bowman: 2, wraith: 3, shielder: 2, brood: 1, mender: 1, eraser: 1, gap: 0.50, tip: '盾兵挡路：等它放盾，别把输出花在盾上' },
+    { minion: 8,  warrior: 5, leaper: 3, archer: 4, bowman: 3, wraith: 4, shielder: 2, brood: 1, mender: 1, eraser: 2, gap: 0.48, tip: '两个擦名者：它们偷的是两把不同的剑' },
+    { minion: 9,  warrior: 5, leaper: 4, archer: 4, bowman: 3, wraith: 4, shielder: 2, brood: 2, mender: 1, eraser: 2, gap: 0.46, tip: '路口挤满了：贴着边圈走，别被围在中间' },
+    // ---- 第五幕（R17~R20）：草甸的夜路 · 毕业考 ----
+    { minion: 9,  warrior: 5, leaper: 4, archer: 4, bowman: 3, wraith: 4, shielder: 3, brood: 2, mender: 1, eraser: 2, gap: 0.45, tip: '第 17 回合：草甸的夜路，全来了' },
+    { minion: 9,  warrior: 6, leaper: 4, archer: 4, bowman: 3, wraith: 4, shielder: 3, brood: 2, mender: 2, eraser: 2, gap: 0.42, tip: '两个小巫：先拆奶，不然前面白打' },
+    { minion: 10, warrior: 6, leaper: 4, archer: 4, bowman: 4, wraith: 5, shielder: 3, brood: 2, mender: 2, eraser: 2, gap: 0.40, tip: '还差两回合：雾里的影子一直在动' },
+    { minion: 10, warrior: 6, leaper: 5, archer: 4, bowman: 4, wraith: 5, shielder: 3, brood: 2, mender: 2, eraser: 2, gap: 0.38, tip: '最后一波：把四条路上的人都拍碎' },
+  ],
+};
+
+// ============================================================
+// 第六关 · 骨塔机房（第 63 块）
+//
+// 剧情接 s06《生母弃我》：阿速带你钻进骨塔的地下机房 —— 报废服务器、
+// 还在慢转的风扇、墙上贴满的 ERROR 日志。
+//
+// 这一关的场地**本身**会打人：地上有 6 块从机柜上拆下来的格栅，
+// 年头久了漏电，周期性通电（通电前 0.8 秒会闪）。站上去每 0.6 秒掉 1 血。
+// 位置是固定的 —— 会看节奏的玩家能踩着「灭」的窗口穿过去。
+//
+// 新怪：重启体（见 enemy.js）—— 打死不算完，4 秒后原地半血重启，
+// 而且比上一次更快；最多重启 2 次。它逼你把「补刀」当成习惯。
+//
+// 新法器：绝缘斗篷（见 relics.js）—— 站上通电地板不掉血，
+// 反而把电引到身边的怪身上。第六关的「以毒攻毒」。
+//
+// 数值：hp 0.30 / dmg 0.17（四关 0.26 / 0.15，五关 0.28 / 0.16）。
+// 场地 19：比五关小一格，因为漏电地板已经占了走位空间。
+// ============================================================
+export const LEVEL_6 = {
+  id: 6,
+  name: '第六关 · 骨塔机房',
+  theme: 'server',
+  arena: 19,
+  order: [
+    ['minion', 1], ['warrior', 1.6], ['reboot', 1.9], ['leaper', 2.0],
+    ['archer', 2.0], ['bowman', 2.2], ['wraith', 2.2],
+    ['shielder', 2.4], ['brood', 2.6], ['mender', 2.6],
+  ],
+  spawnRadius: 17.4,
+  spawnJitter: 0.5,
+  minPlayerDistance: 8.0,
+  minSpawnGap: 2.4,
+  gapScale: 1.35,
+  gap: 2.6,
+  upgradeAfter: [1, 2, 3, 4, 5, 8, 10, 12, 15, 17, 19, 20],
+  shopAfter: [3, 6, 9, 12, 15, 18],
+  weaponAt: 4,
+  scale: { hp: 0.30, damage: 0.17, speed: 0.035 },
+  // 漏电地板：位置固定，相位错开（每一块的通电时间点不一样，
+  // 否则整片地板会一起亮，玩家只能干等 —— 那是罚站，不是走位）
+  hazards: [
+    { x: 6.4, z: 0, r: 2.6, cycle: 5.0, on: 1.4, warm: 0.8, damage: 1 },
+    { x: -6.4, z: 0, r: 2.6, cycle: 5.0, on: 1.4, warm: 0.8, damage: 1 },
+    { x: 0, z: 6.4, r: 2.6, cycle: 5.0, on: 1.4, warm: 0.8, damage: 1 },
+    { x: 0, z: -6.4, r: 2.6, cycle: 5.0, on: 1.4, warm: 0.8, damage: 1 },
+    { x: 8.6, z: 8.6, r: 2.2, cycle: 6.2, on: 1.2, warm: 0.8, damage: 1 },
+    { x: -8.6, z: -8.6, r: 2.2, cycle: 6.2, on: 1.2, warm: 0.8, damage: 1 },
+  ],
+  rounds: [
+    // ---- 第一幕（R1~R4）：机房 · 风扇还在转 ----
+    { minion: 3, warrior: 0, reboot: 0, leaper: 0, archer: 0, bowman: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, gap: 0.90, tip: '骨塔地下机房：地上有几块格栅在漏电，别站上去' },
+    { minion: 4, warrior: 1, reboot: 0, leaper: 0, archer: 0, bowman: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, gap: 0.80, tip: '通电前会闪一下橙光 —— 看到就往外走' },
+    { minion: 4, warrior: 1, reboot: 0, leaper: 0, archer: 1, bowman: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, gap: 0.80, tip: '弧线走位：绕开格栅，别直着冲' },
+    // ---- 第二幕（R5~R8）：重启体登场 ----
+    { minion: 5, warrior: 1, reboot: 1, leaper: 0, archer: 1, bowman: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, gap: 0.75, tip: '那个铁块打死了会重新站起来：躺下的时候守着它' },
+    { minion: 5, warrior: 2, reboot: 1, leaper: 0, archer: 1, bowman: 1, wraith: 0, shielder: 0, brood: 0, mender: 0, gap: 0.72, tip: '重启只需要 4 秒：走了就白打一次' },
+    { minion: 5, warrior: 2, reboot: 1, leaper: 1, archer: 1, bowman: 1, wraith: 1, shielder: 0, brood: 0, mender: 0, gap: 0.70, tip: '雾鬼也钻到机房里来了：隐着身照样咬人' },
+    { minion: 6, warrior: 2, reboot: 2, leaper: 1, archer: 2, bowman: 1, wraith: 1, shielder: 0, brood: 0, mender: 0, gap: 0.66, tip: '两个重启体：先集中拆掉一个，别两边都留半条命' },
+    { minion: 6, warrior: 3, reboot: 2, leaper: 1, archer: 2, bowman: 1, wraith: 1, shielder: 1, brood: 0, mender: 0, gap: 0.62, tip: '盾兵 + 重启体一起上：先解决会复活的' },
+    // ---- 第三幕（R9~R13）：混编加压 ----
+    { minion: 6, warrior: 3, reboot: 2, leaper: 2, archer: 2, bowman: 1, wraith: 2, shielder: 1, brood: 0, mender: 1, gap: 0.60, tip: '戴尖帽的小巫在给怪回血：别让它奶到重启体' },
+    { minion: 7, warrior: 3, reboot: 2, leaper: 2, archer: 2, bowman: 2, wraith: 2, shielder: 1, brood: 1, mender: 1, gap: 0.58, tip: '孢生菇一边孵一边加人：格栅边上是它的孵化场' },
+    { minion: 7, warrior: 4, reboot: 2, leaper: 2, archer: 3, bowman: 2, wraith: 2, shielder: 2, brood: 1, mender: 1, gap: 0.56, tip: '地板、怪、奶妈三件事一起来 —— 先保走位' },
+    { minion: 7, warrior: 4, reboot: 3, leaper: 2, archer: 3, bowman: 2, wraith: 3, shielder: 2, brood: 1, mender: 1, gap: 0.54, tip: '三个重启体：这一波的「清场」要清三遍' },
+    { minion: 8, warrior: 4, reboot: 3, leaper: 3, archer: 3, bowman: 2, wraith: 3, shielder: 2, brood: 1, mender: 1, gap: 0.52, tip: '漏电地板上的怪不掉血 —— 别指望电帮你' },
+    // ---- 第四幕（R14~R17）：机房的夜班 ----
+    { minion: 8, warrior: 4, reboot: 3, leaper: 3, archer: 3, bowman: 2, wraith: 3, shielder: 2, brood: 2, mender: 1, gap: 0.50, tip: '两颗孢生菇：十二只小兵上限，先拆一颗' },
+    { minion: 8, warrior: 5, reboot: 3, leaper: 3, archer: 3, bowman: 3, wraith: 3, shielder: 2, brood: 2, mender: 1, gap: 0.48, tip: '风扇声越来越近 —— 它们比刚才更快了' },
+    { minion: 8, warrior: 5, reboot: 4, leaper: 3, archer: 4, bowman: 3, wraith: 4, shielder: 3, brood: 2, mender: 1, gap: 0.46, tip: '四个重启体：留一条能绕回格栅外的路' },
+    { minion: 9, warrior: 5, reboot: 4, leaper: 4, archer: 4, bowman: 3, wraith: 4, shielder: 3, brood: 2, mender: 2, gap: 0.44, tip: '第 17 回合：ERROR 日志刷得停不下来' },
+    // ---- 第五幕（R18~R20）：骨塔机房 · 毕业考 ----
+    { minion: 9, warrior: 5, reboot: 4, leaper: 4, archer: 4, bowman: 3, wraith: 4, shielder: 3, brood: 2, mender: 2, gap: 0.42, tip: '还差三回合：别把血花在电上' },
+    { minion: 9, warrior: 6, reboot: 4, leaper: 4, archer: 4, bowman: 4, wraith: 4, shielder: 3, brood: 2, mender: 2, gap: 0.40, tip: '倒数第二波：补刀、补刀、补刀' },
+    { minion: 10, warrior: 6, reboot: 5, leaper: 4, archer: 4, bowman: 4, wraith: 5, shielder: 4, brood: 2, mender: 2, gap: 0.38, tip: '最后一波：把机房里的东西全拆了' },
+  ],
+};
+
+// 关卡号 → 关卡表（主流程 / 选关 / 测试都从这里取）
+export const LEVELS_BY_ID = {
+  1: LEVEL_1, 2: LEVEL_2, 3: LEVEL_3, 4: LEVEL_4, 5: LEVEL_5, 6: LEVEL_6,
+};
 
 // 第 roundNo 回合（从 1 开始）的怪物属性倍率
 // 难度（第 18 块）：乘在每回合的成长倍率上。普通 = 原版数值，一局一选，
@@ -366,9 +524,19 @@ export function createLevel(level, { enemies, fx, getPlayerPos, onRound, onRound
   function pickSpawn() {
     const p = getPlayerPos();
     const R = level.spawnRadius;
+    // 第 63 块：四向路口（level.lanes）—— 只在均分的几条「路」上刷。
+    // 每条路带一点角度抖动（±1/6 路宽），不然四次都从同一条直线进来太假。
+    const lanes = level.lanes | 0;
+    const laneStep = lanes > 0 ? (Math.PI * 2) / lanes : 0;
 
     for (let i = 0; i < 30; i++) {
-      const a = Math.random() * Math.PI * 2;
+      let a;
+      if (lanes > 0) {
+        const base = Math.floor(Math.random() * lanes) * laneStep;
+        a = base + (Math.random() - 0.5) * laneStep * 0.33;
+      } else {
+        a = Math.random() * Math.PI * 2;
+      }
       const r = R + (Math.random() - 0.5) * level.spawnJitter * 2;
       const x = Math.cos(a) * r;
       const z = Math.sin(a) * r;

@@ -2,13 +2,13 @@
 
 > 新对话从这里开始读，不要先翻聊天记录。**先读 §0「给新对话的话」，再按需查后面章节。**
 >
-> 最后更新：2026-10-24 凌晨 · 线上 **v=71** · 第 61 块（读取存档改成「最近的在上」）已完成并推送。
+> 最后更新：2026-10-24 · 线上 **v=74** · 第 63 块（第五关 / 第六关 + 第 62 块阶段二）已完成并推送。
 
 ---
 
 ## 0. 给新对话的话（2026-10-23 交接）
 
-1. **当前基线**：v=71（第 61 块，读取存档排序）已推送，git 工作区干净，**没有挂起的半成品**。用户新需求来了再开工，别主动找活。
+1. **当前基线**：v=74（第 63 块 = 第五关「草甸路口」/ 第六关「骨塔机房」+ 第 62 块阶段二：回血技能 / 民心专属事件 / 攻略面板）已推送，git 工作区干净，**没有挂起的半成品**。用户新需求来了再开工，别主动找活。
 2. **节奏**：用户偏好**小步块状推进**——一块功能 = 一次提交 = 一个版本号（v=N）。**做完回归绿就立刻推送交给用户测**，用户反馈比自测更快更准。
 3. **最容易翻车的五件事**：
    ① 发版**两处版本号**都要 bump（index.html 的 `main.js?v=N` / `style.css?v=N` + `js/*.js` 里所有 `import ...?v=N`）——漏一处就是「本地好线上炸」；
@@ -16,15 +16,22 @@
    ③ 公告在 loading 淡完 **+700ms** 才弹，测试截图先 `sleep(2600)` 再 `__game.notice.hide()`；
    ④ `jumpToRound/skipRound` **只在 adminOn 时生效**，不开管理员是静默 no-op；
    ⑤ 本地服务器必须 `run_in_background`；CDP 截图路径**不能含中文**；推送走 `git -c http.proxy=http://127.0.0.1:7897 ...`（先 curl 探代理，挂了改直连）。
-4. **最新绿基线**（动到相关文件后要回归）：Node 13 套约 1060 项 + CDP 52 套约 1700 项全绿，具体套件与数字见 §6。
-5. **已知既有失败（过期断言，别浪费时间查）**：`.tmp-camp-test.mjs` 84/22、`.tmp-boon-test.mjs` 133/13（偶发抖动）、`.tmp-eventui-test.js` 35/2、`.tmp-block18-test.js` 34/1、`.tmp-start-test.js` 33/15、`.tmp-block30-cdp.js` 42/8、`.tmp-ui-test.js` 15/7；`.tmp-event-test.mjs` 主跑 105/0 偶发 104/1。
+4. **最新绿基线**（动到相关文件后要回归）：Node 14 套约 1180 项 + CDP 53 套约 1760 项全绿（第 63 块新增 `.tmp-block63-test.mjs` 119 项 / `.tmp-block63-cdp.js` 57 项），具体套件与数字见 §6。
+5. **已知既有失败（过期断言，别浪费时间查）**：`.tmp-camp-test.mjs` 84/22、`.tmp-boon-test.mjs` 133/13（偶发抖动）、`.tmp-eventui-test.js` 35/2、`.tmp-block18-test.js` 34/1、`.tmp-start-test.js` 33/15、`.tmp-block30-cdp.js` 42/8、`.tmp-ui-test.js` 15/7。
+   **第 63 块已修红的**（原来是过期断言，现已改成与实况一致，全 0 失败）：`.tmp-level4-test.mjs` 90/0（雾鬼取消显形距离 / 奶半径 8.0 / 怪 15 / 法器 8 / 成就 41）、`.tmp-level3-test.mjs` 71/0（法器 7）、`.tmp-event-test.mjs` 105/0（事件 121 / 连锁 22 / 民心 0~120）、`.tmp-block52/56/57/59-test.mjs`、`.tmp-story-test.mjs`（18 夜 = 18 关，前 6 夜已绑关）。
 6. **用户规则**：全中文；有疑问先问、有疑问不写码；README 与实况同步；美术资产优先 GitHub 现成 CC0；不做多角色；局外对局内影响要小（篝火每级 +1 生命这种量级）。
 7. **新怪信息卡在 `?debug=1` 下默认关**（第 55 块）：它会冻结世界，老 CDP 一开局被拦。测这张卡的套件加 **`&meet`**（或 `__game.meetCard.setAuto(true)`）；正常游玩永远开。同类「首次提示型」弹窗以后照这个办：**生产默认开、测试显式开**。
 8. **`el.hidden = true` 不一定能藏住元素**（第 60 块踩的）：只要给这个元素写过 `display`（`.tt-dot` 就是 inline-block），作者样式就压过 UA 的 `[hidden]{display:none}`，属性翻了但照样显示。style.css 顶部现在有全局 `[hidden]{display:none!important}` 兜底；**测试断言可见性请读 `getComputedStyle` / `getClientRects()`，别读 `.hidden` 属性**（签到红点就是这么假绿了一整轮的）。
 9. **浮层别再上 backdrop-filter**（第 59 块）：全屏 blur 压着 WebGL 画布 → 手机上公告要几十秒才画出来、滚动像是「缓存被清空」。已经全站拆完，换成 .86~.90 的纯色遮罩；想要「玻璃感」用半透明底，不要用模糊。
 10. **帧率自适应在 `?debug=1` 下默认关**（第 59 块）：要测得加 `&autoperf`。否则无头 SwiftShader 的低帧会把画质一路压到 min，截图测试全变样。UI 钩子在 `__game.ui.perf`。
 11. **加设置项 / 主菜单按钮之后，回头跑 `.tmp-settings-test.js`**：它原来用**下标**点设置行，第 46 块插了「音效包」之后一直点在错行上（24/12 假失败了一整轮没人发现）。第 59 块改成按标题找行才修好，主菜单入口断言也从「排除法」改成了白名单——以后别再写排除法。
-12. **改横向特性要回头跑老套件**（2026-10-23 教训）：读秒锁让 block32 静默挂；公告升 `NOTICE_VER` 让 block45 挂；**技能键常驻 DOM**（`renderSkill` 只切 `display`）让 weapon/talk-skill/econ-cdp 数技能格假绿（必须 `filter(b => b.style.display !== 'none')`）；乞丐/商队两拍对话 + 3s 读秒让 `choose` 点 disabled 静默失败（加 `sleep(3500)`）。
+12. **第 63 块的四条新坑**：
+    ① **裁 GLB 时 `images[].bufferView` 必须一起重映射**（`.tmp-shrink-glb.py` 已修）：漏了不会报错，模型只是**渲染成纯白** —— 裁完一定要看一眼渲染图（`.tmp-block63-test.mjs` 里有「贴图 PNG 签名」断言兜底）；
+    ② **用 Python 改 `.js` 时 `open(..., newline='')` 不能省**：默认写法在 Windows 上会把文件改写成 CRLF，老测试里 `/a;\n    b;/` 这类正则集体静默挂（block56 就是这么红的）；
+    ③ **测第五/六关必须先造档案**：关卡是锁的（要打通上一关）、第二关起「开局送环剑」也要 `profile.ringGot`。`profile()` 启动时读进内存 → 写 localStorage 之后**必须 reload**；否则点 `.lv-item` 是静默失败、游戏从第一关开始，断言全在错的数据上跑；
+    ④ **第二关起开局会连排两段武器教程（`gameState='wtut'`）**，世界是冻的：起局后要循环点 `#wtSkip` 直到 `state==='playing'`；同理回合清空会弹升级卡，长测试要有个 `clearPanels()` 助手（见 `.tmp-block63-cdp.js`）；
+    ⑤ **属性键名是 `armor`，不是 `defense`**（「防御」只是显示名）：写 `{ stat: 'defense' }` 不会报错，`stats.mods` 直接无视这个键 —— 文案承诺的加成静默归零。第 62 块两条民心事（`repGoodRepair` / `repGoodNames`）就这么空转了一轮，是 `.tmp-event-test.mjs` 的「所有 mods 的 stat 都在属性表里」断言抓出来的。**以后加永久加成，跑这套测试**。
+13. **改横向特性要回头跑老套件**（2026-10-23 教训）：读秒锁让 block32 静默挂；公告升 `NOTICE_VER` 让 block45 挂；**技能键常驻 DOM**（`renderSkill` 只切 `display`）让 weapon/talk-skill/econ-cdp 数技能格假绿（必须 `filter(b => b.style.display !== 'none')`）；乞丐/商队两拍对话 + 3s 读秒让 `choose` 点 disabled 静默失败（加 `sleep(3500)`）。
 
 ---
 
@@ -94,6 +101,8 @@ Three.js r160 的单摇杆幸存者肉鸽《奶蛙夜行》，纯静态站点（
 | **58** | **v=68** | **局外商店 · 宝箱：花骨币买木/银/金三档，开箱直接随机给一次永久属性（诅咒=强制负面）；高品箱低诅咒率且能出永久法器 / 技能CD缩短；效果落 metaShop，每局开局经 applyMeta 注入（属性走 src='meta'，法器经 relics.restore，技能CD经 weapon/arrowRain.setCdMul）** |
 | **59** | **v=69** | **用户六条：盾斧兽人/孢生菇视觉 ×2.6（碰撞 ×1.5）/ 每日签到（周单位，20 一天 + 3 天 100 + 6 天 200）/ 全站拆掉 backdrop-filter + 滚动图层 + legendPulse 收成一次性 / 帧率自适应自动降档 / 修第 58 块诅咒记成正数的真 bug + mods 注入合并** |
 | **60** | **v=70** | **hotfix：签到后红点不消失 —— `.tt-dot{display:inline-block}` 压过 UA 的 `[hidden]{display:none}`，属性翻了但元素照样画；加全局 `[hidden]{display:none!important}` 兜底，`sign.btn()` 调试钩子改读 computed 可见性（原来只读属性才假绿）；顺手把「本周 1 / 7 天 · 今天已签」缩回一行（窄按钮换行把整排撑错位）** |
+| **62** | **v=72** | **阶段一：盾斧兽人 / 孢生菇缩到战士 1.4 倍（1.90）；雾鬼 / 雾猎狼 / 缝补小巫统一到 1.85；缝补小巫奶半径 3.2→8.0 且不再画判定圈（只给被治的怪冒绿光）；雾鬼删掉「贴脸强制显形」；奶蛙音效包感知音量 ×1.8（VOICE_GAIN）；民心上限 100→120 + 商店折扣下限放到 0.65；存档列表排序修正在块 61** |
+| **63** | **v=74** | **第五关「草甸路口」**（四向路口刷怪 `lanes:4`，可以提前站位；新怪**擦名者**读条 2.6s 擦走环上一把剑、得手后往场外跑，杀掉还回来 / 跑掉永久没；新法器**路口灯**每 3~4 秒照亮一圈，唯一反隐手段）+ **第六关「骨塔机房」**（地上 6 块**漏电地板**周期通电、通电前 0.8s 橙光预警，站上去每 0.6s 掉 1 血且不吃无敌帧；新怪**重启体**死后躺 4s 半血重启、最多 2 次；新法器**绝缘斗篷**免地板伤害并把电导给身边的怪）+ 第 62 块阶段二（**回血技能**第 4 关通关永久解锁 / **民心专属事件**涨跌档各一套 9 条 / **攻略面板**战败后可看）+ 骨币倍率补齐 4~6 关 + 商店新增 `needLevel` 门槛 + 右上角 HUD 关卡名不再写死** |
 | **61** | **v=71** | **读取存档列表改成「最近的在上」**（原升序 + 面板头还写着「早的在上」，已同步改成「最近的在上」）；顺手修 `resumeGame()` 无 uid 兜底分支的同类错误（注释写取最近一次，实际升序 + `[0]` 拿到最旧的那份）** |
 
 > 每个块的实现细节、测试坑、真 bug 教训已沉淀进上面的铁律 / 调试钩子 / 文件地图与代码注释，不再单列。
@@ -112,7 +121,7 @@ Three.js r160 的单摇杆幸存者肉鸽《奶蛙夜行》，纯静态站点（
 | `turret.js` / `relics.js` | 弩炮台（上限 3）、地刺/霜环/暖炉（各 3 级） |
 | `upgrade.js` | 28 张升级卡（含 rarity 0~4） |
 | `shop.js` | 18 件货、按品质加权摆 4 件 |
-| `events.js` + `eventsExtra.js` | 57 + 42 = 112 事件（对话/条件/取舍），`eventsExtra.js` 只放数据 |
+| `events.js` + `eventsExtra.js` + `repEvents.js` | 99 随机 + 13 老连锁 + 9 民心事（第 62 块）= 121 事件；`eventsExtra.js` / `repEvents.js` 只放数据 |
 | `campfire.js` | 篝火/骨币（九簇 × 无限级线性阶梯价 `×(1+0.35×level)`） |
 | `boons.js` | 永夜火种（16 张永久卡 + 层数上限 + 品质抽签 + `boonPending` 待领次数） |
 | `curses.js` | 夜行诅咒（六条 debuff、倍率加法叠加） |
@@ -180,7 +189,7 @@ sign.{show,hide,open,state,cells,signed,do,btn} / ui.perf{auto,state,setFps,tick
 
 ## 6. 测试
 
-**Node 13 套（纯逻辑，秒级）**：`node .tmp-stats-test.mjs`（属性）/ `.tmp-rogue-unit.mjs`（回合升级概率）/ `.tmp-econ-test.mjs`（经济商店事件）/ `.tmp-event-test.mjs`（112 事件）/ `.tmp-rarity-test.mjs`（品质幸运）/ `.tmp-camp-test.mjs`（篝火骨币）/ `.tmp-level2-test.mjs`（第二关）/ `.tmp-level3-test.mjs`（第三关）/ `.tmp-level4-test.mjs`（第四关）/ `.tmp-admin-test.mjs` / `.tmp-eventui-test.js` / `.tmp-curse-test.mjs` / `.tmp-boon-test.mjs`（永夜火种）。
+**Node 13 套（纯逻辑，秒级）**：`node .tmp-stats-test.mjs`（属性）/ `.tmp-rogue-unit.mjs`（回合升级概率）/ `.tmp-econ-test.mjs`（经济商店事件）/ `.tmp-event-test.mjs`（121 事件）/ `.tmp-rarity-test.mjs`（品质幸运）/ `.tmp-camp-test.mjs`（篝火骨币）/ `.tmp-level2-test.mjs`（第二关）/ `.tmp-level3-test.mjs`（第三关）/ `.tmp-level4-test.mjs`（第四关）/ `.tmp-admin-test.mjs` / `.tmp-eventui-test.js` / `.tmp-curse-test.mjs` / `.tmp-boon-test.mjs`（永夜火种）。
 
 **CDP 端到端（需先起 8124；一次只跑一套，套间跑 `.tmp-cdp-clean.js`）**：开局/战斗/菜单/设置/存档续玩/图鉴/成就/武器教程/炮台法器/`block18~57` 各块专项/`admin`/`seed`/`pack`/`promo`/`start-test` 等共 52 套，约 1700 项。脚本在上级目录（第 32 块前）与 `naiwa-rouge/`（第 41 块起）。
 

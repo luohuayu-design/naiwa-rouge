@@ -30,11 +30,11 @@
 //       五种元素共用同一模型，克隆后改材质 color/emissive 染色区分；
 //       图标用 assets/weapons/icon-*.svg。加载失败时用双盒拼占位剑。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=72';
-import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=72';
-import { SWORD_KINDS, KIND_ORDER } from './swordKinds.js?v=72';
-import { rollSwordDamage } from './weaponStats.js?v=72';
-import audio from './audio.js?v=72';
+import * as THREE from '../lib/three.module.js?v=74';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=74';
+import { SWORD_KINDS, KIND_ORDER } from './swordKinds.js?v=74';
+import { rollSwordDamage } from './weaponStats.js?v=74';
+import audio from './audio.js?v=74';
 
 // 轨道半径（世界单位）：贴着主角攻击范围环内侧转，视觉上「护体剑气」
 const ORBIT_R = 1.7;
@@ -175,6 +175,41 @@ export function createWeaponSystem({ scene, stats, wstats, fx, enemies }) {
 
   // 环上应有多少把剑 = 拥有多少把（不设上限，用户第 9 块定案）
   function targetCount() { return owned.length; }
+
+  // ============================================================
+  // 擦名者偷剑（第 63 块）
+  // ============================================================
+  // takeSword()：从环上摘走一把（优先摘最便宜的铁剑 —— 玩家丢一把铁剑
+  //   还会心疼，但不会当场崩盘；铁剑没有了才轮到元素剑）。
+  //   返回被摘走的 kind，没剑可摘返回 null。
+  // returnSword(kind)：杀死擦名者后还回来，位置、染色、判定全部按原样复原。
+  // 注意：**不动 flyers**（飞行中的剑是技能打出去的，跟环上的库存是两回事）。
+  function takeSword() {
+    if (!granted || owned.length === 0) return null;
+    // 优先铁剑：同种取环上最后一把，摘掉它就等于「数量 -1」
+    let idx = owned.lastIndexOf('iron');
+    if (idx < 0) idx = owned.length - 1;
+    const kind = owned[idx];
+    owned.splice(idx, 1);
+    for (let i = orbiting.length - 1; i >= 0; i--) {
+      if (orbiting[i].kind === kind) {
+        release(orbiting[i].holder);
+        orbiting.splice(i, 1);
+        break;
+      }
+    }
+    if (fx) fx.ring({ x: 0, z: 0 }, { from: ORBIT_R + 0.2, to: 0.4, color: 0x8a5cff, life: 0.45, opacity: 0.8, y: 0.07 });
+    return kind;
+  }
+
+  function returnSword(kind) {
+    const k = SWORD_KINDS[kind] ? kind : 'iron';
+    if (!granted) return false;
+    owned.push(k);
+    orbiting.push({ kind: k, holder: acquire(k), spawnT: t });
+    if (fx) fx.ring({ x: 0, z: 0 }, { from: 0.4, to: ORBIT_R, color: SWORD_KINDS[k].emissive, life: 0.5, opacity: 0.85, y: 0.06 });
+    return true;
+  }
 
   // 环上还缺哪种剑：owned 里有、环上没有的（多把取第一把）
   function missingKind() {
@@ -446,6 +481,8 @@ export function createWeaponSystem({ scene, stats, wstats, fx, enemies }) {
 
   return {
     preload, grant, fire, update, reset, restore, setVisible, addSword, kindCounts, applyKind,
+    // 第 63 块：擦名者可以摘走一把、杀死后还回来
+    takeSword, returnSword,
     wstats,                     // 武器属性表（测试/调试用）
     get granted() { return granted; },
     get count() { return orbiting.length; },

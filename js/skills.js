@@ -24,7 +24,7 @@
 //
 // ctx 由 main.js 每帧拼好传进来：{ playing, weapon, playerPos, stats, coins }
 // ============================================================
-import audio from './audio.js?v=72';
+import audio from './audio.js?v=74';
 
 export const SKILLS = [
   {
@@ -63,6 +63,32 @@ export const SKILLS = [
     cdText: (ctx) => (ctx.arrowRain && !ctx.arrowRain.ready ? Math.ceil(ctx.arrowRain.cdLeft) + '' : ''),
     press(ctx) {
       if (!ctx.arrowRain.fire(ctx.playerPos)) return false;
+      return true;
+    },
+  },
+
+  // ---- 新技能「回血」（第 62 块，用户需求） ----
+  // 第四关通关后永久解锁（档案里 profile.heal.unlocked）。
+  // 按下瞬间回 5 点、不超上限、冷却 25 秒；满血按不动 —— 别让玩家白扔一次 CD。
+  {
+    id: 'heal',
+    name: '回血',
+    icon: 'assets/skills/icon-heal.svg',
+    hint: '瞬间回复 5 点生命（不超上限），冷却 25 秒；满血时按不动',
+    key: '3',
+    // 解锁后一直有，不依赖环剑 —— 它是保命技能，不能因为没拿到剑就不给
+    visible: (ctx) => ctx.playing && !!ctx.heal && ctx.heal.unlocked,
+    ready: (ctx) => !!ctx.heal && ctx.heal.ready,
+    progress: (ctx) => (ctx.heal ? ctx.heal.progress : 0),
+    // 冷却中显示剩余秒数；满血时显示 ∞（按不动但不是因为在转 CD）
+    cdText: (ctx) => {
+      if (!ctx.heal || !ctx.heal.unlocked) return '';
+      if (ctx.heal.status === 'cd') return Math.ceil(ctx.heal.cdLeft) + '';
+      if (ctx.heal.status === 'full') return '满';
+      return '';
+    },
+    press(ctx) {
+      if (!ctx.heal.fire()) return false;   // 满血 / CD 中：什么都不发生（不播音效）
       return true;
     },
   },

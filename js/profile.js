@@ -41,7 +41,8 @@ export const DEFAULT_SETTINGS = {
 const DEFAULT_PROFILE = {
   v: 1,
   settings: { ...DEFAULT_SETTINGS },
-  stats: { runs: 0, wins: 0, kills: 0, seconds: 0, coins: 0, dmgTaken: 0, cards: {} },
+  // lanternReveal（第 63 块）：路口灯累计照出多少只隐身雾鬼（成就「灯下没有影子」）
+  stats: { runs: 0, wins: 0, kills: 0, seconds: 0, coins: 0, dmgTaken: 0, cards: {}, lanternReveal: 0 },
   codex: { enemies: {}, cards: {}, swords: {}, relics: {}, events: {} },
   ach: {},
   bones: 0,
@@ -75,6 +76,9 @@ const DEFAULT_PROFILE = {
   // 之后从第二关起（含读档新开一局直接选后面的关卡）开局就送 3 把铁剑，
   // 不用再等那一关的第 5 回合。第一关自己仍保留「第 5 回合获得」的仪式时刻。
   ringGot: false,
+  // 回血技能（第 62 块）：第四关通关后永久解锁，之后每局技能栏都多一格。
+  // 只记解锁不看次数 —— 冷却归 healSkill.js 管，属于「本局状态」不进档案。
+  heal: { unlocked: false },
   // 局外商店（第 58 块）：花骨币买宝箱，开箱直接随机给一次永久属性变化。
   //   bought  { wood:n, silver:n, gold:n }  各档买过多少次
   //   opened  累计开箱数
@@ -226,6 +230,22 @@ export function markRingObtained() {
   const p = profile();
   if (p.ringGot) return false;
   p.ringGot = true;
+  save();
+  return true;
+}
+
+// ---------------- 回血技能「已解锁」（第 62 块） ----------------
+// 第四关通关后永久解锁。和 ringGot 一个套路：只在档案里记一个布尔。
+export function healUnlocked() {
+  const h = profile().heal;
+  return !!(h && h.unlocked);
+}
+
+export function markHealUnlocked() {
+  const p = profile();
+  if (!p.heal) p.heal = { unlocked: false };
+  if (p.heal.unlocked) return false;
+  p.heal.unlocked = true;
   save();
   return true;
 }

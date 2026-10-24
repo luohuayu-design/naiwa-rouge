@@ -25,11 +25,11 @@
 // 第四关三只（wraith/leaper/mender，第 35 块，第 52 块换模型），
 // 各自在下面 ENEMY_TYPES 里有详细注释。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=72';
-import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=72';
-import { clone as cloneSkinned } from '../lib/jsm/utils/SkeletonUtils.js?v=72';
-import { distance2D } from './stats.js?v=72';
-import { createRangeRing } from './rangeRing.js?v=72';
+import * as THREE from '../lib/three.module.js?v=74';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=74';
+import { clone as cloneSkinned } from '../lib/jsm/utils/SkeletonUtils.js?v=74';
+import { distance2D } from './stats.js?v=74';
+import { createRangeRing } from './rangeRing.js?v=74';
 
 // KayKit 模型正面朝 +Z；如果哪天换模型发现怪倒着走，把这里改成 Math.PI
 export const ENEMY_MODEL_YAW = 0;
@@ -74,6 +74,12 @@ const CLIP_FAMILIES = {
   quad: {
     idle: 'Idle', walk: 'Walk', run: 'Gallop', attack: 'Attack', cast: 'Walk',
     death: 'Death', hit: 'Idle_HitReact_Left', spawn: 'Idle',
+  },
+  // 第 63 块：RobotExpressive（three.js 示例里的机器人）自带的 14 段动画，
+  // 名字是普通英文，没有前缀也没有编号 —— 单独一族。
+  robot: {
+    idle: 'Idle', walk: 'Walking', run: 'Running', attack: 'Punch', cast: 'Wave',
+    death: 'Death', hit: 'No', spawn: 'Idle',
   },
 };
 
@@ -633,6 +639,102 @@ export const ENEMY_TYPES = {
     glow: { color: 0x1a6b48, intensity: 0.8 },
     anim: {
       walk: 'walk', idle: 'idle', cast: 'cast',
+      death: 'death', spawn: 'spawn',
+    },
+  },
+
+  // ============================================================
+  // 第五关 · 草甸路口（第 63 块）—— 擦名者
+  // ============================================================
+  // 蛙爷的册子上，名字被擦掉的人「人还在，魂没了」。这只怪就是那把橡皮。
+  //
+  // 它**一次都不伤人**，它的威胁在别的地方：读条 2.6 秒后，把你环上的
+  // **一把剑擦掉**（挂在它自己身上），然后转身就往场地外跑 ——
+  // 它跑出去了，那把剑这一局就永远没了。
+  // 所以玩家面对的是一道选择题：先杀眼前的怪，还是先追那个偷东西的。
+  //
+  // 反制手段（都能打断它的算盘）：
+  //   冰剑冻住 → 它跑不动，站着等你来砍
+  //   震剑击退 → 推一下打断读条，这次擦名白读
+  //   任何位移类效果都行 —— 它只有 5 点血，冲过去两下就死
+  //
+  // 模型：KayKit《Character Pack: Adventurers》的 Rogue_Hooded（CC0），
+  // 76 段动画裁到 5 段（见 .tmp-shrink-glb.py），3.6MB → 532KB。
+  eraser: {
+    name: '擦名者',
+    file: 'assets/monsters/hooded-scribe.glb',
+    sourceHeight: 2.652,   // 实测（Idle 渲染身高，.tmp-block63-calib.js）
+    height: 1.95,          // 比战士高半头：兜帽长袍本来就显个儿
+    radius: 0.55,
+    hp: 5,
+    armor: 0,
+    speed: 1.15,
+    // 故意不写 damage：它从不还手（图鉴会显示「从不还手」）。它靠偷东西吃饭。
+    attackRange: 9.0,      // 站得很远就动手，你得先跑过去
+    keepDistance: 6.0,     // 你一靠近它就退
+    attackInterval: 8.5,
+    windup: 2.6,           // 读条 2.6 秒：这段时间冲过去还来得及
+    attackDuration: 3.4,
+    castTime: 1.0,
+    // 只为了让 update 走「施法者」那条骨架（保持距离 + 读条），
+    // 真正的效果在下面的 e.cfg.erase 分支里，spawnSpell 不会收到这个 kind。
+    spell: { kind: 'erase' },
+    erase: {
+      fleeSpeed: 1.85,     // 得手后逃跑时的移速倍率（比玩家 4.4 慢，追得上）
+      knockGap: 0.5,       // 擦下来的剑在它身上挂多久才「掉」——其实一直挂着，这只是冷却
+    },
+    spawnTime: 1.0,
+    deathTime: 1.6,
+    selfDestruct: false,
+    color: 0x6a4f9a,       // 紫黑兜帽：草甸的油灯下最不显眼的那种颜色
+    animFamily: 'humanoid',
+    clipOverrides: { cast: 'Spellcast_Long', death: 'Death_A', hit: 'Hit_A' },
+    glow: { color: 0x3a1a6a, intensity: 0.75 },
+    anim: {
+      walk: 'walk', idle: 'idle', cast: 'cast',
+      death: 'death', spawn: 'spawn',
+    },
+  },
+
+  // ============================================================
+  // 第六关 · 骨塔机房（第 63 块）—— 重启体
+  // ============================================================
+  // 报废服务器机房里还在跑的巡检机器人。打死了不算完：4 秒后它原地重启，
+  // 半血站起来，而且比上一次更快。**最多重启 2 次**，第 3 次才是真死。
+  //
+  // 它把「清场」这件事变贵了：你以为这一波打完了，转身发现地上那个铁块
+  // 又站起来了。想彻底拆掉它，就得多花 4 秒在它旁边守着（补刀）。
+  //
+  // 模型：three.js 官方示例的 RobotExpressive（CC0 by Tomás Laulhé /
+  // 改动 by Don McCurdy），464KB，14 段动画全留（重启用的是 Jump）。
+  reboot: {
+    name: '重启体',
+    file: 'assets/monsters/reboot-unit.glb',
+    sourceHeight: 4.457,   // 实测（Idle 渲染身高，.tmp-block63-calib.js）
+    height: 1.85,
+    radius: 0.62,
+    hp: 3.4,
+    armor: 0,
+    speed: 1.30,
+    damage: 1.1,           // 见 spawn 时的 damageScale 乘算
+    attackRange: 1.55,
+    attackInterval: 1.5,
+    windup: 0.42,
+    attackDuration: 0.85,
+    reboot: {
+      times: 2,            // 最多重启 2 次（第 3 次真死）
+      delay: 4.0,          // 躺尸 4 秒再站起来
+      hpRatio: 0.55,       // 重启后血量 = 上限 × 0.55
+      speedMul: 1.15,      // 每重启一次快 15%（叠乘）
+    },
+    spawnTime: 0.9,
+    deathTime: 1.4,
+    selfDestruct: false,
+    color: 0xb8c4cc,
+    animFamily: 'robot',   // 见 CLIP_FAMILIES.robot（RobotExpressive 自己的动画名）
+    glow: { color: 0x2a6a8a, intensity: 0.7 },
+    anim: {
+      walk: 'walk', idle: 'idle', attack: 'attack',
       death: 'death', spawn: 'spawn',
     },
   },
@@ -1235,6 +1337,11 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
       slowFactor: 0,   // 冰缓减速比例
       freezeT: 0,      // 冰冻剩余时间（第 56 块，冰剑）：>0 时完全定住，不动也不打
       freezeFxT: 0,    // 冰冻指示圈的发出计时
+      // 第 63 块：
+      reboots: 0,      // 重启体：已经重启过几次（见 cfg.reboot.times）
+      rebootFxT: 0,    // 重启体躺尸时那圈红光的闪动计时
+      stolen: null,    // 擦名者：从环上擦下来的那把剑（kind 字符串；杀死它才还）
+      fleeT: 0,        // 擦名者：逃跑已经跑了多久
       // —— 打散怪群的三件套（第 6 块）——
       speedMul,        // 生成时随机出来的速度倍率（0.85~1.15，同种怪也不一样）
       restCd: 2.5 + Math.random() * 3.5,  // 再走多久开始歇（第一次 2.5~6 秒）
@@ -1322,6 +1429,9 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
   //   quiet 只扣血不播命中碎屑（连锁闪电等批量伤害用）
   function takeDamage(e, amount, crit = false, opts = {}) {
     if (e.state === 'dead' || e.state === 'spawn') return false;
+    // 重启体躺尸重启中（第 63 块）：这 4 秒里它是块铁，打不动 ——
+    // 你要做的是**守着**它，等它站起来那一下再补刀。
+    if (e.state === 'down') return false;
     // 雾鬼隐身（第 35 块）：无形之物不受击 —— 近战、剑、炮台、法器全部打空。
     // 想打它只有两条路：等它显形，或者贴脸逼它显形。
     if (e.ghostHidden) return false;
@@ -1356,6 +1466,29 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
   }
 
   function die(e) {
+    // ---- 第 63 块：重启体 —— 打死 ≠ 拆掉 ----
+    // 血量归零时先看还有没有重启次数：有就转成 'down'（躺尸 4 秒），
+    // 不给 onDeath 回调（不算击杀、不掉金币），4 秒后原地半血站起来。
+    // 'down' 不是 'dead'，所以 aliveCount 也算它 —— 这一波清不掉，逼你补刀。
+    if (e.cfg.reboot && e.reboots < e.cfg.reboot.times) {
+      e.reboots++;
+      e.state = 'down';
+      e.t = 0;
+      e.deathT = 0;
+      e.hp = 0;
+      e.bar.spr.visible = false;
+      hideChargeLine(e);
+      hideLeapRing(e);
+      // 倒地：一圈红色 ERROR 光斑 + 一簇电弧，玩家一眼看出「这个还会起来」
+      if (fx) {
+        fx.ring(e.pos, { from: 0.2, to: 1.9, color: 0xff4a3c, life: 0.45, opacity: 0.8, y: 0.05 });
+        fx.burst(e.pos, { color: 0xff7a55, count: 14, speed: 2.6, life: 0.5, size: 0.11, y: 0.3, up: 1.6 });
+      }
+      e.currentAnim = e.cfg.anim.death;
+      e.play(e.cfg.anim.death, { once: true, fade: 0.08, duration: 0.5 });
+      return;
+    }
+
     e.state = 'dead';
     e.t = 0;
     e.deathT = 0;
@@ -2097,6 +2230,45 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
       }
     }
 
+    // ---- 重启体：躺尸 4 秒（第 63 块）----
+    // 放在 'dead' 之前：'down' 不算死，所以 aliveCount 把它算进去 —— 这一波清不掉，
+    // 玩家必须守着它站起来那一下补刀。地上那圈红光就是倒计时。
+    if (e.state === 'down') {
+      const rb = e.cfg.reboot;
+      e.t += dt;
+      const k = Math.min(1, e.t / rb.delay);
+      // 红光呼吸：越快站起来闪得越急（0.45s → 0.15s）
+      e.rebootFxT -= dt;
+      if (e.rebootFxT <= 0) {
+        e.rebootFxT = 0.45 - 0.3 * k;
+        if (fx) {
+          fx.ring(e.pos, {
+            from: 0.9 - 0.5 * k, to: 1.9 - 0.6 * k,
+            color: k > 0.75 ? 0x6fe8ff : 0xff4a3c,
+            life: 0.35, opacity: 0.35 + 0.4 * k, y: 0.05,
+          });
+        }
+      }
+      if (e.t >= rb.delay) {
+        // 站起来：半血、更快
+        e.state = 'chase';
+        e.t = 0;
+        e.hp = Math.max(1, Math.round(e.maxHp * rb.hpRatio));
+        e.damage = Math.max(1, Math.round(e.damage * 1.06));
+        e.speed *= rb.speedMul;
+        e.attackCd = 0.35;
+        e.bar.spr.visible = true;
+        e.bar.draw(e.hp / e.maxHp, e.hp, e.maxHp);
+        e.currentAnim = e.cfg.anim.spawn;
+        e.play(e.cfg.anim.spawn, { once: true, fade: 0.1, duration: 0.5 });
+        if (fx) {
+          fx.ring(e.pos, { from: 0.3, to: 2.1, color: 0x6fe8ff, life: 0.45, opacity: 0.9, y: 0.06 });
+          fx.burst(e.pos, { color: 0xbfe8ff, count: 16, speed: 3.0, life: 0.5, size: 0.11, y: 0.4, up: 1.5 });
+        }
+      }
+      return;
+    }
+
     if (e.state === 'dead') {
       e.deathT += dt;
       const fadeStart = Math.max(0.1, e.cfg.deathTime - 0.45);
@@ -2397,6 +2569,119 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
           e.play(e.cfg.anim.walk, { fade: 0.2 });
         }
       } else if (e.currentAnim !== e.cfg.anim.idle) {
+        e.currentAnim = e.cfg.anim.idle;
+        e.play(e.cfg.anim.idle, { fade: 0.2 });
+      }
+      return;
+    }
+
+    // ---- 擦名者（第五关，第 63 块）----
+    // 三段状态，比别的怪都简单，但压迫感来自「它在偷东西」而不是「它在打我」：
+    //   chase  保持 6 格距离绕着你走，冷却好了开始读条
+    //   attack 读条 2.6 秒（脚下一圈紫黑环）→ 到点把你环上一把剑擦掉
+    //   flee   得手后径向朝场地外跑；跑出去了那把剑这一局就没了
+    // 它一次都不伤人 —— 它的伤害记在你那本账上。
+    if (e.cfg.erase) {
+      const er = e.cfg.erase;
+
+      // ---------- 逃跑 ----------
+      if (e.state === 'flee') {
+        const ang = Math.atan2(e.pos.z, e.pos.x);   // 径向朝外，最短路线出界
+        const sp = e.speed * er.fleeSpeed;
+        e.pos.x += Math.cos(ang) * sp * dt;
+        e.pos.z += Math.sin(ang) * sp * dt;
+        e.fleeT += dt;
+        if (e.currentAnim !== e.cfg.anim.walk) {
+          e.currentAnim = e.cfg.anim.walk;
+          e.play(e.cfg.anim.walk, { fade: 0.12 });
+        }
+        // 尾迹：紫黑色的「纸屑」一路掉，玩家隔半个场地也能看见它往哪跑
+        e.paperFxT = (e.paperFxT || 0) - dt;
+        if (e.paperFxT <= 0) {
+          e.paperFxT = 0.16;
+          if (fx) fx.burst(e.pos, { color: 0x9a7ad0, count: 3, speed: 0.7, life: 0.5, size: 0.07, y: 0.5, up: 0.8 });
+        }
+        if (Math.hypot(e.pos.x, e.pos.z) >= ctx.arenaRadius + 0.8) {
+          // 跑出场地：剑永久丢失。不算击杀，所以没有 onDeath（不掉钱、不计图鉴）。
+          ctx.onEraseEscape?.(e, e.stolen);
+          e.stolen = null;
+          e.root.visible = false;
+          e.bar.spr.visible = false;
+          if (e.ring) { try { e.ring.dispose(); } catch (_) {} e.ring = null; }
+          e.state = 'dead';
+          e.deathT = e.cfg.deathTime;   // 下一帧回收循环直接收走
+        }
+        return;
+      }
+
+      // ---------- 读条 ----------
+      if (e.state === 'attack') {
+        e.paperFxT = (e.paperFxT || 0) - dt;
+        if (e.paperFxT <= 0) {
+          // 越接近读完越密：2.6 秒里从 0.5 秒一粒加到 0.12 秒一粒
+          const k = Math.min(1, e.t / Math.max(0.01, e.cfg.windup));
+          e.paperFxT = 0.5 - 0.38 * k;
+          if (fx) fx.burst(e.pos, { color: 0xb59ce8, count: 2, speed: 0.6, life: 0.55, size: 0.06, y: 0.9, up: 0.5 });
+        }
+        if (!e.hitDone && e.t >= e.cfg.windup) {
+          e.hitDone = true;
+          const kind = ctx.stealSword ? ctx.stealSword() : null;
+          if (kind) {
+            e.stolen = kind;
+            e.state = 'flee';
+            e.t = 0;
+            e.fleeT = 0;
+            if (fx) {
+              fx.ring(e.pos, { from: 0.2, to: 2.2, color: 0x8a5cff, life: 0.5, opacity: 0.85, y: 0.06 });
+              fx.burst(e.pos, { color: 0xd8c8ff, count: 18, speed: 2.4, life: 0.6, size: 0.12, y: 0.8, up: 1.4 });
+            }
+            ctx.onErase?.(e, kind);
+          } else {
+            // 环上一把剑都没有（还没拿到武器 / 已经被擦光）：这次白读
+            if (fx) fx.ring(e.pos, { from: 0.2, to: 1.2, color: 0x5a4a6a, life: 0.4, opacity: 0.5, y: 0.06 });
+          }
+        }
+        if (e.t >= e.cfg.attackDuration) {
+          e.state = 'chase';
+          e.t = 0;
+          e.attackCd = Math.max(0.5, e.cfg.attackInterval - e.cfg.attackDuration);
+          e.currentAnim = e.cfg.anim.walk;
+          e.play(e.cfg.anim.walk, { fade: 0.18 });
+        }
+        return;
+      }
+
+      // ---------- 追 / 退 ----------
+      e.attackCd -= dt;
+      const keep = e.cfg.keepDistance;
+      if (dist < keep) {
+        moveToward(e, -dx, -dz, dist, dt, ctx);
+        if (e.currentAnim !== e.cfg.anim.walk) {
+          e.currentAnim = e.cfg.anim.walk;
+          e.play(e.cfg.anim.walk, { fade: 0.2 });
+        }
+        return;
+      }
+      if (dist > e.cfg.attackRange) {
+        moveToward(e, dx, dz, dist, dt, ctx);
+        if (e.currentAnim !== e.cfg.anim.walk) {
+          e.currentAnim = e.cfg.anim.walk;
+          e.play(e.cfg.anim.walk, { fade: 0.2 });
+        }
+        return;
+      }
+      if (e.attackCd <= 0) {
+        e.state = 'attack';
+        e.t = 0;
+        e.hitDone = false;
+        e.paperFxT = 0;
+        e.currentAnim = e.cfg.anim.cast;
+        e.play(e.cfg.anim.cast, { once: true, fade: 0.15, duration: e.cfg.windup });
+        // 前摇：脚下一圈紫黑环从里扩到 2.4 格 —— 看到就开始冲过去
+        if (fx) fx.ring(e.pos, { from: 0.25, to: 2.4, color: 0x8a5cff, life: e.cfg.windup, opacity: 0.55, y: 0.055 });
+        return;
+      }
+      if (e.currentAnim !== e.cfg.anim.idle) {
         e.currentAnim = e.cfg.anim.idle;
         e.play(e.cfg.anim.idle, { fade: 0.2 });
       }
@@ -2957,6 +3242,25 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     leaperCount: () => list.filter((e) => e.cfg.leap && e.state !== 'dead').length,
     jumpingCount: () => list.filter((e) => e.cfg.leap && e.state === 'jump').length,
     menderCount: () => list.filter((e) => e.cfg.spell && e.cfg.spell.kind === 'mend' && e.state !== 'dead').length,
+    // 第 63 块：
+    //   擦名者 —— 场上还有几只（含正在逃跑的）；stolenCount = 一共被偷走几把剑还没还
+    eraserCount: () => list.filter((e) => e.cfg.erase && e.state !== 'dead').length,
+    fleeingCount: () => list.filter((e) => e.state === 'flee').length,
+    stolenCount: () => list.filter((e) => e.stolen).length,
+    //   重启体 —— 正躺在地上等重启的数量（>0 时这一波清不掉）
+    downCount: () => list.filter((e) => e.state === 'down').length,
+    rebootCount: () => list.filter((e) => e.cfg.reboot && e.state !== 'dead').length,
+    //   反隐（第 63 块，路口灯）：强行把一圈里的隐身雾鬼点亮，返回点亮了几只
+    revealInRadius: (at, radius) => {
+      let n = 0;
+      for (const e of list) {
+        if (!e.ghostHidden || e.state === 'dead') continue;
+        if (distance2D(at, e.pos) > radius) continue;
+        revealGhost(e);
+        n++;
+      }
+      return n;
+    },
     knockback, interrupt, killAll,
     get: (type) => ENEMY_TYPES[type],
     // 调试/测试用

@@ -64,11 +64,14 @@ ok(/if \(seen === `\$\{noticeToday\(\)\}\|\$\{PROMO_VER\}`\) return false;/.test
 ok(/localStorage\.setItem\(PROMO_KEY/.test(mainSrc), '勾选后写本机记录');
 ok(/promoOv\.classList\.add\('art'\)/.test(mainSrc) && /promoTimer = setTimeout\(\(\) => promoOv\.classList\.remove\('art'\)/.test(mainSrc),
   '播艺术字 → 到点自动摘 .art（特效消散变标题）');
-ok(/setTimeout\(\(\) => \{\s*\n\s*if \(gameState === 'title' && !promoOv\.classList\.contains\('on'\)\) showPromo\(false, true\);/.test(mainSrc),
+// 第 63 块修正（过期测试）：链路后来重构成了 afterNoticeChain() + titleIdle()，
+//   「公告 → 签到（没签才弹）→ 宣传有礼」三级，判断条件也不再是裸的 gameState === 'title'。
+ok(/function afterNoticeChain\(\)[\s\S]{0,240}?if \(!promoOv\.classList\.contains\('on'\)\) showPromo\(false, true\);/.test(mainSrc),
   '公告关闭 → 链上宣传有礼（艺术字版，带防重）');
-ok(/if \(gameState === 'title' && !promoOv\.classList\.contains\('on'\)\) showPromo\(false, true\)/.test(mainSrc),
-  '链条带防重：标题页 + 没开着才弹');
-ok(/if \(!showNotice\(false\)\) setTimeout\(\(\) => showPromo\(false, true\), 350\);/.test(mainSrc),
+ok(/if \(!signedToday\(\)\) \{ showSignin\(true\); return; \}/.test(mainSrc)
+  && /function titleIdle\(\)[\s\S]{0,200}?gameState !== 'title'\) return false/.test(mainSrc),
+  '链条带防重：标题页且没开子面板才弹（titleIdle）');
+ok(/if \(!showNotice\(false\)\) setTimeout\(\(\) => afterNoticeChain\(\), 350\);/.test(mainSrc),
   '公告今天已关过 → 宣传有礼自己上场（不漏弹）');
 ok(/btnPromo[\s\S]{0,80}?showPromo\(true, false\)/.test(mainSrc), '主菜单点开 = 强制回看且不播特效');
 ok(/promo: \{[\s\S]*?show: \(force, art\)/.test(mainSrc), '__game.promo 测试钩子（show/hide/open/art/ver/key/clear）');

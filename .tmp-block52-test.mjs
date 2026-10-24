@@ -45,7 +45,7 @@ const TYPES = Object.entries(ENEMY_TYPES).filter(([, t]) => !t.planned);
 const typeNames = TYPES.map(([k]) => k);
 
 sec('一、13 只怪 · 一只一个模型');
-ok(TYPES.length === 13, `怪物条目 13 只（实际 ${TYPES.length}）`);
+ok(TYPES.length === 15, `怪物条目 15 只（实际 ${TYPES.length}）`);   // 第 63 块 +擦名者/重启体
 const files = TYPES.map(([, t]) => t.file);
 ok(files.every((f) => typeof f === 'string' && f.startsWith('assets/monsters/')), '每条都写了 assets/monsters/ 下的模型');
 ok(new Set(files).size === files.length,

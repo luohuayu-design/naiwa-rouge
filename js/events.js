@@ -44,11 +44,15 @@
 // ctx: { round, hasWeapon, gold, rep, hp, maxHp, luck }
 //   luck 用来写 cond（幸运够高才遇得到的吉兆事件，第 11 块）。
 // ============================================================
-import { STAT_DEFS } from './stats.js?v=72';
-import { WEAPON_STAT_DEFS } from './weaponStats.js?v=72';
+import { STAT_DEFS } from './stats.js?v=74';
+import { WEAPON_STAT_DEFS } from './weaponStats.js?v=74';
 // 第 31 块：事件扩容（40 条随机事件 + 3 条连锁后续）单独放一个文件，
 // 不然这个文件会涨到 5000 行。抽取规则、effectLines 等工具函数仍在本文件。
-import { EXTRA_EVENTS, EXTRA_CHAIN_EVENTS } from './eventsExtra.js?v=72';
+import { EXTRA_EVENTS, EXTRA_CHAIN_EVENTS } from './eventsExtra.js?v=74';
+// 第 62 块：民心专属事件（良性 / 恶性两池）。它们不进随机池（全标 chainOnly），
+// 只由 main.js 的「民心档位变化队列」点名播放；这里并进 ALL_EVENTS 是为了
+// getEventById 能找到它们（以及图鉴能翻到）。
+import { REP_EVENTS } from './repEvents.js?v=74';
 
 export const REP_MIN = 0;
 // 第 61 块（用户报「民心到 100 之后不会继续提升」）：上限 100 → 120。
@@ -2172,7 +2176,7 @@ const CHAIN_EVENTS = [
 // 随机事件池（进 pickEvent 抽签的那一批）
 export const EVENTS = [...CORE_EVENTS, ...EXTRA_EVENTS];
 // 全部事件（随机池 + 连锁），便于按 id 查找 / 文档生成
-export const ALL_EVENTS = [...EVENTS, ...CHAIN_EVENTS, ...EXTRA_CHAIN_EVENTS];
+export const ALL_EVENTS = [...EVENTS, ...CHAIN_EVENTS, ...EXTRA_CHAIN_EVENTS, ...REP_EVENTS];
 // ---------------- 抽取 ----------------
 // ctx: { round, hasWeapon, gold, rep }；recentIds：最近出现过的（3 回合内不重复）
 export function pickEvent(ctx = {}, recentIds = [], rng = Math.random) {
@@ -2225,7 +2229,11 @@ export function effectLines(effects = {}) {
     }
   }
   if (effects.healFull) lines.push('生命回满');
-  if (effects.discount) lines.push(`下次商店 ${Math.round((1 - effects.discount) * 10)} 折`);
+  if (effects.discount) {
+    lines.push(effects.discount > 0
+      ? `下次商店 ${Math.round((1 - effects.discount) * 10)} 折`
+      : `下次商店涨价 ${Math.round(-effects.discount * 100)}%`);   // 第 62 块：负折扣 = 涨价
+  }
   if (effects.rep > 0) lines.push(`民心 +${effects.rep}`);
   if (effects.rep < 0) lines.push(`民心 ${effects.rep}`);
   if (effects.gold > 0) lines.push(`金币 +${effects.gold}`);
