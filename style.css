@@ -234,7 +234,10 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
 .sk-ring .sr-fg{stroke:#7df0b0;stroke-linecap:round;
   filter:drop-shadow(0 0 5px rgba(125,240,176,.85))}
 .sk.heal .sk-cd{display:none}          /* 回血走外圈，不再用底部竖条 */
-.sk.heal .sk-num{font-size:12px}       /* 中间留十字，数字压小一点 */
+/* 数字挪到底部当小角标：原来 12px 的「满」/倒计时正好压在十字中间，
+   绿十字反而看不清（用户第 1 条就是嫌这个键丑）。 */
+.sk.heal .sk-num{font-size:10px;top:auto;bottom:3px;color:#bfffe0;
+  text-shadow:0 0 5px rgba(0,0,0,.95)}
 
 /* ---------------- 读条百分比（奶蛙头顶，第 65 块） ----------------
    擦名者开始读条时挂在他头上：紫色进度条 + 百分比数字，越接近读完越亮、
