@@ -152,7 +152,7 @@ ok(/if \(e\.mixer\.timeScale === 0\) e\.mixer\.timeScale = 1;/.test(enemySrc), '
 ok(/title: '冰冻 \+0\.6 秒'[\s\S]{0,120}stat: 'frostTime', flat: 0\.6/.test(upgradeSrc), '「严寒」卡改成延长冰冻（第 64 块 +0.6）');
 ok(/title: '闪电伤害 \+20%'[\s\S]{0,140}stat: 'chainRatio', flat: 0\.20/.test(upgradeSrc), '「导电」卡改成加强闪电伤害（第 64 块 +20%）');
 ok(!/stat: 'chainCount'/.test(upgradeSrc) && !/stat: 'frostSlow'/.test(upgradeSrc), '升级卡不再引用旧属性键');
-ok(/命中点周围 3\.5 格内的怪全部冻住 1\.6 秒/.test(shopSrc), '商店冰剑文案：一片冻住 1.6 秒');
+ok(/命中点周围 7\.0 格内的怪全部冻住 1\.6 秒/.test(shopSrc), '商店冰剑文案：一片冻住 1.6 秒（第 68 块半径改 7.0 格）');
 ok(/一道闪电打到场上所有怪（不限距离、不限只数）/.test(shopSrc), '商店雷剑文案：全场连锁');
 ok(/tagline: '一片冻住'/.test(kindsSrc), '冰剑 tagline 是「一片冻住」');
 ok(/每道 45% 伤害（属性可升级）/.test(kindsSrc), '雷剑描述改「所有怪 + 45%」');

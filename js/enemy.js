@@ -25,11 +25,11 @@
 // 第四关三只（wraith/leaper/mender，第 35 块，第 52 块换模型），
 // 各自在下面 ENEMY_TYPES 里有详细注释。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=79';
-import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=79';
-import { clone as cloneSkinned } from '../lib/jsm/utils/SkeletonUtils.js?v=79';
-import { distance2D } from './stats.js?v=79';
-import { createRangeRing } from './rangeRing.js?v=79';
+import * as THREE from '../lib/three.module.js?v=80';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=80';
+import { clone as cloneSkinned } from '../lib/jsm/utils/SkeletonUtils.js?v=80';
+import { distance2D } from './stats.js?v=80';
+import { createRangeRing } from './rangeRing.js?v=80';
 
 // KayKit 模型正面朝 +Z；如果哪天换模型发现怪倒着走，把这里改成 Math.PI
 export const ENEMY_MODEL_YAW = 0;
@@ -652,10 +652,18 @@ export const ENEMY_TYPES = {
   // ============================================================
   // 蛙爷的册子上，名字被擦掉的人「人还在，魂没了」。这只怪就是那把橡皮。
   //
-  // 它**一次都不伤人**，它的威胁在别的地方：读条 2.6 秒后，把你环上的
-  // **一把剑擦掉**（挂在它自己身上），然后转身就往场地外跑 ——
+  // 它**一次都不伤人**，它的威胁在别的地方：读条 4.5 秒后，把你环上的
+  // **一把剑擦掉**（挂在它自己身上），愣一下才转身往场地外跑 ——
   // 它跑出去了，那把剑这一局就永远没了。
   // 所以玩家面对的是一道选择题：先杀眼前的怪，还是先追那个偷东西的。
+  //
+  // 第 69 块（用户实测：「玩家还没找到擦名者就被偷了」）三条改动：
+  //   ① 起手距离 9.0 → **7.0 格**（保持距离 6.0 → 5.0）—— 它在离你比较近的
+  //      地方才开始读条，屏幕上一定看得见那一圈紫黑环，不会「没找到就被偷」；
+  //   ② 读条 2.6 → **4.5 秒**（attackDuration 3.4 → 5.4，必须大于 windup，
+  //      否则 `e.t >= attackDuration` 会先把它切回 chase，读条永远读不完）；
+  //   ③ 移速 1.15 → **0.55**（约玩家 4.4 的 1/8，追得上）。逃跑速度按倍率补回来
+  //      （fleeSpeed 1.85 → 3.9，绝对速度仍是 ~2.15），「偷到就跑」的压迫感不变。
   //
   // 反制手段（都能打断它的算盘）：
   //   冰剑冻住 → 它跑不动，站着等你来砍
@@ -672,19 +680,23 @@ export const ENEMY_TYPES = {
     radius: 0.55,
     hp: 5,
     armor: 0,
-    speed: 1.15,
+    speed: 0.55,           // 第 69 块：1.15 → 0.55（用户「大幅降低移动速度」）
     // 故意不写 damage：它从不还手（图鉴会显示「从不还手」）。它靠偷东西吃饭。
-    attackRange: 9.0,      // 站得很远就动手，你得先跑过去
-    keepDistance: 6.0,     // 你一靠近它就退
+    attackRange: 7.0,      // 第 69 块：9.0 → 7.0（起手距离上限）
+    // 第 69 块：6.0 → 5.0 → 3.0。实测竖屏横向只有约 4 格在画面里，
+    // 它必须能走到「既在画面里、又在 7 格内」的位置才起手，
+    // keep 必须明显小于 4 格，否则会在「后退保距离」和「前进求可见」之间抖。
+    keepDistance: 3.0,
     attackInterval: 8.5,
-    windup: 2.6,           // 读条 2.6 秒：这段时间冲过去还来得及
-    attackDuration: 3.4,
+    windup: 4.5,           // 第 69 块：2.6 → 4.5 秒，冲过去完全来得及
+    attackDuration: 5.4,   // 必须 > windup，否则读条中被提前切回 chase
     castTime: 1.0,
     // 只为了让 update 走「施法者」那条骨架（保持距离 + 读条），
     // 真正的效果在下面的 e.cfg.erase 分支里，spawnSpell 不会收到这个 kind。
     spell: { kind: 'erase' },
     erase: {
-      fleeSpeed: 1.85,     // 得手后逃跑时的移速倍率（比玩家 4.4 慢，追得上）
+      fleeSpeed: 3.9,      // 得手后逃跑时的移速倍率（0.55×3.9≈2.15，和原来一样快）
+      holdAfterSteal: 1.4, // 第 69 块（用户）：擦完名字先愣 1.4 秒才开跑，给你追上来的窗口
       knockGap: 0.5,       // 擦下来的剑在它身上挂多久才「掉」——其实一直挂着，这只是冷却
     },
     spawnTime: 1.0,
@@ -2618,21 +2630,30 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     }
 
     // ---- 擦名者（第五关，第 63 块）----
-    // 三段状态，比别的怪都简单，但压迫感来自「它在偷东西」而不是「它在打我」：
-    //   chase  保持 6 格距离绕着你走，冷却好了开始读条
-    //   attack 读条 2.6 秒（脚下一圈紫黑环）→ 到点把你环上一把剑擦掉
-    //   flee   得手后径向朝场地外跑；跑出去了那把剑这一局就没了
+    // 四段状态，比别的怪都简单，但压迫感来自「它在偷东西」而不是「它在打我」：
+    //   chase  保持 5 格距离绕着你走，冷却好了开始读条（只在 7 格内才起手）
+    //   attack 读条 4.5 秒（脚下一圈紫黑环）→ 到点把你环上一把剑擦掉
+    //   flee   先原地愣 1.4 秒，再径向朝场地外跑；跑出去了那把剑这一局就没了
     // 它一次都不伤人 —— 它的伤害记在你那本账上。
     if (e.cfg.erase) {
       const er = e.cfg.erase;
 
       // ---------- 逃跑 ----------
       if (e.state === 'flee') {
+        e.fleeT += dt;
+        // 第 69 块（用户）：刚擦完名字先僵住一小会儿 —— 动画停在原地，
+        // 玩家看得见「它得手了」，也真的有机会冲上来砍它一刀。
+        if (e.fleeT <= (er.holdAfterSteal || 0)) {
+          if (e.currentAnim !== e.cfg.anim.idle) {
+            e.currentAnim = e.cfg.anim.idle;
+            e.play(e.cfg.anim.idle, { fade: 0.15 });
+          }
+          return;
+        }
         const ang = Math.atan2(e.pos.z, e.pos.x);   // 径向朝外，最短路线出界
         const sp = e.speed * er.fleeSpeed;
         e.pos.x += Math.cos(ang) * sp * dt;
         e.pos.z += Math.sin(ang) * sp * dt;
-        e.fleeT += dt;
         if (e.currentAnim !== e.cfg.anim.walk) {
           e.currentAnim = e.cfg.anim.walk;
           e.play(e.cfg.anim.walk, { fade: 0.12 });
@@ -2660,7 +2681,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
       if (e.state === 'attack') {
         e.paperFxT = (e.paperFxT || 0) - dt;
         if (e.paperFxT <= 0) {
-          // 越接近读完越密：2.6 秒里从 0.5 秒一粒加到 0.12 秒一粒
+          // 越接近读完越密：4.5 秒里从 0.5 秒一粒加到 0.12 秒一粒
           const k = Math.min(1, e.t / Math.max(0.01, e.cfg.windup));
           e.paperFxT = 0.5 - 0.38 * k;
           if (fx) fx.burst(e.pos, { color: 0xb59ce8, count: 2, speed: 0.6, life: 0.55, size: 0.06, y: 0.9, up: 0.5 });
@@ -2696,6 +2717,9 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
       // ---------- 追 / 退 ----------
       e.attackCd -= dt;
       const keep = e.cfg.keepDistance;
+      // 第 69 块（用户「还没找到它就被偷了」的根治）：起手之前先问一句
+      // 「玩家现在看得见它吗」。看不见就继续朝玩家挪，而不是在屏幕外偷偷读条。
+      const viz = ctx.onScreen ? ctx.onScreen(e.pos) : true;
       if (dist < keep) {
         moveToward(e, -dx, -dz, dist, dt, ctx);
         if (e.currentAnim !== e.cfg.anim.walk) {
@@ -2704,7 +2728,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
         }
         return;
       }
-      if (dist > e.cfg.attackRange) {
+      if (dist > e.cfg.attackRange || !viz) {
         moveToward(e, dx, dz, dist, dt, ctx);
         if (e.currentAnim !== e.cfg.anim.walk) {
           e.currentAnim = e.cfg.anim.walk;

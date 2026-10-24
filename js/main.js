@@ -5,37 +5,37 @@
 // 目标是把三件事调顺：摇杆输入 → 角色速度/朝向 → 相机跟随。
 // 后续叠战斗时，只需要在 tick() 里加敌人更新与自动攻击，不用动输入层。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=79';
-import { buildNightScene } from './scene.js?v=79';
-import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=79';
-import { createInput } from './input.js?v=79';
-import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=79';
-import { createStatView } from './statView.js?v=79';
-import { createWeaponStats } from './weaponStats.js?v=79';
-import { createFx } from './fx.js?v=79';
-import { createEnemySystem } from './enemy.js?v=79';
+import * as THREE from '../lib/three.module.js?v=80';
+import { buildNightScene } from './scene.js?v=80';
+import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=80';
+import { createInput } from './input.js?v=80';
+import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=80';
+import { createStatView } from './statView.js?v=80';
+import { createWeaponStats } from './weaponStats.js?v=80';
+import { createFx } from './fx.js?v=80';
+import { createEnemySystem } from './enemy.js?v=80';
 import {
   createLevel, LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVEL_5, LEVEL_6, LEVELS_BY_ID, DIFFS, setDifficulty, getDifficulty, roundScale, levelStats,
-} from './wave.js?v=79';
-import { createRangeRing } from './rangeRing.js?v=79';
-import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=79';
-import { createWeaponSystem } from './weapon.js?v=79';
-import { createArrowRainSystem } from './arrowRain.js?v=79';
-import { SWORD_KINDS } from './swordKinds.js?v=79';
-import { createGoldSystem } from './gold.js?v=79';
-import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW } from './shop.js?v=79';
-import { createTurretSystem, TURRET } from './turret.js?v=79';
-import { createRelicSystem, RELIC_DEFS } from './relics.js?v=79';
-import { createHazards } from './hazards.js?v=79';
-import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=79';
-import audio from './audio.js?v=79';
-import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=79';
+} from './wave.js?v=80';
+import { createRangeRing } from './rangeRing.js?v=80';
+import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=80';
+import { createWeaponSystem } from './weapon.js?v=80';
+import { createArrowRainSystem } from './arrowRain.js?v=80';
+import { SWORD_KINDS } from './swordKinds.js?v=80';
+import { createGoldSystem } from './gold.js?v=80';
+import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW } from './shop.js?v=80';
+import { createTurretSystem, TURRET } from './turret.js?v=80';
+import { createRelicSystem, RELIC_DEFS } from './relics.js?v=80';
+import { createHazards } from './hazards.js?v=80';
+import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=80';
+import audio from './audio.js?v=80';
+import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=80';
 // 第 62 块：回血技能（第四关通关后永久解锁，回 5 点 / CD 25 秒）
-import { createHealSkill, HEAL_AMOUNT, HEAL_CD } from './healSkill.js?v=79';
+import { createHealSkill, HEAL_AMOUNT, HEAL_CD } from './healSkill.js?v=80';
 // 第 62 块：民心专属事件（升档走良性池、掉档走恶性池）
-import { repPoolForTier, REP_GOOD, REP_BAD } from './repEvents.js?v=79';
+import { repPoolForTier, REP_GOOD, REP_BAD } from './repEvents.js?v=80';
 // 第 62 块：攻略面板（战败提示上的「查看攻略」，手风琴三组）
-import { renderGuide, GUIDE_SECTIONS } from './guide.js?v=79';
+import { renderGuide, GUIDE_SECTIONS } from './guide.js?v=80';
 import {
   settings as readSettings, setSetting, save as saveProfile, profile,
   bumpStat, setStatMax, codexAdd, codexCount, countCard, unlockAch, hasAch, addBones, bones, resetAll,
@@ -48,49 +48,49 @@ import {
   healUnlocked, markHealUnlocked,
   rainObtained, markRainObtained,          // 第 65 块：技能的「有没有」只跟解锁有关
   hintSeen, markHintSeen,                  // 第 65 块：一次性提示卡
-} from './profile.js?v=79';
+} from './profile.js?v=80';
 // 第 44 块：礼包兑换（码表只有哈希，明细在 gift.js 顶部注释）
-import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=79';
+import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=80';
 // 第 46 块：音效包（抽象奶蛙音效包 —— 4 段奶蛙叫声，通关第一关解锁）
-import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=79';
-import * as runSave from './runSave.js?v=79';
+import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=80';
+import * as runSave from './runSave.js?v=80';
 import {
   CAMPFIRE, CAMP_STEP, campBuy, campOwned, campLevel,
   campCost, campApply, bonesFor, diffBoneMul, levelBoneMul, coinBones, BONE,
-} from './campfire.js?v=79';
+} from './campfire.js?v=80';
 // 第 23 块：永夜火种（通关白给的 3 次永久三选一）
 import {
   BOONS, BOON_BY_ID, BOON_PICKS, boonOwned, boonStacks, boonPending, boonTotalStacks,
   grantBoons, rollBoons, takeBoon, applyBoons, boonStackText,
-} from './boons.js?v=79';
+} from './boons.js?v=80';
 // 第 21 块：夜行诅咒（自选 debuff 换骨币倍率）
-import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=79';
+import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=80';
 // 第 22 块：种子与每日挑战
 import {
   DAILY_RULES, dayKey, dayText, dailySeed, seedCode, pickDailyCurses,
   seedFromText, pickSeedRules, loadSeedRecords, saveSeedRecord, pruneSeeds,
   dailyRecord, saveDailyRecord, pruneDaily, makeRng,
-} from './seed.js?v=79';
-import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=79';
+} from './seed.js?v=80';
+import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=80';
 // 第 58 块：局外商店 · 宝箱（花骨币买，开箱随机给永久属性 / 永久法器 / 技能CD缩短）
 import {
   BOXES, BOX_BY_ID, buyBox, rollBox, metaApplyStats, applyMeta,
-} from './metaShop.js?v=79';
+} from './metaShop.js?v=80';
 // 第 59 块：每日签到（以周为单位，周一 00:00 重置）
 import {
   WEEK_TIERS, SIGN_BONES, weekCells, signSummary, signToday, signedToday,
-} from './signin.js?v=79';
-import { achById, ACHS } from './achievements.js?v=79';
+} from './signin.js?v=80';
+import { achById, ACHS } from './achievements.js?v=80';
 import {
   EVENTS, ALL_EVENTS, getEventById, pickEvent, effectLines,
   choiceHint, canAfford, costShort, REP_MIN, REP_MAX, REP_START,
   isTalk, eventChoices, resolveRoll, mergeEffects,
-} from './events.js?v=79';
+} from './events.js?v=80';
 // 第 32 块：主线《笑不出来的那一夜》（18 夜，一夜一关，前 3 夜已有关卡）
 import {
   STORY_ARC, STORY_CHAPTERS, STORY_ENDINGS, MARK_INFO,
   storyChapterAt, storyChapterById, storyEndingKey,
-} from './story.js?v=79';
+} from './story.js?v=80';
 
 // 标记模块已经跑起来了：index.html 的兜底自检靠它判断
 // 「模块根本没执行」还是「执行了但加载慢」。
@@ -1610,8 +1610,8 @@ async function boot() {
       kicker: '地图知识 · 读条',
       title: '头顶这个百分比，是它还要多久得手',
       text: [
-        '戴兜帽的那只叫<b>擦名者</b>。它不还手，只在远处站定读条 —— 读满之后，'
-          + '会把你环上的一把剑擦掉，然后转身往场外跑。',
+        '戴兜帽的那只叫<b>擦名者</b>。它不还手，只在你<b>看得见的地方</b>（7 格内）'
+          + '站定读条 —— 读满 4.5 秒之后，会把你环上的一把剑擦掉，愣一下再往场外跑。',
         '所以奶蛙头顶这条紫色进度条就是<b>它这一下还要多久</b>：越接近 100% 越危险，'
           + '过 65% 会变粉、还会一跳一跳地催你。',
         '应对只有一条：<b>冲过去打断它</b>（打死，或者把它打退），条没读满它就白读一次。',
@@ -6418,6 +6418,27 @@ async function boot() {
         ringObtained: () => ringObtained(),
         prefill: () => { prefillRing(); return { ring: weapon.granted, rain: arrowRain.unlocked }; },
       },
+      // 第 69 块：擦名者「只在你看得见的地方起手」
+      block69: {
+        // 某个世界坐标此刻在不在画面里（与它起手用的是同一个判定）
+        onScreen: (x, z) => onScreen({ x, z }),
+        // 参数快照
+        er: () => {
+          const c = enemies.get('eraser');
+          return c ? {
+            attackRange: c.attackRange, keepDistance: c.keepDistance,
+            speed: c.speed, windup: c.windup, attackDuration: c.attackDuration,
+            fleeSpeed: c.erase.fleeSpeed, holdAfterSteal: c.erase.holdAfterSteal,
+          } : null;
+        },
+        // 场上每只擦名者：状态 / 跑了多久 / 在不在画面里 / 离玩家多远
+        live: () => enemies.list.filter((e) => e.cfg.erase && e.state !== 'dead').map((e) => ({
+          state: e.state,
+          t: +e.t.toFixed(2),
+          onScreen: onScreen(e.pos),
+          dist: +Math.hypot(e.pos.x - pos.x, e.pos.z - pos.z).toFixed(2),
+        })),
+      },
       // 第 62 块：民心专属事件（测试钩子）
       repEv: {
         queue: () => repEventQueue.slice(),
@@ -6878,9 +6899,27 @@ async function boot() {
   }
 
   // 传给怪物 AI 的上下文（每帧复用同一个对象，避免反复分配）
+  // ============================================================
+  // 第 69 块：擦名者「只在你看得见的地方起手」
+  //   用户实测「玩家还没找到擦名者就被偷了」。光把起手距离改近挡不住这件事 ——
+  //   实测（.tmp-probe-view.js）竖屏下横向只有约 4 格落在画面里，纵向（画面上方）
+  //   能看到 15 格，所以它在侧面 7 格读条时玩家其实完全看不见。
+  //   这里把它的位置投到屏幕上做判断，看不见就先往玩家身边挪。
+  //   margin 0.9：留 5% 边距，贴着屏幕边缘（只露半个身子）不算看见。
+  // ============================================================
+  const _visV = new THREE.Vector3();
+  function onScreen(at, margin = 0.9) {
+    if (!at) return true;
+    camera.updateMatrixWorld();
+    _visV.set(at.x, 0.85, at.z).project(camera);
+    if (_visV.z > 1) return false;                 // 落在相机后面
+    return Math.abs(_visV.x) <= margin && Math.abs(_visV.y) <= margin;
+  }
+
   const combatCtx = {
     playerPos: pos,
     playerRadius: BODY_R,
+    onScreen,                                 // 第 69 块：擦名者起手前先问「玩家看得见吗」
     get arenaRadius() { return ARENA_R; },   // 随关卡变（第三关 19，第 33 块）
     hurtPlayer,
     cursePlayer,

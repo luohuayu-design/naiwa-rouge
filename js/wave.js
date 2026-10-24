@@ -341,7 +341,7 @@ export const LEVEL_5 = {
     { minion: 6,  warrior: 3, leaper: 1, archer: 2, bowman: 1, wraith: 2, shielder: 0, brood: 0, mender: 0, eraser: 0, gap: 0.66, tip: '两只雾鬼：别背对着雾开怪' },
     // ---- 第三幕（R8~R12）：擦名者 ----
     { minion: 6,  warrior: 3, leaper: 1, archer: 2, bowman: 1, wraith: 2, shielder: 0, brood: 0, mender: 0, eraser: 1, gap: 0.64, tip: '戴兜帽的那个在擦东西 —— 它要偷你一把剑，先砍它' },
-    { minion: 7,  warrior: 3, leaper: 1, archer: 2, bowman: 2, wraith: 2, shielder: 0, brood: 0, mender: 0, eraser: 1, gap: 0.60, tip: '它读条 2.6 秒：脚下出紫圈就冲过去，来得及' },
+    { minion: 7,  warrior: 3, leaper: 1, archer: 2, bowman: 2, wraith: 2, shielder: 0, brood: 0, mender: 0, eraser: 1, gap: 0.60, tip: '它读条 4.5 秒：脚下出紫圈就冲过去，来得及' },
     { minion: 7,  warrior: 3, leaper: 2, archer: 3, bowman: 2, wraith: 2, shielder: 1, brood: 0, mender: 0, eraser: 1, gap: 0.58, tip: '得手之后它会往外跑：追出去，不然剑就没了' },
     { minion: 7,  warrior: 4, leaper: 2, archer: 3, bowman: 2, wraith: 3, shielder: 1, brood: 0, mender: 1, eraser: 1, gap: 0.56, tip: '缝补小巫在给怪回血：绿的先拆' },
     { minion: 8,  warrior: 4, leaper: 2, archer: 3, bowman: 2, wraith: 3, shielder: 1, brood: 1, mender: 1, eraser: 1, gap: 0.54, tip: '冰剑冻住擦名者最好用：它跑不动就只能站着等你' },

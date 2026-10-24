@@ -139,7 +139,7 @@ const RB = enemy.ENEMY_TYPES.reboot;
 ok(!!ER && ER.name === '擦名者', '图鉴里有擦名者');
 ok(!!RB && RB.name === '重启体', '图鉴里有重启体');
 ok(ER && ER.damage === undefined, '擦名者从不还手（没有 damage 字段）');
-ok(ER && ER.erase && ER.erase.fleeSpeed > 1 && ER.erase.fleeSpeed < 3, '擦名者逃跑倍率合理（追得上）', ER.erase.fleeSpeed);
+ok(ER && ER.erase && ER.speed * ER.erase.fleeSpeed > 1.6 && ER.speed * ER.erase.fleeSpeed < 2.8, '擦名者绝对逃跑速度合理（比玩家慢、追得上）', ER.speed * ER.erase.fleeSpeed);
 ok(ER && ER.windup >= 2, '擦名者读条 ≥2 秒（来得及冲过去）', ER.windup);
 ok(ER && ER.height >= 1.8 && ER.height <= 2.1, '擦名者身高 1.8~2.1', ER.height);
 ok(RB && RB.reboot && RB.reboot.times === 2 && RB.reboot.delay === 4, '重启体：4 秒后重启、最多 2 次');

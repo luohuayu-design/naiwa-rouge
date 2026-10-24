@@ -104,6 +104,9 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
           await ev("document.getElementById('mtOk')?.click(), 1");
         } else if (st === 'event') {
           await ev("document.querySelector('#evList .ev-opt')?.click(), 1");
+        } else if (st === 'hint') {
+          // 第 65 块的一次性提示卡（回血 / 读条）也会把世界冻住
+          await ev("document.getElementById('hiOk')?.click(), 1");
         } else if (await ev("document.getElementById('packGet')?.classList.contains('on')")) {
           await ev("document.getElementById('pgNo')?.click(), 1");
         } else {
@@ -180,6 +183,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
       if (st === 'playing') break;
       if (st === 'wtut') await ev("document.getElementById('wtSkip')?.click(), 1");
       else if (st === 'meet') await ev("document.getElementById('mtOk')?.click(), 1");
+      else if (st === 'hint') await ev("document.getElementById('hiOk')?.click(), 1");
       await sleep(700);
     }
     await waitFor("__game.state === 'playing'", 25000, '进入第五关');
@@ -280,10 +284,10 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     const before = JSON.parse(await ev('JSON.stringify(__game.weapon.kindCounts())'));
     const beforeN = sumKinds(before);
 
-    // 放在「保持距离 6 格」和「射程 9 格」之间，并把冷却清零让它立刻读条
+    // 放在「保持距离 5 格」和「起手距离 7 格」之间（第 69 块改过这两个数），并把冷却清零让它立刻读条
     await ev(`(() => {
       const p = __game.pos;
-      const e = __game.block63.put('eraser', p.x + 7.4, p.z);
+      const e = __game.block63.put('eraser', p.x + 6.4, p.z);
       e.attackCd = 0;
       window.__er = e;
       return 1;
@@ -301,7 +305,16 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     ok(windup >= 2, '读条时间 ≥2 秒（玩家来得及冲过去）', String(windup));
     await shot('eraser_cast.png');
 
-    await waitFor("__game.block63.stolen() >= 1", 8000, '偷到剑');
+    // 第 65 块加的一次性「读条讲解卡」会在第一次读条时把世界冻住 ——
+    // 不关掉它，读条永远不会读满（第 69 块才发现这里没跟上）。
+    for (let i = 0; i < 6; i++) {
+      if (await ev("__game.block65.hint.open()")) {
+        await ev("document.getElementById('hiOk')?.click(), 1");
+        await sleep(300);
+      } else break;
+    }
+
+    await waitFor("__game.block63.stolen() >= 1", 14000, '偷到剑');
     const mid = JSON.parse(await ev('JSON.stringify(__game.weapon.kindCounts())'));
     const midN = sumKinds(mid);
     ok(midN === beforeN - 1, `环上少了一把剑（${beforeN} → ${midN}）`, JSON.stringify(mid));
@@ -322,7 +335,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     // ---- 让它跑掉：剑永久丢失 ----
     await ev(`(() => {
       const p = __game.pos;
-      const e = __game.block63.put('eraser', p.x + 7.4, p.z);
+      const e = __game.block63.put('eraser', p.x + 6.4, p.z);
       e.attackCd = 0;
       window.__er2 = e;
       return 1;
@@ -371,7 +384,11 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     const lv = JSON.parse(await ev('JSON.stringify(__game.block63.relics())'));
     ok(lv.lantern === 1, '买到路口灯', JSON.stringify(lv));
     const flare = JSON.parse(await ev('JSON.stringify(__game.block63.debugLantern())'));
-    ok(flare && flare.shown >= 1, '点灯把隐身的雾鬼照出来了', JSON.stringify(flare));
+    // ⚠️ 买灯那一下本身就会自动点一次，等这里再点第二次时雾鬼早就显形了，
+    //     shown 会是 0（hit 才是这次照到的只数）。所以直接看「它还在不在隐身」。
+    ok(await ev('window.__gh.ghostHidden === false'), '点灯把隐身的雾鬼照出来了（ghostHidden 已清）',
+      JSON.stringify(flare));
+    ok(flare && flare.hit >= 1, '灯按半径圈到了附近的怪', JSON.stringify(flare));
     ok(await ev('window.__gh.ghostHidden === false'), '被照到的雾鬼显形了');
     await shot('lantern.png');
 
