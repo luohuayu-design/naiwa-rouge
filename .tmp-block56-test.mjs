@@ -7,6 +7,7 @@
 //   E 技能栏让开教程卡（--sk-lift + syncSkillLift）
 import fs from 'fs';
 import { ringObtained, markRingObtained } from './js/profile.js';
+import { UPGRADES } from './js/upgrade.js?v=84';
 
 let pass = 0, fail = 0;
 const fails = [];
@@ -149,8 +150,15 @@ ok(/e\.mixer\.timeScale = 0;/.test(enemySrc), '冻住时动画也停');
 ok(/if \(e\.mixer\.timeScale === 0\) e\.mixer\.timeScale = 1;/.test(enemySrc), '解冻后恢复动画（兜底）');
 
 // 升级卡 / 商店 / 种类文案
-ok(/title: '冰冻 \+0\.6 秒'[\s\S]{0,120}stat: 'frostTime', flat: 0\.6/.test(upgradeSrc), '「严寒」卡改成延长冰冻（第 64 块 +0.6）');
-ok(/title: '闪电伤害 \+20%'[\s\S]{0,140}stat: 'chainRatio', flat: 0\.20/.test(upgradeSrc), '「导电」卡改成加强闪电伤害（第 64 块 +20%）');
+// 第 73 块：卡池改成生成式的「一族三档」，源码里已经没有字面量卡片了 ——
+// 改成直接读运行时的卡（小档与原版同 id 同数值，这两条断言的语义不变）。
+const card73 = (id) => UPGRADES.find((u) => u.id === id);
+const chill73 = card73('chill');
+ok(chill73 && chill73.stat === 'frostTime' && Math.abs(chill73.flat - 0.6) < 1e-9
+  && chill73.title === '冰冻 +0.6 秒', `「严寒」卡改成延长冰冻（第 64 块 +0.6，实际 ${chill73 && chill73.title}）`);
+const volt73 = card73('volt');
+ok(volt73 && volt73.stat === 'chainRatio' && Math.abs(volt73.flat - 0.20) < 1e-9
+  && volt73.title === '闪电伤害 +20%', `「导电」卡改成加强闪电伤害（第 64 块 +20%，实际 ${volt73 && volt73.title}）`);
 ok(!/stat: 'chainCount'/.test(upgradeSrc) && !/stat: 'frostSlow'/.test(upgradeSrc), '升级卡不再引用旧属性键');
 ok(/命中点周围 7\.0 格内的怪全部冻住 1\.6 秒/.test(shopSrc), '商店冰剑文案：一片冻住 1.6 秒（第 68 块半径改 7.0 格）');
 ok(/一道闪电打到场上所有怪（不限距离、不限只数）/.test(shopSrc), '商店雷剑文案：全场连锁');

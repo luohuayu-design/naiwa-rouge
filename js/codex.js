@@ -13,13 +13,13 @@
 // （击杀 / 弹事件卡 / 选升级卡）。
 // ============================================================
 
-import { ENEMY_TYPES } from './enemy.js?v=83';
-import { SWORD_KINDS } from './swordKinds.js?v=83';
-import { RELIC_DEFS } from './relics.js?v=83';
-import { UPGRADES } from './upgrade.js?v=83';
-import { ALL_EVENTS } from './events.js?v=83';
-import { RARITIES } from './rarity.js?v=83';
-import { codexAll, codexCount } from './profile.js?v=83';
+import { ENEMY_TYPES } from './enemy.js?v=84';
+import { SWORD_KINDS } from './swordKinds.js?v=84';
+import { RELIC_DEFS } from './relics.js?v=84';
+import { UPGRADES } from './upgrade.js?v=84';
+import { ALL_EVENTS } from './events.js?v=84';
+import { RARITIES } from './rarity.js?v=84';
+import { codexAll, codexCount } from './profile.js?v=84';
 
 export const CODEX_TABS = [
   { id: 'enemies', name: '怪物' },

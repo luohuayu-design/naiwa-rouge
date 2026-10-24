@@ -1,6 +1,6 @@
 // 第 72 块契约测试：按关预载（加载变快）
 import { readFileSync } from 'node:fs';
-import { LEVELS_BY_ID, levelTypes } from './js/wave.js?v=83';
+import { LEVELS_BY_ID, levelTypes } from './js/wave.js?v=84';
 
 let pass = 0, fail = 0;
 const ok = (name, cond) => { if (cond) { pass++; } else { fail++; console.log('  x ' + name); } };
@@ -57,9 +57,12 @@ ok('补载复用 #loading 而不是新造浮层', /loadingEl\.style\.display = '
 const html = readFileSync(new URL('./index.html', import.meta.url), 'utf8');
 const m = html.match(/main\.js\?v=(\d+)/);
 ok('index.html 版本号存在', !!m);
-ok('index.html 是 v=83', !!m && m[1] === '83');
+// ⚠️ HANDOFF 铁律：测试里**别写死版本号**，一律以 index.html 为基准比对
+const VER = m[1];
+ok('index.html 版本号 >= 83', Number(VER) >= 83, VER);
 const imps = [...mainSrc.matchAll(/from '\.\/[a-zA-Z]+\.js\?v=(\d+)'/g)].map((x) => x[1]);
-ok('main.js 内所有 import 都是 83', imps.length > 20 && imps.every((v) => v === '83'));
+ok(`main.js 内所有 import 都是 ${VER}（与 index.html 一致）`,
+  imps.length > 20 && imps.every((v) => v === VER), [...new Set(imps)].join(','));
 
 console.log('\n第 72 块契约：' + pass + ' 通过 / ' + fail + ' 失败');
 process.exit(fail ? 1 : 0);

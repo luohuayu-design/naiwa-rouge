@@ -34,11 +34,11 @@
 //       五种元素共用同一模型，克隆后改材质 color/emissive 染色区分；
 //       图标用 assets/weapons/icon-*.svg。加载失败时用双盒拼占位剑。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=83';
-import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=83';
-import { SWORD_KINDS, KIND_ORDER } from './swordKinds.js?v=83';
-import { rollSwordDamage } from './weaponStats.js?v=83';
-import audio from './audio.js?v=83';
+import * as THREE from '../lib/three.module.js?v=84';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=84';
+import { SWORD_KINDS, KIND_ORDER } from './swordKinds.js?v=84';
+import { rollSwordDamage } from './weaponStats.js?v=84';
+import audio from './audio.js?v=84';
 
 // 轨道半径（世界单位）：贴着主角攻击范围环内侧转，视觉上「护体剑气」
 const ORBIT_R = 1.7;
