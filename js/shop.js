@@ -26,9 +26,9 @@
 // 第 11 块：每件货都带 rarity（0 普通 ~ 4 传说），店里按品质加权抽取 ——
 // 幸运越高，摆出来的货越往金/红那一头走（见 rarity.js）。
 // ============================================================
-import { rarityWeight } from './rarity.js?v=78';
-import { TURRET } from './turret.js?v=78';
-import { RELIC_DEFS } from './relics.js?v=78';
+import { rarityWeight } from './rarity.js?v=79';
+import { TURRET } from './turret.js?v=79';
+import { RELIC_DEFS } from './relics.js?v=79';
 
 export const SHOP_ITEMS = [
   // ---------------- 生命药水（第 13 块起：买进背包，作战中随时用） ----------------
@@ -93,13 +93,13 @@ export const SHOP_ITEMS = [
     id: 'buyPoison', type: 'sword', kind: 'poison', price: 26, needWeapon: true,
     rarity: 1,
     icon: 'assets/weapons/icon-poison.svg', name: '毒剑',
-    desc: '命中点周围 3.5 格内每只怪都中毒：每秒 0.15 毒伤、持续 5 秒（属性可升级）。怪越挤越划算。',
+    desc: '命中点周围 7.0 格内每只怪都中毒：每秒 0.15 毒伤、持续 5 秒（属性可升级）。怪越挤越划算。',
   },
   {
     id: 'buyFrost', type: 'sword', kind: 'frost', price: 26, needWeapon: true,
     rarity: 1,
     icon: 'assets/weapons/icon-frost.svg', name: '冰剑',
-    desc: '命中点周围 3.5 格内的怪全部冻住 1.6 秒（属性可升级）：定身期间不能移动也不能攻击。放投手风筝、断骨骑冲锋都好用。',
+    desc: '命中点周围 7.0 格内的怪全部冻住 1.6 秒（属性可升级）：定身期间不能移动也不能攻击。放投手风筝、断骨骑冲锋都好用。',
   },
   {
     id: 'buyThunder', type: 'sword', kind: 'thunder', price: 34, needWeapon: true,
@@ -164,7 +164,7 @@ export const SHOP_ITEMS = [
     id: 'buyQuake', type: 'sword', kind: 'quake', price: 36, needWeapon: true,
     rarity: 3,
     icon: 'assets/weapons/icon-quake.svg', name: '震剑',
-    desc: '环剑阵里 +1 把震剑。命中时周围 3.5 格内每只怪 35% 概率被震退 1.4 格，并打断它的蓄力 / 读条。',
+    desc: '环剑阵里 +1 把震剑。命中时周围 7.0 格内每只怪 35% 概率被震退 1.4 格，并打断它的蓄力 / 读条。',
   },
   // ---------------- 第四关新增（第 35 块）：暖炉 ----------------
   {

@@ -251,7 +251,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     await sleep(400);
     const wRows = JSON.parse(await ev('JSON.stringify(__game.block64.panel.rows())'));
     ok(wRows.length === 12, `环剑页 12 项（含新增的元素波及/溅射，实际 ${wRows.length}）`);
-    ok(wRows.some((r) => r.name === '元素波及' && r.val.includes('3.5')), '环剑页能看到「元素波及 3.5 格」',
+    ok(wRows.some((r) => r.name === '元素波及' && r.val.includes('7.0')), '环剑页能看到「元素波及 7.0 格」',
       JSON.stringify(wRows.filter((r) => r.name === '元素波及')));
     ok(wRows.some((r) => r.name === '元素溅射' && r.val.includes('50')), '能看到「元素溅射 50%」');
     await ev('__game.block64.panel.close(), 1');
@@ -295,10 +295,10 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     await ev('__game.setWaves(true), 1');
     await ev('__game.setEnemies(true), 1');
     await sleep(600);
-    // 三只盾兵排在一条线上：前两只相距 1.2、第三只离第一只 5.5（超出 3.5 格）
+    // 三只盾兵排在一条线上：前两只相距 1.2、第三只离第一只 9 格（超出 7.0 格）
     const placed = await ev(`(() => {
       const p = __game.pos;
-      const xs = [2.0, 3.2, 6.5];
+      const xs = [2.0, 3.2, 11.0];
       const out = [];
       for (const dx of xs) {
         const e = __game.enemies.spawn('shielder', { x: p.x + dx, z: p.z + 0.001 });
@@ -313,7 +313,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     ok(frost && frost.n >= 3, '取到三只盾兵', JSON.stringify(frost && frost.n));
     ok(frost.frozen[0] > 0 && frost.frozen[1] > 0, '冰剑把命中点和身边的怪都冻住了',
       JSON.stringify(frost.frozen));
-    ok(frost.frozen[2] === 0, '圈外（6.5 格）那只没被冻', JSON.stringify(frost.frozen));
+    ok(frost.frozen[2] === 0, '圈外（9 格）那只没被冻', JSON.stringify(frost.frozen));
     ok(Math.abs((frost.before[1] - frost.after[1]) - 1.0) < 0.02,
       `身边那只吃到 50% 溅射 = 1.0（实际 ${(frost.before[1] - frost.after[1]).toFixed(2)}）`);
     ok(Math.abs(frost.before[0] - frost.after[0]) < 0.01, '直接命中的那只不重复吃溅射');
@@ -368,7 +368,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     ok(ringKinds.some((k) => k.kind !== 'iron'), '环上不止铁剑（属性剑确实上环了）',
       JSON.stringify(ringKinds));
     const wstat = JSON.parse(await ev('JSON.stringify(__game.block64.weaponStats())'));
-    ok(wstat.elementRadius === 3.5 && wstat.elementRatio === 0.5, '运行时读到元素波及 3.5 / 溅射 50%', JSON.stringify(wstat));
+    ok(wstat.elementRadius === 7.0 && wstat.elementRatio === 0.5, '运行时读到元素波及 7.0 / 溅射 50%', JSON.stringify(wstat));
     ok(wstat.poisonDps === 0.15 && wstat.frostTime === 1.6 && wstat.chainRatio === 0.45,
       '运行时元素基础值是新数（毒 0.15 / 冰 1.6 / 雷 0.45）', JSON.stringify(wstat));
 

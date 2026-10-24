@@ -14,7 +14,7 @@
 // 数值怎么算：与 stats.js 完全同一套 (base + Σflat) × (1 + Σpct)。
 // 面板分组：'剑本体' / '元素'。
 // ============================================================
-import { createStats, mitigate, pct, num1 } from './stats.js?v=78';
+import { createStats, mitigate, pct, num1 } from './stats.js?v=79';
 
 export const WEAPON_STAT_DEFS = [
   // ---------------- 剑本体 ----------------
@@ -32,7 +32,9 @@ export const WEAPON_STAT_DEFS = [
   // 命中后波及命中点周围 elementRadius 格内的所有怪（雷剑是全场连锁，不看这个半径）。
   // 同时元素剑的基础值整体抬了一档（毒 0.10→0.15/秒、冰冻 1.2→1.6 秒、闪电 35%→45%），
   // 因为它们现在要吃「一个卡位、一把剑」的预算。
-  { key: 'elementRadius', name: '元素波及',  base: 3.5,   fmt: (v) => v.toFixed(1) + ' 格', group: '元素', desc: '毒/冰/血/震命中时波及的半径（雷剑是全场连锁，不受这个数影响）' },
+  // 第 68 块（用户：「毒剑和冰这些的范围太小了，至少扩大两倍」）：3.5 → 7.0 格。
+  // 判定圈和视觉圈同源（weapon.js 的 aroundPoint + fx.ring 都用这个值），改一处两边一起变大。
+  { key: 'elementRadius', name: '元素波及',  base: 7.0,   fmt: (v) => v.toFixed(1) + ' 格', group: '元素', desc: '毒/冰/血/震命中时波及的半径（雷剑是全场连锁，不受这个数影响）' },
   { key: 'elementRatio',  name: '元素溅射',  base: 0.5,   fmt: pct,  group: '元素', desc: '毒/冰/血/震波及到的怪吃到的伤害比例（直接命中的那只仍是全额）' },
   { key: 'poisonDps',    name: '毒伤',       base: 0.15,  fmt: (v) => v.toFixed(2) + '/秒', group: '元素', desc: '毒剑命中后，波及范围内每只怪每秒扣的血' },
   { key: 'poisonTime',   name: '毒持续',     base: 5.0,   fmt: (v) => v.toFixed(1) + ' 秒',  group: '元素', desc: '中毒状态的持续时间' },

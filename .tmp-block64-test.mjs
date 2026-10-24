@@ -40,7 +40,7 @@ sec('一、武器属性表：新增群体参数 + 元素基础值上调');
 // ============================================================
 ok(WEAPON_STAT_DEFS.length === 12, `武器属性表 12 项（实际 ${WEAPON_STAT_DEFS.length}）`);
 const wdef = (k) => WEAPON_STAT_DEFS.find((d) => d.key === k);
-ok(!!wdef('elementRadius') && wdef('elementRadius').base === 3.5, '新增「元素波及」3.5 格');
+ok(!!wdef('elementRadius') && wdef('elementRadius').base === 7.0, '新增「元素波及」7.0 格（第 68 块从 3.5 翻倍）');
 ok(!!wdef('elementRatio') && wdef('elementRatio').base === 0.5, '新增「元素溅射」50%');
 ok(wdef('poisonDps').base === 0.15, `毒伤基础 0.15/秒（实际 ${wdef('poisonDps').base}）`);
 ok(wdef('frostTime').base === 1.6, `冰冻基础 1.6 秒（实际 ${wdef('frostTime').base}）`);
@@ -51,7 +51,7 @@ ok(WEAPON_STAT_DEFS.every((d) => typeof d.fmt === 'function' && d.desc && d.desc
   '12 项都有 fmt 和说明');
 
 const w = createWeaponStats();
-ok(w.get('elementRadius') === 3.5 && w.get('elementRatio') === 0.5, '实例读得到新参数');
+ok(w.get('elementRadius') === 7.0 && w.get('elementRatio') === 0.5, '实例读得到新参数');
 // 剑伤不受影响：这一块只调元素，不动 swordDamage
 ok(w.get('swordDamage') === 1.60, '剑伤害基础仍是 1.60（没被这次加强误伤）');
 const roll = rollSwordDamage(w, { targetArmor: 0, rng: () => 0.99 });
