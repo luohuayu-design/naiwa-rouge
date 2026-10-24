@@ -2,13 +2,13 @@
 
 > 新对话从这里开始读，不要先翻聊天记录。**先读 §0「给新对话的话」，再按需查后面章节。**
 >
-> 最后更新：2026-10-24 · 线上 **v=74** · 第 63 块（第五关 / 第六关 + 第 62 块阶段二）已完成并推送。
+> 最后更新：2026-10-24 · 线上 **v=75** · 第 64 块（教程扩到 8 步 / 元素剑群体化 / 剑系卡翻倍 / 属性面板技能页 / 技能 CD 两位小数 / 主线番外事件）已完成并推送。
 
 ---
 
 ## 0. 给新对话的话（2026-10-23 交接）
 
-1. **当前基线**：v=74（第 63 块 = 第五关「草甸路口」/ 第六关「骨塔机房」+ 第 62 块阶段二：回血技能 / 民心专属事件 / 攻略面板）已推送，git 工作区干净，**没有挂起的半成品**。用户新需求来了再开工，别主动找活。
+1. **当前基线**：v=75（第 64 块 = 新手教程扩到 8 步讲透判定环与 UI / 环剑恢复顺序随机化 / 毒冰血震群体化（命中点 3.5 格）/ 剑系 9 张卡约翻倍 / 属性面板第三页「技能」/ 技能 CD 两位小数 / 10 条主线番外事件；再往前是第 63 块第五关「草甸路口」+ 第六关「骨塔机房」）已推送，git 工作区干净，**没有挂起的半成品**。用户新需求来了再开工，别主动找活。
 2. **节奏**：用户偏好**小步块状推进**——一块功能 = 一次提交 = 一个版本号（v=N）。**做完回归绿就立刻推送交给用户测**，用户反馈比自测更快更准。
 3. **最容易翻车的五件事**：
    ① 发版**两处版本号**都要 bump（index.html 的 `main.js?v=N` / `style.css?v=N` + `js/*.js` 里所有 `import ...?v=N`）——漏一处就是「本地好线上炸」；
@@ -16,9 +16,10 @@
    ③ 公告在 loading 淡完 **+700ms** 才弹，测试截图先 `sleep(2600)` 再 `__game.notice.hide()`；
    ④ `jumpToRound/skipRound` **只在 adminOn 时生效**，不开管理员是静默 no-op；
    ⑤ 本地服务器必须 `run_in_background`；CDP 截图路径**不能含中文**；推送走 `git -c http.proxy=http://127.0.0.1:7897 ...`（先 curl 探代理，挂了改直连）。
-4. **最新绿基线**（动到相关文件后要回归）：Node 14 套约 1180 项 + CDP 53 套约 1760 项全绿（第 63 块新增 `.tmp-block63-test.mjs` 119 项 / `.tmp-block63-cdp.js` 57 项），具体套件与数字见 §6。
+4. **最新绿基线**（动到相关文件后要回归）：Node 15 套约 1200 项 + CDP 54 套约 1820 项全绿（第 64 块新增 `.tmp-block64-test.mjs` 164 项 / `.tmp-block64-cdp.js` 58 项），具体套件与数字见 §6。仓库内 12 套的最新数字：block52 141 / block53 46 / block54 54 / block55 91 / **block56 84** / block57 112 / block58 18 / block59 49 / block63 119 / block64 164 / gift 18 / story 76，全部 0 失败。
 5. **已知既有失败（过期断言，别浪费时间查）**：`.tmp-camp-test.mjs` 84/22、`.tmp-boon-test.mjs` 133/13（偶发抖动）、`.tmp-eventui-test.js` 35/2、`.tmp-block18-test.js` 34/1、`.tmp-start-test.js` 33/15、`.tmp-block30-cdp.js` 42/8、`.tmp-ui-test.js` 15/7。
    **第 63 块已修红的**（原来是过期断言，现已改成与实况一致，全 0 失败）：`.tmp-level4-test.mjs` 90/0（雾鬼取消显形距离 / 奶半径 8.0 / 怪 15 / 法器 8 / 成就 41）、`.tmp-level3-test.mjs` 71/0（法器 7）、`.tmp-event-test.mjs` 105/0（事件 121 / 连锁 22 / 民心 0~120）、`.tmp-block52/56/57/59-test.mjs`、`.tmp-story-test.mjs`（18 夜 = 18 关，前 6 夜已绑关）。
+   **第 64 块又修红的**：`.tmp-block56-test.mjs` 77/7 → **84/0**（全是第 56 块写死的旧数值：frostTime 1.2→1.6、chainRatio 0.35→0.45、严寒 +0.3→+0.6、导电 +10%→+20%、冰剑 tagline / 雷剑 45% / 商店冰剑文案）、`.tmp-stats-test.mjs` 70/0、`.tmp-rogue-unit.mjs` 144/0、`.tmp-econ-test.mjs` 80/0、`.tmp-event-test.mjs` 105/0、`.tmp-event-test.mjs` 的事件数 121→**131**。
 6. **用户规则**：全中文；有疑问先问、有疑问不写码；README 与实况同步；美术资产优先 GitHub 现成 CC0；不做多角色；局外对局内影响要小（篝火每级 +1 生命这种量级）。
 7. **新怪信息卡在 `?debug=1` 下默认关**（第 55 块）：它会冻结世界，老 CDP 一开局被拦。测这张卡的套件加 **`&meet`**（或 `__game.meetCard.setAuto(true)`）；正常游玩永远开。同类「首次提示型」弹窗以后照这个办：**生产默认开、测试显式开**。
 8. **`el.hidden = true` 不一定能藏住元素**（第 60 块踩的）：只要给这个元素写过 `display`（`.tt-dot` 就是 inline-block），作者样式就压过 UA 的 `[hidden]{display:none}`，属性翻了但照样显示。style.css 顶部现在有全局 `[hidden]{display:none!important}` 兜底；**测试断言可见性请读 `getComputedStyle` / `getClientRects()`，别读 `.hidden` 属性**（签到红点就是这么假绿了一整轮的）。
@@ -31,7 +32,12 @@
     ③ **测第五/六关必须先造档案**：关卡是锁的（要打通上一关）、第二关起「开局送环剑」也要 `profile.ringGot`。`profile()` 启动时读进内存 → 写 localStorage 之后**必须 reload**；否则点 `.lv-item` 是静默失败、游戏从第一关开始，断言全在错的数据上跑；
     ④ **第二关起开局会连排两段武器教程（`gameState='wtut'`）**，世界是冻的：起局后要循环点 `#wtSkip` 直到 `state==='playing'`；同理回合清空会弹升级卡，长测试要有个 `clearPanels()` 助手（见 `.tmp-block63-cdp.js`）；
     ⑤ **属性键名是 `armor`，不是 `defense`**（「防御」只是显示名）：写 `{ stat: 'defense' }` 不会报错，`stats.mods` 直接无视这个键 —— 文案承诺的加成静默归零。第 62 块两条民心事（`repGoodRepair` / `repGoodNames`）就这么空转了一轮，是 `.tmp-event-test.mjs` 的「所有 mods 的 stat 都在属性表里」断言抓出来的。**以后加永久加成，跑这套测试**。
-13. **改横向特性要回头跑老套件**（2026-10-23 教训）：读秒锁让 block32 静默挂；公告升 `NOTICE_VER` 让 block45 挂；**技能键常驻 DOM**（`renderSkill` 只切 `display`）让 weapon/talk-skill/econ-cdp 数技能格假绿（必须 `filter(b => b.style.display !== 'none')`）；乞丐/商队两拍对话 + 3s 读秒让 `choose` 点 disabled 静默失败（加 `sleep(3500)`）。
+13. **第 64 块的四条新坑**：
+    ① **用户可见文字里的 `**加粗**` 会被原样显示**：`textContent` 不认 markdown。教程卡、图鉴怪描述、`swordKinds.desc` 全走 `textContent` —— 要么别写星号（改用「」），要么走 `guide.js` 里新加的 `richText()`（按 `**` 切段生成 `<b class="gd-b">`）。改完 grep 一遍 `js/*.js` 里的 `\*\*`；
+    ② **`e.dot` 的时间字段是 `t`，不是 `time`**（`applyDot` 里写的是 `e.dot.t`）：测试钩子读 `.time` 会得到 `undefined`，断言「毒命中」全 false；
+    ③ **测试文件自己的 `import '?v=N'` 也要跟着 bump**：模块升 v=75 后 `.tmp-block59/64` 直接 `TypeError: Cannot read properties of undefined`。批量 `sed -i 's/?v=74/?v=75/g' .tmp-*.mjs .tmp-*.js`（含上级目录）；
+    ④ **改数值要全仓库扫旧文案**：商店 `shop.js` 的剑描述、图鉴 `codex.js`、`swordKinds.desc`、`guide.js`、武器教程 `WEAPON_TUT` 是五份独立的文案副本，改完数值只改一处 = 玩家看到「冻 1.2 秒」实际冻 1.6 秒。第 64 块就是靠 block56 的旧断言对拍才发现商店还写着 1.2 秒 / 35%。
+14. **改横向特性要回头跑老套件**（2026-10-23 教训）：读秒锁让 block32 静默挂；公告升 `NOTICE_VER` 让 block45 挂；**技能键常驻 DOM**（`renderSkill` 只切 `display`）让 weapon/talk-skill/econ-cdp 数技能格假绿（必须 `filter(b => b.style.display !== 'none')`）；乞丐/商队两拍对话 + 3s 读秒让 `choose` 点 disabled 静默失败（加 `sleep(3500)`）。
 
 ---
 
@@ -103,6 +109,7 @@ Three.js r160 的单摇杆幸存者肉鸽《奶蛙夜行》，纯静态站点（
 | **60** | **v=70** | **hotfix：签到后红点不消失 —— `.tt-dot{display:inline-block}` 压过 UA 的 `[hidden]{display:none}`，属性翻了但元素照样画；加全局 `[hidden]{display:none!important}` 兜底，`sign.btn()` 调试钩子改读 computed 可见性（原来只读属性才假绿）；顺手把「本周 1 / 7 天 · 今天已签」缩回一行（窄按钮换行把整排撑错位）** |
 | **62** | **v=72** | **阶段一：盾斧兽人 / 孢生菇缩到战士 1.4 倍（1.90）；雾鬼 / 雾猎狼 / 缝补小巫统一到 1.85；缝补小巫奶半径 3.2→8.0 且不再画判定圈（只给被治的怪冒绿光）；雾鬼删掉「贴脸强制显形」；奶蛙音效包感知音量 ×1.8（VOICE_GAIN）；民心上限 100→120 + 商店折扣下限放到 0.65；存档列表排序修正在块 61** |
 | **63** | **v=74** | **第五关「草甸路口」**（四向路口刷怪 `lanes:4`，可以提前站位；新怪**擦名者**读条 2.6s 擦走环上一把剑、得手后往场外跑，杀掉还回来 / 跑掉永久没；新法器**路口灯**每 3~4 秒照亮一圈，唯一反隐手段）+ **第六关「骨塔机房」**（地上 6 块**漏电地板**周期通电、通电前 0.8s 橙光预警，站上去每 0.6s 掉 1 血且不吃无敌帧；新怪**重启体**死后躺 4s 半血重启、最多 2 次；新法器**绝缘斗篷**免地板伤害并把电导给身边的怪）+ 第 62 块阶段二（**回血技能**第 4 关通关永久解锁 / **民心专属事件**涨跌档各一套 9 条 / **攻略面板**战败后可看）+ 骨币倍率补齐 4~6 关 + 商店新增 `needLevel` 门槛 + 右上角 HUD 关卡名不再写死** |
+| **64** | **v=75** | **① 新手教程 4 步→8 步**（走路 / **判定环** / 打第一只 / 三选一 / 属性面板 / 技能栏与 CD 读秒 / 背包 / 开局），推进从「按下标」改成「按 `kind`」，讲解步用 `#tcNext` 手动翻；**② 环剑恢复顺序随机化**（导出纯函数 `pickMissingKind(owned, ringKinds, rng)`：从「库存减环上」的差集里随机挑，属性剑不再被先得的铁剑稀释）；**③ 元素剑群体化**（毒/冰/血/震统一「命中点 3.5 格内一圈」，直接命中那只不吃溅射，血剑按一圈总伤害回血；雷剑保持全场连锁并 `return`，不进圆圈分支；新增武器属性 `elementRadius` 3.5 格 / `elementRatio` 50%）；**④ 剑系 9 张卡约翻倍**（剑伤害 30→60% / 暴击 0.08→0.16 / 吸剑 40→80% / 转速 25→50% / 锻剑 −1→−2 秒 / 淬毒 0.05→0.12 / 严寒 0.3→0.6 / 导电 0.10→0.20 / 回春 0.05→0.10）；**⑤ 属性面板加第三页「技能」**（3 个技能 + CD 时长 + 当前状态 + 未解锁写清条件）；**⑥ 技能 CD 倒计时两位小数**（`skills.js` 的 `fmtCd`，原 `Math.ceil`）；**⑦ 主线番外事件 10 条**（`js/eventsSide.js`，全部带 `cond(ctx.story)`，看过对应夜才进池；事件总数 121→**131**）** |
 | **61** | **v=71** | **读取存档列表改成「最近的在上」**（原升序 + 面板头还写着「早的在上」，已同步改成「最近的在上」）；顺手修 `resumeGame()` 无 uid 兜底分支的同类错误（注释写取最近一次，实际升序 + `[0]` 拿到最旧的那份）** |
 
 > 每个块的实现细节、测试坑、真 bug 教训已沉淀进上面的铁律 / 调试钩子 / 文件地图与代码注释，不再单列。
@@ -113,15 +120,16 @@ Three.js r160 的单摇杆幸存者肉鸽《奶蛙夜行》，纯静态站点（
 
 | 文件 | 职责 |
 | --- | --- |
-| `main.js`（~5400 行） | 主循环 + 所有 UI 面板 + 各系统接线 + `__game` 钩子。**改之前先 grep 定位** |
+| `main.js`（~6700 行） | 主循环 + 所有 UI 面板 + 各系统接线 + `__game` 钩子。**改之前先 grep 定位** |
 | `wave.js` | 20 回合编排、`roundScale`、难度 `DIFFS`、`startAt`（读档）、升级/商店节点 |
-| `stats.js` | 通用属性引擎（`createStats(defs)`），主角 14 项 / 武器 11 项两套实例 |
+| `stats.js` | 通用属性引擎（`createStats(defs)`），主角 14 项 / 武器 **12 项**两套实例 |
 | `enemy.js` | 13 只怪（一只一个 glb）、`CLIP_FAMILIES` 动作家族翻译、配件挂骨骼、血条统一 `BAR_W=1.5`、冰冻 `freezeT` |
-| `weapon.js` | 环剑、5 种元素剑；**万剑齐发 CD 制**（n=owned.length、不动环绕）；冰剑 `applyFreeze`、雷剑 `chainTargets(e, Infinity, Infinity)` |
+| `weapon.js` | 环剑、5 种元素剑；**万剑齐发 CD 制**（n=owned.length、不动环绕）；**第 64 块：毒/冰/血/震统一走 `aroundPoint()` 炸一圈（`elementRadius` 3.5 格、`elementRatio` 50% 溅射）**，雷剑 `chainTargets(e, Infinity, Infinity)` 全场连锁后 `return`；恢复顺序走导出的 `pickMissingKind()` 随机挑 |
 | `turret.js` / `relics.js` | 弩炮台（上限 3）、地刺/霜环/暖炉（各 3 级） |
 | `upgrade.js` | 28 张升级卡（含 rarity 0~4） |
 | `shop.js` | 18 件货、按品质加权摆 4 件 |
-| `events.js` + `eventsExtra.js` + `repEvents.js` | 99 随机 + 13 老连锁 + 9 民心事（第 62 块）= 121 事件；`eventsExtra.js` / `repEvents.js` 只放数据 |
+| `events.js` + `eventsExtra.js` + `eventsSide.js` + `repEvents.js` | 99 随机 + **10 条主线番外（第 64 块）** + 13 老连锁 + 9 民心事（第 62 块）= **131 事件**；抽签池是 `RANDOM_EVENTS`（`[...EVENTS, ...SIDE_EVENTS]`），`ALL_EVENTS` 才含连锁与民心。后面三个文件只放数据 |
+| `eventsSide.js` | **主线番外 10 条（第 64 块）**：`cond(ctx.story)` 读 `seen/read` 判断玩家看过对应夜没有，看过才进抽签池（例：爷爷的锅 s01、047 的按钮 s02、阿苏跑腿 s04、阿静倒酒 s07\|s10、空白页 s11、小满的铅笔 s16） |
 | `campfire.js` | 篝火/骨币（九簇 × 无限级线性阶梯价 `×(1+0.35×level)`） |
 | `boons.js` | 永夜火种（16 张永久卡 + 层数上限 + 品质抽签 + `boonPending` 待领次数） |
 | `curses.js` | 夜行诅咒（六条 debuff、倍率加法叠加） |
@@ -134,8 +142,9 @@ Three.js r160 的单摇杆幸存者肉鸽《奶蛙夜行》，纯静态站点（
 | `arrowRain.js` | 箭雨（单技能 8s CD、自动落群箭，伤害走 wstats） |
 | `statView.js` | 属性页 3D 展台（独立 canvas，只有开着才 update） |
 | `signin.js` | 每日签到（第 59 块）：周一起算的 7 天进度、20/100/200 三档奖励、跨周清零、脏数据过滤 |
+| `skills.js` | **技能注册表（第 64 块扩充）**：`visible/ready/progress/press/cdText` + `cd/cdNow/desc/unlockNote/state`；`fmtCd()` 统一两位小数（原 `Math.ceil`） |
 | `story.js` | 主线 18 夜数据 + 印记/结局 + 调度（加新关只改对应夜的 `levelId`+`atRound`） |
-| `codex.js` / `achievements.js` / `audio.js` / `joystick.js` / `scene.js` / `frog.js` / `fx.js` / `gold.js` / `skills.js` / `input.js` / `rangeRing.js` / `swordKinds.js` | 图鉴渲染数据 / 26 条成就 / 音频引擎 / 摇杆 / 场景 / 角色 / 特效 / 金币 / 技能注册 / 输入 / 范围环 / 剑种 |
+| `codex.js` / `achievements.js` / `audio.js` / `joystick.js` / `scene.js` / `frog.js` / `fx.js` / `gold.js` / `input.js` / `rangeRing.js` / `swordKinds.js` / `guide.js` | 图鉴渲染数据 / **41 条成就** / 音频引擎 / 摇杆 / 场景 / 角色 / 特效 / 金币 / 输入 / 范围环 / 剑种（`tagline`+`desc` 走 textContent，**别写 markdown 星号**）/ 攻略面板（含 `richText()` 加粗渲染） |
 | `assets/` | `rigged.glb`（奶蛙）、`weapons/`、`monsters/`（13 个 glb，共 5.0MB，boot 全量预载）、`props/`（CC0 道具）、`codex/*.webp`（13 张图鉴缩略图）、`audio/` |
 
 ---
@@ -147,7 +156,7 @@ Three.js r160 的单摇杆幸存者肉鸽《奶蛙夜行》，纯静态站点（
 3. **资产优先 GitHub 现成 CC0**：需要 3D 模型/贴图/UI 形状贴图时先找现成的（KayKit / Quaternius 等），程序化只作加载失败兜底。
 4. **数值改动必须跑回归**：Node 5 套 + 相关 CDP 套（见 §6）。
 5. **属性公式**：`(base + flat) × (1 + Σpct)`；`base = 0` 的属性只能用 flat。
-6. **两套属性表**：主角 `STAT_DEFS`（14 项）、武器 `WEAPON_STAT_DEFS`（11 项）。剑击只读 `wstats`。
+6. **两套属性表**：主角 `STAT_DEFS`（14 项）、武器 `WEAPON_STAT_DEFS`（**12 项**，第 64 块新增 `elementRadius` 元素波及 / `elementRatio` 元素溅射）。剑击只读 `wstats`。
 7. **品质是抽签权重**，不是先摇档再挑卡。
 8. **`handleRoundClear` 只允许存在一份**（同名 function 重复声明会静默覆盖）。
 9. **一件武器只教一次**（`localStorage['naiwa_rouge_wtut_v1']`）。
@@ -181,6 +190,9 @@ jumpToRound(n) / skipRound()   ← 仅 adminOn 时生效
 gift.{state,open,redeem,list} / notice.{show,hide,seenReset} / pack.{...} / arrowRain.{...}
 statPage.{show,ready,yaw,rows} / promo.{show,hide,open,art,ver,key,clear} / render{live,frames,appH,appHpx}
 sign.{show,hide,open,state,cells,signed,do,btn} / ui.perf{auto,state,setFps,tick,reset} / meta.apply
+block64.tut{step,total,kind,title,text,stepText,nextHidden,next,start,skip}   ← 教程 8 步（截图/断言用）
+block64.panel{open,close,tab,rows,notes,sub}                                  ← 属性面板三页
+block64.skillNums() / ringKinds() / ringOrder() / elemHit(kind,type) / weaponStats() / grantRing()
 ```
 
 常用：`__game.hurt(99)` 直接结算；`__game.enemies.all().forEach(e=>__game.enemies.takeDamage(e,999))` 清场（**注意：清光会弹三选一，挡住后续操作**）。
@@ -189,9 +201,9 @@ sign.{show,hide,open,state,cells,signed,do,btn} / ui.perf{auto,state,setFps,tick
 
 ## 6. 测试
 
-**Node 13 套（纯逻辑，秒级）**：`node .tmp-stats-test.mjs`（属性）/ `.tmp-rogue-unit.mjs`（回合升级概率）/ `.tmp-econ-test.mjs`（经济商店事件）/ `.tmp-event-test.mjs`（121 事件）/ `.tmp-rarity-test.mjs`（品质幸运）/ `.tmp-camp-test.mjs`（篝火骨币）/ `.tmp-level2-test.mjs`（第二关）/ `.tmp-level3-test.mjs`（第三关）/ `.tmp-level4-test.mjs`（第四关）/ `.tmp-admin-test.mjs` / `.tmp-eventui-test.js` / `.tmp-curse-test.mjs` / `.tmp-boon-test.mjs`（永夜火种）。
+**Node 15 套（纯逻辑，秒级）**：`node .tmp-stats-test.mjs`（属性）/ `.tmp-rogue-unit.mjs`（回合升级概率）/ `.tmp-econ-test.mjs`（经济商店事件）/ `.tmp-event-test.mjs`（**131 事件** + 番外剧情门槛）/ `.tmp-rarity-test.mjs`（品质幸运）/ `.tmp-block64-test.mjs`（**164 项：武器属性表 / 剑系卡翻倍 / 元素说明 / 番外分布 / 技能元数据 / 攻略面板 / 教程 8 步 / 恢复顺序分布 / 版本号**）/ `.tmp-camp-test.mjs`（篝火骨币）/ `.tmp-level2-test.mjs`（第二关）/ `.tmp-level3-test.mjs`（第三关）/ `.tmp-level4-test.mjs`（第四关）/ `.tmp-admin-test.mjs` / `.tmp-eventui-test.js` / `.tmp-curse-test.mjs` / `.tmp-boon-test.mjs`（永夜火种）。
 
-**CDP 端到端（需先起 8124；一次只跑一套，套间跑 `.tmp-cdp-clean.js`）**：开局/战斗/菜单/设置/存档续玩/图鉴/成就/武器教程/炮台法器/`block18~57` 各块专项/`admin`/`seed`/`pack`/`promo`/`start-test` 等共 52 套，约 1700 项。脚本在上级目录（第 32 块前）与 `naiwa-rouge/`（第 41 块起）。
+**CDP 端到端（需先起 8124；一次只跑一套，套间跑 `.tmp-cdp-clean.js`）**：开局/战斗/菜单/设置/存档续玩/图鉴/成就/武器教程/炮台法器/`block18~57` 各块专项/`admin`/`seed`/`pack`/`promo`/`start-test`/`block64` 等共 **54 套**，约 1820 项。脚本在上级目录（第 32 块前）与 `naiwa-rouge/`（第 41 块起）。
 
 **跑全量回归的正确姿势（2026-10-21 定）**：
 - 启动参数带 `--num-raster-threads=2 --renderer-process-limit=1` + 关后台节流（SwiftShader 会按核数开线程打满 CPU）。
@@ -206,8 +218,9 @@ sign.{show,hide,open,state,cells,signed,do,btn} / ui.perf{auto,state,setFps,tick
 用户 2026-10-21 定：**不要多角色，其他都可以做，只要局外因素对局内影响不会过大**。
 
 - [x] 第 19~57 块全部完成并推送（见 §2）
+- [x] 第五关「草甸路口」/ 第六关「骨塔机房」（第 63 块）
 - [ ] **主菜单 3D 背景**（场景和模型都在，只是没跑 render）
-- [ ] 第五关（主线 s05《一百只蛙的名单》蛙爷，`story.js` 里 `levelId:null` 等接）
+- [ ] 第七关（主线 s07 起还有 12 夜的 `levelId:null` 等接）
 - [ ] 更多武器/技能（`skills.js` 的 SKILLS 表，技能栏还剩 5 格）
 - [ ] 性能优化（怪物合批/假阴影/视锥剔除）—— **等用户点头再动**
 - [ ] 不做：主菜单排行榜（无后端）、商城/皮肤、广告位、多角色

@@ -31,9 +31,9 @@
 //   标了 scope:'weapon' 的项改的是武器表（剑系 / 元素系），其余改主角表。
 //   两块表都要传进来，没传 wstats 时武器项会退化到主角表（只为兼容老调用）。
 // ============================================================
-import { STAT_DEFS } from './stats.js?v=74';
-import { WEAPON_STAT_DEFS } from './weaponStats.js?v=74';
-import { RARITIES, rarityWeight, oddsOf } from './rarity.js?v=74';
+import { STAT_DEFS } from './stats.js?v=75';
+import { WEAPON_STAT_DEFS } from './weaponStats.js?v=75';
+import { RARITIES, rarityWeight, oddsOf } from './rarity.js?v=75';
 
 // 一张卡改的是哪块表
 function tableFor(scope, stats, wstats) {
@@ -101,26 +101,30 @@ export const UPGRADES = [
   },
   // ---- 武器系（needsWeapon：第 5 回合拿到环剑后才会进抽取池）
   //      scope:'weapon' = 改的是武器自己的属性表，与主角的攻击/暴击毫无关系 ----
+  // 第 64 块（用户定案「剑的属性提升都太弱，要大大加强」）：本组与下面元素组的
+  // 数值**全部约翻倍**。以前「剑伤害 +30%」在后期只有 1.6→2.08，玩家拿了没感觉；
+  // 现在一张卡就能明显看出剑阵变厚。翻倍的同时保持内部比例不变（暴击/暴伤/转速
+  // 的跷跷板关系没动），只是整体抬了一档。
   {
     id: 'swordEdge', tag: 'atk', glyph: '🗡', name: '剑刃',
     rarity: 1, needsWeapon: true, scope: 'weapon',
     w0: 1.20, gw: +0.060,   // 权重 = w0 + gw × (回合-1)
-    title: '剑伤害 +30%', desc: '直接放大环剑每一剑的伤害',
-    stat: 'swordDamage', pct: 0.30,
+    title: '剑伤害 +60%', desc: '直接放大环剑每一剑的伤害（第 64 块起翻倍）',
+    stat: 'swordDamage', pct: 0.60,
   },
   {
     id: 'swordCrit', tag: 'atk', glyph: '✦', name: '剑锋',
     rarity: 1, needsWeapon: true, scope: 'weapon',
     w0: 0.90, gw: +0.070,
-    title: '剑暴击率 +8%', desc: '环剑自己的暴击概率（基础 10%），不吃主角暴击率',
-    stat: 'swordCrit', flat: 0.08,
+    title: '剑暴击率 +16%', desc: '环剑自己的暴击概率（基础 10%），不吃主角暴击率',
+    stat: 'swordCrit', flat: 0.16,
   },
   {
     id: 'swordFang', tag: 'atk', glyph: '✧', name: '淬锋',
     rarity: 2, needsWeapon: true, scope: 'weapon',
     w0: 0.70, gw: +0.090,
-    title: '剑暴击伤害 +40%', desc: '剑暴击时更疼；和剑锋一起拿收益最大',
-    stat: 'swordCritMul', pct: 0.40,
+    title: '剑暴击伤害 +80%', desc: '剑暴击时更疼；和剑锋一起拿收益最大',
+    stat: 'swordCritMul', pct: 0.80,
   },
   {
     id: 'swordArray', tag: 'atk', glyph: '✹', name: '剑阵',
@@ -133,44 +137,44 @@ export const UPGRADES = [
     id: 'swordSpin', tag: 'atk', glyph: ' ⟳', name: '疾轮',
     rarity: 0, needsWeapon: true, scope: 'weapon',
     w0: 1.00, gw: +0.020,   // 权重 = w0 + gw × (回合-1)
-    title: '剑转速 +25%', desc: '剑转得更快，同样时间扫过更多怪',
-    stat: 'swordOrbit', pct: 0.25,
+    title: '剑转速 +50%', desc: '剑转得更快，同样时间扫过更多怪',
+    stat: 'swordOrbit', pct: 0.50,
   },
   {
     id: 'swordForge', tag: 'atk', glyph: '⚒', name: '锻造',
     rarity: 0, needsWeapon: true, scope: 'weapon',
     w0: 0.90, gw: +0.010,   // 权重 = w0 + gw × (回合-1)
-    title: '剑匣收紧', desc: '整环补满时间 10 → 9 秒（无论几把剑都在时限内补满）',
-    stat: 'swordRefill', flat: -1.0,
+    title: '剑匣收紧', desc: '整环补满时间 10 → 8 秒（无论几把剑都在时限内补满）',
+    stat: 'swordRefill', flat: -2.0,
   },
   // ---- 元素剑系（拿到对应剑才真正有意义，但只要有环剑就可抽；商店可买元素剑） ----
   {
     id: 'venom', tag: 'atk', glyph: '☠', name: '淬毒',
     rarity: 2, needsWeapon: true, scope: 'weapon',
     w0: 0.80, gw: +0.030,
-    title: '毒伤 +0.05/秒', desc: '毒剑的中毒更疼（0.10 → 0.15/秒），持续 5 秒不变',
-    stat: 'poisonDps', flat: 0.05,
+    title: '毒伤 +0.12/秒', desc: '毒剑的中毒更疼（0.15 → 0.27/秒），且毒会铺满整片波及范围',
+    stat: 'poisonDps', flat: 0.12,
   },
   {
     id: 'chill', tag: 'atk', glyph: '❆', name: '严寒',
     rarity: 2, needsWeapon: true, scope: 'weapon',
     w0: 0.80, gw: +0.030,
-    title: '冰冻 +0.3 秒', desc: '冰剑把怪冻得更久（1.2 → 1.5 秒），定住就是完全动不了',
-    stat: 'frostTime', flat: 0.3,
+    title: '冰冻 +0.6 秒', desc: '冰剑把怪冻得更久（1.6 → 2.2 秒），一片全定住',
+    stat: 'frostTime', flat: 0.6,
   },
   {
     id: 'volt', tag: 'atk', glyph: '⚡', name: '导电',
     rarity: 3, needsWeapon: true, scope: 'weapon',
     w0: 0.60, gw: +0.040,
-    title: '闪电伤害 +10%', desc: '雷剑连锁的每道闪电更疼（35% → 45%），连锁目标是场上所有怪',
-    stat: 'chainRatio', flat: 0.10,
+    title: '闪电伤害 +20%', desc: '雷剑连锁的每道闪电更疼（45% → 65%），连锁目标是场上所有怪',
+    stat: 'chainRatio', flat: 0.20,
   },
   {
     id: 'spring', tag: 'atk', glyph: '❥', name: '活血',
     rarity: 2, needsWeapon: true, scope: 'weapon',
     w0: 0.60, gw: +0.030,
-    title: '血剑回血 +5%', desc: '血剑按伤害回血的比例 15% → 20%',
-    stat: 'leechRate', flat: 0.05,
+    title: '血剑回血 +10%', desc: '血剑按伤害回血的比例 15% → 25%（群体命中时按总伤害算）',
+    stat: 'leechRate', flat: 0.10,
   },
   // ---- 经济 ----
   {

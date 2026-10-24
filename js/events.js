@@ -44,15 +44,18 @@
 // ctx: { round, hasWeapon, gold, rep, hp, maxHp, luck }
 //   luck 用来写 cond（幸运够高才遇得到的吉兆事件，第 11 块）。
 // ============================================================
-import { STAT_DEFS } from './stats.js?v=74';
-import { WEAPON_STAT_DEFS } from './weaponStats.js?v=74';
+import { STAT_DEFS } from './stats.js?v=75';
+import { WEAPON_STAT_DEFS } from './weaponStats.js?v=75';
 // 第 31 块：事件扩容（40 条随机事件 + 3 条连锁后续）单独放一个文件，
 // 不然这个文件会涨到 5000 行。抽取规则、effectLines 等工具函数仍在本文件。
-import { EXTRA_EVENTS, EXTRA_CHAIN_EVENTS } from './eventsExtra.js?v=74';
+import { EXTRA_EVENTS, EXTRA_CHAIN_EVENTS } from './eventsExtra.js?v=75';
 // 第 62 块：民心专属事件（良性 / 恶性两池）。它们不进随机池（全标 chainOnly），
 // 只由 main.js 的「民心档位变化队列」点名播放；这里并进 ALL_EVENTS 是为了
 // getEventById 能找到它们（以及图鉴能翻到）。
-import { REP_EVENTS } from './repEvents.js?v=74';
+import { REP_EVENTS } from './repEvents.js?v=75';
+// 第 64 块：主线番外（10 条）。全部带 cond，读 ctx.story —— 只有走过对应那一夜的
+// 人才会抽到，所以不会稀释新玩家的池子；并进 RANDOM_EVENTS 参与随机。
+import { SIDE_EVENTS } from './eventsSide.js?v=75';
 
 export const REP_MIN = 0;
 // 第 61 块（用户报「民心到 100 之后不会继续提升」）：上限 100 → 120。
@@ -2175,13 +2178,18 @@ const CHAIN_EVENTS = [
 
 // 随机事件池（进 pickEvent 抽签的那一批）
 export const EVENTS = [...CORE_EVENTS, ...EXTRA_EVENTS];
-// 全部事件（随机池 + 连锁），便于按 id 查找 / 文档生成
-export const ALL_EVENTS = [...EVENTS, ...CHAIN_EVENTS, ...EXTRA_CHAIN_EVENTS, ...REP_EVENTS];
+// 第 64 块：抽签池 = 原来 99 条 + 主线番外 10 条。
+// 番外自带 cond（要看过对应章节），所以它只是让「走过剧情的人」的池子变厚。
+export const RANDOM_EVENTS = [...EVENTS, ...SIDE_EVENTS];
+// 全部事件（随机池 + 番外 + 连锁 + 民心事），便于按 id 查找 / 文档生成 / 图鉴
+export const ALL_EVENTS = [...RANDOM_EVENTS, ...CHAIN_EVENTS, ...EXTRA_CHAIN_EVENTS, ...REP_EVENTS];
 // ---------------- 抽取 ----------------
-// ctx: { round, hasWeapon, gold, rep }；recentIds：最近出现过的（3 回合内不重复）
+// ctx: { round, hasWeapon, gold, rep, levelId, story }；
+//   story 是 { seen, read } 两张表，番外用 cond 读它；
+//   recentIds：最近出现过的（3 回合内不重复）
 export function pickEvent(ctx = {}, recentIds = [], rng = Math.random) {
   const recent = new Set(recentIds.slice(-3));
-  const pool = EVENTS.filter((ev) => {
+  const pool = RANDOM_EVENTS.filter((ev) => {
     if (ev.chainOnly) return false;
     if (recent.has(ev.id)) return false;
     if (ev.cond && !ev.cond(ctx)) return false;

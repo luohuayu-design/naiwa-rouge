@@ -22,9 +22,25 @@
 //     press(ctx)    按下时执行；返回 false 表示什么也没发生（不放音效）
 //   }
 //
+// 第 64 块（用户需求）：属性面板要能查到「每个技能的 CD 多长」，
+// 所以每条技能补了三样**纯展示用**的元数据（不影响战斗逻辑）：
+//   cd            基础冷却秒数（不吃局外商店的 CD 缩短）
+//   cdNow(ctx)    本局实际冷却秒数（吃 CD 缩短；面板显示这个）
+//   desc          一段完整的效果说明（属性面板「技能」页用）
+//   unlockNote    解锁条件（没解锁时面板上显示）
+//   state(ctx)    'lock' 未解锁 / 'ready' 可放 / 'cd' 冷却中 / 'full' 条件不满足
+//
 // ctx 由 main.js 每帧拼好传进来：{ playing, weapon, playerPos, stats, coins }
 // ============================================================
-import audio from './audio.js?v=74';
+import audio from './audio.js?v=75';
+
+// 冷却数字统一两位小数（第 64 块用户需求：倒计时精确到两位小数）。
+// 不补零会跳字（3.4 → 3.35 期间宽度变化），toFixed(2) 宽度恒定。
+export function fmtCd(sec) {
+  const v = Number(sec);
+  if (!Number.isFinite(v) || v <= 0) return '';
+  return v.toFixed(2);
+}
 
 export const SKILLS = [
   {
@@ -36,10 +52,17 @@ export const SKILLS = [
     hint: '向四周辐射出你拥有的每一把剑（不影响环上转的），冷却 6 秒',
     key: '1',
     requiresWeapon: true,
+    cd: 6.0,
+    cdNow: (ctx) => (ctx.weapon ? ctx.weapon.fireCdTotal : 6.0),
+    desc: '不管环上此刻恢复了几把，按下就向四周辐射出 n 把剑 —— n = 你拥有的总剑数（最初 3 把 + 商店买的 + 事件给的），'
+      + '不是环上现有的数量。每把剑飞出去各打一次伤害，飞完或命中就回收。放完技能环上一把不少，该转的照转、该补的照补。'
+      + '被围住的时候放，或者用来清一条直线上的怪。',
+    unlockNote: '第 5 回合结束自动获得环剑后拥有',
+    state: (ctx) => (ctx.weapon.granted ? (ctx.weapon.fireReady ? 'ready' : 'cd') : 'lock'),
     // 冷却中按不动；按钮底部进度条 = 冷却填充，格子上的数字 = 还剩几秒
     ready: (ctx) => ctx.playing && ctx.weapon.granted && ctx.weapon.fireReady,
     progress: (ctx) => (ctx.weapon.granted ? ctx.weapon.fireCdProgress : 0),
-    cdText: (ctx) => (ctx.weapon.granted && !ctx.weapon.fireReady ? Math.ceil(ctx.weapon.fireCdLeft) + '' : ''),
+    cdText: (ctx) => (ctx.weapon.granted && !ctx.weapon.fireReady ? fmtCd(ctx.weapon.fireCdLeft) : ''),
     press(ctx) {
       if (!ctx.weapon.fire(() => ctx.playerPos)) return false;
       audio.sfx('swordFire');
@@ -55,12 +78,19 @@ export const SKILLS = [
     icon: 'assets/skills/icon-arrow.svg',
     hint: '在最近的怪物头顶标出一片区域，片刻后群箭落下（冷却 8 秒）',
     key: '2',
+    cd: 8.0,
+    cdNow: (ctx) => (ctx.arrowRain ? ctx.arrowRain.cdMax : 8.0),
+    desc: '自动挑怪最密的地方（离你最近那一堆）标出一片圆形区域，片刻之后群箭从那片天上落下，'
+      + '范围内每只怪各吃一次伤害。它不用瞄、不用站位，是「远处那一堆我不想过去」的解法；'
+      + '空地上没有怪时按不动，不会白扔。',
+    unlockNote: '第二关起开局送环剑时一并解锁（第一关只有剑）',
+    state: (ctx) => (!ctx.arrowRain || !ctx.arrowRain.unlocked ? 'lock' : (ctx.arrowRain.ready ? 'ready' : 'cd')),
     // 只在解锁后出现（第二关起拿环剑时一并解锁；第一关永远只有剑）
     visible: (ctx) => ctx.playing && !!ctx.arrowRain && ctx.arrowRain.unlocked,
     ready: (ctx) => !!ctx.arrowRain && ctx.arrowRain.ready,
     progress: (ctx) => (ctx.arrowRain ? ctx.arrowRain.progress : 0),
     // 冷却倒计时数字：ready 时返回空串（不显示），冷却中显示「还差几秒」
-    cdText: (ctx) => (ctx.arrowRain && !ctx.arrowRain.ready ? Math.ceil(ctx.arrowRain.cdLeft) + '' : ''),
+    cdText: (ctx) => (ctx.arrowRain && !ctx.arrowRain.ready ? fmtCd(ctx.arrowRain.cdLeft) : ''),
     press(ctx) {
       if (!ctx.arrowRain.fire(ctx.playerPos)) return false;
       return true;
@@ -76,14 +106,23 @@ export const SKILLS = [
     icon: 'assets/skills/icon-heal.svg',
     hint: '瞬间回复 5 点生命（不超上限），冷却 25 秒；满血时按不动',
     key: '3',
+    cd: 25.0,
+    cdNow: (ctx) => (ctx.heal && ctx.heal.cdTotal ? ctx.heal.cdTotal : 25.0),
+    desc: '按下的瞬间立刻回 5 点生命，不会超过上限。25 秒冷却，满血时按不动（不浪费 CD）。'
+      + '不回血的角色在第四关往后很难靠药水撑住，这个技能的价值是「不用回城、不用找商店」。',
+    unlockNote: '第四关通关后永久解锁（局外档案，跨局有效）',
+    state: (ctx) => {
+      if (!ctx.heal || !ctx.heal.unlocked) return 'lock';
+      return ctx.heal.status === 'cd' ? 'cd' : ctx.heal.status === 'full' ? 'full' : 'ready';
+    },
     // 解锁后一直有，不依赖环剑 —— 它是保命技能，不能因为没拿到剑就不给
     visible: (ctx) => ctx.playing && !!ctx.heal && ctx.heal.unlocked,
     ready: (ctx) => !!ctx.heal && ctx.heal.ready,
     progress: (ctx) => (ctx.heal ? ctx.heal.progress : 0),
-    // 冷却中显示剩余秒数；满血时显示 ∞（按不动但不是因为在转 CD）
+    // 冷却中显示剩余秒数；满血时显示「满」（按不动但不是因为在转 CD）
     cdText: (ctx) => {
       if (!ctx.heal || !ctx.heal.unlocked) return '';
-      if (ctx.heal.status === 'cd') return Math.ceil(ctx.heal.cdLeft) + '';
+      if (ctx.heal.status === 'cd') return fmtCd(ctx.heal.cdLeft);
       if (ctx.heal.status === 'full') return '满';
       return '';
     },

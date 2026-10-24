@@ -15,13 +15,17 @@
 //       放完环就秃了，和整环补满制叠在一起手感很堵，用户要求改成 CD 制。）
 //
 // 元素剑（见 swordKinds.js）：每把剑有一种元素，命中触发附加效果——
-//   poison 毒（DoT）/ frost 冰冻（第 56 块起：直接冻住，不再是减速）/
-//   thunder 雷（第 56 块起：连锁场上所有怪，伤害比例下调）/
-//   leech 血（回血）/ iron 铁（无附加）。
+//   第 64 块（用户定案）起**五种元素全部群体化**：
+//   thunder 雷：全场连锁（唯一不限距离的，每道 chainRatio 伤害）；
+//   poison 毒 / frost 冰 / leech 血 / quake 震：在命中点炸开一圈，
+//     半径内所有怪吃 elementRatio 溅射伤害 + 各自元素效果（中毒 / 冰冻 / 震退打断 /
+//     按总伤害回血）。视觉上各有一圈对应颜色的扩散环。
+//   iron 铁：无附加，但便宜、可以叠数量。
 //   商店可以买新剑（addSword），买到就立刻上环。
 //
 // 数值全部走**武器自己的属性表** wstats（weaponStats.js）：
 //   swordDamage / swordCrit / swordCritMul / swordOrbit / swordRefill
+//   + elementRadius / elementRatio（第 64 块：群体波及半径与溅射比例）
 //   + poisonDps / poisonTime / frostTime / chainRatio / leechRate
 // ⚠️ 第 6 块起武器与主角彻底解耦：剑的伤害、暴击、吸血都不吃主角属性，
 //    stats 在武器系统里只剩一个用途 —— 给主角回血（血剑/吸血）。
@@ -30,11 +34,11 @@
 //       五种元素共用同一模型，克隆后改材质 color/emissive 染色区分；
 //       图标用 assets/weapons/icon-*.svg。加载失败时用双盒拼占位剑。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=74';
-import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=74';
-import { SWORD_KINDS, KIND_ORDER } from './swordKinds.js?v=74';
-import { rollSwordDamage } from './weaponStats.js?v=74';
-import audio from './audio.js?v=74';
+import * as THREE from '../lib/three.module.js?v=75';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=75';
+import { SWORD_KINDS, KIND_ORDER } from './swordKinds.js?v=75';
+import { rollSwordDamage } from './weaponStats.js?v=75';
+import audio from './audio.js?v=75';
 
 // 轨道半径（世界单位）：贴着主角攻击范围环内侧转，视觉上「护体剑气」
 const ORBIT_R = 1.7;
@@ -49,6 +53,24 @@ const HIT_Y = 0.8;             // 判定高度基准（怪都是贴地的，只�
 // 雷剑连锁（第 56 块起）：目标是场上所有怪，不限只数也不限距离 —— 见 applyKind 的 thunder 分支
 const FIRE_CD = 6.0;           // 万剑齐发冷却（秒，第 56 块用户定案：技能改成有 CD 的）
 const MAX_BOLT_VIS = 8;        // 一帧最多画几道闪电线：雷剑连锁全场，线只画最近的几条，别把屏幕糊满
+
+// 第 64 块：从「owned 减 环上」的差集里**随机**挑一种剑补回环上。
+// 抽出来导出是为了让 Node 测试能直接验分布（不用起浏览器），逻辑本身只此一份。
+//   owned     总库存（按获得顺序，可能有重复）
+//   ringKinds 环上此刻的剑（按环上的顺序）
+// 返回 null = 不缺口。
+export function pickMissingKind(owned, ringKinds, rng = Math.random) {
+  const have = new Map();
+  for (const k of ringKinds) have.set(k, (have.get(k) || 0) + 1);
+  const pool = [];
+  for (const k of owned) {
+    const c = have.get(k) || 0;
+    if (c > 0) { have.set(k, c - 1); continue; }
+    pool.push(k);         // 这一把在库存里、但不在环上
+  }
+  if (!pool.length) return null;
+  return pool[Math.min(pool.length - 1, (rng() * pool.length) | 0)];
+}
 
 export function createWeaponSystem({ scene, stats, wstats, fx, enemies }) {
   let granted = false;         // 是否已获得（第 5 回合 grant；第 56 块起后续关卡开局也送）
@@ -212,15 +234,14 @@ export function createWeaponSystem({ scene, stats, wstats, fx, enemies }) {
   }
 
   // 环上还缺哪种剑：owned 里有、环上没有的（多把取第一把）
+  // 第 64 块（用户报「恢复顺序有问题」）：以前这里按 owned 的**获得顺序**返回，
+  //   于是先买到的铁剑永远排在最前 —— 玩家一旦处在「剑不停被消耗」的节奏里，
+  //   补回来的总是那几把铁剑，后面买的属性剑几乎轮不上环，属性剑在环上的比例
+  //   被稀释得越来越小。
+  //   现在改成**在差集里随机挑一种**：缺几把就每把独立随机，长期看每种剑上环的
+  //   概率严格等于它占库存的比例。整环补满制不受影响（缺多少补多少）。
   function missingKind() {
-    const have = new Map();
-    for (const o of orbiting) have.set(o.kind, (have.get(o.kind) || 0) + 1);
-    for (const k of owned) {
-      const c = have.get(k) || 0;
-      if (c > 0) { have.set(k, c - 1); continue; }
-      return k;
-    }
-    return null;
+    return pickMissingKind(owned, orbiting.map((o) => o.kind));
   }
 
   // ---------------- 技能：万剑齐发（第 56 块重做） ----------------
@@ -262,26 +283,36 @@ export function createWeaponSystem({ scene, stats, wstats, fx, enemies }) {
     return enemies.list.filter((e) => e.state !== 'dead' && e.state !== 'spawn' && !e.ghostHidden);
   }
 
-  // 元素附加效果（毒 / 冰 / 雷 / 血；铁剑无）—— 数值同样取武器表
+  // 元素附加效果（第 64 块用户定案：五种元素剑全部群体化）
+  //   · thunder（雷剑）：**全场连锁** —— 不限距离、不限只数，每道 chainRatio 伤害。
+  //     这是它的独占地位，所以它不看 elementRadius。
+  //   · poison / frost / leech / quake：**在命中点炸开一圈** —— 半径内所有怪
+  //     吃 elementRatio 比例的溅射伤害（直接命中的那只已经吃过全额，不重复），
+  //     并全部附上各自的元素效果（中毒 / 冰冻 / 震退打断 / 按总伤害吸血）。
+  //   视觉上每种元素都有自己的颜色和音效：毒雾绿、寒气蓝、血环红、震波金。
+  const ELEMENT_FX = {
+    poison: { color: 0x53d418, sfx: 'poison' },
+    frost: { color: 0x2fb8ff, sfx: 'ice' },
+    leech: { color: 0xff2e55, sfx: 'heal' },
+    quake: { color: 0xffb03c, sfx: null },
+  };
+
+  // 命中点 radius 内的活怪（隐身雾鬼照旧打不到 —— 反隐是路口灯的活）
+  function aroundPoint(at, radius) {
+    const r2 = radius * radius;
+    return enemies.list.filter((o) => {
+      if (o.state === 'dead' || o.state === 'spawn' || o.ghostHidden) return false;
+      const dx = o.pos.x - at.x, dz = o.pos.z - at.z;
+      return dx * dx + dz * dz <= r2;
+    });
+  }
+
   function applyKind(kind, e, dmg) {
-    if (kind === 'poison') {
-      enemies.applyDot(e, { dps: wstats.get('poisonDps'), time: wstats.get('poisonTime') });
-      audio.sfx('poison');
-    } else if (kind === 'frost') {
-      // 冰剑（第 56 块重做，用户定案）：命中后**直接冻结**一段时间，
-      // 不再是「减速」—— 冻住的怪不能移动也不能攻击，投手/冲锋全得干瞪眼。
-      // 时长走 frostTime（属性可升级延长）。
-      enemies.applyFreeze(e, { time: wstats.get('frostTime') });
-      audio.sfx('ice');
-    } else if (kind === 'leech') {
-      const r = wstats.get('leechRate');
-      if (r > 0 && dmg > 0) {
-        stats.heal(dmg * r);
-        audio.sfx('heal');
-      }
-    } else if (kind === 'thunder') {
+    if (!e || kind === 'iron' || !SWORD_KINDS[kind]) return;
+
+    if (kind === 'thunder') {
       // 雷剑（第 56 块重做，用户定案）：连锁到**场上所有怪**（不再限只数/距离），
-      // 每道闪电的伤害比例下调到 chainRatio（可升级）。怪越密越是清场技。
+      // 每道闪电的伤害比例走 chainRatio（第 64 块 45% 起，可升级）。怪越密越是清场技。
       // 视觉上只画最近的几道线（MAX_BOLT_VIS）—— 三十只怪同时链会糊满屏。
       const targets = enemies.chainTargets(e, Infinity, Infinity);
       if (targets.length) audio.sfx('thunder');
@@ -292,14 +323,53 @@ export function createWeaponSystem({ scene, stats, wstats, fx, enemies }) {
         enemies.takeDamage(tgt, cd, false, { quiet: true });
         if (vis < MAX_BOLT_VIS) { bolt(e.pos, tgt.pos); vis++; }
       }
+      return;
+    }
+
+    // ---- 下面四种：一圈溅射 ----
+    const R = Math.max(1.0, wstats.get('elementRadius'));
+    const ratio = Math.max(0, wstats.get('elementRatio'));
+    const splash = dmg * ratio;
+    const around = aroundPoint(e.pos, R);
+    const fxInfo = ELEMENT_FX[kind] || ELEMENT_FX.quake;
+
+    // 溅射伤害：直接命中的那只跳过（它在 hitEnemy 里已经吃过全额伤害）
+    let totalDmg = dmg;                       // 血剑按「这一剑打出的总伤害」回血
+    for (const o of around) {
+      if (o === e) continue;
+      enemies.takeDamage(o, splash, false, { quiet: true });
+      totalDmg += splash;
+    }
+
+    // 一圈元素视觉：贴地扩散环 + 少量粒子（不新开贴图，控制 draw call）
+    if (fx) {
+      fx.ring(e.pos, { from: 0.35, to: R, color: fxInfo.color, life: 0.34, opacity: 0.62, y: 0.055 });
+      fx.ring(e.pos, { from: 0.2, to: R * 0.72, color: fxInfo.color, life: 0.24, opacity: 0.42, y: 0.075 });
+      fx.burst(e.pos, {
+        color: fxInfo.color, count: 12, speed: R * 1.35, life: 0.34,
+        size: 0.11, y: 0.7, up: 0.9, gravity: 5, radius: 0.1,
+      });
+    }
+    if (fxInfo.sfx) audio.sfx(fxInfo.sfx);
+
+    if (kind === 'poison') {
+      // 毒：范围内全部中毒（可叠时间，不叠层）——怪挤在一起时收益最高
+      const dot = { dps: wstats.get('poisonDps'), time: wstats.get('poisonTime') };
+      for (const o of around) enemies.applyDot(o, dot);
+    } else if (kind === 'frost') {
+      // 冰：范围内全部冻住（第 56 块起是「完全定身」，不是减速）
+      const fz = { time: wstats.get('frostTime') };
+      for (const o of around) enemies.applyFreeze(o, fz);
+    } else if (kind === 'leech') {
+      // 血：按「这一剑对圈内所有怪造成的总伤害」回血 —— 一圈扫到五只就按五只算
+      const r = wstats.get('leechRate');
+      if (r > 0 && totalDmg > 0) stats.heal(totalDmg * r);
     } else if (kind === 'quake') {
-      // 震剑（第 29 块）：命中时有概率把目标震退 + 打断蓄力/读条。
-      // 数值不走武器表（固定 35% / 1.4 格）—— 它是「打断」这一层的解法，
-      // 不吃伤害成长，避免和三关的骨骑冲锋数值打架。
-      if (e.state !== 'dead' && e.state !== 'spawn' && Math.random() < QUAKE_CHANCE) {
-        enemies.interrupt(e);
-        enemies.knockback(e, _playerAt.x, _playerAt.z, QUAKE_KNOCK);
-        if (fx) fx.ring(e.pos, { from: 0.2, to: 1.05, color: 0xffc46a, life: 0.26, opacity: 0.6, y: 0.06 });
+      // 震：圈内每只怪各自 35% 概率被震退 + 打断蓄力/读条（逐只独立判定）
+      for (const o of around) {
+        if (o.state === 'dead' || Math.random() >= QUAKE_CHANCE) continue;
+        enemies.interrupt(o);
+        enemies.knockback(o, _playerAt.x, _playerAt.z, QUAKE_KNOCK);
       }
     }
   }
@@ -492,6 +562,8 @@ export function createWeaponSystem({ scene, stats, wstats, fx, enemies }) {
     get orbitingCount() { return orbiting.length; },
     get flyingCount() { return flyers.length; },
     get orbitAngle() { return orbitAngle; },   // 调试/测试用
+    // 第 64 块：环上此刻每种剑的顺序表（测试「恢复顺序随机化」用）
+    get ringKinds() { return orbiting.map((s) => s.kind); },
     // 万剑齐发冷却（第 56 块）：ready = 冷却走完；cdLeft 剩余秒数；progress 0→1 填满
     get fireReady() { return granted && fireCd <= 0; },
     get fireCdLeft() { return fireCd; },

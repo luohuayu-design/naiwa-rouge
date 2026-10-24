@@ -119,13 +119,13 @@ ok(/你拥有的每一把剑都向外辐射（不影响环上转的）/.test(htm
 sec('D、冰剑冻结 + 雷剑全场连锁');
 
 // 属性表
-ok(/key: 'frostTime',\s+name: '冰冻持续',\s+base: 1\.2/.test(wstatsSrc), 'frostTime 改成「冰冻持续」1.2 秒');
-ok(/key: 'chainRatio',\s+name: '闪电伤害',\s+base: 0\.35/.test(wstatsSrc), '新增 chainRatio 0.35（每道闪电的伤害比例）');
+ok(/key: 'frostTime',\s+name: '冰冻持续',\s+base: 1\.6/.test(wstatsSrc), 'frostTime 改成「冰冻持续」1.6 秒（第 64 块上调）');
+ok(/key: 'chainRatio',\s+name: '闪电伤害',\s+base: 0\.45/.test(wstatsSrc), 'chainRatio 0.45（每道闪电的伤害比例，第 64 块上调）');
 ok(!/key: 'frostSlow'/.test(wstatsSrc), 'frostSlow（旧冰缓）已从属性表撤掉');
 ok(!/key: 'chainCount'/.test(wstatsSrc), 'chainCount（旧链数）已从属性表撤掉');
 
 // weapon.js 的元素效果
-ok(/enemies\.applyFreeze\(e, \{ time: wstats\.get\('frostTime'\) \}\);/.test(weaponSrc), '冰剑命中 → applyFreeze（不再是 applySlow）');
+ok(/const fz = \{ time: wstats\.get\('frostTime'\) \};/.test(weaponSrc) && /for \(const o of around\) enemies\.applyFreeze\(o, fz\);/.test(weaponSrc), '冰剑命中 → applyFreeze 波及一圈（不再是 applySlow）');
 ok(!/applySlow/.test(weaponSrc), 'weapon.js 不再调用 applySlow');
 ok(/enemies\.chainTargets\(e, Infinity, Infinity\)/.test(weaponSrc), '雷剑连锁目标 = 全场（不限只数不限距离）');
 ok(/const ratio = wstats\.get\('chainRatio'\);/.test(weaponSrc), '闪电伤害走 chainRatio');
@@ -143,13 +143,13 @@ ok(/e\.mixer\.timeScale = 0;/.test(enemySrc), '冻住时动画也停');
 ok(/if \(e\.mixer\.timeScale === 0\) e\.mixer\.timeScale = 1;/.test(enemySrc), '解冻后恢复动画（兜底）');
 
 // 升级卡 / 商店 / 种类文案
-ok(/title: '冰冻 \+0\.3 秒'[\s\S]{0,120}stat: 'frostTime', flat: 0\.3/.test(upgradeSrc), '「严寒」卡改成延长冰冻');
-ok(/title: '闪电伤害 \+10%'[\s\S]{0,140}stat: 'chainRatio', flat: 0\.10/.test(upgradeSrc), '「导电」卡改成加强闪电伤害');
+ok(/title: '冰冻 \+0\.6 秒'[\s\S]{0,120}stat: 'frostTime', flat: 0\.6/.test(upgradeSrc), '「严寒」卡改成延长冰冻（第 64 块 +0.6）');
+ok(/title: '闪电伤害 \+20%'[\s\S]{0,140}stat: 'chainRatio', flat: 0\.20/.test(upgradeSrc), '「导电」卡改成加强闪电伤害（第 64 块 +20%）');
 ok(!/stat: 'chainCount'/.test(upgradeSrc) && !/stat: 'frostSlow'/.test(upgradeSrc), '升级卡不再引用旧属性键');
-ok(/命中后直接把怪冻住 1\.2 秒/.test(shopSrc), '商店冰剑文案：冻住');
-ok(/一道闪电打到场上所有怪/.test(shopSrc), '商店雷剑文案：全场连锁');
-ok(/tagline: '命中后冰冻'/.test(kindsSrc), '冰剑 tagline 改「命中后冰冻」');
-ok(/每道 35% 伤害（属性可升级）。怪越密越是清场技/.test(kindsSrc), '雷剑描述改「所有怪 + 35%」');
+ok(/命中点周围 3\.5 格内的怪全部冻住 1\.6 秒/.test(shopSrc), '商店冰剑文案：一片冻住 1.6 秒');
+ok(/一道闪电打到场上所有怪（不限距离、不限只数）/.test(shopSrc), '商店雷剑文案：全场连锁');
+ok(/tagline: '一片冻住'/.test(kindsSrc), '冰剑 tagline 是「一片冻住」');
+ok(/每道 45% 伤害（属性可升级）/.test(kindsSrc), '雷剑描述改「所有怪 + 45%」');
 ok(!/命中后减速/.test(kindsSrc), '种类表里不再写「命中后减速」');
 
 // ============================================================

@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#080f14">
 <link rel="icon" href="data:,">
 <title>蛙步 · 夜行</title>
-<link rel="stylesheet" href="style.css?v=74">
+<link rel="stylesheet" href="style.css?v=75">
 </head>
 <body>
 
@@ -91,7 +91,10 @@
 <!-- 受击红闪 -->
 <div id="hurtFx"></div>
 
-<!-- 属性详情面板：分两页（奶蛙 / 环剑），页内按组显示 -->
+<!-- 属性详情面板：分三页（奶蛙 / 环剑 / 技能），页内按组显示 -->
+<!-- 第 64 块：加了「技能」页 —— 以前箭雨、回血和各技能的 CD 完全查不到，
+     玩家只能靠技能键上的倒计时猜。现在每格写着基础 CD、本局实际 CD（吃过缩短）、
+     当前状态和解锁条件。 -->
 <div id="attrPanel" class="attr-panel" aria-hidden="true">
   <div class="ap-card">
     <div class="ap-head">
@@ -104,9 +107,10 @@
     <div class="ap-tabs" id="apTabs" role="tablist">
       <button class="ap-tab on" type="button" data-tab="player" role="tab">奶蛙</button>
       <button class="ap-tab" type="button" data-tab="weapon" role="tab">环剑</button>
+      <button class="ap-tab" type="button" data-tab="skill" role="tab">技能</button>
     </div>
     <div class="ap-list" id="apList"></div>
-    <div class="ap-foot">两页数值互不影响 · 点空白处关闭</div>
+    <div class="ap-foot">三页互不影响 · 点空白处关闭</div>
   </div>
 </div>
 
@@ -207,12 +211,15 @@
 <!-- 新手教程浮层（底部，pointer-events 只留给跳过按钮，不挡摇杆） -->
 <div id="tutCard" class="tut-card" aria-hidden="true">
   <div class="tc-head">
-    <span class="tc-step" id="tcStep">新手教程 1 / 4</span>
+    <span class="tc-step" id="tcStep">新手教程 1 / 8</span>
     <button class="tc-skip" id="tcSkip" type="button">跳过教程</button>
   </div>
   <div class="tc-title" id="tcTitle">先动起来</div>
   <div class="tc-text" id="tcText">—</div>
   <div class="tc-bar"><i id="tcBar"></i></div>
+  <!-- 第 64 块：纯讲解的步骤（判定环 / 技能栏 / HUD / 商店）没有「动作」可以
+       触发推进，给一个「下一步」按钮；需要动手的步骤会自动藏起来。 -->
+  <button class="wt-next" id="tcNext" type="button" hidden>下一步</button>
 </div>
 
 <!-- 主页面（标题 + 主菜单）
@@ -803,7 +810,7 @@
 <!-- 不用 importmap：老手机浏览器（iOS 16.4 以下、旧版微信/安卓 WebView）
      不支持 import maps，会让整个模块解析失败、加载页永远停在 0%。
      项目内所有 import 都写成相对路径，直接靠原生 ES Module 解析。 -->
-<script type="module" src="js/main.js?v=74"></script>
+<script type="module" src="js/main.js?v=75"></script>
 
 <!-- 兜底自检：模块没跑起来时把原因写出来，别让用户对着 0% 干等 -->
 <script>

@@ -13,13 +13,13 @@
 // （击杀 / 弹事件卡 / 选升级卡）。
 // ============================================================
 
-import { ENEMY_TYPES } from './enemy.js?v=74';
-import { SWORD_KINDS } from './swordKinds.js?v=74';
-import { RELIC_DEFS } from './relics.js?v=74';
-import { UPGRADES } from './upgrade.js?v=74';
-import { ALL_EVENTS } from './events.js?v=74';
-import { RARITIES } from './rarity.js?v=74';
-import { codexAll, codexCount } from './profile.js?v=74';
+import { ENEMY_TYPES } from './enemy.js?v=75';
+import { SWORD_KINDS } from './swordKinds.js?v=75';
+import { RELIC_DEFS } from './relics.js?v=75';
+import { UPGRADES } from './upgrade.js?v=75';
+import { ALL_EVENTS } from './events.js?v=75';
+import { RARITIES } from './rarity.js?v=75';
+import { codexAll, codexCount } from './profile.js?v=75';
 
 export const CODEX_TABS = [
   { id: 'enemies', name: '怪物' },
@@ -47,10 +47,10 @@ function enemySub(cfg) {
 
 // 怪物一句话说明：按「它给你什么压力」分类，第二关三个巫师各有专属文案
 function enemyDesc(cfg) {
-  if (cfg.erase) return '损失压力：它从不还手，读条 2.6 秒后把你环上的一把剑**擦掉**，然后转身往场地外跑 —— 跑出去那把剑这一局就没了。冰剑冻住 / 震剑击退 / 冲过去砍死它，都行';
+  if (cfg.erase) return '损失压力：它从不还手，读条 2.6 秒后把你环上的一把剑「擦掉」，然后转身往场地外跑 —— 跑出去那把剑这一局就没了。冰剑冻住 / 震剑击退 / 冲过去砍死它，都行';
   if (cfg.reboot) return '耐心压力：打死不算完 —— 躺 4 秒后原地半血重启，而且比上一次更快（最多重启 2 次）。地上那圈红光就是倒计时，守着它补刀';
   if (cfg.charge) return '机动压力：地上一道直线就是它的冲锋路线 —— 横向侧移能躲，撞完它会僵一下（那就是输出窗口）';
-  if (cfg.leap) return '空间压力：蓄力后跳向你**当时**站的那个点，地上的红圈就是落点 —— 离开那个点，它在僵直里等你打';
+  if (cfg.leap) return '空间压力：蓄力后跳向你「当时」站的那个点，地上的红圈就是落点 —— 离开那个点，它在僵直里等你打';
   if (cfg.ghost) return '信息压力：显形 3 秒、隐身 2.5 秒轮着来；隐身时打不着它，但它照样能咬你（第 61 块取消了「贴脸逼它现形」）—— 只能等它自己露头';
   if (cfg.shield) return '节奏压力：举盾时减伤 70% 且不移动，放下盾才正常挨打 —— 挑窗口再打';
   if (cfg.spell && cfg.spell.kind === 'mend') return '续航压力：定时给半场内的怪回血（回合越往后奶得越多）；它不画范围圈，但被治的怪身上会冒绿光 —— 顺着绿光找过去先拆它';

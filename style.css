@@ -142,6 +142,14 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
 .ap-val{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
   font-size:13px;font-weight:700;color:#9df3cd;text-align:right}
 .ap-desc{grid-column:1/-1;font-size:10.5px;line-height:1.5;color:rgba(150,196,180,.48)}
+/* 第 64 块：属性面板「技能」页的状态行（未解锁 / 冷却中 / 就绪）。
+   冷却中是琥珀色（提醒还在转），就绪是青绿（可以放），未解锁是灰。 */
+.ap-st{grid-column:1/-1;margin-top:2px;font-size:10.5px;letter-spacing:.04em}
+.ap-st.lock{color:rgba(150,196,180,.5)}
+.ap-st.cd{color:#ffd48a}
+.ap-st.ready{color:#8ef2c8}
+.ap-st.full{color:rgba(168,214,196,.72)}
+.ap-skill .ap-name{font-weight:700}
 .ap-foot{padding:10px 16px 14px;text-align:center;font-size:10px;
   letter-spacing:.06em;color:rgba(140,190,172,.42)}
 
@@ -993,6 +1001,9 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
   -webkit-tap-highlight-color:transparent;display:none;transition:transform .1s ease}
 .wt-next.on{display:block}
 .wt-next:active{transform:scale(.985)}
+/* 第 64 块：新手教程的讲解步也用这个按钮（复用外观），但默认显示 ——
+   显不显示由 JS 切 hidden 决定（全局 [hidden] 兜底会压住 display） */
+#tutCard .wt-next{display:block}
 
 /* ============================================================
    金币 / 随机事件卡 / 商店
@@ -1510,7 +1521,10 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
 
 /* 第 47 块：技能框上的 CD 倒计时数字（箭雨） */
 .sk-num{position:absolute;left:0;right:0;top:4px;z-index:2;pointer-events:none;
-  font-size:15px;font-weight:900;font-style:normal;text-align:center;
+  /* 第 64 块：倒计时改成两位小数（如 25.00 / 6.42），5 个字符要在 58px 里放得下 ——
+     字号收到 13px + 等宽数字，宽度稳定，不会跳字。 */
+  font-size:13px;font-weight:900;font-style:normal;text-align:center;
+  font-variant-numeric:tabular-nums;letter-spacing:-.02em;
   color:#ffe9a8;text-shadow:0 0 6px rgba(0,0,0,.9),0 1px 2px rgba(0,0,0,.9)}
 
 /* ============================================================
@@ -1815,6 +1829,8 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
 .gd-item.open .gd-item-bd{display:block}
 .gd-p{margin:0 0 6px;font-size:11px;line-height:1.85;color:rgba(206,232,222,.82)}
 .gd-p b{font-weight:800}
+/* 第 64 块：正文里的 **加粗** 现在渲染成 <b class="gd-b">（以前是把星号原样打出来） */
+.gd-p .gd-b{font-weight:800;color:#d8fff0}
 .gd-p-what b{color:#9fd8ff}
 .gd-p-best b{color:#7ef0c6}
 .gd-p-warn b{color:#ffb987}

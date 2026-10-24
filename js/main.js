@@ -5,37 +5,37 @@
 // 目标是把三件事调顺：摇杆输入 → 角色速度/朝向 → 相机跟随。
 // 后续叠战斗时，只需要在 tick() 里加敌人更新与自动攻击，不用动输入层。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=74';
-import { buildNightScene } from './scene.js?v=74';
-import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=74';
-import { createInput } from './input.js?v=74';
-import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=74';
-import { createStatView } from './statView.js?v=74';
-import { createWeaponStats } from './weaponStats.js?v=74';
-import { createFx } from './fx.js?v=74';
-import { createEnemySystem } from './enemy.js?v=74';
+import * as THREE from '../lib/three.module.js?v=75';
+import { buildNightScene } from './scene.js?v=75';
+import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=75';
+import { createInput } from './input.js?v=75';
+import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=75';
+import { createStatView } from './statView.js?v=75';
+import { createWeaponStats } from './weaponStats.js?v=75';
+import { createFx } from './fx.js?v=75';
+import { createEnemySystem } from './enemy.js?v=75';
 import {
   createLevel, LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVEL_5, LEVEL_6, LEVELS_BY_ID, DIFFS, setDifficulty, getDifficulty, roundScale, levelStats,
-} from './wave.js?v=74';
-import { createRangeRing } from './rangeRing.js?v=74';
-import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=74';
-import { createWeaponSystem } from './weapon.js?v=74';
-import { createArrowRainSystem } from './arrowRain.js?v=74';
-import { SWORD_KINDS } from './swordKinds.js?v=74';
-import { createGoldSystem } from './gold.js?v=74';
-import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW } from './shop.js?v=74';
-import { createTurretSystem, TURRET } from './turret.js?v=74';
-import { createRelicSystem, RELIC_DEFS } from './relics.js?v=74';
-import { createHazards } from './hazards.js?v=74';
-import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=74';
-import audio from './audio.js?v=74';
-import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=74';
+} from './wave.js?v=75';
+import { createRangeRing } from './rangeRing.js?v=75';
+import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=75';
+import { createWeaponSystem } from './weapon.js?v=75';
+import { createArrowRainSystem } from './arrowRain.js?v=75';
+import { SWORD_KINDS } from './swordKinds.js?v=75';
+import { createGoldSystem } from './gold.js?v=75';
+import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW } from './shop.js?v=75';
+import { createTurretSystem, TURRET } from './turret.js?v=75';
+import { createRelicSystem, RELIC_DEFS } from './relics.js?v=75';
+import { createHazards } from './hazards.js?v=75';
+import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=75';
+import audio from './audio.js?v=75';
+import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=75';
 // 第 62 块：回血技能（第四关通关后永久解锁，回 5 点 / CD 25 秒）
-import { createHealSkill, HEAL_AMOUNT, HEAL_CD } from './healSkill.js?v=74';
+import { createHealSkill, HEAL_AMOUNT, HEAL_CD } from './healSkill.js?v=75';
 // 第 62 块：民心专属事件（升档走良性池、掉档走恶性池）
-import { repPoolForTier, REP_GOOD, REP_BAD } from './repEvents.js?v=74';
+import { repPoolForTier, REP_GOOD, REP_BAD } from './repEvents.js?v=75';
 // 第 62 块：攻略面板（战败提示上的「查看攻略」，手风琴三组）
-import { renderGuide, GUIDE_SECTIONS } from './guide.js?v=74';
+import { renderGuide, GUIDE_SECTIONS } from './guide.js?v=75';
 import {
   settings as readSettings, setSetting, save as saveProfile, profile,
   bumpStat, setStatMax, codexAdd, codexCount, countCard, unlockAch, hasAch, addBones, bones, resetAll,
@@ -46,49 +46,49 @@ import {
   enemyMet, markEnemyMet,
   ringObtained, markRingObtained,
   healUnlocked, markHealUnlocked,
-} from './profile.js?v=74';
+} from './profile.js?v=75';
 // 第 44 块：礼包兑换（码表只有哈希，明细在 gift.js 顶部注释）
-import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=74';
+import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=75';
 // 第 46 块：音效包（抽象奶蛙音效包 —— 4 段奶蛙叫声，通关第一关解锁）
-import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=74';
-import * as runSave from './runSave.js?v=74';
+import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=75';
+import * as runSave from './runSave.js?v=75';
 import {
   CAMPFIRE, CAMP_STEP, campBuy, campOwned, campLevel,
   campCost, campApply, bonesFor, diffBoneMul, levelBoneMul, coinBones, BONE,
-} from './campfire.js?v=74';
+} from './campfire.js?v=75';
 // 第 23 块：永夜火种（通关白给的 3 次永久三选一）
 import {
   BOONS, BOON_BY_ID, BOON_PICKS, boonOwned, boonStacks, boonPending, boonTotalStacks,
   grantBoons, rollBoons, takeBoon, applyBoons, boonStackText,
-} from './boons.js?v=74';
+} from './boons.js?v=75';
 // 第 21 块：夜行诅咒（自选 debuff 换骨币倍率）
-import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=74';
+import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=75';
 // 第 22 块：种子与每日挑战
 import {
   DAILY_RULES, dayKey, dayText, dailySeed, seedCode, pickDailyCurses,
   seedFromText, pickSeedRules, loadSeedRecords, saveSeedRecord, pruneSeeds,
   dailyRecord, saveDailyRecord, pruneDaily, makeRng,
-} from './seed.js?v=74';
-import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=74';
+} from './seed.js?v=75';
+import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=75';
 // 第 58 块：局外商店 · 宝箱（花骨币买，开箱随机给永久属性 / 永久法器 / 技能CD缩短）
 import {
   BOXES, BOX_BY_ID, buyBox, rollBox, metaApplyStats, applyMeta,
-} from './metaShop.js?v=74';
+} from './metaShop.js?v=75';
 // 第 59 块：每日签到（以周为单位，周一 00:00 重置）
 import {
   WEEK_TIERS, SIGN_BONES, weekCells, signSummary, signToday, signedToday,
-} from './signin.js?v=74';
-import { achById, ACHS } from './achievements.js?v=74';
+} from './signin.js?v=75';
+import { achById, ACHS } from './achievements.js?v=75';
 import {
   EVENTS, ALL_EVENTS, getEventById, pickEvent, effectLines,
   choiceHint, canAfford, costShort, REP_MIN, REP_MAX, REP_START,
   isTalk, eventChoices, resolveRoll, mergeEffects,
-} from './events.js?v=74';
+} from './events.js?v=75';
 // 第 32 块：主线《笑不出来的那一夜》（18 夜，一夜一关，前 3 夜已有关卡）
 import {
   STORY_ARC, STORY_CHAPTERS, STORY_ENDINGS, MARK_INFO,
   storyChapterAt, storyChapterById, storyEndingKey,
-} from './story.js?v=74';
+} from './story.js?v=75';
 
 // 标记模块已经跑起来了：index.html 的兜底自检靠它判断
 // 「模块根本没执行」还是「执行了但加载慢」。
@@ -455,6 +455,7 @@ async function boot() {
   const tcStep = document.getElementById('tcStep');
   const tcTitle = document.getElementById('tcTitle');
   const tcText = document.getElementById('tcText');
+  const tcNext = document.getElementById('tcNext');   // 第 64 块：讲解步的「下一步」
   const tcBar = document.getElementById('tcBar');
   const wcard = document.getElementById('weaponCard');
   // 武器用法教程（第 15 块）：获得新武器时自动弹，可跳过
@@ -503,11 +504,13 @@ async function boot() {
     }
   }
 
-  // 属性面板：分两页（奶蛙 / 环剑），页内按 group 分组。
+  // 属性面板：分三页（奶蛙 / 环剑 / 技能），页内按 group 分组。
   // 主角与武器是两套独立属性表，混在一页里玩家分不清「这个攻击力管不管剑」，
   // 所以第 6 块改成标签页 + 分组小标题。
+  // 第 64 块（用户反馈）：加了第三页「技能」—— 以前箭雨、回血和每个技能的 CD
+  // 在界面上完全查不到，玩家只能盯着技能键上的倒计时猜。
   const apTabsEl = document.getElementById('apTabs');
-  let panelTab = 'player';     // player | weapon
+  let panelTab = 'player';     // player | weapon | skill
 
   function apRow(def, value) {
     const row = document.createElement('div');
@@ -525,11 +528,58 @@ async function boot() {
     return row;
   }
 
+  // 「技能」页的一行：名字 / CD / 说明 / 当前状态
+  // 状态行是活的（每次打开面板现算）：未解锁就写解锁条件，冷却中写还剩多少秒。
+  function apSkillRow(sk, ctx) {
+    const row = document.createElement('div');
+    row.className = 'ap-row ap-skill';
+    row.dataset.skill = sk.id;
+
+    const name = document.createElement('div');
+    name.className = 'ap-name';
+    name.textContent = sk.name;
+
+    const baseCd = Number(sk.cd) || 0;
+    const cdNow = sk.cdNow ? Number(sk.cdNow(ctx)) || baseCd : baseCd;
+    const st = sk.state ? sk.state(ctx) : 'ready';
+    const cdTotal = cdNow > 0 ? cdNow : 1;
+    const left = (sk.progress ? Math.max(0, Math.min(1, sk.progress(ctx) || 0)) : 0) > 0
+      ? cdNow * (1 - Math.max(0, Math.min(1, sk.progress(ctx) || 0)))
+      : cdNow;
+
+    const val = document.createElement('div');
+    val.className = 'ap-val';
+    val.textContent = `CD ${cdNow.toFixed(2)} 秒`;
+
+    const desc = document.createElement('div');
+    desc.className = 'ap-desc';
+    // 被局外商店缩短过就点一句，不然玩家会以为自己记错了
+    desc.textContent = sk.desc
+      + (cdNow < baseCd - 1e-6 ? `（基础 ${baseCd.toFixed(2)} 秒，本局被「技能 CD 缩短」压到 ${cdNow.toFixed(2)} 秒）` : '')
+      + (sk.key ? `　快捷键 ${sk.key}。` : '');
+
+    const stEl = document.createElement('div');
+    stEl.className = `ap-st ${st}`;
+    if (st === 'lock') stEl.textContent = `未解锁 —— ${sk.unlockNote || '继续推进剧情/关卡'}`;
+    else if (st === 'cd') stEl.textContent = `冷却中 · 还剩 ${left.toFixed(2)} 秒`;
+    else if (st === 'full') stEl.textContent = '满血，按不动（不消耗冷却）';
+    else stEl.textContent = '就绪，随时可以放';
+    stEl.dataset.state = st;
+
+    row.append(name, val, desc, stEl);
+    return row;
+  }
+
   function renderPanel() {
-    const tabName = panelTab === 'weapon' ? '环剑' : '奶蛙';
+    const tabName = panelTab === 'weapon' ? '环剑' : panelTab === 'skill' ? '技能' : '奶蛙';
     const table = panelTab === 'weapon' ? wstats : stats;
+    const ctx = skillCtx();
+    // 技能页没有「项数」的概念，改成「几个技能」；另外两页照旧报属性项数
+    const countText = panelTab === 'skill'
+      ? `${SKILLS.length} 个技能`
+      : `${tabName} ${table.defs.length} 项`;
     apSub.textContent = `生命 ${fmtHp(stats.hp.cur)} / ${stats.get('maxHp').toFixed(1)}`
-      + ` · ${tabName} ${table.defs.length} 项 · 已暂停`;
+      + ` · ${countText} · 已暂停`;
 
     // 标签页高亮
     for (const btn of apTabsEl.querySelectorAll('.ap-tab')) {
@@ -537,6 +587,20 @@ async function boot() {
     }
 
     apList.textContent = '';
+
+    // 技能页：直接按 skills.js 的注册顺序铺开（**包括还没解锁的** —— 用户就是
+    // 想在面板里看到「箭雨是什么、什么时候解锁、CD 多长」）
+    if (panelTab === 'skill') {
+      const box = document.createElement('div');
+      box.className = 'ap-group';
+      const head = document.createElement('div');
+      head.className = 'ap-gt';
+      head.textContent = '技能';
+      box.appendChild(head);
+      for (const sk of SKILLS) box.appendChild(apSkillRow(sk, ctx));
+      apList.appendChild(box);
+      return;
+    }
 
     // 武器页：还没拿到环剑时先说明一句，数值照常显示（都是真实生效值）
     if (panelTab === 'weapon' && !weapon.granted) {
@@ -573,7 +637,8 @@ async function boot() {
   apTabsEl.addEventListener('click', (e) => {
     const btn = e.target.closest('.ap-tab');
     if (!btn) return;
-    panelTab = btn.dataset.tab === 'weapon' ? 'weapon' : 'player';
+    panelTab = btn.dataset.tab === 'weapon' ? 'weapon'
+      : btn.dataset.tab === 'skill' ? 'skill' : 'player';
     renderPanel();
   });
 
@@ -584,7 +649,7 @@ async function boot() {
     panelOpen = open;
     if (open) {
       panelOpenedOnce = true;
-      if (tab) panelTab = tab === 'weapon' ? 'weapon' : 'player';
+      if (tab) panelTab = tab === 'weapon' ? 'weapon' : tab === 'skill' ? 'skill' : 'player';
       input.joystick.release();   // 面板盖住屏幕，别让摇杆一直输出
       vel.set(0, 0, 0);           // 暂停时不留残余速度，关掉面板不会突然窜出去
       renderPanel();
@@ -1053,27 +1118,67 @@ async function boot() {
   bagPanel.addEventListener('click', (e) => { if (e.target === bagPanel) setBag(false); });
   renderBagBtn();
 
-  // 新手教程
+  // 新手教程（第 64 块：4 步 → 8 步）
+  // 用户反馈：原来的教程太简单，很多人开局根本不知道脚下那圈光是干什么用的，
+  // 也不知道界面上那些数字是什么。于是拆成两类步骤：
+  //   · kind:'move' / 'kill' / 'panel' / 'bag' —— 要玩家**真的做一个动作**才过；
+  //   · kind:'info' —— 纯讲解（判定环 / 技能栏 / HUD / 商店），卡片上出现
+  //     「下一步」按钮，点一下往下走。以前没有这个按钮，讲解步没法推进。
+  // 顺序是照着「玩家眼睛会先看到什么」排的：先动 → 脚下的圈 → 打怪 → 血条/属性
+  // → 技能栏 → 顶部数值 → 背包 → 商店与法器（顺带收尾）。
   let tutStep = 0;
   let tutMoved = 0;
   let tutDummy = null;
   let tutBagUsed = false;      // 背包那一步：打开过背包（再用「关掉」判过关）
   const TUT_STEPS = [
     {
+      kind: 'move',
       title: '先动起来',
       text: '按住屏幕左半边任意位置拖动，奶蛙就会朝那个方向跑（电脑上也可以按 WASD）。跑起来这一步就过了。',
     },
     {
+      kind: 'info',
+      title: '脚下这圈光，是你的判定环',
+      text: '脚下那圈青绿色的光叫「判定环」，它就是你这一下的攻击范围。'
+        + '怪只有走进圈里，你才会自动拍它；圈外的怪你一下都够不到。'
+        + '所以「走位」的意思不是躲，是「把怪带进圈里」 —— 一边退一边让它们排队进来，一次拍一只，比站着被围好得多。'
+        + '圈的大小由「攻击范围」决定，拿到加范围的升级会当场变大。',
+    },
+    {
+      kind: 'kill',
       title: '攻击是自动的',
-      text: '脚下这个青绿色的圈是你的攻击范围：怪一走进来就会自动拍它，不用点攻击键。先拍死面前这只小兵。',
+      text: '不用点任何攻击键：怪一踏进刚才那圈光，你就会自动拍它，转身自动朝向目标。朝那只小兵走过去，拍死它。',
     },
     {
-      title: '随时查看属性',
-      text: '点左上角的血条可以暂停游戏、查看全部属性（主角和环剑分两页）。打开再关掉。',
+      kind: 'panel',
+      title: '血条 = 属性面板入口',
+      text: '点左上角那块血条会暂停游戏、打开属性面板：奶蛙 / 环剑 / 技能三页。'
+        + '技能页里写清了每个技能的冷却时长和当前状态，忘了随时来查。打开再关掉。',
     },
     {
-      title: '背包与按钮',
-      text: '右下角的背包按钮（或按 B）随时能打开：商店买的药水存在这里，危急时点一下就用。旁边的喇叭是声音开关。打开背包再关掉，教程就结束了。',
+      kind: 'info',
+      title: '右下角：技能栏',
+      text: '一格一个技能，按下去不用瞄准。第一格「万剑齐发」要「第 5 回合拿到环剑之后」才出现；第二关起还会多一格「箭雨」。'
+        + '格子上那串小字是剩余冷却，精确到 0.01 秒；底下那道竖光是冷却进度，满了就说明能放了。',
+    },
+    {
+      kind: 'info',
+      title: '左上角与右上角',
+      text: '左上角：生命（跑完就结束）、金币（商店花）、民心（村民对你的看法 —— 高了买东西便宜、有人帮你；低了涨价、还会遭贼）。'
+        + '右上角：关卡名、当前回合、以及这回合还剩多少怪（那根进度条）。一关 20 回合，撑到最后就算通关。',
+    },
+    {
+      kind: 'bag',
+      title: '背包与声音',
+      text: '右下角的背包按钮（或按 B）随时能打开：商店买的药水存在这里，危急时点一下就用，打开时游戏会暂停。'
+        + '旁边的喇叭是声音开关。打开背包再关掉，教程就快结束了。',
+    },
+    {
+      kind: 'info',
+      title: '最后：金币、商店与法器',
+      text: '怪死后会掉金币，落地 0.5 秒自动吸进你的口袋。第 8、16 回合结束会弹商店：'
+        + '买剑（元素剑是这局的核心，越多越强）、买药水、买属性、买法器 —— 法器挂在身上自动生效，不用你操作。'
+        + '准备好了就点下一步，第 1 回合开始。',
     },
   ];
 
@@ -1584,9 +1689,11 @@ async function boot() {
     tcStep.textContent = `新手教程 ${tutStep + 1} / ${TUT_STEPS.length}`;
     tcTitle.textContent = s.title;
     tcText.textContent = s.text;
+    // 第 64 块：纯讲解的步骤要有个「下一步」，动手的步骤自己会推进（藏起按钮）
+    if (tcNext) tcNext.hidden = s.kind !== 'info';
     syncSkillLift();          // 第 56 块：文案换了卡片高度可能变
     tcBar.style.width = ((tutStep / TUT_STEPS.length) * 100).toFixed(1) + '%';
-    if (tutStep === 1) spawnTutDummy();
+    if (s.kind === 'kill') spawnTutDummy();
   }
 
   // 教程用的靶子：站在主角前方 3 个单位、0 伤害、1 血 —— 走过来正好进入攻击范围
@@ -1624,17 +1731,24 @@ async function boot() {
     startPlay();
   }
 
-  // 教程每帧推进：移动距离 / 靶子是否被拍死 / 属性面板是否开过又关掉 / 背包是否开过又关掉
+  // 教程每帧推进：按步骤的 kind 判过关条件（第 64 块改成按 kind 而不是下标，
+  // 以后插一步不用再回来改一串数字）
+  //   move  —— 走够 2.5 个单位
+  //   kill  —— 靶子被拍死
+  //   panel —— 打开过属性面板再关掉
+  //   bag   —— 打开过背包再关掉
+  //   info  —— 玩家点「下一步」（本函数不推进）
   function tutorialTick(moved) {
-    if (tutStep === 0) {
+    const kind = TUT_STEPS[tutStep] && TUT_STEPS[tutStep].kind;
+    if (kind === 'move') {
       tutMoved += moved;
       tcBar.style.width = (Math.min(1, tutMoved / 2.5) / TUT_STEPS.length * 100).toFixed(1) + '%';
       if (tutMoved >= 2.5) tutNext();
-    } else if (tutStep === 1) {
+    } else if (kind === 'kill') {
       if (tutDummy && tutDummy.state === 'dead') tutNext();
-    } else if (tutStep === 2) {
+    } else if (kind === 'panel') {
       if (panelOpenedOnce && !panelOpen) tutNext();
-    } else if (tutStep === 3) {
+    } else if (kind === 'bag') {
       if (tutBagUsed && !bagOpen) tutNext();
     }
   }
@@ -2358,6 +2472,8 @@ async function boot() {
   document.getElementById('tutYes').addEventListener('click', () => beginGame({ tutorial: true }));
   document.getElementById('tutNo').addEventListener('click', () => beginGame({ tutorial: false }));
   document.getElementById('tcSkip').addEventListener('click', endTutorial);
+  // 第 64 块：讲解步（判定环 / 技能栏 / HUD / 商店）靠这个按钮往下走
+  tcNext?.addEventListener('click', () => { if (gameState === 'tutorial') tutNext(); });
 
   // ---------------- 武器获得卡 ----------------
   let weaponCardOpen = false;
@@ -2413,19 +2529,19 @@ async function boot() {
     },
     poison: {
       name: '毒 剑',
-      steps: [{ title: '命中就上毒', text: '毒是按秒跳血的，砍得越勤、毒得越久。打血厚的战士先给它上毒再绕圈走。' }],
+      steps: [{ title: '命中就毒一片', text: '毒是按秒跳血的，砍得越勤、毒得越久。第 64 块起它不只毒一只 —— 命中点周围一圈的怪全部中毒，打血厚的战士先给它上毒再绕圈走。' }],
     },
     frost: {
       name: '冰 剑',
-      steps: [{ title: '命中就冻住', text: '冰剑不再只是减速 —— 命中的怪直接定住 1.2 秒，不能移动也不能攻击。投手的骨刀、骨骑的冲锋，冻一下全断。' }],
+      steps: [{ title: '命中就冻一片', text: '冰剑命中会炸开一圈寒气，圈内所有怪直接定住 1.6 秒，不能移动也不能攻击。投手的骨刀、骨骑的冲锋，冻一下全断。' }],
     },
     thunder: {
       name: '雷 剑',
-      steps: [{ title: '命中就全场连锁', text: '砍中一只，一道闪电打到场上所有怪（每道 35% 伤害）。怪越密越是清场技，孤单单一只时性价比一般。' }],
+      steps: [{ title: '命中就全场连锁', text: '砍中一只，一道闪电打到场上所有怪（每道 45% 伤害）。怪越密越是清场技，孤单单一只时性价比一般。' }],
     },
     leech: {
       name: '血 剑',
-      steps: [{ title: '命中就回血', text: '按剑伤的一部分回血，和吸血属性叠乘。残血时别退，往怪身上蹭反而更安全。' }],
+      steps: [{ title: '一圈回血', text: '命中时按「这一剑对周围所有怪造成的总伤害」的一部分回血，和吸血属性叠乘。残血时别退，往怪堆里蹭反而更安全。' }],
     },
     // 第 53 块（用户反馈「箭雨拿到之后没提示、没教程」）：
     // 技能也挂进这套卡片 —— key 是技能 id，不是剑种。和武器共用一个队列，
@@ -3269,11 +3385,14 @@ async function boot() {
         }
       }
       // 2) 抽一个随机事件
+      const storyP = storyProgress();
       const ev = pickEvent(
         {
           round: roundNo + 1, hasWeapon: weapon.granted, gold: coins,
           rep: reputation, hp: stats.hp.cur, luck: stats.get('luck'),
           levelId: curLevelId,          // 第 29 块：第三关专属奇遇靠它筛
+          // 第 64 块：主线番外靠它筛 —— 只有走过对应那一夜的玩家才抽得到
+          story: { seen: storyP.seen, read: storyP.read },
         },
         seenEvents,
         rngOf('event')
@@ -5891,6 +6010,73 @@ async function boot() {
         },
         stateOf: (type) => enemies.list.filter((e) => e.type === type).map((e) => e.state),
         hpOf: (type) => enemies.list.filter((e) => e.type === type).map((e) => ({ hp: e.hp, max: e.maxHp, reboots: e.reboots })),
+      },
+      // 第 64 块：新手教程 / 属性面板技能页 / 元素群体 / 环剑恢复顺序（测试钩子）
+      block64: {
+        tut: {
+          step: () => tutStep,
+          total: TUT_STEPS.length,
+          kind: () => (TUT_STEPS[tutStep] || {}).kind,
+          title: () => tcTitle.textContent,
+          text: () => tcText.textContent,
+          stepText: () => tcStep.textContent,
+          nextHidden: () => !!(tcNext && tcNext.hidden),
+          next: () => { if (gameState === 'tutorial') tutNext(); return tutStep; },
+          // 从主菜单起一局带教程的（测试入口；正常游玩走「新手引导」按钮）
+          start: () => { beginGame({ tutorial: true }); return gameState; },
+          skip: () => { endTutorial(); return gameState; },
+        },
+        panel: {
+          open: (tab) => { setPanel(true, tab || 'player'); return panelTab; },
+          close: () => setPanel(false),
+          tab: () => panelTab,
+          // 面板当前页的每一行（技能页就是技能清单）
+          rows: () => [...apList.querySelectorAll('.ap-row')].map((r) => {
+            const st = r.querySelector('.ap-st');
+            return {
+              name: (r.querySelector('.ap-name') || {}).textContent || '',
+              val: (r.querySelector('.ap-val') || {}).textContent || '',
+              state: st ? st.dataset.state : '',
+              status: st ? st.textContent : '',
+            };
+          }),
+          notes: () => [...apList.querySelectorAll('.ap-note')].map((n) => n.textContent),
+          sub: () => apSub.textContent,
+        },
+        // 技能键上的倒计时文本（两位小数在这里验）
+        skillNums: () => [...skillBar.querySelectorAll('.sk')]
+          .filter((b) => b.style.display !== 'none')
+          .map((b) => ({ id: b.dataset.skill, num: (b.querySelector('.sk-num') || {}).textContent || '' })),
+        // 环上此刻每种剑各有几把（随机恢复靠它验分布）
+        ringKinds: () => {
+          const m = new Map();
+          for (const k of weapon.ringKinds) m.set(k, (m.get(k) || 0) + 1);
+          return [...m].map(([kind, n]) => ({ kind, n }));
+        },
+        ringOrder: () => weapon.ringKinds.slice(),
+        // 元素群体：对某只怪走一次 applyKind，看圈内其它怪有没有吃到（伤害/状态）
+        elemHit: (kind, type = 'minion') => {
+          const list = enemies.list.filter((e) => e.type === type && e.state !== 'dead');
+          if (!list.length) return null;
+          const before = list.map((e) => +e.hp.toFixed(2));
+          weapon.applyKind(kind, list[0], 2.0);
+          return {
+            n: list.length,
+            before,
+            after: list.map((e) => +e.hp.toFixed(2)),
+            frozen: list.map((e) => +(e.freezeT || 0).toFixed(2)),
+            dotted: list.map((e) => !!(e.dot && e.dot.t > 0)),
+          };
+        },
+        // 直接把环剑塞给玩家（走正常 grant 路径，技能键/特效都会跟着出来）
+        grantRing: () => { weapon.grant(); renderSkill(); return weapon.granted; },
+        weaponStats: () => ({
+          elementRadius: wstats.get('elementRadius'),
+          elementRatio: wstats.get('elementRatio'),
+          poisonDps: wstats.get('poisonDps'),
+          frostTime: wstats.get('frostTime'),
+          chainRatio: wstats.get('chainRatio'),
+        }),
       },
       // 第 62 块：民心专属事件（测试钩子）
       repEv: {
