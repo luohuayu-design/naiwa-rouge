@@ -558,6 +558,19 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
   color:rgba(200,232,216,.66);transition:opacity .2s ease}
 .ld-tip.fade{opacity:0}
 
+/* 第 79 块：慢 ≠ 错。9 秒只出这行黄字，不碰百分比、不染错误色；
+   25 秒才连重试按钮一起给。显隐全靠 hidden 属性。 */
+.ld-slow{margin-top:14px;font-size:11.5px;line-height:1.7;color:#f0d68a;opacity:0;
+  transition:opacity .3s ease}
+.ld-slow:not([hidden]){opacity:1}
+.ld-retry{margin-top:14px;padding:7px 24px;border-radius:999px;
+  border:1px solid rgba(140,235,200,.5);background:rgba(80,210,170,.12);
+  color:#c6f2df;font-size:12px;letter-spacing:.12em;font-family:inherit;
+  cursor:pointer;-webkit-tap-highlight-color:transparent}
+.ld-retry:active{background:rgba(80,210,170,.26)}
+/* hidden 属性必须显式压住：父级是 display:flex，容易被 display 规则顶掉 */
+#loading [hidden]{display:none!important}
+
 /* ============================================================
    开始界面 / 新手教程 / 武器获得卡
    ============================================================ */

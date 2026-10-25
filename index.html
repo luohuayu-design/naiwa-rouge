@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#080f14">
 <link rel="icon" href="data:,">
 <title>蛙步 · 夜行</title>
-<link rel="stylesheet" href="style.css?v=89">
+<link rel="stylesheet" href="style.css?v=90">
 </head>
 <body>
 
@@ -855,37 +855,118 @@
     <div class="ld-bar"><i id="ldBar"></i></div>
     <div class="ld-txt" id="ldTxt">0%</div>
     <div class="ld-tip" id="ldTip"></div>
+    <!-- 第 79 块：慢 ≠ 错。9 秒只是「有点慢」的黄字提示，不碰百分比、
+         不染成错误色；真的起不来（25 秒）才给重试按钮。 -->
+    <div class="ld-slow" id="ldSlow" hidden>网络有点慢，还在加载……</div>
+    <button class="ld-retry" id="ldRetry" type="button" hidden>重新加载</button>
   </div>
 </div>
 
 <!-- 不用 importmap：老手机浏览器（iOS 16.4 以下、旧版微信/安卓 WebView）
      不支持 import maps，会让整个模块解析失败、加载页永远停在 0%。
      项目内所有 import 都写成相对路径，直接靠原生 ES Module 解析。 -->
-<script type="module" src="js/main.js?v=89"></script>
+<script type="module" src="js/main.js?v=90"></script>
 
-<!-- 兜底自检：模块没跑起来时把原因写出来，别让用户对着 0% 干等 -->
+<!-- 兜底自检（第 79 块重写）：把「慢」和「真的失败」分开，别再把慢当错。
+     - 脚本 404 / 解析失败 → 红字 + 重试按钮（这才是真失败）
+     - 9 秒还没起来    → 只显示黄字「网络有点慢」，百分比和进度条照常走
+     - 25 秒还没起来   → 再给重试按钮，但仍然不写死
+     - 模块一跑起来（window.__naiwaBooted，main.js 顶层就置位）→ 提示全收掉
+     旧版的问题：9 秒直接把 ldTxt 改成红色小字「加载超时」，而且颜色字号写死在
+     元素上、后面加载成功了也不会还原 —— 明明只是网络慢，却报成失败。 -->
 <script>
 (function () {
+  var slow = document.getElementById('ldSlow');
+  var retry = document.getElementById('ldRetry');
+  var txt = document.getElementById('ldTxt');
+  var booted = false;
+  // 打点：自动化测试靠它验证「9 秒 / 25 秒」是定时器自己的时间，
+  // 而不是「从导航开始算」—— 网慢的时候 HTML 自己都要下好几秒，那样算不准。
+  var T0 = Date.now();
+  var ldT = (window.__ldT = { t0: T0, slow: 0, long: 0, fail: 0 });
+
+  function show(el) { if (el) el.removeAttribute('hidden'); }
+  function hide(el) { if (el) el.setAttribute('hidden', ''); }
+
   function fail(text) {
-    var t = document.getElementById('ldTxt');
-    if (!t) return;
-    t.textContent = text;
-    t.style.color = '#ff8a78';
-    t.style.fontSize = '12px';
-    t.style.letterSpacing = '0';
+    if (booted || !txt) return;
+    if (!ldT.fail) ldT.fail = Date.now() - T0;
+    txt.textContent = text;
+    txt.style.color = '#ff8a78';
+    txt.style.fontSize = '12px';
+    txt.style.letterSpacing = '0';
+    hide(slow);
+    show(retry);
   }
+
   // 脚本 404 / 解析失败都会派发到脚本元素上（捕获阶段才拿得到）
   window.addEventListener('error', function (e) {
-    if (window.__naiwaBooted) return;
+    if (booted) return;
     var el = e.target;
-    if (el && el.tagName === 'SCRIPT') fail('脚本加载失败，请检查网络后刷新');
+    if (el && el.tagName === 'SCRIPT') fail('脚本加载失败，请检查网络后重试');
   }, true);
 
+  if (retry) retry.addEventListener('click', function () { location.reload(); });
+
   setTimeout(function () {
-    if (window.__naiwaBooted) return;
-    var hasModule = 'noModule' in document.createElement('script');
-    fail(hasModule ? '加载超时，请刷新重试' : '浏览器版本过低，请用最新版 Chrome / Safari 打开');
+    if (booted) return;
+    if (!('noModule' in document.createElement('script'))) {
+      fail('浏览器版本过低，请用最新版 Chrome / Safari 打开');
+      return;
+    }
+    ldT.slow = Date.now() - T0;
+    show(slow);          // 只是慢，不判死
   }, 9000);
+
+  setTimeout(function () {
+    if (booted) return;
+    ldT.long = Date.now() - T0;
+    if (slow) slow.textContent = '加载时间偏长 —— 网络差的时候重载一两次就好了';
+    show(slow);
+    show(retry);
+  }, 25000);
+
+  // 模块跑起来就把所有提示收掉，顺便把可能被写坏的文字样式还原
+  var iv = setInterval(function () {
+    if (!window.__naiwaBooted) return;
+    booted = true;
+    clearInterval(iv);
+    hide(slow);
+    hide(retry);
+    if (txt) { txt.style.color = ''; txt.style.fontSize = ''; txt.style.letterSpacing = ''; }
+  }, 200);
+})();
+</script>
+
+<!-- Service Worker（第 79 块）：把下载过的 js / css / 静态资源存到本地。
+     GitHub Pages 只给 10 分钟缓存，以前隔一会儿来就等于把 1MB 重新下一遍；
+     现在同一个 ?v= 版本内再进几乎瞬间打开，网络抖动还会自动重试。
+     不支持的老浏览器静默跳过，行为跟以前完全一样。 -->
+<script>
+(function () {
+  if (!('serviceWorker' in navigator)) return;
+  if (/[?&]nosw=1/.test(location.search)) return;
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' })
+      .then(function () { return navigator.serviceWorker.ready; })
+      .then(function (reg) {
+        // 首屏那批 js/css 是在 SW 接管**之前**就下完的，它自己没机会存 ——
+        // 只靠运行时缓存的话，第一次访问什么都存不下，第二次还得重下 1MB。
+        // 所以把「这次真的下载过什么」报过去，让它在后台补存一份。
+        var urls = [];
+        try {
+          var rs = performance.getEntriesByType('resource') || [];
+          for (var i = 0; i < rs.length; i++) {
+            var u = rs[i].name;
+            if (u && u.indexOf(location.origin) === 0 && /\.(js|css|glb|gltf|webp|png|jpe?g|svg|ico|woff2?|mp3|ogg|wav)(\?|$)/i.test(u)) {
+              urls.push(u);
+            }
+          }
+        } catch (e) { /* 拿不到 resource timing 就算了，不影响游戏 */ }
+        if (urls.length && reg.active) reg.active.postMessage({ type: 'warm', urls: urls });
+      })
+      .catch(function () { /* 注册失败就当没有，绝不影响游戏 */ });
+  });
 })();
 </script>
 </body>
