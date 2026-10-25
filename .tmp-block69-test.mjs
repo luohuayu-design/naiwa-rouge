@@ -34,7 +34,8 @@ sec('一、起手距离：只在「比较近」的地方才读条');
 // ============================================================
 ok(!!ER, '图鉴里还有擦名者');
 ok(ER.attackRange === 7.0, '起手距离 7.0 格（原 9.0）', String(ER.attackRange));
-ok(ER.keepDistance === 3.0, '保持距离收到 3.0 格（原 6.0；必须明显小于横向可见的 ~4 格）', String(ER.keepDistance));
+// 第 75 块：用户要求「它会自主向主角移动」→ 3.0 改成 4.2，靠到身边来缠
+ok(ER.keepDistance === 4.2, '保持距离 4.2 格（第 75 块：主动靠到身边）', String(ER.keepDistance));
 // 攻击窗口必须够宽，否则它会在「前进 / 后退」之间反复横跳、永远不起手
 ok(ER.attackRange - ER.keepDistance >= 1.5,
   '起手窗口 ≥1.5 格（不会在前进/后退之间来回抖）', String(ER.attackRange - ER.keepDistance));
@@ -44,8 +45,8 @@ ok(ER.attackRange > 5.0, '起手距离仍大于判定圈（不会贴着脸读条
 const enemySrc = read('js/enemy.js');
 ok(/const viz = ctx\.onScreen \? ctx\.onScreen\(e\.pos\) : true/.test(enemySrc),
   'chase 分支每帧问一次「玩家看得见吗」');
-ok(/if \(dist > e\.cfg\.attackRange \|\| !viz\)/.test(enemySrc),
-  '看不见就往玩家身边挪（不是站着干等）');
+ok(/if \(dist > keep \+ 0\.45 \|\| !viz\)/.test(enemySrc),
+  '看不见就往玩家身边挪（第 75 块：靠近条件改成 keep，会主动走过来）');
 const mainSrc0 = read('js/main.js');
 ok(/function onScreen\(at, margin = 0\.9\)/.test(mainSrc0), 'main.js 有 onScreen 投影判定');
 ok(/\.project\(camera\)/.test(mainSrc0), 'onScreen 真的用 camera.project 投到屏幕坐标');
@@ -72,8 +73,9 @@ ok(ER.windup * 4.4 > ER.attackRange * 2,
 // ============================================================
 sec('三、移速：大幅降低，但逃跑速度要补回来');
 // ============================================================
-ok(ER.speed === 0.55, '平时移速 0.55（原 1.15，约玩家的 1/8）', String(ER.speed));
-ok(4.4 / ER.speed >= 6, '玩家比它快 6 倍以上（追得上）', (4.4 / ER.speed).toFixed(1) + '×');
+// 第 75 块：0.55 太慢（从场边走 7 格要 12 秒，玩家只看见它最后才慢慢挪过来）
+ok(Math.abs(ER.speed - 1.35) < 1e-6, '平时移速 1.35（第 75 块：玩家的三成，看得见它在走）', String(ER.speed));
+ok(4.4 / ER.speed >= 3, '玩家仍比它快 3 倍以上（追得上）', (4.4 / ER.speed).toFixed(1) + '×');
 const flee = ER.speed * ER.erase.fleeSpeed;
 ok(flee > 1.6 && flee < 2.8,
   '逃跑绝对速度仍在 1.6~2.8（和原来 ~2.15 相当，「偷到就跑」的手感不变）', flee.toFixed(2));

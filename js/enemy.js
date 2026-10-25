@@ -25,11 +25,11 @@
 // 第四关三只（wraith/leaper/mender，第 35 块，第 52 块换模型），
 // 各自在下面 ENEMY_TYPES 里有详细注释。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=85';
-import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=85';
-import { clone as cloneSkinned } from '../lib/jsm/utils/SkeletonUtils.js?v=85';
-import { distance2D } from './stats.js?v=85';
-import { createRangeRing } from './rangeRing.js?v=85';
+import * as THREE from '../lib/three.module.js?v=86';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=86';
+import { clone as cloneSkinned } from '../lib/jsm/utils/SkeletonUtils.js?v=86';
+import { distance2D } from './stats.js?v=86';
+import { createRangeRing } from './rangeRing.js?v=86';
 
 // KayKit 模型正面朝 +Z；如果哪天换模型发现怪倒着走，把这里改成 Math.PI
 export const ENEMY_MODEL_YAW = 0;
@@ -672,6 +672,13 @@ export const ENEMY_TYPES = {
   //
   // 模型：KayKit《Character Pack: Adventurers》的 Rogue_Hooded（CC0），
   // 76 段动画裁到 5 段（见 .tmp-shrink-glb.py），3.6MB → 532KB。
+  // 第 75 块（用户实测：「生成靠后，最后只剩它」「它应该自主向主角移动」）：
+  //   原来 speed 0.55 是玩家（4.4）的 1/8 —— 从 18 格外的场边走 7 格要 12 秒，
+  //   等它磨蹭到玩家身边，别的怪都死光了，观感就是「最后只剩一个慢吞吞的」。
+  //   现在 speed 1.35（玩家的三成）：看得见它在走、也追得上，但它依旧杀不了人。
+  //   keepDistance 3.0 → 4.2：它会**主动靠到 4 格左右**缠着你，而不是在 7 格外
+  //   站着不动（chase 的靠近条件也改了，见 updateOne 的擦名者分支）。
+  //   fleeSpeed 按绝对速度折算：0.55×3.9 ≈ 2.15 → 1.35×1.6 ≈ 2.16，逃跑手感不变。
   eraser: {
     name: '擦名者',
     file: 'assets/monsters/hooded-scribe.glb',
@@ -680,13 +687,11 @@ export const ENEMY_TYPES = {
     radius: 0.55,
     hp: 5,
     armor: 0,
-    speed: 0.55,           // 第 69 块：1.15 → 0.55（用户「大幅降低移动速度」）
+    speed: 1.35,           // 第 75 块：0.55 → 1.35（能看见它在向主角移动）
     // 故意不写 damage：它从不还手（图鉴会显示「从不还手」）。它靠偷东西吃饭。
     attackRange: 7.0,      // 第 69 块：9.0 → 7.0（起手距离上限）
-    // 第 69 块：6.0 → 5.0 → 3.0。实测竖屏横向只有约 4 格在画面里，
-    // 它必须能走到「既在画面里、又在 7 格内」的位置才起手，
-    // keep 必须明显小于 4 格，否则会在「后退保距离」和「前进求可见」之间抖。
-    keepDistance: 3.0,
+    // 第 69 块：6.0 → 5.0 → 3.0。第 75 块：3.0 → 4.2（主动靠到你身边来缠）
+    keepDistance: 4.2,
     attackInterval: 8.5,
     windup: 4.5,           // 第 69 块：2.6 → 4.5 秒，冲过去完全来得及
     attackDuration: 5.4,   // 必须 > windup，否则读条中被提前切回 chase
@@ -695,7 +700,7 @@ export const ENEMY_TYPES = {
     // 真正的效果在下面的 e.cfg.erase 分支里，spawnSpell 不会收到这个 kind。
     spell: { kind: 'erase' },
     erase: {
-      fleeSpeed: 3.9,      // 得手后逃跑时的移速倍率（0.55×3.9≈2.15，和原来一样快）
+      fleeSpeed: 1.6,      // 第 75 块：按新移速折算，绝对速度仍是 ~2.16（和原来一样快）
       holdAfterSteal: 1.4, // 第 69 块（用户）：擦完名字先愣 1.4 秒才开跑，给你追上来的窗口
       knockGap: 0.5,       // 擦下来的剑在它身上挂多久才「掉」——其实一直挂着，这只是冷却
     },
@@ -738,7 +743,7 @@ export const ENEMY_TYPES = {
     windup: 0.42,
     attackDuration: 0.85,
     reboot: {
-      times: 2,            // 最多重启 2 次（第 3 次真死）
+      times: 1,            // 第 75 块（用户）：2 → 1。最多重启 1 次，第 2 次真死
       delay: 4.0,          // 躺尸 4 秒再站起来
       hpRatio: 0.55,       // 重启后血量 = 上限 × 0.55
       speedMul: 1.15,      // 每重启一次快 15%（叠乘）
@@ -753,6 +758,55 @@ export const ENEMY_TYPES = {
       walk: 'walk', idle: 'idle', attack: 'attack',
       death: 'death', spawn: 'spawn',
     },
+  },
+
+  // ============================================================
+  // 第六关 · 骨塔机房（第 75 块）—— 并联体
+  // ============================================================
+  // 机房里两台并在一起供电的旧发电机。夜行把它叫醒之后，它**离地浮起来**，
+  // 和同伙之间拉出一条青白色的电弧 —— 人从线上过，就是一次电击。
+  //
+  // 用户定案的机制：**场上所有并联体两两相连**（4 只 = 6 条线），
+  // 不设距离上限。所以它不是「一个敌人」，而是「一片会移动的禁区」：
+  // 场上每多一只，可站的空地就少几条缝。解法只有一个 —— 把并联体本身拆掉。
+  //
+  // 它自己也会近战（蹭到就电一下），但那不是重点；重点是那张网。
+  // 数值给得低（hp 3.2 / 伤害 0.9），因为电弧已经在持续消耗你的血。
+  //
+  // 模型：Kenney《Space Kit》的 machine_generator（CC0，28KB）——
+  // 静态网格、没有骨骼动画，所以不写 animFamily（resolveClipAliases 会安全地返回空表）。
+  // 「活着」的感觉靠程序化的悬停 + 自转 + 电弧抖动，见 updateOne 的 arc 分支。
+  arc: {
+    name: '并联体',
+    file: 'assets/monsters/parallel-cell.glb',
+    sourceHeight: 0.40,    // 实测包围盒最高点（Kenney 的 1 单位 ≈ 1 格）
+    height: 1.30,          // 放大到近人高：一块浮在半空的铁疙瘩
+    radius: 0.55,
+    hp: 3.2,
+    armor: 0,
+    speed: 1.75,
+    damage: 0.9,
+    attackRange: 1.6,
+    attackInterval: 1.7,
+    windup: 0.40,
+    attackDuration: 0.80,
+    hover: 0.55,           // 离地高度（悬浮）
+    spin: 0.8,             // 自转角速度（弧度/秒）
+    arc: {
+      color: 0x7ad8ff,     // 青白电弧
+      width: 0.085,        // 基准粗细（每帧再抖 0.7~1.4 倍）
+      y: 0.85,             // 线的高度（空中，不是地上的一道缝）
+      hitR: 0.42,          // 判定半径（再加主角自己的半径）
+      damage: 1,
+      cd: 0.70,            // 全局节流：同一刻只吃一次
+    },
+    spawnTime: 0.8,
+    deathTime: 1.2,
+    selfDestruct: false,
+    color: 0x7ad8ff,
+    tint: 0x5aa8d0,        // 压一层冷青：和机房的蓝绿微光同调
+    glow: { color: 0x2a8ac8, intensity: 0.9 },
+    anim: { walk: 'walk', idle: 'idle', attack: 'attack', death: 'death', spawn: 'spawn' },
   },
 
   // ============================================================
@@ -1663,6 +1717,106 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     e.chargeLine = null;
   }
 
+  // ---------------- 并联体的电弧网（第 75 块，第六关） ----------------
+  // 用户定案：「新怪成对出现、两两之间连一条持续电流，碰到就掉血（4 只 = 6 条线）」。
+  // 所以这不是「配对连线」，是**组合数**：场上 n 只并联体 → C(n,2) 条电弧。
+  // 4 只刚好 6 条，围成一张三角形的网 —— 怪越多，能站的地方越少。
+  //
+  // 三条规则：
+  //   ① 不设距离上限。两只在场地两头也连着（不然「4 只 = 6 条」就不成立了），
+  //      玩家唯一的解法是把并联体本身清掉；
+  //   ② 伤害走全局节流（arcZapCd）：同一刻有几条线压在身上，也只掉一次血，
+  //      否则站在交叉点会瞬间暴毙 —— 那是 bug，不是难度；
+  //   ③ 线在空中（y≈0.8），不是地上的一道缝：一眼能看出「这里是禁区」。
+  //
+  // 视觉：每帧重建（最多 6 条，开销可忽略）。每一条都带随机抖动与粗细闪烁，
+  // 看起来像真的在放电，而不是一根贴上去的荧光棒。
+  const arcGeo = new THREE.BoxGeometry(1, 1, 1);
+  let arcMatBase = null;
+  const arcPool = [];          // 复用的 Mesh，避免每帧 new
+  let arcZapCd = 0;            // 掉血节流（秒）
+
+  function arcMeshAt(i, color) {
+    let m = arcPool[i];
+    if (!m) {
+      if (!arcMatBase) {
+        arcMatBase = new THREE.MeshBasicMaterial({
+          color, transparent: true, opacity: 0.75,
+          depthWrite: false, blending: THREE.AdditiveBlending,
+        });
+      }
+      m = new THREE.Mesh(arcGeo, arcMatBase.clone());
+      m.renderOrder = 3;
+      m.frustumCulled = false;
+      scene.add(m);
+      arcPool[i] = m;
+    }
+    m.visible = true;
+    return m;
+  }
+
+  // 点到线段的最短距离（电弧判定用）
+  function distToSeg(px, pz, ax, az, bx, bz) {
+    const vx = bx - ax, vz = bz - az;
+    const wx = px - ax, wz = pz - az;
+    const L2 = vx * vx + vz * vz;
+    let t = L2 > 1e-6 ? (wx * vx + wz * vz) / L2 : 0;
+    t = t < 0 ? 0 : (t > 1 ? 1 : t);
+    return Math.hypot(px - (ax + vx * t), pz - (az + vz * t));
+  }
+
+  function updateArcNet(dt, ctx) {
+    const nodes = [];
+    for (const e of list) {
+      if (!e.cfg.arc) continue;
+      if (e.state === 'dead' || e.state === 'spawn') continue;
+      nodes.push(e);
+    }
+    if (arcZapCd > 0) arcZapCd -= dt;
+
+    let n = 0;
+    let zapped = false;
+    for (let i = 0; i < nodes.length; i++) {
+      const a = nodes[i];
+      for (let j = i + 1; j < nodes.length; j++) {
+        const b = nodes[j];
+        const cfg = a.cfg.arc;
+        const dx = b.pos.x - a.pos.x;
+        const dz = b.pos.z - a.pos.z;
+        const len = Math.hypot(dx, dz);
+        if (len < 0.05) continue;
+
+        const y = (cfg.y || 0.8) + (Math.random() - 0.5) * 0.16;
+        const m = arcMeshAt(n, cfg.color || 0x7ad8ff);
+        m.position.set((a.pos.x + b.pos.x) * 0.5, y, (a.pos.z + b.pos.z) * 0.5);
+        m.rotation.set(0, Math.atan2(dx, dz), 0);
+        // 粗细每帧抖一下：0.7~1.4 倍基准宽 —— 电弧的「噼啪」感全靠这个
+        const w = (cfg.width || 0.09) * (0.7 + Math.random() * 0.7);
+        m.scale.set(w, w, len);
+        m.material.opacity = 0.55 + Math.random() * 0.35;
+        n++;
+
+        // 命中：主角到线段的距离 < 判定半径
+        if (!zapped && arcZapCd <= 0) {
+          const d = distToSeg(ctx.playerPos.x, ctx.playerPos.z, a.pos.x, a.pos.z, b.pos.x, b.pos.z);
+          if (d <= (cfg.hitR || 0.42) + ctx.playerRadius) {
+            zapped = true;
+            arcZapCd = cfg.cd || 0.7;
+            ctx.hurtPlayer(cfg.damage || 1, null);
+            if (fx && ctx.playerPos) {
+              fx.burst(ctx.playerPos, { color: 0x9ee8ff, count: 8, speed: 1.6, life: 0.3, size: 0.08, y: 0.7, up: 1.0 });
+            }
+          }
+        }
+      }
+    }
+
+    // 多出来的线收起来（不 dispose，下一帧还要用）
+    for (let i = n; i < arcPool.length; i++) arcPool[i].visible = false;
+    // 没有节点时把节流也清掉，下次接上立刻能咬人
+    if (!nodes.length) arcZapCd = 0;
+  }
+
   // ---------------- 雾猎狼的落点红圈（第 35 块） ----------------
   // 蓄力时钉在「玩家当时站的位置」：红圈 + 一层淡红填充，跟弓手的红圈一个语言。
   // 落点在起手那一刻就锁死 —— 红圈出现 → 走出去，就是这么直白的应对。
@@ -2353,6 +2507,15 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     e.mixer.update(dt);
     e.t += dt;
 
+    // ---- 并联体（第六关，第 75 块）：静态模型靠程序化漂浮「活起来」 ----
+    // Kenney 的模型没有骨骼动画（clip 表是空的，play() 会安全地什么都不做），
+    // 所以「在动」这件事只能自己写：离地悬停 + 上下呼吸 + 缓慢自转。
+    // 死亡后不再抬高度，让它自然落到地上。
+    if (e.cfg.spin && e.state !== 'dead') {
+      e.root.position.y = (e.cfg.hover || 0) + Math.sin(e.t * 2.2) * 0.10;
+      e.model.rotation.y = ENEMY_MODEL_YAW + e.t * e.cfg.spin;
+    }
+
     // ---- 冰缓：减速倒计时（移速在 moveToward 里按 slowT 折算） ----
     if (e.slowT > 0) e.slowT -= dt;
 
@@ -2904,7 +3067,8 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
       // 第 69 块（用户「还没找到它就被偷了」的根治）：起手之前先问一句
       // 「玩家现在看得见它吗」。看不见就继续朝玩家挪，而不是在屏幕外偷偷读条。
       const viz = ctx.onScreen ? ctx.onScreen(e.pos) : true;
-      if (dist < keep) {
+      // 进/退各留一条死区，否则它会在 keep 那条线上左右抖（第 75 块）
+      if (dist < keep - 0.35) {
         moveToward(e, -dx, -dz, dist, dt, ctx);
         if (e.currentAnim !== e.cfg.anim.walk) {
           e.currentAnim = e.cfg.anim.walk;
@@ -2912,7 +3076,9 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
         }
         return;
       }
-      if (dist > e.cfg.attackRange || !viz) {
+      if (dist > keep + 0.45 || !viz) {
+        // 第 75 块：靠近条件从 attackRange（7）改成 keep（4.2）——
+        // 它会一路走到你身边 4 格处才停，而不是在 7 格外站着等读条。
         moveToward(e, dx, dz, dist, dt, ctx);
         if (e.currentAnim !== e.cfg.anim.walk) {
           e.currentAnim = e.cfg.anim.walk;
@@ -3283,6 +3449,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     updateZones(dt, ctx);
     updateArrows(dt, ctx);
     updateSpikes(dt, ctx);
+    updateArcNet(dt, ctx);      // 第 75 块：并联体的电弧网
 
     // 分离：避免怪物叠成一个点（O(n²)，同屏最多十几只，开销可忽略）
     for (let i = 0; i < list.length; i++) {
@@ -3500,6 +3667,10 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     // 第 63 块：
     //   擦名者 —— 场上还有几只（含正在逃跑的）；stolenCount = 一共被偷走几把剑还没还
     eraserCount: () => list.filter((e) => e.cfg.erase && e.state !== 'dead').length,
+    //   第 75 块：并联体的电弧网 —— 场上几只节点、现在画了几条线。
+    //   n 只节点应该正好 C(n,2) 条线（4 只 = 6 条），测试和调试都靠这两个数。
+    arcNodes: () => list.filter((e) => e.cfg.arc && e.state !== 'dead' && e.state !== 'spawn').length,
+    arcLines: () => arcPool.filter((m) => m.visible).length,
     //   擦名者读条进度（第 65 块）：给「奶蛙头顶百分比」用。
     //   返回 null = 现在没有人在读条；否则 { progress 0~1, who }。
     //   多只同时读条取进度最高的那只 —— 最危险的那一只才该占着头顶。

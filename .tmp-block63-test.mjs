@@ -144,12 +144,12 @@ ok(ER && ER.damage === undefined, '擦名者从不还手（没有 damage 字段�
 ok(ER && ER.erase && ER.speed * ER.erase.fleeSpeed > 1.6 && ER.speed * ER.erase.fleeSpeed < 2.8, '擦名者绝对逃跑速度合理（比玩家慢、追得上）', ER.speed * ER.erase.fleeSpeed);
 ok(ER && ER.windup >= 2, '擦名者读条 ≥2 秒（来得及冲过去）', ER.windup);
 ok(ER && ER.height >= 1.8 && ER.height <= 2.1, '擦名者身高 1.8~2.1', ER.height);
-ok(RB && RB.reboot && RB.reboot.times === 2 && RB.reboot.delay === 4, '重启体：4 秒后重启、最多 2 次');
+ok(RB && RB.reboot && RB.reboot.times === 1 && RB.reboot.delay === 4, '重启体：4 秒后重启、最多 1 次（第 75 块用户定案）');
 ok(RB && RB.reboot.hpRatio >= 0.4 && RB.reboot.hpRatio <= 0.7, '重启后是半血左右', RB.reboot.hpRatio);
 ok(RB && RB.height >= 1.8 && RB.height <= 2.0, '重启体身高 1.8~2.0', RB.height);
 // 第 71 块 +井蛙 / 木鱼灵
-ok(enemy.ENEMY_TYPES.minion && Object.keys(enemy.ENEMY_TYPES).filter((k) => !enemy.ENEMY_TYPES[k].planned).length === 17,
-  '启用中的怪物 17 只');
+ok(enemy.ENEMY_TYPES.minion && Object.keys(enemy.ENEMY_TYPES).filter((k) => !enemy.ENEMY_TYPES[k].planned).length === 18,
+  '启用中的怪物 18 只');
 // 第 62 块定下的尺寸（盾兵/孢生按战士 1.4 倍，三只小的统一 1.8~1.9）
 const W = enemy.ENEMY_TYPES.warrior;
 // 战士 1.38 × 1.4 = 1.93，用户拍板取整到 1.9 —— 容差放到 0.06 而不是 0.02

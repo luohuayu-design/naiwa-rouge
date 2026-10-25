@@ -1,6 +1,6 @@
 // 第 72 块契约测试：按关预载（加载变快）
 import { readFileSync } from 'node:fs';
-import { LEVELS_BY_ID, levelTypes } from './js/wave.js?v=85';
+import { LEVELS_BY_ID, levelTypes } from './js/wave.js?v=86';
 
 let pass = 0, fail = 0;
 const ok = (name, cond) => { if (cond) { pass++; } else { fail++; console.log('  x ' + name); } };
@@ -17,7 +17,7 @@ for (const id of Object.keys(LEVELS_BY_ID)) {
   ok('第' + id + '关无重复', new Set(t).size === t.length);
   for (const x of t) seen.add(x);
 }
-ok('全部 7 关合起来覆盖 17 种怪', seen.size === 17);
+ok('全部 7 关合起来覆盖 18 种怪', seen.size === 18, String(seen.size));   // 第 75 块 +并联体
 ok('第一关只有 4 种（首屏最小集）', levelTypes(LEVELS_BY_ID[1]).length === 4);
 ok('第一关含 minion（教程要打一只）', levelTypes(LEVELS_BY_ID[1]).includes('minion'));
 ok('第五关含 eraser', levelTypes(LEVELS_BY_ID[5]).includes('eraser'));

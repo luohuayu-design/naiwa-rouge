@@ -5,11 +5,11 @@ import {
   UPGRADES, FAMILIES, TIERS, TAG_NAMES,
   weightOf, poolOf, rollChoices, chanceTable, rarityOdds,
   applyUpgrade, previewUpgrade,
-} from './js/upgrade.js?v=85';
-import { RARITIES, rarityWeight } from './js/rarity.js?v=85';
-import { createStats } from './js/stats.js?v=85';
-import { createWeaponStats } from './js/weaponStats.js?v=85';
-import { codexSummary } from './js/codex.js?v=85';
+} from './js/upgrade.js?v=86';
+import { RARITIES, rarityWeight } from './js/rarity.js?v=86';
+import { createStats } from './js/stats.js?v=86';
+import { createWeaponStats } from './js/weaponStats.js?v=86';
+import { codexSummary } from './js/codex.js?v=86';
 
 let pass = 0; const fails = [];
 const ok = (name, cond, extra = '') => {

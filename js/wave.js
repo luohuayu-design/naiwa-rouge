@@ -383,7 +383,7 @@ export const LEVEL_6 = {
   theme: 'server',
   arena: 19,
   order: [
-    ['minion', 1], ['warrior', 1.6], ['reboot', 1.9], ['leaper', 2.0],
+    ['minion', 1], ['warrior', 1.6], ['reboot', 1.9], ['arc', 2.1], ['leaper', 2.0],
     ['archer', 2.0], ['bowman', 2.2], ['wraith', 2.2],
     ['shielder', 2.4], ['brood', 2.6], ['mender', 2.6],
   ],
@@ -410,30 +410,30 @@ export const LEVEL_6 = {
   ],
   rounds: [
     // ---- 第一幕（R1~R4）：机房 · 风扇还在转 ----
-    { minion: 3, warrior: 0, reboot: 0, leaper: 0, archer: 0, bowman: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, gap: 0.90, tip: '骨塔地下机房：地上有几块格栅在漏电，别站上去' },
-    { minion: 4, warrior: 1, reboot: 0, leaper: 0, archer: 0, bowman: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, gap: 0.80, tip: '通电前会闪一下橙光 —— 看到就往外走' },
-    { minion: 4, warrior: 1, reboot: 0, leaper: 0, archer: 1, bowman: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, gap: 0.80, tip: '弧线走位：绕开格栅，别直着冲' },
+    { minion: 3, warrior: 0, reboot: 0, arc: 0, leaper: 0, archer: 0, bowman: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, gap: 0.90, tip: '骨塔地下机房：地上有几块格栅在漏电，别站上去' },
+    { minion: 4, warrior: 1, reboot: 0, arc: 0, leaper: 0, archer: 0, bowman: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, gap: 0.80, tip: '通电前会闪一下橙光 —— 看到就往外走' },
+    { minion: 4, warrior: 1, reboot: 0, arc: 0, leaper: 0, archer: 1, bowman: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, gap: 0.80, tip: '弧线走位：绕开格栅，别直着冲' },
     // ---- 第二幕（R5~R8）：重启体登场 ----
-    { minion: 5, warrior: 1, reboot: 1, leaper: 0, archer: 1, bowman: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, gap: 0.75, tip: '那个铁块打死了会重新站起来：躺下的时候守着它' },
-    { minion: 5, warrior: 2, reboot: 1, leaper: 0, archer: 1, bowman: 1, wraith: 0, shielder: 0, brood: 0, mender: 0, gap: 0.72, tip: '重启只需要 4 秒：走了就白打一次' },
-    { minion: 5, warrior: 2, reboot: 1, leaper: 1, archer: 1, bowman: 1, wraith: 1, shielder: 0, brood: 0, mender: 0, gap: 0.70, tip: '雾鬼也钻到机房里来了：隐着身照样咬人' },
-    { minion: 6, warrior: 2, reboot: 2, leaper: 1, archer: 2, bowman: 1, wraith: 1, shielder: 0, brood: 0, mender: 0, gap: 0.66, tip: '两个重启体：先集中拆掉一个，别两边都留半条命' },
-    { minion: 6, warrior: 3, reboot: 2, leaper: 1, archer: 2, bowman: 1, wraith: 1, shielder: 1, brood: 0, mender: 0, gap: 0.62, tip: '盾兵 + 重启体一起上：先解决会复活的' },
+    { minion: 5, warrior: 1, reboot: 1, arc: 0, leaper: 0, archer: 1, bowman: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, gap: 0.75, tip: '那个铁块打死了会重新站起来：躺下的时候守着它' },
+    { minion: 5, warrior: 2, reboot: 1, arc: 0, leaper: 0, archer: 1, bowman: 1, wraith: 0, shielder: 0, brood: 0, mender: 0, gap: 0.72, tip: '重启只需要 4 秒：走了就白打一次' },
+    { minion: 5, warrior: 2, reboot: 1, arc: 2, leaper: 1, archer: 1, bowman: 1, wraith: 1, shielder: 0, brood: 0, mender: 0, gap: 0.70, tip: '雾鬼也钻到机房里来了：隐着身照样咬人' },
+    { minion: 6, warrior: 2, reboot: 2, arc: 2, leaper: 1, archer: 2, bowman: 1, wraith: 1, shielder: 0, brood: 0, mender: 0, gap: 0.66, tip: '两只并联体浮起来了：它们之间那条青白色电弧，碰到就掉血' },
+    { minion: 6, warrior: 3, reboot: 2, arc: 2, leaper: 1, archer: 2, bowman: 1, wraith: 1, shielder: 1, brood: 0, mender: 0, gap: 0.62, tip: '拆掉一只并联体，就少一条电弧 —— 场上的网是它们连出来的' },
     // ---- 第三幕（R9~R13）：混编加压 ----
-    { minion: 6, warrior: 3, reboot: 2, leaper: 2, archer: 2, bowman: 1, wraith: 2, shielder: 1, brood: 0, mender: 1, gap: 0.60, tip: '戴尖帽的小巫在给怪回血：别让它奶到重启体' },
-    { minion: 7, warrior: 3, reboot: 2, leaper: 2, archer: 2, bowman: 2, wraith: 2, shielder: 1, brood: 1, mender: 1, gap: 0.58, tip: '孢生菇一边孵一边加人：格栅边上是它的孵化场' },
-    { minion: 7, warrior: 4, reboot: 2, leaper: 2, archer: 3, bowman: 2, wraith: 2, shielder: 2, brood: 1, mender: 1, gap: 0.56, tip: '地板、怪、奶妈三件事一起来 —— 先保走位' },
-    { minion: 7, warrior: 4, reboot: 3, leaper: 2, archer: 3, bowman: 2, wraith: 3, shielder: 2, brood: 1, mender: 1, gap: 0.54, tip: '三个重启体：这一波的「清场」要清三遍' },
-    { minion: 8, warrior: 4, reboot: 3, leaper: 3, archer: 3, bowman: 2, wraith: 3, shielder: 2, brood: 1, mender: 1, gap: 0.52, tip: '漏电地板上的怪不掉血 —— 别指望电帮你' },
+    { minion: 6, warrior: 3, reboot: 2, arc: 2, leaper: 2, archer: 2, bowman: 1, wraith: 2, shielder: 1, brood: 0, mender: 1, gap: 0.60, tip: '戴尖帽的小巫在给怪回血：别让它奶到重启体' },
+    { minion: 7, warrior: 3, reboot: 2, arc: 4, leaper: 2, archer: 2, bowman: 2, wraith: 2, shielder: 1, brood: 1, mender: 1, gap: 0.58, tip: '四只并联体 = 六条电弧：这张网会把你逼到格栅边上' },
+    { minion: 7, warrior: 4, reboot: 2, arc: 4, leaper: 2, archer: 3, bowman: 2, wraith: 2, shielder: 2, brood: 1, mender: 1, gap: 0.56, tip: '地板、怪、奶妈三件事一起来 —— 先保走位' },
+    { minion: 7, warrior: 4, reboot: 3, arc: 4, leaper: 2, archer: 3, bowman: 2, wraith: 3, shielder: 2, brood: 1, mender: 1, gap: 0.54, tip: '三个重启体：这一波的「清场」要清三遍' },
+    { minion: 8, warrior: 4, reboot: 3, arc: 4, leaper: 3, archer: 3, bowman: 2, wraith: 3, shielder: 2, brood: 1, mender: 1, gap: 0.52, tip: '漏电地板上的怪不掉血 —— 别指望电帮你' },
     // ---- 第四幕（R14~R17）：机房的夜班 ----
-    { minion: 8, warrior: 4, reboot: 3, leaper: 3, archer: 3, bowman: 2, wraith: 3, shielder: 2, brood: 2, mender: 1, gap: 0.50, tip: '两颗孢生菇：十二只小兵上限，先拆一颗' },
-    { minion: 8, warrior: 5, reboot: 3, leaper: 3, archer: 3, bowman: 3, wraith: 3, shielder: 2, brood: 2, mender: 1, gap: 0.48, tip: '风扇声越来越近 —— 它们比刚才更快了' },
-    { minion: 8, warrior: 5, reboot: 4, leaper: 3, archer: 4, bowman: 3, wraith: 4, shielder: 3, brood: 2, mender: 1, gap: 0.46, tip: '四个重启体：留一条能绕回格栅外的路' },
-    { minion: 9, warrior: 5, reboot: 4, leaper: 4, archer: 4, bowman: 3, wraith: 4, shielder: 3, brood: 2, mender: 2, gap: 0.44, tip: '第 17 回合：ERROR 日志刷得停不下来' },
+    { minion: 8, warrior: 4, reboot: 3, arc: 4, leaper: 3, archer: 3, bowman: 2, wraith: 3, shielder: 2, brood: 2, mender: 1, gap: 0.50, tip: '两颗孢生菇：十二只小兵上限，先拆一颗' },
+    { minion: 8, warrior: 5, reboot: 3, arc: 4, leaper: 3, archer: 3, bowman: 3, wraith: 3, shielder: 2, brood: 2, mender: 1, gap: 0.48, tip: '风扇声越来越近 —— 它们比刚才更快了' },
+    { minion: 8, warrior: 5, reboot: 4, arc: 4, leaper: 3, archer: 4, bowman: 3, wraith: 4, shielder: 3, brood: 2, mender: 1, gap: 0.46, tip: '四个重启体：留一条能绕回格栅外的路' },
+    { minion: 9, warrior: 5, reboot: 4, arc: 4, leaper: 4, archer: 4, bowman: 3, wraith: 4, shielder: 3, brood: 2, mender: 2, gap: 0.44, tip: '第 17 回合：ERROR 日志刷得停不下来' },
     // ---- 第五幕（R18~R20）：骨塔机房 · 毕业考 ----
-    { minion: 9, warrior: 5, reboot: 4, leaper: 4, archer: 4, bowman: 3, wraith: 4, shielder: 3, brood: 2, mender: 2, gap: 0.42, tip: '还差三回合：别把血花在电上' },
-    { minion: 9, warrior: 6, reboot: 4, leaper: 4, archer: 4, bowman: 4, wraith: 4, shielder: 3, brood: 2, mender: 2, gap: 0.40, tip: '倒数第二波：补刀、补刀、补刀' },
-    { minion: 10, warrior: 6, reboot: 5, leaper: 4, archer: 4, bowman: 4, wraith: 5, shielder: 4, brood: 2, mender: 2, gap: 0.38, tip: '最后一波：把机房里的东西全拆了' },
+    { minion: 9, warrior: 5, reboot: 4, arc: 4, leaper: 4, archer: 4, bowman: 3, wraith: 4, shielder: 3, brood: 2, mender: 2, gap: 0.42, tip: '还差三回合：别把血花在电上' },
+    { minion: 9, warrior: 6, reboot: 4, arc: 4, leaper: 4, archer: 4, bowman: 4, wraith: 4, shielder: 3, brood: 2, mender: 2, gap: 0.40, tip: '倒数第二波：补刀、补刀、补刀' },
+    { minion: 10, warrior: 6, reboot: 5, arc: 4, leaper: 4, archer: 4, bowman: 4, wraith: 5, shielder: 4, brood: 2, mender: 2, gap: 0.38, tip: '最后一波：把机房里的东西全拆了' },
   ],
 };
 
@@ -589,23 +589,53 @@ export function levelTypes(level = LEVEL_1) {
 // mod：本回合修正（随机事件写入），数量按 mod.countScale 缩放。
 // level.gapScale：全关生成节奏系数（第 33 块，第三关 1.35 = 放慢 35%），
 // 只拉开怪与怪的间隔，不改回合表里的数量。
-function buildSpawns(roundNo, mod = {}, level = LEVEL_1) {
-  const cfg = level.rounds[roundNo - 1];
+// 第 75 块（用户实测：「它们生成有些靠后，最后只剩擦名者」）：
+// 擦名者（eraser）**不再参与 order 排队**，而是单独插到本回合刷怪进度的
+// 40%~60% 之间 —— 也就是场上最热闹、玩家最忙的那一段。它出厂时就是来添乱的，
+// 不该等到清场了才慢悠悠走过来。
+//
+// 两个细节：
+//   ① 插进去之后**整表按 delay 重排**。update 是按 spawnIdx 顺序消费的
+//      （`t >= spawns[spawnIdx].delay`），表里一旦出现倒序，后面那些怪会卡住不刷；
+//   ② 标记 `near: true`：进场位置改用更近的半径（见 pickSpawn 的 nearR 参数），
+//      免得它在 18 格外的场边出生 —— 那个距离玩家看不见，也走不过来。
+const ERASER_AT = 0.5;       // 插在刷怪进度的中点（上下浮动 ±0.1）
+const ERASER_NEAR = 0.52;    // 出生半径 = 关卡 spawnRadius × 这个系数（五关 18.2 → 9.5 格）
+
+// 第 75 块：导出（测试要精确检查「擦名者插在进度哪一格」与整表是否递增）
+export function buildSpawns(roundNo, mod = {}, level = LEVEL_1) {  const cfg = level.rounds[roundNo - 1];
   const cs = mod.countScale != null ? Math.max(0, mod.countScale) : 1;
   const gs = level.gapScale || 1;
   const n = (v) => Math.max(0, Math.round((v || 0) * cs));
   const out = [];
   let t = 0.75;
   let first = true;
+  let eraserCount = 0;
   for (const [type, gapMul] of level.order) {
     const count = n(cfg[type]);
     if (count <= 0) continue;
+    if (type === 'eraser') {        // 第 75 块：先扣下来，等整表排完再插到中段
+      eraserCount += count;
+      continue;                     // 别动 t / first，它不该占别人的段间隔
+    }
     if (!first) t += 0.35;
     first = false;
     for (let i = 0; i < count; i++) {
       out.push({ type, delay: t });
       t += cfg.gap * gapMul * gs;
     }
+  }
+  if (eraserCount > 0) {
+    // 整回合的刷怪时长：最后一只怪什么时候出来（没别的怪时就给个最短窗口）
+    const span = out.length ? out[out.length - 1].delay : 4.0;
+    for (let i = 0; i < eraserCount; i++) {
+      // 一只擦名者固定在 50%；多只就在 40%~60% 之间岔开，别叠在同一秒
+      const k = eraserCount === 1
+        ? ERASER_AT
+        : (ERASER_AT - 0.10) + (0.20 * i) / (eraserCount - 1);
+      out.push({ type: 'eraser', delay: Math.max(1.2, span * k), near: true });
+    }
+    out.sort((a, b) => a.delay - b.delay);   // 见上面 ①：必须是递增表
   }
   return out;
 }
@@ -621,9 +651,13 @@ export function createLevel(level, { enemies, fx, getPlayerPos, onRound, onRound
   let spawned = 0;
   let roundMod = {};        // 本回合修正（事件写入：countScale / speedScale）
 
-  function pickSpawn() {
+  // nearR：第 75 块 —— 擦名者用更近的出生半径传进来（其它怪不传，行为不变）。
+  // 传了就同时收紧「不能刷在主角脸上」的下限，否则近半径会被规则 2 全部否掉。
+  function pickSpawn(nearR) {
     const p = getPlayerPos();
-    const R = level.spawnRadius;
+    const R = nearR || level.spawnRadius;
+    const minD = nearR ? Math.min(level.minPlayerDistance, R * 0.66) : level.minPlayerDistance;
+    const jitter = nearR ? level.spawnJitter * 0.6 : level.spawnJitter;
     // 第 63 块：四向路口（level.lanes）—— 只在均分的几条「路」上刷。
     // 每条路带一点角度抖动（±1/6 路宽），不然四次都从同一条直线进来太假。
     const lanes = level.lanes | 0;
@@ -637,12 +671,12 @@ export function createLevel(level, { enemies, fx, getPlayerPos, onRound, onRound
       } else {
         a = Math.random() * Math.PI * 2;
       }
-      const r = R + (Math.random() - 0.5) * level.spawnJitter * 2;
+      const r = R + (Math.random() - 0.5) * jitter * 2;
       const x = Math.cos(a) * r;
       const z = Math.sin(a) * r;
 
       // 规则 2：不能刷在主角脸上
-      if (Math.hypot(x - p.x, z - p.z) < level.minPlayerDistance) continue;
+      if (Math.hypot(x - p.x, z - p.z) < minD) continue;
 
       // 规则 3：不能和最近的出生点重叠
       let ok = true;
@@ -729,7 +763,8 @@ export function createLevel(level, { enemies, fx, getPlayerPos, onRound, onRound
       t += dt;
       while (spawnIdx < spawns.length && t >= spawns[spawnIdx].delay) {
         const sp = spawns[spawnIdx++];
-        const at = pickSpawn();
+        // 第 75 块：擦名者（near）从更近的圈上进场 —— 它得让玩家当场看见
+        const at = pickSpawn(sp.near ? level.spawnRadius * ERASER_NEAR : 0);
         const sc = roundScale(roundIndex + 1, level);
         const e = enemies.spawn(sp.type, at, {
           hpScale: sc.hp, damageScale: sc.damage, speedScale: sc.speed,

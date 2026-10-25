@@ -48,7 +48,7 @@ const typeNames = TYPES.map(([k]) => k);
 // 所以「条目 17 / 文件 15」，重复的只允许是这两个已知占位。
 const KNOWN_PLACEHOLDER = ['assets/monsters/wolf.glb', 'assets/monsters/tribal.glb'];
 sec('一、17 只怪 · 一只一个模型');
-ok(TYPES.length === 17, `怪物条目 17 只（实际 ${TYPES.length}）`);   // 第 71 块 +井蛙/木鱼灵
+ok(TYPES.length === 18, `怪物条目 18 只（实际 ${TYPES.length}）`);   // 第 75 块 +并联体
 const files = TYPES.map(([, t]) => t.file);
 ok(files.every((f) => typeof f === 'string' && f.startsWith('assets/monsters/')), '每条都写了 assets/monsters/ 下的模型');
 const dupFiles = files.filter((f, i) => files.indexOf(f) !== i);
@@ -76,7 +76,13 @@ for (const [k, t] of TYPES) {
   const abs = path.join(ROOT, t.file);
   if (!fs.existsSync(abs)) continue;
   const clips = glbClipNames(abs);
-  ok(clips.length >= 3, `${k} 模型自带动画 ≥3 段（${clips.length} 段）`);
+  // 第 75 块：并联体（arc）用的是 Kenney 的静态网格，本来就没有骨骼动画，
+  // 它的「活着」靠程序化悬停 + 电弧抖动（见 updateOne 的 cfg.spin 分支）。
+  if (k === 'arc') {
+    ok(clips.length === 0, `${k} 是静态模型（0 段动画，靠程序化浮空）`, String(clips.length));
+  } else {
+    ok(clips.length >= 3, `${k} 模型自带动画 ≥3 段（${clips.length} 段）`);
+  }
   const overrides = t.clipOverrides || {};
   const badKeys = Object.keys(overrides).filter((x) => !CLIP_KEYS.includes(x));
   ok(badKeys.length === 0, `${k} clipOverrides 只用语义键`, `非法键：${badKeys.join(',')}`);
