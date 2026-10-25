@@ -91,15 +91,16 @@ sec('五、第六关新怪：并联体（成对 · 电弧网）');
   ok(types.includes('reboot') && types.includes('arc'),
     '第六关至少两种「本关新增」的怪（重启体 + 并联体）');
 
-  // 每回合数量必须是偶数（成对登场），且不超过 4（4 只 = 6 条线，再多就封场了）
-  let even = true, maxN = 0, appeared = 0;
+  // 第 80 块（用户定案）：「不需要成对出现，两个及两个以上就 OK」。
+  // 所以这里不再要求偶数，改成断言「真的有奇数回合」—— 有奇数才证明成对限制真去掉了。
+  let odd = 0, maxN = 0, appeared = 0;
   for (const r of LEVEL_6.rounds) {
     const n = r.arc || 0;
-    if (n % 2 !== 0) even = false;
+    if (n % 2 === 1) odd++;
     maxN = Math.max(maxN, n);
     if (n > 0) appeared++;
   }
-  ok(even, '每回合的并联体都是偶数（成对出现）');
+  ok(odd >= 1, `至少一个回合的并联体是奇数（${odd} 个）—— 不必成对`);
   ok(maxN <= 4, `单回合最多 ${maxN} 只（4 只 = C(4,2) = 6 条电弧）`);
   ok(appeared >= 10, `${appeared} 个回合会出场（不是只露一次脸）`);
   ok(LEVEL_6.order.some(([t]) => t === 'arc'), 'order 里有 arc（会被刷出来）');

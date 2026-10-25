@@ -16,10 +16,11 @@
 // 与环剑（自动索敌、消耗制）和炮台（固定点位）互补；价格定在
 // 商店里「买得起但要攒一攒」的档，让 9/12/15/18 回合的商店有取舍。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=90';
-import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=90';
-import { distance2D } from './stats.js?v=90';
-import audio from './audio.js?v=90';
+import * as THREE from '../lib/three.module.js?v=91';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=91';
+import { withV } from './assetUrl.js?v=91';   // 第 80 块：glb 带版本号，SW 才走缓存优先
+import { distance2D } from './stats.js?v=91';
+import audio from './audio.js?v=91';
 
 export const RELIC_DEFS = {
   spikes: {
@@ -134,7 +135,7 @@ export function createRelicSystem({ scene, fx, enemies, onLanternReveal }) {
   let spikeTpl = null;        // 克隆模板（整个场景根，只藏掉石砖 —— 保住根节点的朝向/缩放）
   (async () => {
     try {
-      const gltf = await new GLTFLoader().loadAsync('assets/props/spikes-trap.glb');
+      const gltf = await new GLTFLoader().loadAsync(withV('assets/props/spikes-trap.glb'));
       const root2 = gltf.scene.clone(true);
       // ⚠️ 这份模型的结构是「石砖网格」包着「尖刺网格」（尖刺是砖的子节点）：
       //    不管藏节点还是藏网格都会连刺一起藏掉。只能把尖刺摘出来挂到根上，再扔掉石砖。

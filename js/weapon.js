@@ -34,11 +34,12 @@
 //       五种元素共用同一模型，克隆后改材质 color/emissive 染色区分；
 //       图标用 assets/weapons/icon-*.svg。加载失败时用双盒拼占位剑。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=90';
-import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=90';
-import { SWORD_KINDS, KIND_ORDER } from './swordKinds.js?v=90';
-import { rollSwordDamage } from './weaponStats.js?v=90';
-import audio from './audio.js?v=90';
+import * as THREE from '../lib/three.module.js?v=91';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=91';
+import { withV } from './assetUrl.js?v=91';   // 第 80 块：glb 带版本号，SW 才走缓存优先
+import { SWORD_KINDS, KIND_ORDER } from './swordKinds.js?v=91';
+import { rollSwordDamage } from './weaponStats.js?v=91';
+import audio from './audio.js?v=91';
 
 // 轨道半径（世界单位）：贴着主角攻击范围环内侧转，视觉上「护体剑气」
 const ORBIT_R = 1.7;
@@ -108,7 +109,7 @@ export function createWeaponSystem({ scene, stats, wstats, fx, enemies }) {
   // ---------------- 加载 ----------------
   async function preload() {
     try {
-      const gltf = await new GLTFLoader().loadAsync('assets/weapons/weapon-sword.glb');
+      const gltf = await new GLTFLoader().loadAsync(withV('assets/weapons/weapon-sword.glb'));
       template = gltf.scene;
       template.traverse((o) => {
         if (!o.isMesh) return;

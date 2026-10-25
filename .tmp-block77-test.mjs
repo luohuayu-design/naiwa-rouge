@@ -138,7 +138,9 @@ sec('五、源码层面的三处配套改动');
 const src = readFileSync('js/enemy.js', 'utf8');
 ok(/fish:\s*\{\s*\n\s*idle: 'Swimming_Normal'/.test(src), 'CLIP_FAMILIES 里新增了 fish 一族');
 ok(/else if \(e\.cfg\.hover && e\.state !== 'dead'\)/.test(src), 'updateOne 里有「只浮空不自转」的分支');
-ok(/if \(cfg\.hover\) model\.position\.y \+= cfg\.hover;/.test(src), '图鉴预览也应用 hover（否则半截埋地）');
+// 第 80 块：加了 previewHover:false 的例外（并联体原点在底部，抬了构图会散），
+// 所以这里放宽成「条件是 cfg.hover 开头，动作仍是抬高」
+ok(/if \(cfg\.hover[^\n]*\) model\.position\.y \+= cfg\.hover;/.test(src), '图鉴预览也应用 hover（否则半截埋地）');
 ok(/\(e\.cfg\.hover \|\| 0\) - 0\.45 \* k/.test(src), '死亡下沉相对 hover 计算（浮空怪不会突然掉到地上）');
 // 顺带修的既有 bug：擦名者「看不见→靠近」和「太近→后退」两条规则互相夹死，
 // 会卡在视野边缘（≈3.85 格）原地抖，永远不读条。

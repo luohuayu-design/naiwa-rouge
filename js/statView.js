@@ -7,8 +7,9 @@
 //   · 待机呼吸 + 每隔几秒原地蹦一下（update(dt, 1) 走路步态），偶尔拍一下手（playAttack）。
 // 只在属性页开着时被 main.js 每帧驱动，关页即停，不占主循环。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=90';
-import { loadFrog } from './frog.js?v=90';
+import * as THREE from '../lib/three.module.js?v=91';
+import { loadFrog } from './frog.js?v=91';
+import { withV } from './assetUrl.js?v=91';   // 第 80 块：和 main.js 用同一个带版本的 URL，浏览器只下一次
 
 export function createStatView(canvas) {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
@@ -54,10 +55,10 @@ export function createStatView(canvas) {
   async function load() {
     if (frog || loadErr) return;
     try {
-      frog = await loadFrog('assets/rigged.glb');
+      frog = await loadFrog(withV('assets/rigged.glb'));
     } catch (err) {
       console.warn('[属性页] 奶蛙模型加载失败，用占位：', err);
-      import('./frog.js?v=90').then((m) => { frog = m.buildFallbackFrog(); }).catch(() => { loadErr = true; });
+      import('./frog.js?v=91').then((m) => { frog = m.buildFallbackFrog(); }).catch(() => { loadErr = true; });
       loadErr = true;   // 先标记，兜底异步到了再覆盖 frog
       return;
     }

@@ -417,10 +417,11 @@ export const LEVEL_6 = {
     { minion: 5, warrior: 1, reboot: 1, arc: 0, leaper: 0, archer: 1, bowman: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, gap: 0.75, tip: '那个铁块打死了会重新站起来：躺下的时候守着它' },
     { minion: 5, warrior: 2, reboot: 1, arc: 0, leaper: 0, archer: 1, bowman: 1, wraith: 0, shielder: 0, brood: 0, mender: 0, gap: 0.72, tip: '重启只需要 4 秒：走了就白打一次' },
     { minion: 5, warrior: 2, reboot: 1, arc: 2, leaper: 1, archer: 1, bowman: 1, wraith: 1, shielder: 0, brood: 0, mender: 0, gap: 0.70, tip: '雾鬼也钻到机房里来了：隐着身照样咬人' },
-    { minion: 6, warrior: 2, reboot: 2, arc: 2, leaper: 1, archer: 2, bowman: 1, wraith: 1, shielder: 0, brood: 0, mender: 0, gap: 0.66, tip: '两只并联体浮起来了：它们之间那条青白色电弧，碰到就掉血' },
-    { minion: 6, warrior: 3, reboot: 2, arc: 2, leaper: 1, archer: 2, bowman: 1, wraith: 1, shielder: 1, brood: 0, mender: 0, gap: 0.62, tip: '拆掉一只并联体，就少一条电弧 —— 场上的网是它们连出来的' },
+    { minion: 6, warrior: 2, reboot: 2, arc: 2, leaper: 1, archer: 2, bowman: 1, wraith: 1, shielder: 0, brood: 0, mender: 0, gap: 0.66, tip: '并联体浮起来了：两只之间就拉着一条电弧，碰到掉血 —— 不用等它们成对，两只起就连' },
+    { minion: 6, warrior: 3, reboot: 2, arc: 2, leaper: 1, archer: 2, bowman: 1, wraith: 1, shielder: 1, brood: 0, mender: 0, gap: 0.62, tip: '场上并联体越少，能站的缝就越多 —— 它们互相还会推开，缝隙是它们自己让出来的' },
     // ---- 第三幕（R9~R13）：混编加压 ----
-    { minion: 6, warrior: 3, reboot: 2, arc: 2, leaper: 2, archer: 2, bowman: 1, wraith: 2, shielder: 1, brood: 0, mender: 1, gap: 0.60, tip: '戴尖帽的小巫在给怪回血：别让它奶到重启体' },
+    // 第 80 块：这一回合给 3 只（奇数），让「两只以上就成网、不必成对」真的看得见。
+    { minion: 6, warrior: 3, reboot: 2, arc: 3, leaper: 2, archer: 2, bowman: 1, wraith: 2, shielder: 1, brood: 0, mender: 1, gap: 0.60, tip: '戴尖帽的小巫在给怪回血：别让它奶到重启体' },
     { minion: 7, warrior: 3, reboot: 2, arc: 4, leaper: 2, archer: 2, bowman: 2, wraith: 2, shielder: 1, brood: 1, mender: 1, gap: 0.58, tip: '四只并联体 = 六条电弧：这张网会把你逼到格栅边上' },
     { minion: 7, warrior: 4, reboot: 2, arc: 4, leaper: 2, archer: 3, bowman: 2, wraith: 2, shielder: 2, brood: 1, mender: 1, gap: 0.56, tip: '地板、怪、奶妈三件事一起来 —— 先保走位' },
     { minion: 7, warrior: 4, reboot: 3, arc: 4, leaper: 2, archer: 3, bowman: 2, wraith: 3, shielder: 2, brood: 1, mender: 1, gap: 0.54, tip: '三个重启体：这一波的「清场」要清三遍' },

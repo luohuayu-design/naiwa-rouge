@@ -196,12 +196,16 @@ self.addEventListener('fetch', (event) => {
   const isStatic = STATIC_RE.test(path);
   if (!isCode && !isStatic) return;                // index.html 等一律放行
 
-  const immutable = VERSION_RE.test(url.search);   // 带 ?v=N 的代码可以永久缓存
+  // 带 ?v=N 的一律视为「内容不可变」→ 缓存优先。
+  // 第 80 块：原来只有 js/css 能吃这一档，glb 只能走「先给缓存 + 后台重下」——
+  // 怪物模型 7MB，每次刷新 / 重新进关都在后台重下一遍，玩家进关时带宽被自己抢光。
+  // 现在 glb 请求也带 ?v=N（见 js/assetUrl.js），同版本第二次进站一个字节都不下。
+  const immutable = VERSION_RE.test(url.search);
   event.respondWith((async () => {
     // 发起请求的页面自己要求别走缓存 → 直接透传（也不写缓存）
     if (await fromNoSwPage(event)) return fetch(req);
     const cache = await caches.open(CACHE);
-    if (isCode && immutable) return cacheFirst(event, cache);
+    if (immutable) return cacheFirst(event, cache);
     return staleWhileRevalidate(event, cache);
   })());
 });

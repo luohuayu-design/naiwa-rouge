@@ -96,12 +96,21 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
         if (!pv) throw new Error('构建失败');
         const h = pv.height;
         const g = new THREE.Group();
-        pv.model.rotation.y = -0.62;              // 3/4 侧脸，比正面有立体感
-        g.add(pv.model);
+        // 第 80 块：转 pivot（摆在几何中心上），不是 model 本身 ——
+        // 原点离几何体远的模型（并联体）转 model 会绕远点画个大圈
+        pv.pivot.rotation.y = -0.62;              // 3/4 侧脸，比正面有立体感
+        g.add(pv.pivot);
+        // 第 80 块：模型可能整个待在离原点好几格的地方（并联体 6 格多）——
+        // 取景算法是从原点往外试的，先把它挪回来才不会量到一张空图
+        if (pv.center) g.position.set(-pv.center.x, 0, -pv.center.z);
         scene.add(g);
         // 影子要跟着自动取景走，先建好、每轮重摆
         const disc = new THREE.Mesh(new THREE.CircleGeometry(h * 0.5, 40), shadowMat);
         disc.rotation.x = -Math.PI / 2;
+        // 第 80 块：影子摆在模型的水平中心。Kenney 的模型原点常常不在正中，
+        // 摆在组原点时并联体的影子会飘到它左边半个身位（缩略图看起来像两截）。
+        window.__cxCenter = pv.center;
+        if (pv.center) disc.position.set(pv.center.x, 0, pv.center.z);
         g.add(disc);
 
         // ---- 自动取景 ----
@@ -160,6 +169,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
         window.__cxDbg = dbg;
         return url;
       })()`);
+      console.log('  [center] ' + type + ' = ' + (await ev('JSON.stringify(window.__cxCenter || null)')));
       const buf = Buffer.from(url.split(',')[1], 'base64');
       fs.writeFileSync(path.join(OUT, type + '.webp'), buf);
       console.log('写出', type + '.webp', (buf.length / 1024).toFixed(1) + 'KB');

@@ -13,10 +13,11 @@
 // 做弩臂 + 上膛的箭 + 骨头点缀（均 CC0），加载失败时退回程序化炮台（外观稍简，
 // 逻辑完全一致）。深夜里靠自发光宝珠看清楚。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=90';
-import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=90';
-import { distance2D } from './stats.js?v=90';
-import audio from './audio.js?v=90';
+import * as THREE from '../lib/three.module.js?v=91';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=91';
+import { withV } from './assetUrl.js?v=91';   // 第 80 块：glb 带版本号，SW 才走缓存优先
+import { distance2D } from './stats.js?v=91';
+import audio from './audio.js?v=91';
 
 // ---------------- 可调参数（平衡都在这里） ----------------
 export const TURRET = {
@@ -53,10 +54,10 @@ export function createTurretSystem({ scene, fx, enemies }) {
     try {
       const loader = new GLTFLoader();
       const [crate, bow, bolt, bone] = await Promise.all([
-        loader.loadAsync('assets/props/turret-crate.glb'),
-        loader.loadAsync('assets/props/ballista-bow.glb'),
-        loader.loadAsync('assets/props/ballista-bolt.glb'),
-        loader.loadAsync('assets/props/bone-deco.glb'),
+        loader.loadAsync(withV('assets/props/turret-crate.glb')),
+        loader.loadAsync(withV('assets/props/ballista-bow.glb')),
+        loader.loadAsync(withV('assets/props/ballista-bolt.glb')),
+        loader.loadAsync(withV('assets/props/bone-deco.glb')),
       ]);
       // fit：等比缩到目标尺寸并把包围盒中心挪回原点
       const fit = (obj, target) => {

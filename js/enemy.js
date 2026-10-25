@@ -25,11 +25,12 @@
 // 第四关三只（wraith/leaper/mender，第 35 块，第 52 块换模型），
 // 各自在下面 ENEMY_TYPES 里有详细注释。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=90';
-import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=90';
-import { clone as cloneSkinned } from '../lib/jsm/utils/SkeletonUtils.js?v=90';
-import { distance2D } from './stats.js?v=90';
-import { createRangeRing } from './rangeRing.js?v=90';
+import * as THREE from '../lib/three.module.js?v=91';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=91';
+import { clone as cloneSkinned } from '../lib/jsm/utils/SkeletonUtils.js?v=91';
+import { distance2D } from './stats.js?v=91';
+import { createRangeRing } from './rangeRing.js?v=91';
+import { withV } from './assetUrl.js?v=91';
 
 // KayKit 模型正面朝 +Z；如果哪天换模型发现怪倒着走，把这里改成 Math.PI
 export const ENEMY_MODEL_YAW = 0;
@@ -769,21 +770,29 @@ export const ENEMY_TYPES = {
   },
 
   // ============================================================
-  // 第六关 · 骨塔机房（第 75 块）—— 并联体
+  // 第六关 · 骨塔机房（第 75 块 / 第 80 块重做）—— 并联体
   // ============================================================
   // 机房里两台并在一起供电的旧发电机。夜行把它叫醒之后，它**离地浮起来**，
   // 和同伙之间拉出一条青白色的电弧 —— 人从线上过，就是一次电击。
   //
-  // 用户定案的机制：**场上所有并联体两两相连**（4 只 = 6 条线），
-  // 不设距离上限。所以它不是「一个敌人」，而是「一片会移动的禁区」：
-  // 场上每多一只，可站的空地就少几条缝。解法只有一个 —— 把并联体本身拆掉。
+  // 【机制·一句话】场上**只要有 2 只或以上**，每两只之间就连一条悬空电弧，
+  // 不设距离上限、也不要求成对（3 只 = 3 条，4 只 = 6 条，n 只 = C(n,2) 条）。
+  // 所以它不是「一个敌人」，而是「一片会移动的禁区」：场上每多一只，
+  // 可站的空地就少几条缝。解法只有一个 —— 把并联体本身拆掉，它牵的线整片跟着断。
+  //
+  // 【间距】它们之间会被一股「同性相斥」的力推开，**两两最近距离不小于
+  // minGap（3.0 格）**（第 80 块，用户要求：原来会全挤在主角身边堆成一坨，
+  // 电弧全被压成零长度，禁区就成了一个点）。这条也是玩家的口子：
+  // 3 只摆开 → 中间必然留出三角形空地，那是唯一的活路。
   //
   // 它自己也会近战（蹭到就电一下），但那不是重点；重点是那张网。
   // 数值给得低（hp 3.2 / 伤害 0.9），因为电弧已经在持续消耗你的血。
   //
   // 模型：Kenney《Space Kit》的 machine_generator（CC0，28KB）——
   // 静态网格、没有骨骼动画，所以不写 animFamily（resolveClipAliases 会安全地返回空表）。
-  // 「活着」的感觉靠程序化的悬停 + 自转 + 电弧抖动，见 updateOne 的 arc 分支。
+  // 「活着」的感觉靠程序化悬停 + 轻微机械摆动 + 电弧抖动（见 updateOne 的 arc 分支）。
+  // ⚠️ 第 80 块删掉了**整圈自转**：root 在朝玩家平滑转、model 又在自己转，
+  // 两层叠加看起来「线在稳稳走、铁疙瘩在原地乱转」—— 玩家会以为是两个东西。
   arc: {
     name: '并联体',
     file: 'assets/monsters/parallel-cell.glb',
@@ -799,14 +808,26 @@ export const ENEMY_TYPES = {
     windup: 0.40,
     attackDuration: 0.80,
     hover: 0.55,           // 离地高度（悬浮）
-    spin: 0.8,             // 自转角速度（弧度/秒）
+    sway: 0.16,            // 左右机械摆动幅度（弧度）；不是自转，见 updateOne
+    previewHover: false,   // 图鉴里不抬 hover（原点在底部，抬了构图会散）
     arc: {
-      color: 0x7ad8ff,     // 青白电弧
-      width: 0.085,        // 基准粗细（每帧再抖 0.7~1.4 倍）
-      y: 0.85,             // 线的高度（空中，不是地上的一道缝）
+      color: 0x3fc4ff,     // 青蓝电弧（原来是 0x7ad8ff，additive 叠加后直接过曝成白色）
+      // 第 80 块实机调参（截图对比出来的）：
+      //   0.075 宽 + 0.18 抖动 + 6 段 → 两格长的线上全是碎方块，远看像「虚线」；
+      //   加宽到 0.11、抖到 0.10、段数降到 5，线才连成一条会扭的电流。
+      width: 0.145,        // 基准粗细（每帧再抖）
       hitR: 0.42,          // 判定半径（再加主角自己的半径）
       damage: 1,
       cd: 0.70,            // 全局节流：同一刻只吃一次
+      minGap: 3.0,         // 两两最小间距（格）—— 小于它就被推开
+      segs: 4,             // 一条电弧折成几段（锯齿感）
+      jitter: 0.10,        // 折线横向抖动幅度（格）
+      dots: 2,             // 沿线流动的光点数（电流在流的感觉全靠它）
+      // 线的离地高度 = hover + height × 这个比例。
+      // 第 80 块：0.55（模型半腰）从俯视角会被 1.3 格高的铁疙瘩挡住靠近它的那半截，
+      // 只看得见中间一小段 —— 抬到 0.95（贴着模型顶部）才整条可见，
+      // 而且端点落在模型上边缘，正好读成「从顶部电极吐出来的」。
+      yFrac: 1.02,
     },
     spawnTime: 0.8,
     deathTime: 1.2,
@@ -1175,7 +1196,7 @@ export async function buildPreviewModel(type) {
   if (!cfg) return null;
   let gltf = previewGltf.get(cfg.file);
   if (!gltf) {
-    gltf = await new GLTFLoader().loadAsync(cfg.file);
+    gltf = await new GLTFLoader().loadAsync(withV(cfg.file));
     previewGltf.set(cfg.file, gltf);
   }
   const model = cloneSkinned(gltf.scene);
@@ -1184,8 +1205,11 @@ export async function buildPreviewModel(type) {
   // 脚底对齐（同 spawn）：实测脚底在原点以下的模型要往上抬一点，不然缩略图会「陷」进影子
   if (cfg.footY != null && cfg.footY < 0) model.position.y = -cfg.footY * s;
   // 浮空怪（并联体 / 木鱼灵）：局内是靠 root 抬高 hover，缩略图也照抬，
-  // 否则原点在身体正中的模型会在图鉴里半截埋进影子（第 77 块一并修掉）
-  if (cfg.hover) model.position.y += cfg.hover;
+  // 否则原点在身体正中的模型会在图鉴里半截埋进影子（第 77 块一并修掉）。
+  // 第 80 块：previewHover:false —— 并联体的原点在**底部**（sourceHeight 是包围盒
+  // 最高点），本来就不需要抬。照抬的话它会在图鉴里悬在影子上面一大截，
+  // 自动取景又要把影子一起框进去，结果模型缩成一个小蓝盒（生成出来只有 2KB）。
+  if (cfg.hover && cfg.previewHover !== false) model.position.y += cfg.hover;
   model.traverse((o) => {
     if (!o.isMesh) return;
     o.castShadow = false;
@@ -1233,7 +1257,30 @@ export async function buildPreviewModel(type) {
     mixer.clipAction(clip).play();
     mixer.update(0.45);
   }
-  return { model, height: cfg.height };
+  // 第 80 块：把模型摆到几何中心上，并用一层 pivot 承担旋转。
+  // Kenney 这类模型的顶点离原点很远（并联体实测中心在 x≈2 / z≈1.5 格，
+  // 乘 3.25 倍就是 6 格多），而图鉴的影子、自动取景都以**原点**为基准 ——
+  // 不修的话影子会飞出画面、模型被挤到边角，出图只有 2KB 的「一小块蓝盒子」。
+  // 只影响离线出图（图鉴运行时只读 webp），不进局内热路径。
+  let pivot = model;
+  let center = null;
+  try {
+    model.updateWorldMatrix(true, true);
+    const box = new THREE.Box3().setFromObject(model);
+    if (Number.isFinite(box.min.x) && Number.isFinite(box.max.x)) {
+      const c = box.getCenter(new THREE.Vector3());
+      center = { x: c.x, z: c.z, minY: box.min.y, maxY: box.max.y };
+      // 偏移小于 2cm 的不用折腾（绝大多数模型原点就是中心）
+      if (Math.hypot(c.x, c.z) > 0.02) {
+        pivot = new THREE.Group();
+        pivot.position.set(c.x, 0, c.z);
+        model.position.x -= c.x;
+        model.position.z -= c.z;
+        pivot.add(model);
+      }
+    }
+  } catch (_) {}
+  return { model, pivot, height: cfg.height, center };
 }
 
 function lerpAngle(a, b, t) {
@@ -1322,23 +1369,67 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
         return v;
       }
     }
-    const gltf = await new GLTFLoader().loadAsync(cfg.file);
+    const gltf = await new GLTFLoader().loadAsync(withV(cfg.file));
 
     const clips = {};
     for (const c of gltf.animations) clips[c.name] = c;
 
+    // ---- 第 80 块：静态模型的「原点离几何体很远」补偿 ----
+    // 用户原话：「感觉目前并联体和节点是两个实体啊，节点在稳定移动，并联体乱转」。
+    // 根因就在这里：Kenney 的 generator 顶点离原点约 2 格（原始尺度），
+    // 放大 3.25 倍后几何中心离 root 有 6 格多 —— 电弧按 e.pos 画在脚下，
+    // 铁疙瘩却飘在六格开外，两者当然像两个东西（而且玩家砍的是空气）。
+    // 只在**没有动画**的静态网格上量（蒙皮模型的 Box3 不可信，见 HANDOFF），
+    // 量出来存进 assets，spawn 时按缩放比补回（不能直接改 gltf.scene.position ——
+    // 那是缩放前的坐标，乘上 s 才是局内的真实位移）。
+    let offset = null;
+    if (!gltf.animations.length) {
+      try {
+        gltf.scene.updateWorldMatrix(true, true);
+        const box = new THREE.Box3().setFromObject(gltf.scene);
+        if (Number.isFinite(box.min.x) && Number.isFinite(box.max.x)) {
+          const cx = (box.min.x + box.max.x) / 2;
+          const cz = (box.min.z + box.max.z) / 2;
+          if (Math.hypot(cx, cz) > 0.05) offset = { x: cx, z: cz };
+        }
+      } catch (_) { /* 量不出来就当没有偏移，行为跟以前一样 */ }
+    }
+
     // 语义键（idle/walk/attack…）→ 真实 clip 名，见 CLIP_FAMILIES
-    const data = { scene: gltf.scene, clips, aliases: resolveClipAliases(gltf, cfg) };
+    const data = { scene: gltf.scene, clips, aliases: resolveClipAliases(gltf, cfg), offset };
     assets.set(type, data);
     return data;
   }
 
-  async function preload(types, onProgress) {
-    const all = types.filter((t) => !ENEMY_TYPES[t].planned);
-    for (let i = 0; i < all.length; i++) {
-      await loadType(all[i]);
-      if (onProgress) onProgress((i + 1) / all.length);
+  // 第 80 块：预载改成**并发**（用户第二次反馈「每一关的加载还是很慢」）。
+  // 原来是 `for + await` 纯串行：第六关 11 只怪合计约 5MB，一只一只排队，
+  // 手机上光下载就十几秒。现在默认 4 路并发，同样的量大约 1/3 时间。
+  // 另外一个坑一起修了：原来某一只失败就整段 reject，main.js 判成「本关模型加载失败」，
+  // 后面几只全不下 —— 现在单只失败记一条 warn 继续下一只。
+  //   · types 里已经有的类型直接跳过（loadType 是幂等的，差集在这里再算一次也不亏）；
+  //   · limit 给 idle 预载用（预载不该和战斗抢主线程，GLTF 解析是同步的）。
+  async function preload(types, onProgress, opts = {}) {
+    const all = types.filter((t) => ENEMY_TYPES[t] && !ENEMY_TYPES[t].planned && !assets.has(t));
+    if (!all.length) {
+      if (onProgress) onProgress(1);
+      return;
     }
+    const limit = Math.max(1, Math.min(opts.limit || 4, all.length));
+    let done = 0;
+    let next = 0;
+    const worker = async () => {
+      while (next < all.length) {
+        const t = all[next++];
+        try {
+          await loadType(t);
+        } catch (err) {
+          console.warn('[怪物] 模型加载失败（跳过这一只）：', t, err);
+        }
+        done++;
+        if (onProgress) onProgress(done / all.length);
+      }
+    };
+    await Promise.all(Array.from({ length: limit }, worker));
   }
 
   // ---------------- 生成 ----------------
@@ -1419,7 +1510,20 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
         m.opacity = 1;
       }
     }
-    root.add(model);
+    // 第 80 块：给「原点离几何体很远」的静态模型加一层 pivot。
+    // Three 的变换顺序是 T×R×S —— 直接给 model.position 打偏移、再设 rotation，
+    // 模型会绕**那个偏移点**打转：并联体原始偏 2 格，放大 3.25 倍就是 6 格多，
+    // 摆动 0.16 弧度会甩出 ±1 格，看起来就是「铁疙瘩在原地乱转」（用户原话）。
+    // 加一层摆在 root 原点的 pivot，把偏移吃在 pivot 内部：几何中心重新落回
+    // pivot 原点，pivot 的 rotation 才是真正绕中心转。没有 offset 的怪不套壳。
+    let pivot = model;
+    if (src.offset) {
+      pivot = new THREE.Group();
+      model.position.x = -src.offset.x * s;
+      model.position.z = -src.offset.z * s;
+      pivot.add(model);
+    }
+    root.add(pivot);
 
     // 脚下的范围环：只给「能近身伤到主角」的怪。
     // 远程（投手 projectile / 弓手 volley / mage castTime）不画 —— 弓手的招牌
@@ -1587,6 +1691,9 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
       }
     }
 
+    // 第 80 块：sway 要转的是 pivot（几何中心），不是 model 本身
+    e.modelPivot = pivot !== model ? pivot : null;
+
     // 出生：先播从地里钻出来的动画
     bar.draw(1, maxHp, maxHp);
     e.currentAnim = cfg.anim.spawn;
@@ -1737,37 +1844,68 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     e.chargeLine = null;
   }
 
-  // ---------------- 并联体的电弧网（第 75 块，第六关） ----------------
-  // 用户定案：「新怪成对出现、两两之间连一条持续电流，碰到就掉血（4 只 = 6 条线）」。
+  // ---------------- 并联体的电弧网（第 75 块；第 80 块整体重做） ----------------
+  // 用户定案：「场上的并联体两两之间连一条持续电流，碰到就掉血」。
   // 所以这不是「配对连线」，是**组合数**：场上 n 只并联体 → C(n,2) 条电弧。
-  // 4 只刚好 6 条，围成一张三角形的网 —— 怪越多，能站的地方越少。
+  // **不要求成对**（第 80 块用户确认）：2 只 = 1 条、3 只 = 3 条、4 只 = 6 条，任意 n≥2 都成网。
   //
   // 三条规则：
   //   ① 不设距离上限。两只在场地两头也连着（不然「4 只 = 6 条」就不成立了），
   //      玩家唯一的解法是把并联体本身清掉；
   //   ② 伤害走全局节流（arcZapCd）：同一刻有几条线压在身上，也只掉一次血，
   //      否则站在交叉点会瞬间暴毙 —— 那是 bug，不是难度；
-  //   ③ 线在空中（y≈0.8），不是地上的一道缝：一眼能看出「这里是禁区」。
+  //   ③ 线悬在模型半腰（hover + height×0.55），不是地上的一道缝。
   //
-  // 视觉：每帧重建（最多 6 条，开销可忽略）。每一条都带随机抖动与粗细闪烁，
-  // 看起来像真的在放电，而不是一根贴上去的荧光棒。
-  const arcGeo = new THREE.BoxGeometry(1, 1, 1);
-  let arcMatBase = null;
-  const arcPool = [];          // 复用的 Mesh，避免每帧 new
+  // 第 80 块为什么要重做视觉（用户原话：「电线更清晰，带动效」「感觉并联体和
+  // 节点是两个实体，节点在稳定移动，并联体乱转」）：
+  //   · 线**从模型边缘起步**（按 radius 内缩），端点就在铁疙瘩身上 —— 不再是
+  //     「一根悬空的线碰巧经过它旁边」；
+  //   · 线在模型半腰的高度，而不在模型下半截；
+  //   · 一条线折成 segs 段锯齿（每帧相位在动）+ 沿线跑 dots 个光点 + 咬人时爆闪；
+  //   · 模型取消整圈自转（见 cfg.sway 的注释），只留一点机械摆动。
+  // 实现：**一条线 = 一个 InstancedMesh**（段 + 光点全在里面），6 条线 6 个 draw call。
+  // 每帧只更新 instanceMatrix，不 new 任何东西。
+  // 第 80 块：用**球**而不是方块做实例。
+  // 方块段在接头处一粗一细，远看是一串「白色小方块」，完全不像电流；
+  // 球拉长成椭球后，相邻段在拐角处自然叠成圆润的胶囊 —— 才连得成一条会扭的光。
+  // 光点也直接用同一套几何（缩成小球），一条线仍然只有一个 InstancedMesh。
+  const arcGeo = new THREE.SphereGeometry(0.5, 8, 6);
+  const arcPool = [];          // i -> InstancedMesh（null = 该槽已废弃，等重建）
   let arcZapCd = 0;            // 掉血节流（秒）
+  let arcFlow = 0;             // 流光沿线的推进量（0~1 循环）
+  let arcPhase = 0;            // 锯齿抖动相位（每帧推进 → 电流在扭）
+  let arcFlash = 0;            // 刚咬到人的爆闪（1 → 0 衰减）
 
-  function arcMeshAt(i, color) {
+  const _arcM4 = new THREE.Matrix4();
+  const _arcQ = new THREE.Quaternion();
+  const _arcP = new THREE.Vector3();
+  const _arcS = new THREE.Vector3();
+  const _arcD = new THREE.Vector3();
+  const ARC_Z = new THREE.Vector3(0, 0, 1);
+
+  function arcMeshAt(i, color, instCount, segs) {
     let m = arcPool[i];
+    if (m && m.count !== instCount) {
+      // 段数变了（配置改动）：这个槽作废重建，别拿旧缓冲硬塞
+      scene.remove(m);
+      m.material.dispose();
+      m.dispose();
+      m = null;
+      arcPool[i] = null;
+    }
     if (!m) {
-      if (!arcMatBase) {
-        arcMatBase = new THREE.MeshBasicMaterial({
-          color, transparent: true, opacity: 0.75,
-          depthWrite: false, blending: THREE.AdditiveBlending,
-        });
-      }
-      m = new THREE.Mesh(arcGeo, arcMatBase.clone());
-      m.renderOrder = 3;
+      const mat = new THREE.MeshBasicMaterial({
+        color: 0xffffff, transparent: true, opacity: 0.9,
+        depthWrite: false, blending: THREE.AdditiveBlending,
+      });
+      m = new THREE.InstancedMesh(arcGeo, mat, instCount);
+      m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
       m.frustumCulled = false;
+      m.renderOrder = 3;
+      // 段用「电弧色」，光点用近白 —— 白底材质 × instanceColor 才亮得起来
+      const c = new THREE.Color(color || 0x7ad8ff);
+      const d = new THREE.Color(0xeaffff);
+      for (let k = 0; k < instCount; k++) m.setColorAt(k, k < segs ? c : d);
       scene.add(m);
       arcPool[i] = m;
     }
@@ -1785,6 +1923,44 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     return Math.hypot(px - (ax + vx * t), pz - (az + vz * t));
   }
 
+  // 「同性相斥」：两只并联体靠得太近就互相推开（第 80 块，用户要求）。
+  // 不做成转向力 —— 直接位移最稳：追击再猛也压不到 minGap 以内，
+  // 而玩家要的正是「中间那段缝」。
+  function separateArcs(nodes, dt) {
+    if (nodes.length < 2) return;
+    const gap = nodes[0].cfg.arc.minGap || 3.0;
+    const k = 1 - Math.exp(-10 * dt);      // 每秒逼近 ~99.99%，够快又不抖
+    // 迭代两轮：三只挤成一坨时，一轮推完可能又互相抵消
+    for (let pass = 0; pass < 2; pass++) {
+      for (let i = 0; i < nodes.length; i++) {
+        const a = nodes[i];
+        for (let j = i + 1; j < nodes.length; j++) {
+          const b = nodes[j];
+          let dx = b.pos.x - a.pos.x;
+          let dz = b.pos.z - a.pos.z;
+          let d = Math.hypot(dx, dz);
+          if (d >= gap) continue;
+          if (d < 1e-3) {
+            // 出生点完全重叠：按序号挑一个确定的方向拆开（不能用随机会抖）
+            const ang = i * 2.399 + j * 1.618;
+            dx = Math.cos(ang); dz = Math.sin(ang); d = 1e-3;
+          } else {
+            dx /= d; dz /= d;
+          }
+          const push = (gap - d) * 0.5 * k;
+          a.pos.x -= dx * push; a.pos.z -= dz * push;
+          b.pos.x += dx * push; b.pos.z += dz * push;
+        }
+      }
+    }
+    // 推开之后可能出界：夹回来（不然它们会站在场地外面放电）
+    const lim = arenaR - 0.6;
+    for (const e of nodes) {
+      const r = Math.hypot(e.pos.x, e.pos.z);
+      if (r > lim) { e.pos.x = (e.pos.x / r) * lim; e.pos.z = (e.pos.z / r) * lim; }
+    }
+  }
+
   function updateArcNet(dt, ctx) {
     const nodes = [];
     for (const e of list) {
@@ -1793,6 +1969,11 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
       nodes.push(e);
     }
     if (arcZapCd > 0) arcZapCd -= dt;
+    if (arcFlash > 0) arcFlash = Math.max(0, arcFlash - dt * 3.2);
+    arcPhase += dt * 11.0;
+    arcFlow = (arcFlow + dt * 1.55) % 1;
+
+    separateArcs(nodes, dt);
 
     let n = 0;
     let zapped = false;
@@ -1804,16 +1985,84 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
         const dx = b.pos.x - a.pos.x;
         const dz = b.pos.z - a.pos.z;
         const len = Math.hypot(dx, dz);
-        if (len < 0.05) continue;
+        if (len < 0.3) continue;          // 贴一起了就别画（分离开会处理）
 
-        const y = (cfg.y || 0.8) + (Math.random() - 0.5) * 0.16;
-        const m = arcMeshAt(n, cfg.color || 0x7ad8ff);
-        m.position.set((a.pos.x + b.pos.x) * 0.5, y, (a.pos.z + b.pos.z) * 0.5);
-        m.rotation.set(0, Math.atan2(dx, dz), 0);
-        // 粗细每帧抖一下：0.7~1.4 倍基准宽 —— 电弧的「噼啪」感全靠这个
-        const w = (cfg.width || 0.09) * (0.7 + Math.random() * 0.7);
-        m.scale.set(w, w, len);
-        m.material.opacity = 0.55 + Math.random() * 0.35;
+        const segs = Math.max(2, cfg.segs || 6);
+        const dots = Math.max(0, cfg.dots ?? 2);
+        const ux = dx / len, uz = dz / len;
+
+        // 线的高度跟着模型走：两端各取自己的 hover + 身高比例
+        const ya = a.root.position.y + a.cfg.height * (cfg.yFrac ?? 0.55);
+        const yb = b.root.position.y + b.cfg.height * (cfg.yFrac ?? 0.55);
+        // 端点从模型边缘起步 —— 「线长在铁疙瘩身上」全靠这一下
+        const ia = Math.min(len * 0.30, a.cfg.radius * 0.85);
+        const ib = Math.min(len * 0.30, b.cfg.radius * 0.85);
+        const sx = a.pos.x + ux * ia, sz = a.pos.z + uz * ia;
+        const ex = b.pos.x - ux * ib, ez = b.pos.z - uz * ib;
+        const nx = -uz, nz = ux;          // 水平法线：锯齿沿这个方向甩
+
+        const m = arcMeshAt(n, cfg.color, segs + dots, segs);
+        const jit = cfg.jitter || 0.18;
+        // ---- 1) 折线顶点：两端收拢（taper=0），中间抖得最狠 ----
+        const pts = [];
+        for (let s = 0; s <= segs; s++) {
+          const t = s / segs;
+          const taper = Math.sin(t * Math.PI);
+          const off = taper * (
+            Math.sin(t * 7.3 + arcPhase) * 0.62 +
+            Math.sin(t * 17.1 - arcPhase * 1.37) * 0.38
+          ) * jit;
+          const wobY = taper * Math.sin(t * 11.0 + arcPhase * 0.8) * 0.04;
+          pts.push({
+            x: sx + (ex - sx) * t + nx * off,
+            y: ya + (yb - ya) * t + wobY,
+            z: sz + (ez - sz) * t + nz * off,
+          });
+        }
+        // ---- 2) 段：每一段是一个拉长的方块，首尾相接 ----
+        for (let s = 0; s < segs; s++) {
+          const p0 = pts[s], p1 = pts[s + 1];
+          _arcD.set(p1.x - p0.x, p1.y - p0.y, p1.z - p0.z);
+          const sl = _arcD.length();
+          _arcP.set((p0.x + p1.x) * 0.5, (p0.y + p1.y) * 0.5, (p0.z + p1.z) * 0.5);
+          // 段宽**固定**：每段随机的话接头处一粗一细，远看是一串珠子而不是一条电流
+          const w = cfg.width || 0.11;
+          if (sl < 1e-5) {
+            _arcQ.identity();
+            _arcS.set(1e-4, 1e-4, 1e-4);
+          } else {
+            _arcD.divideScalar(sl);
+            _arcQ.setFromUnitVectors(ARC_Z, _arcD);
+            // 35% 重叠：椭球两端本来就细，只叠 12% 会在每个接缝处露出「腰」，
+            // 远看还是一串珠子。叠够之后相邻段糊成一条连续的粗光带。
+            _arcS.set(w, w, sl * 1.35);
+          }
+          _arcM4.compose(_arcP, _arcQ, _arcS);
+          m.setMatrixAt(s, _arcM4);
+        }
+        // ---- 3) 光点：沿着折线往 b 跑，看起来像电流在流 ----
+        for (let k = 0; k < dots; k++) {
+          const u = (arcFlow + k / Math.max(1, dots)) % 1;
+          const ft = u * segs;
+          const si = Math.min(segs - 1, Math.floor(ft));
+          const lt = ft - si;
+          const p0 = pts[si], p1 = pts[si + 1];
+          _arcP.set(
+            p0.x + (p1.x - p0.x) * lt,
+            p0.y + (p1.y - p0.y) * lt,
+            p0.z + (p1.z - p0.z) * lt,
+          );
+          _arcQ.identity();
+          // 流光比线本身粗一倍多：远看是一颗亮点在线上跑
+          const ds = (cfg.width || 0.145) * (1.7 + Math.sin(arcPhase * 0.9 + k * 2.1) * 0.3);
+          _arcS.set(ds, ds, ds);
+          _arcM4.compose(_arcP, _arcQ, _arcS);
+          m.setMatrixAt(segs + k, _arcM4);
+        }
+        m.instanceMatrix.needsUpdate = true;
+        // 整体亮度：平时轻微呼吸，咬到人瞬间拉满 —— 这一下比掉血数字更有说服力
+        // additive 混合下太亮会「过曝成白色」，青色就没了 —— 压到 0.5 上下才看得出是青光
+        m.material.opacity = 0.62 + Math.random() * 0.22 + arcFlash * 0.30;
         n++;
 
         // 命中：主角到线段的距离 < 判定半径
@@ -1822,9 +2071,10 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
           if (d <= (cfg.hitR || 0.42) + ctx.playerRadius) {
             zapped = true;
             arcZapCd = cfg.cd || 0.7;
+            arcFlash = 1;
             ctx.hurtPlayer(cfg.damage || 1, null);
             if (fx && ctx.playerPos) {
-              fx.burst(ctx.playerPos, { color: 0x9ee8ff, count: 8, speed: 1.6, life: 0.3, size: 0.08, y: 0.7, up: 1.0 });
+              fx.burst(ctx.playerPos, { color: 0x9ee8ff, count: 10, speed: 1.8, life: 0.32, size: 0.08, y: 0.8, up: 1.1 });
             }
           }
         }
@@ -1832,7 +2082,9 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     }
 
     // 多出来的线收起来（不 dispose，下一帧还要用）
-    for (let i = n; i < arcPool.length; i++) arcPool[i].visible = false;
+    for (let i = n; i < arcPool.length; i++) {
+      if (arcPool[i]) arcPool[i].visible = false;
+    }
     // 没有节点时把节流也清掉，下次接上立刻能咬人
     if (!nodes.length) arcZapCd = 0;
   }
@@ -2527,13 +2779,21 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     e.mixer.update(dt);
     e.t += dt;
 
-    // ---- 并联体（第六关，第 75 块）：静态模型靠程序化漂浮「活起来」 ----
+    // ---- 并联体（第六关，第 75 块；第 80 块改运动） ----
     // Kenney 的模型没有骨骼动画（clip 表是空的，play() 会安全地什么都不做），
-    // 所以「在动」这件事只能自己写：离地悬停 + 上下呼吸 + 缓慢自转。
-    // 死亡后不再抬高度，让它自然落到地上。
-    if (e.cfg.spin && e.state !== 'dead') {
-      e.root.position.y = (e.cfg.hover || 0) + Math.sin(e.t * 2.2) * 0.10;
-      e.model.rotation.y = ENEMY_MODEL_YAW + e.t * e.cfg.spin;
+    // 所以「在动」这件事只能自己写：离地悬停 + 上下呼吸 + **一点左右机械摆动**。
+    //
+    // ⚠️ 第 80 块删掉了原来的整圈自转（`model.rotation.y = t * spin`）：
+    // root 已经在朝玩家平滑转向（updateOne 的通用分支），模型再自己转一圈，
+    // 两层叠起来就是「线在稳稳地走、铁疙瘩在原地乱转」—— 玩家会以为
+    // 电弧和机体是两个东西。现在模型只在自己的朝向上左右摆 ±sway 弧度，
+    // 幅度小到不会和移动方向打架，但足够让静态网格「不像贴图」。
+    if (e.cfg.arc && e.state !== 'dead') {
+      e.root.position.y = (e.cfg.hover || 0) + Math.sin(e.t * 2.2) * 0.055;
+      // 有 pivot 的（原点补偿过的模型）转 pivot —— 它才绕几何中心
+      const rig = e.modelPivot || e.model;
+      rig.rotation.y = ENEMY_MODEL_YAW
+        + Math.sin(e.t * 1.7 + e.driftPhase) * (e.cfg.sway || 0.16);
     } else if (e.cfg.hover && e.state !== 'dead') {
       // ---- 木鱼灵（第 77 块）：鱼型灵体只浮空、不自转 ----
       // 河豚模型的原点在身体正中，不抬就有一半埋进地里；这里纯粹上下呼吸。

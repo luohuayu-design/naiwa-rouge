@@ -61,7 +61,8 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
         errSink.push((m.params.exceptionDetails?.exception?.description || m.params.exceptionDetails?.text || '').split('\n')[0]);
       }
       if (m.method === 'Network.requestWillBeSent') {
-        const u = m.params.request?.url || '';
+        // 第 80 块：glb 现在带 ?v=N（SW 才能缓存优先），endsWith('.glb') 会全部漏掉
+        const u = (m.params.request?.url || '').split('?')[0];
         if (u.endsWith('.glb')) glbSink.push(u.split('/').pop());
       }
       if (m.id && pending.has(m.id)) { pending.get(m.id)(m.result || {}); pending.delete(m.id); }

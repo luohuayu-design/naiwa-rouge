@@ -13,13 +13,13 @@
 // （击杀 / 弹事件卡 / 选升级卡）。
 // ============================================================
 
-import { ENEMY_TYPES } from './enemy.js?v=90';
-import { SWORD_KINDS } from './swordKinds.js?v=90';
-import { RELIC_DEFS } from './relics.js?v=90';
-import { UPGRADES } from './upgrade.js?v=90';
-import { ALL_EVENTS } from './events.js?v=90';
-import { RARITIES } from './rarity.js?v=90';
-import { codexAll, codexCount } from './profile.js?v=90';
+import { ENEMY_TYPES } from './enemy.js?v=91';
+import { SWORD_KINDS } from './swordKinds.js?v=91';
+import { RELIC_DEFS } from './relics.js?v=91';
+import { UPGRADES } from './upgrade.js?v=91';
+import { ALL_EVENTS } from './events.js?v=91';
+import { RARITIES } from './rarity.js?v=91';
+import { codexAll, codexCount } from './profile.js?v=91';
 
 export const CODEX_TABS = [
   { id: 'enemies', name: '怪物' },
@@ -42,11 +42,16 @@ const statLine = (pairs) =>
 // 不然玩家会以为是数值漏填。
 function enemySub(cfg) {
   const line = statLine([['生命', cfg.hp], ['伤害', cfg.damage], ['速度', cfg.speed]]);
+  // 并联体（第 80 块）：真正伤人的是电弧，不从这条线上说清楚，玩家会拿它当普通近战
+  if (cfg.arc) return `${line} · 电弧 1 伤 / 次`;
   return Number.isFinite(cfg.damage) ? line : `${line} · 从不还手`;
 }
 
 // 怪物一句话说明：按「它给你什么压力」分类，第二关三个巫师各有专属文案
 function enemyDesc(cfg) {
+  // 并联体（第 75 块，第 80 块把机制写全）：这是唯一一个「危险不在它身上、
+  // 在它们之间」的怪，不说清 n 只连几条、多久咬一次、缝在哪，玩家只会觉得莫名掉血。
+  if (cfg.arc) return '区域压力：两只以上就成网 —— 场上每两只之间都拖着一条悬空电弧（2 只 1 条、3 只 3 条、4 只 6 条，不用成对出现），多远的都连。碰到电弧掉 1 点血，同一下之间隔 0.7 秒，站在交叉口不会瞬间连扣。它们之间会互相推开、两两保持 3 格以上 —— 中间那几段缝就是你唯一的活路；拆掉一只，它牵的线整片跟着断';
   if (cfg.erase) return '损失压力：它从不还手，读条 4.5 秒后把你环上的一把剑「擦掉」，然后转身往场地外跑 —— 跑出去那把剑这一局就没了。冰剑冻住 / 震剑击退 / 冲过去砍死它，都行';
   if (cfg.reboot) return '耐心压力：打死不算完 —— 躺 4 秒后原地半血重启，而且比上一次更快（最多重启 2 次）。地上那圈红光就是倒计时，守着它补刀';
   if (cfg.charge) return '机动压力：地上一道直线就是它的冲锋路线 —— 横向侧移能躲，撞完它会僵一下（那就是输出窗口）';
