@@ -45,15 +45,19 @@ const TYPES = Object.entries(ENEMY_TYPES).filter(([, t]) => !t.planned);
 const typeNames = TYPES.map(([k]) => k);
 
 // 第 71 块 +井蛙/木鱼灵 = 17 条；第 75 块 +并联体 = 18 条。
-// 第 77 块起井蛙 / 木鱼灵各有自己的 glb（frog / puffer-fish），**不再有任何占位复用**，
-// 所以现在是「条目 18 / 文件 18」，一只一个文件。
-sec('一、18 只怪 · 一只一个模型');
-ok(TYPES.length === 18, `怪物条目 18 只（实际 ${TYPES.length}）`);   // 第 75 块 +并联体
+// 第 77 块起井蛙 / 木鱼灵各有自己的 glb（frog / puffer-fish），曾经是「一只一个文件」。
+// 第 81 块（第八关 · 无名者 + 旗手）有意复用 skeleton-minion / skeleton-rogue：
+// 这两只是「同一批骷髅里的普通一个和举牌的那个」，本来就该长一个样，
+// 给它们各做一套新模型反而会让人以为是不同种族。所以现在是「条目 20 / 文件 18」。
+sec('一、20 只怪 · 只有第八关的两只有意复用模型');
+ok(TYPES.length === 20, `怪物条目 20 只（实际 ${TYPES.length}）`);   // 第 75 块 +并联体，第 81 块 +无名者/旗手
 const files = TYPES.map(([, t]) => t.file);
 ok(files.every((f) => typeof f === 'string' && f.startsWith('assets/monsters/')), '每条都写了 assets/monsters/ 下的模型');
 const dupFiles = files.filter((f, i) => files.indexOf(f) !== i);
-ok(dupFiles.length === 0,
-  `18 个模型文件互不重复（${files.length} 条目 / ${new Set(files).size} 文件）`,
+// 第 81 块：允许且**只允许**第八关那两只有意复用（无名者 / 旗手）
+const ALLOWED_DUP = new Set(['assets/monsters/skeleton-minion.glb', 'assets/monsters/skeleton-rogue.glb']);
+ok(dupFiles.every((f) => ALLOWED_DUP.has(f)) && new Set(files).size === 18,
+  `${files.length} 条目 / ${new Set(files).size} 文件，重复的只有 skull 那两个`,
   `重复：${dupFiles.join(', ')}`);
 const names = TYPES.map(([, t]) => t.name);
 ok(new Set(names).size === names.length, '13 个中文名互不重复');

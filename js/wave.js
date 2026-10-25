@@ -513,9 +513,94 @@ export const LEVEL_7 = {
   ],
 };
 
+// ============================================================
+// 第八关 · 骨塔寄存层（第 81 块）
+//
+// 剧情接 s08《一百层台阶》：骨塔的台阶是螺旋的，每一级都刻着名字。
+// 第七十层是个大平台，上面站着几十只骷髅 —— 不动、不说话、面朝同一个方向，
+// 「像在等一个永远不会来的队伍」。它们胸前的木牌被雾吹过，只剩一道划痕。
+//
+// 这一关**换了威胁的方向**：
+//   前七关所有怪都是「追你 → 你拉着跑」，玩家只需要一种应对。
+//   这里的无名者（ranker）从不追人：它们排成一横排，共享一个朝向，
+//   匀速平移，撞到墙才转向。你躲的不是某只怪，是它要走的那条线。
+//   所以走位从「跑」变成「选位置」—— 站在侧面，它们就一直往前走。
+//
+// 两只新怪（enemy.js）：
+//   ranker 无名者 —— 队形成员。撞人掉血并把人**沿法线**挤开（不是顶着走）。
+//   bearer 旗手   —— 队伍正中举着木牌杆。打死它，整队散架 4 秒：
+//                    原地不动 + 受双倍伤害。这是本关唯一的清场窗口。
+//
+// 一个新物件（deposit.js）：
+//   寄存柜 —— 每死一只无名者/旗手，木牌进柜（柜面 3×3 格看得见）。
+//             攒满 8 块开门，把这一沓牌子放回场上：走出来一支新队伍。
+//             所以「杀」本身不是解，杀太快柜子就会溢出来。
+//             站在柜边不动 1.1 秒可以取走 2 块（挪一步就断）。
+//             场上活着的队伍超过 12 只时，柜子不再放人，改为放电（可躲）。
+//
+// 场地：arena 18 —— 比第七关的窄井（13）宽得多，因为队伍需要横向铺开；
+//       但比第六关的机房（19）略小，走位的容错其实更低。
+// 数值：hp 0.34 / dmg 0.20，整体系数 hpMul 1.28 / dmgMul 1.55（七关是 1.20 / 1.45）。
+//       无名者本身很脆（hp 2.8），威胁来自「数量 + 挤压」，不是数值。
+// ============================================================
+export const LEVEL_8 = {
+  id: 8,
+  name: '第八关 · 骨塔寄存层',
+  theme: 'ossuary',         // 第 81 块：骨白 + 灰绿 + 干白雾（scene.js 的 THEMES）
+  arena: 18,
+  order: [
+    ['minion', 1], ['warrior', 1.6], ['ranker', 1.8], ['bearer', 2.0],
+    ['archer', 2.0], ['bowman', 2.2], ['leaper', 2.2], ['wraith', 2.4],
+    ['shielder', 2.4], ['mender', 2.6], ['brood', 2.6], ['reboot', 2.8],
+  ],
+  spawnRadius: 16.2,
+  spawnJitter: 0.5,
+  minPlayerDistance: 8.0,
+  minSpawnGap: 2.4,
+  gapScale: 1.35,
+  gap: 2.6,
+  upgradeAfter: [1, 2, 3, 4, 5, 8, 10, 12, 15, 17, 19, 20],
+  shopAfter: [3, 6, 9, 12, 15, 18],
+  weaponAt: 4,
+  scale: { hp: 0.34, damage: 0.20, speed: 0.035, hpMul: 1.28, dmgMul: 1.55 },
+  // 寄存柜：不在场地里，立在边界石圈外面（像间哨亭）。
+  //   x/z 是柜子中心，r 是它的碰撞半径，headcount 是开门时放出几个人。
+  //   玩家走到场地边缘（r≈17.7）离柜子 1.5 格，正好在取牌范围（3.4）内。
+  //   放在场地外的好处：队伍换向点在 r=16.1，永远碰不到它 —— 不会出现
+  //   一排骷髅从柜子里穿过去的穿模。
+  deposit: { x: 0, z: -19.2, r: 1.5, headcount: 6 },
+  rounds: [
+    // ---- 第一幕（R1~R4）：寄存层 · 一排人面朝一个方向 ----
+    { minion: 3, warrior: 0, ranker: 0, bearer: 0, archer: 0, bowman: 0, leaper: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, reboot: 0, gap: 0.90, tip: '骨塔第七十层：场边那个木柜是寄存柜 —— 死掉的骷髅，木牌会被它收进去' },
+    { minion: 4, warrior: 1, ranker: 3, bearer: 1, archer: 0, bowman: 0, leaper: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, reboot: 0, gap: 0.80, tip: '那一排骷髅不追人：它们只朝一个方向走，撞上才掉血 —— 让开就行' },
+    { minion: 4, warrior: 1, ranker: 3, bearer: 1, archer: 1, bowman: 0, leaper: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, reboot: 0, gap: 0.80, tip: '它们不会拐弯：你站在侧面，它们就一直往前走' },
+    { minion: 5, warrior: 2, ranker: 4, bearer: 1, archer: 1, bowman: 0, leaper: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, reboot: 0, gap: 0.75, tip: '队伍中间那只举着牌子 —— 它一倒，整排会站住 4 秒' },
+    // ---- 第二幕（R5~R8）：柜子满了 ----
+    { minion: 5, warrior: 2, ranker: 4, bearer: 1, archer: 1, bowman: 1, leaper: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, reboot: 0, gap: 0.72, tip: '柜子里攒满 8 块木牌就会开 —— 开之前站到柜边不动，能取走两块' },
+    { minion: 5, warrior: 2, ranker: 5, bearer: 1, archer: 1, bowman: 1, leaper: 1, wraith: 0, shielder: 0, brood: 0, mender: 0, reboot: 0, gap: 0.70, tip: '站桩取牌的时候不能动：先看清队伍走到哪了' },
+    { minion: 6, warrior: 2, ranker: 5, bearer: 1, archer: 2, bowman: 1, leaper: 1, wraith: 1, shielder: 0, brood: 0, mender: 0, reboot: 0, gap: 0.66, tip: '雾鬼也来了：一种是隐着身的，一种是明着排队走过来的' },
+    { minion: 6, warrior: 3, ranker: 9, bearer: 2, archer: 2, bowman: 1, leaper: 1, wraith: 1, shielder: 1, brood: 0, mender: 0, reboot: 0, gap: 0.62, tip: '两队各走各的：别站在两条线的交叉口' },
+    // ---- 第三幕（R9~R13）：拆旗手 ----
+    { minion: 6, warrior: 3, ranker: 9, bearer: 2, archer: 2, bowman: 1, leaper: 2, wraith: 1, shielder: 1, brood: 0, mender: 0, reboot: 0, gap: 0.60, tip: '先拆旗手，再吃那 4 秒：一只只砍是最亏的打法' },
+    { minion: 7, warrior: 3, ranker: 10, bearer: 2, archer: 2, bowman: 2, leaper: 2, wraith: 1, shielder: 1, brood: 0, mender: 1, reboot: 0, gap: 0.58, tip: '戴尖帽的小巫在给旗手回血：它会把散掉的队伍重新扶起来' },
+    { minion: 7, warrior: 4, ranker: 10, bearer: 2, archer: 2, bowman: 2, leaper: 2, wraith: 2, shielder: 1, brood: 1, mender: 1, reboot: 0, gap: 0.56, tip: '柜子一直满的话，先停手：清掉散架那 4 秒里的，比一直砍划算' },
+    { minion: 7, warrior: 4, ranker: 12, bearer: 3, archer: 3, bowman: 2, leaper: 2, wraith: 2, shielder: 2, brood: 1, mender: 1, reboot: 0, gap: 0.54, tip: '三支队伍：场地会被三条线同时切开' },
+    { minion: 8, warrior: 4, ranker: 12, bearer: 3, archer: 3, bowman: 2, leaper: 3, wraith: 2, shielder: 2, brood: 1, mender: 1, reboot: 1, gap: 0.52, tip: '重启体也来了：躺下的时候守着它' },
+    // ---- 第四幕（R14~R17）：两个机制一起压 ----
+    { minion: 8, warrior: 4, ranker: 12, bearer: 3, archer: 3, bowman: 3, leaper: 3, wraith: 2, shielder: 2, brood: 2, mender: 1, reboot: 1, gap: 0.50, tip: '队伍、柜子、奶妈一起来 —— 先保走位，再谈清场' },
+    { minion: 8, warrior: 5, ranker: 12, bearer: 3, archer: 3, bowman: 3, leaper: 3, wraith: 3, shielder: 2, brood: 2, mender: 1, reboot: 2, gap: 0.48, tip: '柜子溢出来的时候会放电：看到地上那圈橙光就往外跑' },
+    { minion: 8, warrior: 5, ranker: 12, bearer: 3, archer: 4, bowman: 3, leaper: 4, wraith: 3, shielder: 3, brood: 2, mender: 2, reboot: 2, gap: 0.46, tip: '第 16 回合：这一层的队伍从来就没散过' },
+    { minion: 9, warrior: 5, ranker: 12, bearer: 3, archer: 4, bowman: 3, leaper: 4, wraith: 3, shielder: 3, brood: 2, mender: 2, reboot: 2, gap: 0.44, tip: '第 17 回合：每一条线后面都还有一条' },
+    // ---- 第五幕（R18~R20）：寄存层 · 毕业考 ----
+    { minion: 9, warrior: 5, ranker: 12, bearer: 3, archer: 4, bowman: 4, leaper: 4, wraith: 4, shielder: 3, brood: 2, mender: 2, reboot: 2, gap: 0.42, tip: '还剩三回合：别把血花在队伍侧面' },
+    { minion: 9, warrior: 6, ranker: 12, bearer: 3, archer: 4, bowman: 4, leaper: 4, wraith: 4, shielder: 3, brood: 2, mender: 2, reboot: 3, gap: 0.40, tip: '倒数第二波：旗手、走位、柜子，三件事一起看' },
+    { minion: 10, warrior: 6, ranker: 12, bearer: 3, archer: 4, bowman: 4, leaper: 5, wraith: 4, shielder: 4, brood: 2, mender: 2, reboot: 3, gap: 0.38, tip: '最后一波：把这一层的牌子全收走' },
+  ],
+};
+
 // 关卡号 → 关卡表（主流程 / 选关 / 测试都从这里取）
 export const LEVELS_BY_ID = {
-  1: LEVEL_1, 2: LEVEL_2, 3: LEVEL_3, 4: LEVEL_4, 5: LEVEL_5, 6: LEVEL_6, 7: LEVEL_7,
+  1: LEVEL_1, 2: LEVEL_2, 3: LEVEL_3, 4: LEVEL_4, 5: LEVEL_5, 6: LEVEL_6, 7: LEVEL_7, 8: LEVEL_8,
 };
 
 // 第 roundNo 回合（从 1 开始）的怪物属性倍率

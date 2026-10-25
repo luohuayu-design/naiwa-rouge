@@ -144,7 +144,7 @@ if (existsSync(arcThumb)) {
 sec('九、版本号：index.html 与所有 js 完全一致');
 // ============================================================
 const V = (htmlSrc.match(/\?v=(\d+)/) || [, '1'])[1];
-ok(V === '91', `index.html 是 v=${V}`);
+ok(Number(V) >= 91, `index.html 是 v=${V}（≥ 91 即可，别写死版本号）`);
 const fs2 = await import('node:fs');
 const jsFiles = fs2.readdirSync('js').filter((f) => f.endsWith('.js'));
 let bad = [];

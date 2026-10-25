@@ -25,12 +25,12 @@
 // 第四关三只（wraith/leaper/mender，第 35 块，第 52 块换模型），
 // 各自在下面 ENEMY_TYPES 里有详细注释。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=91';
-import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=91';
-import { clone as cloneSkinned } from '../lib/jsm/utils/SkeletonUtils.js?v=91';
-import { distance2D } from './stats.js?v=91';
-import { createRangeRing } from './rangeRing.js?v=91';
-import { withV } from './assetUrl.js?v=91';
+import * as THREE from '../lib/three.module.js?v=92';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=92';
+import { clone as cloneSkinned } from '../lib/jsm/utils/SkeletonUtils.js?v=92';
+import { distance2D } from './stats.js?v=92';
+import { createRangeRing } from './rangeRing.js?v=92';
+import { withV } from './assetUrl.js?v=92';
 
 // KayKit 模型正面朝 +Z；如果哪天换模型发现怪倒着走，把这里改成 Math.PI
 export const ENEMY_MODEL_YAW = 0;
@@ -927,6 +927,112 @@ export const ENEMY_TYPES = {
       death: 'death', spawn: 'spawn',
     },
   },
+
+  // ============================================================
+  // 第八关 · 骨塔寄存层（第 81 块）—— 无名者
+  // ============================================================
+  // 剧情接 s08《一百层台阶》：第七十层的大平台上站着几十只骷髅，
+  // 面朝同一个方向、不动、不说话 ——「像在等一个永远不会来的队伍」。
+  // 它们胸前的木牌本来是刻着名字的，被雾吹过之后只剩一块空白。
+  //
+  // 【机制·一句话】这是全场**唯一不追你**的敌人。
+  // 它们排成一横排，共享一个朝向，整体匀速平移，像一堵会走路的墙。
+  // 撞上就掉血、而且会把你顶着走 —— 但只要你让开，它们不会拐弯来追。
+  //
+  // 所以第八关的走位逻辑和前七关**反过来**：
+  //   以前是「怪追你 → 你拉着跑」；现在是「墙在扫 → 你规划站位」。
+  //   你不可能靠绕圈把它们遛死，只能选择站哪边、什么时候穿过去。
+  //
+  // 【队形】槽位制（见 SQUAD_SLOTS）：每只占一个沿法线方向的固定槽位，
+  // 每帧把它的法线坐标拉回槽位 —— 队伍永远是一条笔直的横排，不会走散。
+  // 中间死了人，槽位就空着（一眼看得出来「这队少了一个」）。
+  //
+  // 【旗手】每队一只 bearer，站在正中。把它打死，整队「散架」4 秒：
+  //   原地不动、不再撞人、**受双倍伤害**。这是本关唯一的清场窗口 ——
+  //   先杀旗手，再吃这 4 秒，比追着一只只砍划算得多。
+  //
+  // 【木牌】胸前那块空牌是程序化贴图（makeTagTexture，全队共用一张），
+  // 不占新资产。它是「无名」这个概念的视觉锚点，也是寄存柜收集的东西。
+  ranker: {
+    name: '无名者',
+    file: 'assets/monsters/skeleton-minion.glb',
+    sourceHeight: 1.05,    // 实测（同 minion）
+    height: 1.55,          // 比小兵高一截：站直的人，不是扑上来的兵
+    radius: 0.42,
+    hp: 2.8,
+    armor: 0,
+    speed: 1.05,           // 这是**队伍平移速度**，不是追人速度（它从不追人）
+    damage: 0.9,
+    attackRange: 1.2,
+    attackInterval: 1.6,
+    windup: 0.36,
+    attackDuration: 0.70,
+    tag: 'board',          // 胸前挂一块空木牌
+    squad: {
+      gap: 1.0,            // 槽位间距（格）：比 2×radius 宽一点，肩并肩但不重叠
+      push: 0.55,          // 撞到人时每秒把人顶开多少格（乘 dt）
+      hitCd: 0.55,         // 同一只无名者的撞击伤害节流
+      turnTime: 1.15,      // 撞墙后整队停多久再转向（这段是白给的输出时间）
+    },
+    spawnTime: 0.9,
+    deathTime: 1.3,
+    selfDestruct: false,
+    color: 0xd8d2c0,       // 骨白偏灰
+    tint: 0xb9b3a4,        // 压一层灰：寄存层的骨不是雪白的
+    glow: { color: 0x4a5040, intensity: 0.30 },
+    anim: {
+      walk: ANIM.walk, idle: ANIM.idle, attack: ANIM.punch,
+      death: ANIM.death, spawn: ANIM.spawn,
+    },
+  },
+
+  // ============================================================
+  // 第八关 · 骨塔寄存层（第 81 块）—— 旗手
+  // ============================================================
+  // 队伍里举木牌杆的那一只。它不冲锋、不施法，只是走 —— 但整队的朝向由它定。
+  // 打死它，那面牌子掉在地上，其余的无名者立刻「不知道该往哪儿走」，
+  // 原地站住 4 秒，而且这 4 秒里受的伤害翻倍。
+  //
+  // 血给得厚（7 点，约等于两只半无名者），因为它站在队伍正中：
+  // 要够到它就得先顶着两侧的人撞进队形里，这本身就是一次赌博。
+  //
+  // 模型复用 skeleton-rogue（比小兵高、骨架更细，像「举旗的那个」），
+  // 木牌杆是程序化的（见 spawn 的 tag:'pole' 分支），不占新资产。
+  bearer: {
+    name: '旗手',
+    file: 'assets/monsters/skeleton-rogue.glb',
+    sourceHeight: 1.10,
+    height: 1.72,
+    radius: 0.46,
+    hp: 7,
+    armor: 0,
+    speed: 1.05,
+    damage: 1.0,
+    attackRange: 1.35,
+    attackInterval: 1.7,
+    windup: 0.40,
+    attackDuration: 0.75,
+    tag: 'pole',           // 举一根挂木牌的杆
+    squad: {
+      gap: 1.0,
+      push: 0.62,
+      hitCd: 0.55,
+      turnTime: 1.15,
+      leader: true,        // 队伍的「定朝向的人」：它才是 bearer
+      stun: 4.0,           // 它一死，整队散架多少秒
+      stunDamageMul: 2.0,  // 散架期间队员受到的伤害倍率
+    },
+    spawnTime: 1.1,
+    deathTime: 1.6,
+    selfDestruct: false,
+    color: 0xf0e2b8,       // 木牌黄
+    tint: 0xc9c0ac,
+    glow: { color: 0x6a5a30, intensity: 0.45 },
+    anim: {
+      walk: ANIM.walk, idle: ANIM.idle, attack: ANIM.punch,
+      death: ANIM.death, spawn: ANIM.spawn,
+    },
+  },
 };
 
 // ------------------------------------------------------------
@@ -1191,6 +1297,106 @@ function applyWizardSkin(model, skin) {
 // 再摆一个 Idle 姿势。打扮走的是**同一段代码**，缩略图才不会和游戏里长得不一样。
 // 换模型后要重新生成缩略图：`node .tmp-codex-shots.js`。
 const previewGltf = new Map();   // file -> gltf（同一个 glb 只解析一次）
+// ---- 胸前的空木牌（程序化，全队共用一张贴图，零新资产）----
+// s08 里那些骷髅的木牌本来刻着名字，被雾吹过只剩划痕。这块牌子就是「无名」——
+// 也是寄存柜收集的东西。不用贴图文件：一张 64×40 的 canvas 画木纹 + 划痕 + 半截偏旁。
+let tagTex = null;
+function makeTagTexture() {
+  if (tagTex) return tagTex;
+  const W = 64, H = 40;
+  const cv = document.createElement('canvas');
+  cv.width = W; cv.height = H;
+  const g = cv.getContext('2d');
+  g.fillStyle = '#8a6b45';
+  g.fillRect(0, 0, W, H);
+  let seed = 810081;
+  const rnd = () => { seed = (seed * 1103515245 + 12345) % 2147483648; return seed / 2147483648; };
+  // 木纹
+  for (let i = 0; i < 10; i++) {
+    g.strokeStyle = `rgba(${70 + rnd() * 30 | 0},${50 + rnd() * 24 | 0},30,${0.12 + rnd() * 0.18})`;
+    g.lineWidth = 0.8 + rnd();
+    const y = rnd() * H;
+    g.beginPath();
+    g.moveTo(0, y);
+    g.bezierCurveTo(W * 0.3, y + (rnd() - 0.5) * 4, W * 0.7, y + (rnd() - 0.5) * 4, W, y);
+    g.stroke();
+  }
+  // 木框
+  g.strokeStyle = 'rgba(58,40,24,0.75)';
+  g.lineWidth = 3;
+  g.strokeRect(1.5, 1.5, W - 3, H - 3);
+  // 被擦掉的那道划痕（斜的，像真的拿布抹过）
+  g.strokeStyle = 'rgba(226,214,190,0.42)';
+  g.lineWidth = 2.4;
+  g.beginPath();
+  g.moveTo(W * 0.24, H * 0.62);
+  g.lineTo(W * 0.76, H * 0.44);
+  g.stroke();
+  // 一个没刻完的偏旁：横、竖各一笔就停了
+  g.strokeStyle = 'rgba(240,232,208,0.34)';
+  g.lineWidth = 1.6;
+  g.beginPath();
+  g.moveTo(W * 0.33, H * 0.28); g.lineTo(W * 0.33, H * 0.40);
+  g.moveTo(W * 0.28, H * 0.32); g.lineTo(W * 0.39, H * 0.32);
+  g.stroke();
+  tagTex = new THREE.CanvasTexture(cv);
+  tagTex.colorSpace = THREE.SRGBColorSpace;
+  return tagTex;
+}
+
+// 把木牌挂到模型上。
+// ⚠️ 挂在 model 里要**反向缩放**：model.scale 是 (height/sourceHeight) ≈ 1.5，
+// 直接挂一块 0.38 的牌子会被放大成 0.57，而且位置也会跟着放大。
+// 套一层 1/s 的 holder，里面就能按世界单位写尺寸和高度。
+function attachTag(model, kind, s) {
+  if (!kind || typeof document === 'undefined') return;
+  // ⚠️ 用 MeshBasicMaterial（不吃光），不是 MeshStandardMaterial。
+  // 踩过的坑：Standard 材质会被下面 spawn 里的 `cfg.tint` 整片覆盖颜色、
+  // 又被 `cfg.glow` 盖一层自发光，木牌最后渲染成一块深棕近黑的小方片 ——
+  // 夜里压在深灰地面上，肉眼和「没画出来」完全一样（为了这个查了三轮）。
+  // Basic 不受灯光与 tint 影响，贴图什么色就出什么色，远看也认得出。
+  const mat = new THREE.MeshBasicMaterial({
+    map: makeTagTexture(), side: THREE.DoubleSide, toneMapped: false,
+  });
+  const holder = new THREE.Group();
+  holder.scale.setScalar(1 / s);
+  if (kind === 'pole') {
+    // 旗手：把牌子**举过头顶**（不是挂在腰上）。
+    // 第一版杆子只到 1.0 格、牌子在胸口高度 —— 从俯视角整块被身体挡住，
+    // 图鉴里就是「一只普通骷髅」，玩家根本分不出该先打谁。
+    // 第二版杆 1.9 / 牌 1.74：位置对了，但牌是**零厚度的 Plane**，
+    // 队伍侧身走的时候正对镜头变成一条线；而且牌顶正好撞上血条那一带。
+    // 现在杆 2.35、牌子是 0.06 厚的 Box，悬在头顶上方 0.4 格，
+    // 牌顶 2.35 仍低于血条底边（height + 0.95 - 0.19 ≈ 2.48），不会被压住。
+    const woodMat = new THREE.MeshStandardMaterial({ color: 0x6b4a2e, roughness: 0.80 });
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.034, 2.45, 6), woodMat);
+    pole.position.y = 1.225;
+    pole.castShadow = true;
+    holder.add(pole);
+    const board = new THREE.Mesh(new THREE.BoxGeometry(0.84, 0.54, 0.06), mat);
+    board.position.set(0, 2.18, 0.02);
+    board.castShadow = true;
+    board.frustumCulled = false;
+    holder.add(board);
+    // 侧前方偏出 0.60 / 0.26：旗手那顶红兜帽又高又宽（比 cfg.height 还高一截），
+    // 偏移只有 0.40 时牌子有一半藏在帽檐后面。侧前方也让牌面更正面地迎向镜头。
+    holder.position.set(0.60, 0.0, 0.26);
+  } else {
+    // 无名者：胸前一块小牌。模型正面是 +z（ENEMY_MODEL_YAW = 0）。
+    // z 从 0.30 一路加到 0.56：这只模型胸口有自己的**围巾/护胸**，凸出到 0.3 以上，
+    // 牌子挂 0.30 会整个埋进围巾里（图鉴缩略图上就是「无名者身上没有牌子」）。
+    // 0.56 挂在围巾外面，看着像用绳吊在胸前。
+    const board = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.28, 0.05), mat);
+    board.position.set(0, 0.96, 0.56);
+    board.frustumCulled = false;
+    holder.add(board);
+  }
+  // 打个标记：spawn 里那几个「遍历所有 mesh 改材质」的段落要跳过木牌
+  // （tint / glow / ghost 都会把它的颜色冲掉）。
+  holder.traverse((o) => { if (o.isMesh) o.userData.isTag = true; });
+  model.add(holder);
+}
+
 export async function buildPreviewModel(type) {
   const cfg = ENEMY_TYPES[type];
   if (!cfg) return null;
@@ -1210,17 +1416,22 @@ export async function buildPreviewModel(type) {
   // 最高点），本来就不需要抬。照抬的话它会在图鉴里悬在影子上面一大截，
   // 自动取景又要把影子一起框进去，结果模型缩成一个小蓝盒（生成出来只有 2KB）。
   if (cfg.hover && cfg.previewHover !== false) model.position.y += cfg.hover;
+  // 第 81 块：无名者胸前的木牌 / 旗手举的牌子 —— 图鉴里没有这块牌子，
+  // 这两只就只是「两只骷髅」，玩家分不出该先打谁。
+  if (cfg.tag) attachTag(model, cfg.tag, s);
   model.traverse((o) => {
     if (!o.isMesh) return;
     o.castShadow = false;
     o.receiveShadow = false;
     o.frustumCulled = false;
+    if (o.userData.isTag) return;   // 木牌保持自己的 Basic 材质（第 81 块）
     o.material = o.material.clone();
   });
   if (cfg.skin) applyWizardSkin(model, cfg.skin);
   if (cfg.tint) {
     const tc = new THREE.Color(cfg.tint);
     model.traverse((o) => {
+      if (o.userData.isTag) return;   // 木牌不被整体压色（第 81 块）
       if (o.isMesh && o.material && o.material.color) o.material.color.copy(tc);
     });
   }
@@ -1469,6 +1680,8 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     const s = (cfg.height / cfg.sourceHeight) * scaleMul;
     model.scale.setScalar(s);
     model.rotation.y = ENEMY_MODEL_YAW;
+    // 第 81 块：无名者胸前的空木牌 / 旗手举的牌子（程序化，零新资产）
+    if (cfg.tag) attachTag(model, cfg.tag, s);
     // 脚底对齐（第 52 块）：新模型的脚底不完全在原点（实测 -0.08 ~ +0.49），
     // 负的要抬起来（不然半个身子陷进土里），正的是天生浮空（雾鬼/焚火魔），照原样飘。
     if (cfg.footY != null && cfg.footY < 0) model.position.y = -cfg.footY * s;
@@ -1479,6 +1692,9 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
       o.castShadow = true;
       o.receiveShadow = false;
       o.frustumCulled = false;        // 蒙皮包围盒不准，关掉剔除防闪
+      // 第 81 块：木牌不进 mats —— 它不吃受击闪白 / 自发光 / 半透明，
+      // 否则 tint 一覆盖就渲染成深棕近黑的小方片（= 等于没挂）。
+      if (o.userData.isTag) return;
       o.material = o.material.clone(); // 独立材质，受击闪光才不会全队一起亮
       mats.push(o.material);
     });
@@ -1489,6 +1705,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     if (cfg.tint) {
       const tc = new THREE.Color(cfg.tint);
       model.traverse((o) => {
+        if (o.userData.isTag) return;   // 木牌不被整体压色（第 81 块）
         if (o.isMesh && o.material && o.material.color) o.material.color.copy(tc);
       });
     }
@@ -1701,6 +1918,9 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     if (fx) fx.spawnRing(e.pos, cfg.color);
 
     list.push(e);
+    // 第 81 块：队伍成员（无名者 / 旗手）生成后立刻编队。
+    // 放在 push 之后：onSpawn 回调里（新怪信息卡）就已经能看见它属于哪一队。
+    if (cfg.squad) joinSquad(e, opts.newSquad, opts.squadRef);
     // 第 55 块：新怪第一次上场时通报一声 —— main.js 据此冻结世界、弹「它怎么打人」的信息卡。
     // 放在 push 之后：回调里就看得见这只怪已经在场上了（测试也靠这点断言）。
     if (onSpawn) onSpawn(e);
@@ -1731,7 +1951,10 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     //   auraArmor —— 主祭霜牢环（第 28 块）
     //   shieldUp  —— 盾斧兽人举盾（第 29 块，举盾时减伤 70%）
     const red = Math.min(0.95, (e.auraArmor || 0) + (e.shieldUp && e.cfg.shield ? e.cfg.shield.reduce : 0));
-    const dealt = red > 0 ? amount * (1 - red) : amount;
+    // 第 81 块：旗手倒下后的 4 秒里，整队受双倍伤害 —— 这是清场的唯一窗口，
+    // 玩家必须先砍旗手再回头吃这 4 秒，不然只能一只只硬磨。
+    const stunMul = e.squadStunMul || 1;
+    const dealt = (red > 0 ? amount * (1 - red) : amount) * stunMul;
     e.hp -= dealt;
     if (!opts.dot) e.flashT = 0.1;
     e.bar.spr.visible = true;
@@ -1792,6 +2015,18 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     hideLeapRing(e);     // 雾猎狼死在蓄力里：落点红圈立刻收掉（第 35 块）
     if (e.cfg.leap) e.root.position.y = 0;   // 滞空时被打死：尸体落回地面
     if (fx) fx.death(e.pos, e.cfg.color);
+    // 第 81 块：旗手倒下 → 整队「散架」。
+    // 杆子一倒，其余的无名者就不知道该往哪儿走了：原地站 4 秒，而且受双倍伤害。
+    // 这是本关唯一的高效清场窗口 —— 玩家该先砍旗手，而不是追着人砍。
+    if (e.cfg.squad && e.cfg.squad.leader && e.squad) {
+      const s = e.squad;
+      s.stunT = e.cfg.squad.stun || 4.0;
+      for (const m of s.members) m.squadStunMul = e.cfg.squad.stunDamageMul || 2.0;
+      if (fx) {
+        fx.ring(e.pos, { from: 0.3, to: 3.6, color: 0xf0e2b8, life: 0.62, opacity: 0.85, y: 0.06 });
+        fx.burst(e.pos, { color: 0xf0e2b8, count: 22, speed: 3.2, life: 0.7, size: 0.13, y: 0.6, up: 2.0 });
+      }
+    }
     if (onDeath) onDeath(e);
 
     if (e.cfg.selfDestruct) {
@@ -2775,6 +3010,283 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     if (e.attackCd <= 0 && dist <= tg.range) extendTongue(e, ctx);
   }
 
+  // ============================================================
+  // 第八关 · 无名者的队形（第 81 块）
+  // ============================================================
+  // 一句话：**这是一支不会追你的敌人**，只要你不站在它的路上。
+  //
+  // 为什么不用「追人 AI」：前七关所有怪都是「朝主角走 + 到了打」，玩家因此
+  // 只需要一种应对（拉着跑）。第八关要换一个维度，所以整支队伍共享**一个朝向**，
+  // 匀速平移，撞到墙才转向。你躲的不是某只怪，是它要走的那条线。
+  //
+  // 队形靠「槽位」维持（不是靠物理分离）：
+  //   每只记住自己沿**法线**方向的槽位偏移（-2.5 ~ +2.5，间隔 1.0），
+  //   每帧把实际偏移量拉回槽位。这样队伍永远是一条笔直的横排 ——
+  //   即使中间有人死了、有人被冰缓，剩下的也会立刻重新排齐。
+  //   ⚠️ 间距 1.0 必须 > 2×radius(0.42)：小于它，「分离」和「对齐」每帧互相
+  //   拉扯，整排会抖成筛子（第 80 块并联体的间距也是同一个道理）。
+  //
+  // 三个状态（优先级从上到下）：
+  //   stunT > 0   旗手被砍死 → 整队散架 4 秒，原地不动、受双倍伤害 ← 唯一清场窗口
+  //   turnT > 0   撞墙 / 撞到寄存柜 → 停 1.15 秒再换向 ← 白给的输出时间
+  //   否则         平移 + 撞人
+  // ============================================================
+  const squads = [];
+  let squadSeq = 0;
+  const SQUAD_MAX = 6;                                    // 一队最多 6 只（含旗手）
+  const SQUAD_SLOTS = [-2.5, -1.5, -0.5, 0.5, 1.5, 2.5];  // 沿法线的固定槽位
+  const SQUAD_EDGE = 1.9;                                 // 离边界这么近就换向
+
+ // ---------------- 队伍 ----------------
+  function createSquad(cx, cz, speed) {
+    // 新队伍朝一个随机方向出发（第一次撞墙之后就由「朝场地中心」接管，
+    // 见 requestTurn —— 纯随机方向会让队伍一直贴着墙蹭）
+    const a = Math.random() * Math.PI * 2;
+    const s = {
+      id: ++squadSeq,
+      dir: { x: Math.cos(a), z: Math.sin(a) },
+      speed: Math.max(0.35, speed || 1.05),
+      turnT: 0,
+      stunT: 0,
+      nextDir: null,
+      members: [],
+      slots: new Map(),      // e → 槽位偏移
+      hits: 0,               // 撞墙次数（调试/测试）
+    };
+    squads.push(s);
+    return s;
+  }
+
+  function squadCenter(s) {
+    let cx = 0, cz = 0;
+    for (const m of s.members) { cx += m.pos.x; cz += m.pos.z; }
+    const n = s.members.length || 1;
+    return { x: cx / n, z: cz / n };
+  }
+
+  // 找空槽：优先离「已有成员最近的槽」，这样新人插队进来是往队伍里补，
+  // 而不是每次都从最左边长出来（队长得歪歪扭扭）。
+  function takeSlot(s, preferCenter) {
+    const used = new Set();
+    for (const m of s.members) used.add(s.slots.get(m));
+    const free = SQUAD_SLOTS.filter((v) => !used.has(v));
+    if (!free.length) return null;
+    if (preferCenter) {
+      free.sort((a, b) => Math.abs(a) - Math.abs(b));
+      return free[0];
+    }
+    if (!used.size) return 0.5;
+    let best = free[0], bestD = Infinity;
+    for (const v of free) {
+      let d = Infinity;
+      for (const u of used) d = Math.min(d, Math.abs(u - v));
+      if (d < bestD) { bestD = d; best = v; }
+    }
+    return best;
+  }
+
+  // 把一只怪并进队伍。找不到合适的队伍（都满了 / 都在散架）就新建一支。
+  // ref：**同一批**生成的人共用一个 { squad } 盒子（寄存柜开门时一次放 6 只）。
+  // 只给第一只传 forceNew 是不够的 —— 每只都 forceNew 就会各建一队，
+  // 「放出一支队伍」变成「放出六支单人队」（CDP 抓到的就是这个）。
+  function joinSquad(e, forceNew, ref) {
+    const wantLeader = !!(e.cfg.squad && e.cfg.squad.leader);
+    let target = (ref && ref.squad) ? ref.squad : null;
+    // forceNew：寄存柜吐出来的那一批要**自己成一队**，不能塞进场上已有的队伍
+    // （否则「柜子开门」听起来是一件事，画面上却只是给旧队伍补了六个人）
+    for (const s of (forceNew || target ? [] : squads)) {
+      if (s.stunT > 0) continue;                 // 散架中的队伍不收人（会立刻恢复）
+      if (s.members.length >= SQUAD_MAX) continue;
+      if (wantLeader && s.members.some((m) => m.cfg.squad && m.cfg.squad.leader)) continue;
+      target = s;
+      break;
+    }
+    if (!target) target = createSquad(e.pos.x, e.pos.z, e.speed);
+    const slot = takeSlot(target, wantLeader);
+    if (slot == null) {
+      // 理论上不会走到这儿（上面已经卡了 SQUAD_MAX），兜底：单独一队
+      const solo = createSquad(e.pos.x, e.pos.z, e.speed);
+      solo.members.push(e);
+      solo.slots.set(e, 0);
+      e.squad = solo;
+      if (ref) ref.squad = solo;
+      return solo;
+    }
+    target.members.push(e);
+    target.slots.set(e, slot);
+    e.squad = target;
+    e.contactCd = 0;
+    if (ref) ref.squad = target;      // 回填：同一批的下一只直接进这队
+    return target;
+  }
+
+  // 换向：不朝「反向」，而是朝**场地中心**（带 ±20° 扰动）。
+  // 纯反向会在场地里来回扫同一条线，玩家站住不动就永远安全；
+  // 朝中心走则一定会穿过中场，逼你换位置。
+  function requestTurn(s, reason) {
+    if (s.turnT > 0) return;
+    const c = squadCenter(s);
+    const r = Math.hypot(c.x, c.z);
+    let a;
+    if (r < 2.0) {
+      // 已经在场地中间了：随便挑一个偏离当前方向 ±90° 以上的新方向
+      a = Math.atan2(s.dir.z, s.dir.x) + (Math.random() > 0.5 ? 1 : -1) * (Math.PI * 0.5 + Math.random() * 0.6);
+    } else {
+      a = Math.atan2(-c.z, -c.x) + (Math.random() - 0.5) * 0.7;
+    }
+    s.nextDir = { x: Math.cos(a), z: Math.sin(a) };
+    s.turnT = (s.members[0] && s.members[0].cfg.squad.turnTime) || 1.15;
+    s.hits++;
+    if (fx && reason === 'edge' && s.members.length) {
+      // 转向提示：脚下一圈淡环 —— 看见就知道「这一排要停了」
+      fx.ring(c, { from: 0.3, to: 2.6, color: s.members[0].cfg.color, life: 0.45, opacity: 0.35, y: 0.05 });
+    }
+  }
+
+  function updateSquads(dt, ctx) {
+    const pp = ctx.playerPos;
+    for (let i = squads.length - 1; i >= 0; i--) {
+      const s = squads[i];
+      // 清尸体（槽位留着不重排：中间空一个位置，一眼看得出来这队少了一个人）
+      if (s.members.some((m) => m.state === 'dead')) {
+        s.members = s.members.filter((m) => m.state !== 'dead');
+      }
+      if (!s.members.length) {
+        squads.splice(i, 1);
+        continue;
+      }
+
+      // ---- 散架：旗手死了，整队站住 + 受双倍伤害 ----
+      if (s.stunT > 0) {
+        s.stunT -= dt;
+        const mul = (s.members.find((m) => m.cfg.squad && m.cfg.squad.leader) || { cfg: {} }).cfg.squad;
+        for (const m of s.members) m.squadStunMul = s.stunT > 0 ? ((mul && mul.stunDamageMul) || 2.0) : 1;
+        if (s.stunT <= 0) {
+          for (const m of s.members) m.squadStunMul = 1;
+          if (fx) fx.ring(squadCenter(s), { from: 0.4, to: 3.2, color: 0xf0e2b8, life: 0.5, opacity: 0.55, y: 0.06 });
+        }
+        continue;
+      }
+
+      // ---- 换向中：原地停住 ----
+      if (s.turnT > 0) {
+        s.turnT -= dt;
+        if (s.turnT <= 0 && s.nextDir) {
+          s.dir = s.nextDir;
+          s.nextDir = null;
+        }
+        continue;
+      }
+
+      // ---- 平移 ----
+      const stepX = s.dir.x * s.speed * dt;
+      const stepZ = s.dir.z * s.speed * dt;
+      for (const m of s.members) {
+        if (m.state === 'spawn') continue;        // 刚钻出来的先站定
+        if (m.freezeT > 0) continue;              // 冻住的拉不动整队（但队伍照样走，它自己掉队后会被对齐拉回来）
+        m.pos.x += stepX;
+        m.pos.z += stepZ;
+      }
+
+      // ---- 法线对齐：把每只的「横向偏移」拉回它的槽位 ----
+      const nx = -s.dir.z, nz = s.dir.x;
+      const c = squadCenter(s);
+      for (const m of s.members) {
+        const slot = s.slots.get(m);
+        if (slot == null) continue;
+        const rel = (m.pos.x - c.x) * nx + (m.pos.z - c.z) * nz;
+        const diff = (slot - rel) * Math.min(1, dt * 6);
+        m.pos.x += nx * diff;
+        m.pos.z += nz * diff;
+        // 夹回场地（对齐时可能把边缘的横向推出去）
+        const lim = ctx.arenaRadius - m.cfg.radius - 0.1;
+        const rr = Math.hypot(m.pos.x, m.pos.z);
+        if (rr > lim) {
+          m.pos.x = (m.pos.x / rr) * lim;
+          m.pos.z = (m.pos.z / rr) * lim;
+        }
+      }
+
+      // ---- 撞墙 / 撞到寄存柜 → 换向 ----
+      // ⚠️ 关键条件：必须**正在往外走**才算撞墙。
+      // 只判「超界」会死锁 —— 换向之后队伍仍然站在界外，下一帧立刻又判成撞墙，
+      // 于是无限 turnT（实测 turnT 永远在 0.2~1.1 之间打转，队伍一动不动）。
+      // 加上「方向和径向同向」这一条，朝里走的那几帧就不会再触发换向。
+      const lim = ctx.arenaRadius - SQUAD_EDGE;
+      let hit = false;
+      for (const m of s.members) {
+        if (m.state === 'spawn') continue;
+        const r = Math.hypot(m.pos.x, m.pos.z);
+        if (r < lim) continue;
+        const outward = (m.pos.x * s.dir.x + m.pos.z * s.dir.z) > 0;
+        if (outward) { hit = true; break; }
+      }
+      // 硬性夹回：不管朝哪走，都不许真的跑出场地（对齐 / 换向都可能把边缘的人挤出去）
+      const hardLim = ctx.arenaRadius - 0.5;
+      for (const m of s.members) {
+        const r = Math.hypot(m.pos.x, m.pos.z);
+        if (r > hardLim) {
+          m.pos.x = (m.pos.x / r) * hardLim;
+          m.pos.z = (m.pos.z / r) * hardLim;
+        }
+      }
+      // 寄存柜是地面上的实体，一排骷髅不能从柜子里穿过去
+      const hub = ctx.depositHub;
+      if (!hit && hub) {
+        for (const m of s.members) {
+          if (m.state === 'spawn') continue;
+          if (Math.hypot(m.pos.x - hub.x, m.pos.z - hub.z) < hub.r + m.cfg.radius + 0.25) { hit = true; break; }
+        }
+      }
+      if (hit) { requestTurn(s, 'edge'); continue; }
+
+      // ---- 撞人 ----
+      for (const m of s.members) {
+        if (m.state === 'spawn' || m.state === 'dead') continue;
+        if (m.contactCd > 0) m.contactCd -= dt;
+        const ddx = pp.x - m.pos.x, ddz = pp.z - m.pos.z;
+        const d = Math.hypot(ddx, ddz);
+        const reach = m.cfg.radius + (ctx.playerRadius || 0.32) + 0.10;
+        if (d > reach || d < 1e-4) continue;
+        // 沿**法线**顶开，而不是沿「怪→玩家」的径向：
+        // 径向推会把人一路顶着走（推到墙角就出不来），法线推是「被人流挤到旁边」，
+        // 玩家还有机会从侧面让开 —— 手感是两回事。
+        const sign = (ddx * nx + ddz * nz) >= 0 ? 1 : -1;
+        if (ctx.pushPlayer) ctx.pushPlayer(nx * sign, nz * sign, (m.cfg.squad.push || 0.55) * dt);
+        if (m.contactCd > 0) continue;
+        m.contactCd = m.cfg.squad.hitCd || 0.55;
+        ctx.hurtPlayer(m.damage, m);
+        if (fx) {
+          fx.burst({ x: m.pos.x, z: m.pos.z }, {
+            color: m.cfg.color, count: 6, speed: 1.5, life: 0.28, size: 0.08, y: 0.6, up: 0.9,
+          });
+        }
+      }
+    }
+  }
+
+  // 队员自己的每帧表现：朝向锁定为「队伍行进方向」，不是玩家。
+  // 这一条是「它不看你」的核心 —— 前七关所有怪都在盯着你转身，
+  // 这一排从头到尾只朝前，你从侧面走过去它们不会回头。
+  function handleSquadMember(e, dt, ctx) {
+    const s = e.squad;
+    if (!s) {
+      if (e.currentAnim !== e.cfg.anim.idle) {
+        e.currentAnim = e.cfg.anim.idle;
+        e.play(e.cfg.anim.idle, { fade: 0.2 });
+      }
+      return;
+    }
+    const yaw = Math.atan2(s.dir.x, s.dir.z);
+    e.root.rotation.y = lerpAngle(e.root.rotation.y, yaw, 1 - Math.exp(-5 * dt));
+    const moving = s.stunT <= 0 && s.turnT <= 0;
+    const want = moving ? e.cfg.anim.walk : e.cfg.anim.idle;
+    if (e.currentAnim !== want) {
+      e.currentAnim = want;
+      e.play(want, { fade: 0.25 });
+    }
+  }
+
   function updateOne(e, dt, ctx) {
     e.mixer.update(dt);
     e.t += dt;
@@ -2966,6 +3478,11 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
       }
       return;
     }
+
+    // ---- 第八关 · 无名者 / 旗手：跟着队伍走（第 81 块）----
+    // 放在出生判断之后、所有「追人」分支之前：它们没有自己的 AI，
+    // 位置由 updateSquads 统一推，这里只管朝向和走路动画。
+    if (e.cfg.squad) { handleSquadMember(e, dt, ctx); return; }
 
     // ---- 第七关 · 井蛙：吐舌头拉人（第 71 块）----
     if (e.cfg.tongue) { handleTongue(e, dt, ctx); return; }
@@ -3742,6 +4259,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
   function update(dt, ctx) {
     collectAuras(ctx);
     for (const e of list) updateOne(e, dt, ctx);
+    updateSquads(dt, ctx);      // 第 81 块：无名者的队形（平移 / 对齐 / 撞人 / 换向）
     updateMendFx(dt);
     updateShots(dt, ctx);
     updateZones(dt, ctx);
@@ -3756,6 +4274,9 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
       for (let j = i + 1; j < list.length; j++) {
         const b = list[j];
         if (b.state === 'dead' || b.state === 'spawn') continue;
+        // 第 81 块：同一支队伍的人不参与物理分离 —— 间距由槽位管（1.0 格），
+        // 让分离再来推一手会和「法线对齐」每帧互相拉扯，整排抖成筛子。
+        if (a.squad && a.squad === b.squad) continue;
         const dx = b.pos.x - a.pos.x;
         const dz = b.pos.z - a.pos.z;
         const d2 = dx * dx + dz * dz;
@@ -3920,6 +4441,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     for (const s of spikesFx) scene.remove(s.mesh);
     spikesFx.length = 0;
     pendingHits.length = 0;
+    squads.length = 0;          // 第 81 块：重开一局不留旧队伍引用
   }
 
   // 战士/投手的攻击时长：没单独写就默认 0.9 秒（动画按比例加速/减速），
@@ -3969,6 +4491,33 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     //   n 只节点应该正好 C(n,2) 条线（4 只 = 6 条），测试和调试都靠这两个数。
     arcNodes: () => list.filter((e) => e.cfg.arc && e.state !== 'dead' && e.state !== 'spawn').length,
     arcLines: () => arcPool.filter((m) => m.visible).length,
+    //   第 81 块：无名者的队伍。每队给出人数、朝向、状态和每只的实际槽位，
+    //   测试要断言「一排站得直」和「旗手死了整队散架」都靠它。
+    squadCount: () => squads.length,
+    squadState: () => squads.map((s) => ({
+      id: s.id,
+      n: s.members.length,
+      dir: [+s.dir.x.toFixed(2), +s.dir.z.toFixed(2)],
+      speed: +s.speed.toFixed(2),
+      turnT: +s.turnT.toFixed(2),
+      stunT: +s.stunT.toFixed(2),
+      hits: s.hits,
+      hasLeader: s.members.some((m) => m.cfg.squad && m.cfg.squad.leader),
+      slots: s.members.map((m) => s.slots.get(m)),
+      pos: s.members.map((m) => [+m.pos.x.toFixed(2), +m.pos.z.toFixed(2)]),
+    })),
+    squadAlive: () => list.filter((e) => e.cfg.squad && e.state !== 'dead').length,
+    // 调试：强行给第 i 支队伍定方向（测试「朝外走会撞墙换向」用；
+    // 正常玩法里方向只由 requestTurn 改，玩家碰不到这个口）
+    squadDir: (i, x, z) => {
+      const s = squads[i];
+      if (!s) return false;
+      const L = Math.hypot(x, z) || 1;
+      s.dir = { x: x / L, z: z / L };
+      s.turnT = 0;
+      s.nextDir = null;
+      return true;
+    },
     //   擦名者读条进度（第 65 块）：给「奶蛙头顶百分比」用。
     //   返回 null = 现在没有人在读条；否则 { progress 0~1, who }。
     //   多只同时读条取进度最高的那只 —— 最危险的那一只才该占着头顶。

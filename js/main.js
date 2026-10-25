@@ -5,39 +5,40 @@
 // 目标是把三件事调顺：摇杆输入 → 角色速度/朝向 → 相机跟随。
 // 后续叠战斗时，只需要在 tick() 里加敌人更新与自动攻击，不用动输入层。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=91';
-import { buildNightScene } from './scene.js?v=91';
-import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=91';
+import * as THREE from '../lib/three.module.js?v=92';
+import { buildNightScene } from './scene.js?v=92';
+import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=92';
 // 第 80 块：给 glb 拼上版本号 → SW 缓存优先（详见 assetUrl.js）
-import { withV } from './assetUrl.js?v=91';
-import { createInput } from './input.js?v=91';
-import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=91';
-import { createStatView } from './statView.js?v=91';
-import { createWeaponStats } from './weaponStats.js?v=91';
-import { createFx } from './fx.js?v=91';
-import { createEnemySystem, ENEMY_TYPES } from './enemy.js?v=91';
+import { withV } from './assetUrl.js?v=92';
+import { createInput } from './input.js?v=92';
+import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=92';
+import { createStatView } from './statView.js?v=92';
+import { createWeaponStats } from './weaponStats.js?v=92';
+import { createFx } from './fx.js?v=92';
+import { createEnemySystem, ENEMY_TYPES } from './enemy.js?v=92';
 import {
-  createLevel, LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVEL_5, LEVEL_6, LEVEL_7, LEVELS_BY_ID, DIFFS, setDifficulty, getDifficulty, roundScale, levelStats, levelTypes,
-} from './wave.js?v=91';
-import { createRangeRing } from './rangeRing.js?v=91';
-import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=91';
-import { createWeaponSystem } from './weapon.js?v=91';
-import { createArrowRainSystem } from './arrowRain.js?v=91';
-import { SWORD_KINDS } from './swordKinds.js?v=91';
-import { createGoldSystem } from './gold.js?v=91';
-import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW } from './shop.js?v=91';
-import { createTurretSystem, TURRET } from './turret.js?v=91';
-import { createRelicSystem, RELIC_DEFS } from './relics.js?v=91';
-import { createHazards } from './hazards.js?v=91';
-import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=91';
-import audio from './audio.js?v=91';
-import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=91';
+  createLevel, LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVEL_5, LEVEL_6, LEVEL_7, LEVEL_8, LEVELS_BY_ID, DIFFS, setDifficulty, getDifficulty, roundScale, levelStats, levelTypes,
+} from './wave.js?v=92';
+import { createRangeRing } from './rangeRing.js?v=92';
+import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=92';
+import { createWeaponSystem } from './weapon.js?v=92';
+import { createArrowRainSystem } from './arrowRain.js?v=92';
+import { SWORD_KINDS } from './swordKinds.js?v=92';
+import { createGoldSystem } from './gold.js?v=92';
+import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW } from './shop.js?v=92';
+import { createTurretSystem, TURRET } from './turret.js?v=92';
+import { createRelicSystem, RELIC_DEFS } from './relics.js?v=92';
+import { createHazards } from './hazards.js?v=92';
+import { createDeposit } from './deposit.js?v=92';   // 第 81 块：第八关的寄存柜
+import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=92';
+import audio from './audio.js?v=92';
+import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=92';
 // 第 62 块：回血技能（第四关通关后永久解锁，回 5 点 / CD 25 秒）
-import { createHealSkill, HEAL_AMOUNT, HEAL_CD } from './healSkill.js?v=91';
+import { createHealSkill, HEAL_AMOUNT, HEAL_CD } from './healSkill.js?v=92';
 // 第 62 块：民心专属事件（升档走良性池、掉档走恶性池）
-import { repPoolForTier, REP_GOOD, REP_BAD } from './repEvents.js?v=91';
+import { repPoolForTier, REP_GOOD, REP_BAD } from './repEvents.js?v=92';
 // 第 62 块：攻略面板（战败提示上的「查看攻略」，手风琴三组）
-import { renderGuide, GUIDE_SECTIONS } from './guide.js?v=91';
+import { renderGuide, GUIDE_SECTIONS } from './guide.js?v=92';
 import {
   settings as readSettings, setSetting, save as saveProfile, profile,
   bumpStat, setStatMax, codexAdd, codexCount, countCard, unlockAch, hasAch, addBones, bones, resetAll,
@@ -50,53 +51,53 @@ import {
   healUnlocked, markHealUnlocked,
   rainObtained, markRainObtained,          // 第 65 块：技能的「有没有」只跟解锁有关
   hintSeen, markHintSeen,                  // 第 65 块：一次性提示卡
-} from './profile.js?v=91';
+} from './profile.js?v=92';
 // 第 44 块：礼包兑换（码表只有哈希，明细在 gift.js 顶部注释）
-import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=91';
+import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=92';
 // 第 46 块：音效包（抽象奶蛙音效包 —— 4 段奶蛙叫声，通关第一关解锁）
-import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=91';
-import * as runSave from './runSave.js?v=91';
+import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=92';
+import * as runSave from './runSave.js?v=92';
 // 第 78 块：存档导出 / 导入。数据逻辑全在这个模块里（不碰 DOM），这里只接按钮
-import * as saveIO from './saveIO.js?v=91';
+import * as saveIO from './saveIO.js?v=92';
 import {
   CAMPFIRE, CAMP_STEP, campBuy, campOwned, campLevel,
   campCost, campApply, bonesFor, diffBoneMul, levelBoneMul, coinBones, BONE,
-} from './campfire.js?v=91';
+} from './campfire.js?v=92';
 // 第 23 块：永夜火种（通关白给的 3 次永久三选一）
 import {
   BOONS, BOON_BY_ID, BOON_PICKS, boonOwned, boonStacks, boonPending, boonTotalStacks,
   grantBoons, rollBoons, takeBoon, applyBoons, boonStackText,
-} from './boons.js?v=91';
+} from './boons.js?v=92';
 // 第 21 块：夜行诅咒（自选 debuff 换骨币倍率）
-import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=91';
+import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=92';
 // 第 22 块：种子与每日挑战
 import {
   DAILY_RULES, dayKey, dayText, dailySeed, seedCode, pickDailyCurses,
   seedFromText, pickSeedRules, loadSeedRecords, saveSeedRecord, pruneSeeds,
   dailyRecord, saveDailyRecord, pruneDaily, makeRng,
-} from './seed.js?v=91';
-import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=91';
+} from './seed.js?v=92';
+import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=92';
 // 第 58 块：局外商店 · 宝箱（花骨币买，开箱随机给永久属性 / 永久法器 / 技能CD缩短）
 import {
   BOXES, BOX_BY_ID, buyBox, rollBox, metaApplyStats, applyMeta,
   // 第 74 块：盲盒按购买次数加价（三种各自独立计数）
   boxCost, boxPriceOf, boxBought, BOX_PRICE_STEP,
-} from './metaShop.js?v=91';
+} from './metaShop.js?v=92';
 // 第 59 块：每日签到（以周为单位，周一 00:00 重置）
 import {
   WEEK_TIERS, SIGN_BONES, weekCells, signSummary, signToday, signedToday,
-} from './signin.js?v=91';
-import { achById, ACHS } from './achievements.js?v=91';
+} from './signin.js?v=92';
+import { achById, ACHS } from './achievements.js?v=92';
 import {
   EVENTS, ALL_EVENTS, getEventById, pickEvent, effectLines,
   choiceHint, canAfford, costShort, REP_MIN, REP_MAX, REP_START,
   isTalk, eventChoices, resolveRoll, mergeEffects,
-} from './events.js?v=91';
+} from './events.js?v=92';
 // 第 32 块：主线《笑不出来的那一夜》（18 夜，一夜一关，前 3 夜已有关卡）
 import {
   STORY_ARC, STORY_CHAPTERS, STORY_ENDINGS, MARK_INFO,
   storyChapterAt, storyChapterById, storyEndingKey,
-} from './story.js?v=91';
+} from './story.js?v=92';
 
 // 标记模块已经跑起来了：index.html 的兜底自检靠它判断
 // 「模块根本没执行」还是「执行了但加载慢」。
@@ -715,6 +716,9 @@ async function boot() {
       // 第五/六关的两只新怪（第 63 块）
       if (e.type === 'eraser' && codexCount('enemies', 'eraser') >= 10) tryAch('eraser_10');
       if (e.type === 'reboot' && codexCount('enemies', 'reboot') >= 10) tryAch('reboot_10');
+      // 第 81 块：无名者 / 旗手倒下 → 木牌进寄存柜。
+      // 这是第八关的核心循环：杀得越多，柜子越快满；满了柜子会把人放回场上。
+      if (e.type === 'ranker' || e.type === 'bearer') deposit.addTag(1);
       // 木鱼法器（第 71 块）：击杀时也震一圈（挨打/击杀都触发）
       if (relics.woodfishHit) relics.woodfishHit(e.pos);
       // 小兵是自爆 → 爆炸声；其他怪是被打死 → 骨头散架声
@@ -821,6 +825,13 @@ async function boot() {
   // 位置写在关卡数据里（wave.js 的 hazards），由 setLevel 重建。
   // 只伤玩家：电流不认机房里那些怪。绝缘斗篷靠 isPowered 决定要不要把电引出去。
   const hazards = createHazards({
+    scene, fx, playerPos: pos, playerRadius: BODY_R, hurtPlayer,
+  });
+
+  // ---------------- 寄存柜（第 81 块，第八关） ----------------
+  // 只伤玩家 / 收木牌 / 放队伍，和 hazards 是两套东西（它不是「危险区」，是「对象」）。
+  // 放队伍的回调要能 spawn，所以函数体在运行时才取 enemies —— 那时已经建好了。
+  const deposit = createDeposit({
     scene, fx, playerPos: pos, playerRadius: BODY_R, hurtPlayer,
   });
 
@@ -2009,6 +2020,7 @@ async function boot() {
     { id: 5, name: LEVEL_5.name, playable: true },   // 第 63 块：第五关 · 草甸路口
     { id: 6, name: LEVEL_6.name, playable: true },   // 第 63 块：第六关 · 骨塔机房
     { id: 7, name: LEVEL_7.name, playable: true },   // 第 71 块：第七关 · 骨塔井底
+    { id: 8, name: LEVEL_8.name, playable: true },   // 第 81 块：第八关 · 骨塔寄存层
   ];
   // 选关面板点了哪一关 —— beginGame 时按它切关卡（点的时候还没进战斗）
   let pendingLevelId = 1;
@@ -3968,6 +3980,8 @@ async function boot() {
     setSceneTheme(level.level.theme || 'meadow');
     setArenaRadius(level.level.arena || 15);
     hazards.build(level.level.hazards || []);   // 第 63 块：只有第六关有漏电地板
+    // 第 81 块：寄存柜（只有第八关有）。build 会先 reset 自己，别的关传 undefined 即清空。
+    deposit.build(level.level.deposit || null);
     // 右上角：第几关 + 地区名（"第五关 · 草甸路口" → "第五关" / "草甸路口"）
     const nm = String(level.level.name || '').split('·');
     if (whLevelEl) whLevelEl.textContent = (nm[0] || `第 ${curLevelId} 关`).trim();
@@ -6571,6 +6585,14 @@ async function boot() {
       },
       // 第 63 块：第五/六关的现场（漏电地板 / 擦名者 / 重启体 / 新法器）
       block63: {
+        // 第 81 块：第八关的寄存柜（观测 + 手动灌牌子，测试不用真杀 8 只）
+        deposit: {
+          state: () => deposit.state(),
+          pos: () => deposit.pos(),
+          count: () => deposit.count(),
+          add: (n) => deposit.addTag(n == null ? 1 : n),
+          clear: () => { deposit.clearTags(); return true; },
+        },
         hazards: {
           count: () => hazards.count,
           defs: () => hazards.defs,
@@ -7276,6 +7298,18 @@ async function boot() {
       showToast('名字被擦干净了', `擦名者带着你的${nm}消失在雾里 —— 这一局再也拿不回来了`);
       audio.sfx('die');
     },
+    // 第 81 块：无名者的队伍把人挤开。dx/dz 是**单位推力方向**，amount 已乘 dt。
+    // 和 pullPlayer 的区别：pull 是「被拽向一个点」，push 是「顺着一个方向被推」——
+    // 队伍推人的方向是它自己的法线，不是「怪→玩家」，所以不能用 pull 表达。
+    pushPlayer: (dx, dz, amount) => {
+      pos.x += dx * amount;
+      pos.z += dz * amount;
+      const limit = ARENA_R - BODY_R;
+      const d = Math.hypot(pos.x, pos.z);
+      if (d > limit) { pos.x = (pos.x / d) * limit; pos.z = (pos.z / d) * limit; }
+    },
+    // 第 81 块：队伍要绕开寄存柜（它是地面上的实体），位置从这儿拿
+    get depositHub() { return deposit.pos(); },
     // 第 71 块：井蛙吐舌把主角拉过来。amount = 这一帧要拖拽的距离（已乘 dt）。
     // 直接把 pos 朝 (x,z) 拽过去，并夹回场地内（边界约束在外面那块已跑过，这里补一刀）。
     pullPlayer: (x, z, amount) => {
@@ -7378,6 +7412,34 @@ async function boot() {
       healSkill.update(dt);          // 第 62 块：回血技能的冷却
       turrets.update(dt, { playerPos: pos });
       hazards.update(dt, { playerPos: pos });          // 第 63 块：漏电地板
+      // 第 81 块：寄存柜（收木牌 / 站桩取牌 / 满了放人 / 溢出放电）
+      deposit.update(dt, {
+        squadAlive: () => enemies.squadAlive(),
+        onRelease: (n) => {
+          const hub = deposit.pos();
+          if (!hub) return;
+          // 从柜子门口朝场地中心的方向站出来：旗手先，其余人跟在他身后两侧。
+          // newSquad: true —— 这一批必须自己成一队（见 enemy.js 的 joinSquad）。
+          const d = Math.hypot(hub.x, hub.z) || 1;
+          const fx_ = -hub.x / d, fz_ = -hub.z / d;      // 柜子 → 场地中心
+          const nx = -fz_, nz = fx_;                     // 法线（队伍排开的方向）
+          // 这 6 只共用同一个 ref：第一只建队，后面几只跟着进（见 enemy.js 的 joinSquad）
+          const ref = {};
+          for (let i = 0; i < n; i++) {
+            const isLeader = i === 0;
+            const lat = isLeader ? 0 : ((i % 2 ? 1 : -1) * Math.ceil(i / 2)) * 1.0;
+            const at = {
+              x: hub.x + fx_ * (2.4 + (isLeader ? 0 : 0.3)) + nx * lat,
+              z: hub.z + fz_ * (2.4 + (isLeader ? 0 : 0.3)) + nz * lat,
+            };
+            const lim = ARENA_R - 1.2;
+            const rr = Math.hypot(at.x, at.z);
+            if (rr > lim) { at.x = (at.x / rr) * lim; at.z = (at.z / rr) * lim; }
+            enemies.spawn(isLeader ? 'bearer' : 'ranker', at, { newSquad: isLeader, squadRef: ref });
+          }
+          audio.sfx('upgrade');
+        },
+      });
       relics.update(dt, { playerPos: pos, hazards });  // 绝缘斗篷要问地板通没通电
       aegisUpdate(dt);
       // 金币：攻击范围圈就是拾取范围（第 23 块，进圈即吸），圈外的 3 秒后自动入账

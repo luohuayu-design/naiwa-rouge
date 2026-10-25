@@ -1038,7 +1038,7 @@ export const STORY_CHAPTERS = [
   },
 
   {
-    id: 's08', no: 8, act: 2, levelId: null, atRound: null,
+    id: 's08', no: 8, act: 2, levelId: 8, atRound: 2,
     icon: '🪜', title: '一百层台阶', who: '寄存处的骷髅', place: '骨塔第七十层',
     story:
       '骨塔的台阶是螺旋的，每一级都刻着名字。\n'

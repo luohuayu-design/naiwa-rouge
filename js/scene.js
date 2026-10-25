@@ -8,7 +8,7 @@
 // 两套配色集中在 THEMES 里，buildNightScene({ theme }) 建哪套，
 // 局中要换就调返回的 setTheme('crypt')（不改几何，只改颜色和贴图）。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=91';
+import * as THREE from '../lib/three.module.js?v=92';
 
 export const THEMES = {
   // 第一关 · 荒草地：冷月光 + 青绿边圈 + 萤火虫
@@ -107,6 +107,25 @@ export const THEMES = {
     tuft: 0x2a4a48, tuftVisible: false,
     fly: 0x8fe8e0, flyCount: 70,            // 井里的水珠 / 浮尘
     ground: 'well',
+  },
+  // 第八关 · 骨塔寄存层（第 81 块）：骨白 + 灰绿 + 白雾
+  //
+  // 前七关的色调是一条越走越冷的线：草地的青绿 → 庭院的紫 → 钟楼的炭红 →
+  // 服务区的霜青 → 路口的暖黄 → 机房的蓝绿 → 井底的青蓝。
+  // 这里第一次**没有颜色倾向**：骨塔七十层是存放牌位的地方，只有骨、灰、白，
+  // 所以要「苍」—— 底色压成冷灰，天光偏骨白，雾是干燥的白雾（不是水汽）。
+  // 第八关的压迫感全来自「队伍在动」，场景必须安静、寡淡，一点多余的光都不要。
+  ossuary: {
+    bg: 0x131519,
+    fog: 0x2b3036, fogDensity: 0.0128,
+    hemiSky: 0xa8b8bc, hemiGround: 0x2a2620, hemiIntensity: 1.50,
+    moon: 0xeaf2e6, moonIntensity: 3.25, moonBase: 3.05,
+    rim: 0x8aa08e, rimIntensity: 0.88,
+    edge: 0xc8dcb8, edgeOpacity: 0.30,      // 平台边沿一圈褪色的骨白
+    stone: 0x3a4046,
+    tuft: 0x39443a, tuftVisible: false,     // 寄存层当然没有草
+    fly: 0xdcecc8, flyCount: 64,            // 飘着的骨粉 / 纸灰
+    ground: 'ossuary',
   },
 };
 
@@ -442,7 +461,93 @@ function makeGroundTexture(kind) {
   if (kind === 'crossroad') return makeCrossroadTexture();
   if (kind === 'server') return makeServerTexture();
   if (kind === 'well') return makeWellTexture();
+  if (kind === 'ossuary') return makeOssuaryTexture();
   return makeGrassTexture();
+}
+
+// 骨塔寄存层的地面（第 81 块）：压实的骨灰 + 碎骨渣 + 木牌压痕。
+//
+// 这一层的「地面」其实是被几十年的碎骨和骨灰填平的石板 —— 所以底色是中性的冷灰，
+// 没有任何饱和色。细节分三层：
+//   ① 大块明暗：几代人踩过的地方更亮（磨出来的）；
+//   ② 骨渣：小白点 + 小白条，比例比其他场景的颗粒高得多，这是「骨灰」的关键；
+//   ③ 木牌压痕：淡淡的矩形印子，暗示这里长年摆着牌子（但不排成整齐的网格，
+//      否则平铺十六次会变成一张瓷砖图，一眼假）。
+function makeOssuaryTexture() {
+  const S = 512;
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = S;
+  const g = cv.getContext('2d');
+
+  g.fillStyle = '#2f3438';
+  g.fillRect(0, 0, S, S);
+
+  let seed = 710071;
+  const rnd = () => {
+    seed = (seed * 1103515245 + 12345) % 2147483648;
+    return seed / 2147483648;
+  };
+
+  // ① 大块明暗：踩亮的石面 / 积灰的洼地
+  for (let i = 0; i < 180; i++) {
+    const x = rnd() * S, y = rnd() * S, r = 20 + rnd() * 82;
+    const rad = g.createRadialGradient(x, y, 0, x, y, r);
+    const dark = rnd() > 0.5;
+    rad.addColorStop(0, dark ? 'rgba(9,11,13,0.42)' : 'rgba(122,132,134,0.28)');
+    rad.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = rad;
+    g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+  }
+
+  // ② 骨渣：这是这张贴图和别的地面最不一样的一层
+  for (let i = 0; i < 3200; i++) {
+    const x = rnd() * S, y = rnd() * S;
+    const a = 0.10 + rnd() * 0.30;
+    if (rnd() > 0.38) {
+      // 骨白碎屑：小而亮，撒得密
+      g.fillStyle = `rgba(214,220,206,${a})`;
+      g.beginPath(); g.arc(x, y, 0.5 + rnd() * 1.5, 0, Math.PI * 2); g.fill();
+    } else {
+      g.fillStyle = `rgba(10,12,14,${a + 0.10})`;
+      g.beginPath(); g.arc(x, y, 0.6 + rnd() * 1.6, 0, Math.PI * 2); g.fill();
+    }
+  }
+
+  // 碎骨条：不是圆点，是细长的小骨头 —— 骨灰里永远有没烧透的那几根
+  g.lineCap = 'round';
+  for (let i = 0; i < 150; i++) {
+    const x = rnd() * S, y = rnd() * S;
+    const len = 2 + rnd() * 7;
+    const ang = rnd() * Math.PI;
+    g.strokeStyle = `rgba(206,212,198,${0.10 + rnd() * 0.20})`;
+    g.lineWidth = 0.7 + rnd() * 1.2;
+    g.beginPath();
+    g.moveTo(x, y);
+    g.lineTo(x + Math.cos(ang) * len, y + Math.sin(ang) * len);
+    g.stroke();
+  }
+
+  // ③ 木牌压痕：淡矩形，位置散、角度微歪（排整齐就成了瓷砖）
+  for (let i = 0; i < 26; i++) {
+    const x = rnd() * S, y = rnd() * S;
+    const w = 8 + rnd() * 16, h = 12 + rnd() * 22;
+    g.save();
+    g.translate(x, y);
+    g.rotate((rnd() - 0.5) * 0.5);
+    g.fillStyle = `rgba(58,46,36,${0.10 + rnd() * 0.12})`;
+    g.fillRect(-w / 2, -h / 2, w, h);
+    g.strokeStyle = `rgba(14,12,10,${0.10 + rnd() * 0.10})`;
+    g.lineWidth = 1;
+    g.strokeRect(-w / 2, -h / 2, w, h);
+    g.restore();
+  }
+
+  const tex = new THREE.CanvasTexture(cv);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(16, 16);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 8;
+  return tex;
 }
 
 // 雾堤服务区的地面：青灰霜面 + 霜斑 + 老裂缝（第 35 块）。

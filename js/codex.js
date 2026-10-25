@@ -13,13 +13,13 @@
 // （击杀 / 弹事件卡 / 选升级卡）。
 // ============================================================
 
-import { ENEMY_TYPES } from './enemy.js?v=91';
-import { SWORD_KINDS } from './swordKinds.js?v=91';
-import { RELIC_DEFS } from './relics.js?v=91';
-import { UPGRADES } from './upgrade.js?v=91';
-import { ALL_EVENTS } from './events.js?v=91';
-import { RARITIES } from './rarity.js?v=91';
-import { codexAll, codexCount } from './profile.js?v=91';
+import { ENEMY_TYPES } from './enemy.js?v=92';
+import { SWORD_KINDS } from './swordKinds.js?v=92';
+import { RELIC_DEFS } from './relics.js?v=92';
+import { UPGRADES } from './upgrade.js?v=92';
+import { ALL_EVENTS } from './events.js?v=92';
+import { RARITIES } from './rarity.js?v=92';
+import { codexAll, codexCount } from './profile.js?v=92';
 
 export const CODEX_TABS = [
   { id: 'enemies', name: '怪物' },
@@ -41,6 +41,12 @@ const statLine = (pairs) =>
 // 怪物数值行。没有 damage 的（孢冠菌王）显式写「不还手」，
 // 不然玩家会以为是数值漏填。
 function enemySub(cfg) {
+  // 无名者 / 旗手（第 81 块）：它们的 speed 是**队伍平移速度**，不是追人速度。
+  // 直接写「速度 1.05」会让玩家以为它追得慢、可以慢慢跑 —— 它们根本不追。
+  if (cfg.squad) {
+    const line = statLine([['生命', cfg.hp], ['伤害', cfg.damage], ['队列移速', cfg.speed]]);
+    return cfg.squad.leader ? `${line} · 散架 4 秒` : `${line} · 不追人`;
+  }
   const line = statLine([['生命', cfg.hp], ['伤害', cfg.damage], ['速度', cfg.speed]]);
   // 并联体（第 80 块）：真正伤人的是电弧，不从这条线上说清楚，玩家会拿它当普通近战
   if (cfg.arc) return `${line} · 电弧 1 伤 / 次`;
@@ -49,6 +55,14 @@ function enemySub(cfg) {
 
 // 怪物一句话说明：按「它给你什么压力」分类，第二关三个巫师各有专属文案
 function enemyDesc(cfg) {
+  // 无名者 / 旗手（第 81 块）：这一关的机制和前七关完全不是一回事，
+  // 不写清「不追人」「旗手死了会散架」「柜子会把人放回来」，玩家只会觉得莫名掉血。
+  if (cfg.squad && cfg.squad.leader) {
+    return '节奏压力：举着木牌杆的那一只，走在队伍正中。砍死它，整队立刻散架 4 秒 —— 原地不动，而且这 4 秒里受双倍伤害。先拆旗手、再吃这 4 秒，比一只只砍划算得多。它比无名者厚一倍多，还被队形护在中间：要够到它，就得顶着两侧的人冲进队里';
+  }
+  if (cfg.squad) {
+    return `区域压力：全场唯一不追你的敌人 —— 它们排成一横排、共享一个朝向、匀速往前走，撞到墙才转向（中途会停 1.1 秒）。撞上掉 ${Number.isFinite(cfg.damage) ? cfg.damage : 1} 点血，并把你沿队伍侧面挤开，不是顶着走。躲法不是跑，是站到侧面：你不挡路，它们就一直往前走。耐久很低，麻烦的是数量和队形`;
+  }
   // 并联体（第 75 块，第 80 块把机制写全）：这是唯一一个「危险不在它身上、
   // 在它们之间」的怪，不说清 n 只连几条、多久咬一次、缝在哪，玩家只会觉得莫名掉血。
   if (cfg.arc) return '区域压力：两只以上就成网 —— 场上每两只之间都拖着一条悬空电弧（2 只 1 条、3 只 3 条、4 只 6 条，不用成对出现），多远的都连。碰到电弧掉 1 点血，同一下之间隔 0.7 秒，站在交叉口不会瞬间连扣。它们之间会互相推开、两两保持 3 格以上 —— 中间那几段缝就是你唯一的活路；拆掉一只，它牵的线整片跟着断';

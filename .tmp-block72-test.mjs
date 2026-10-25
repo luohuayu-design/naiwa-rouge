@@ -17,7 +17,8 @@ for (const id of Object.keys(LEVELS_BY_ID)) {
   ok('第' + id + '关无重复', new Set(t).size === t.length);
   for (const x of t) seen.add(x);
 }
-ok('全部 7 关合起来覆盖 18 种怪', seen.size === 18, String(seen.size));   // 第 75 块 +并联体
+// 第 81 块 +无名者 / 旗手 → 20 种（8 关）
+ok('全部 8 关合起来覆盖 20 种怪', seen.size === 20, String(seen.size));
 ok('第一关只有 4 种（首屏最小集）', levelTypes(LEVELS_BY_ID[1]).length === 4);
 ok('第一关含 minion（教程要打一只）', levelTypes(LEVELS_BY_ID[1]).includes('minion'));
 ok('第五关含 eraser', levelTypes(LEVELS_BY_ID[5]).includes('eraser'));
