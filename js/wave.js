@@ -451,7 +451,10 @@ export const LEVEL_6 = {
 //   wellfrog 井蛙 —— 吐舌头把主角拉过去，舌头有**独立血量**，必须先砍断舌头，
 //                    井蛙本体才吃伤害；砍断后井蛙进入短硬直。这是「换血换机制」：
 //                    它不靠更高数值压你，靠「拉你进怪堆」制造麻烦。
-//   woodfish 木鱼灵 —— 青色法器精魄，读条在你脚下钉青圈（hex 改青）：圈里掉血 + 减速。
+//   woodfish 木鱼灵 —— 青色法器精魄。第 82 块之前它整套复用咒面图腾
+//                    （读条 → 脚下青圈 → 掉血 + 减速），用户：「攻击模式和咒面图腾重合」。
+//                    现在改成吐**追踪泡**：一颗实体泡慢慢追你、能走位甩开、也能砍爆；
+//                    追上就掉 1 点血并把你定住 1.2 秒（一步都走不了）。
 //                    血薄、站后排，优先点掉。它敲的木鱼后来成了法器「木鱼」（见 relics.js）。
 //
 // 数值：hp 0.32 / dmg 0.19，再乘整关系数 hpMul 1.20 / dmgMul 1.45（六关是 1.15 / 1.35），
@@ -495,13 +498,13 @@ export const LEVEL_7 = {
     { minion: 5, warrior: 2, wellfrog: 2, archer: 1, bowman: 1, woodfish: 0, leaper: 1, wraith: 1, shielder: 0, brood: 0, mender: 0, reboot: 0, gap: 0.70, tip: '两只井蛙会轮流拉你：别被拽到怪堆里' },
     { minion: 6, warrior: 2, wellfrog: 2, archer: 2, bowman: 1, woodfish: 0, leaper: 1, wraith: 1, shielder: 1, brood: 0, mender: 0, reboot: 0, gap: 0.66, tip: '盾兵也来了：等它放盾再打' },
     // ---- 第三幕（R8~R11）：木鱼灵登场 ----
-    { minion: 6, warrior: 3, wellfrog: 2, archer: 2, bowman: 1, woodfish: 1, leaper: 1, wraith: 2, shielder: 1, brood: 0, mender: 0, reboot: 0, gap: 0.62, tip: '那只青色木鱼灵在念咒：脚下出青圈掉血又减速，走开' },
-    { minion: 7, warrior: 3, wellfrog: 2, archer: 2, bowman: 2, woodfish: 1, leaper: 2, wraith: 2, shielder: 1, brood: 1, mender: 0, reboot: 0, gap: 0.60, tip: '木鱼灵血薄但会减速你，优先点掉' },
+    { minion: 6, warrior: 3, wellfrog: 2, archer: 2, bowman: 1, woodfish: 1, leaper: 1, wraith: 2, shielder: 1, brood: 0, mender: 0, reboot: 0, gap: 0.62, tip: '那只青色木鱼灵在吐泡：泡会拐着弯追你，砍两下就炸' },
+    { minion: 7, warrior: 3, wellfrog: 2, archer: 2, bowman: 2, woodfish: 1, leaper: 2, wraith: 2, shielder: 1, brood: 1, mender: 0, reboot: 0, gap: 0.60, tip: '被泡追上会被定住一秒 —— 走不动的那一下最危险，优先点掉木鱼灵' },
     { minion: 7, warrior: 4, wellfrog: 3, archer: 3, bowman: 2, woodfish: 1, leaper: 2, wraith: 2, shielder: 2, brood: 1, mender: 1, reboot: 0, gap: 0.58, tip: '它敲的木鱼会震你 —— 井底的法器之一，之后能在商店买到' },
     { minion: 7, warrior: 4, wellfrog: 3, archer: 3, bowman: 2, woodfish: 2, leaper: 2, wraith: 3, shielder: 2, brood: 1, mender: 1, reboot: 1, gap: 0.56, tip: '重启体也钻进井里了：躺下时守着它' },
     // ---- 第四幕（R12~R15）：混编加压 ----
     { minion: 7, warrior: 4, wellfrog: 3, archer: 3, bowman: 2, woodfish: 2, leaper: 3, wraith: 3, shielder: 2, brood: 1, mender: 1, reboot: 1, gap: 0.54, tip: '井蛙、木鱼、滴水和怪一起上 —— 先保走位' },
-    { minion: 8, warrior: 4, wellfrog: 4, archer: 3, bowman: 3, woodfish: 2, leaper: 3, wraith: 3, shielder: 2, brood: 2, mender: 1, reboot: 1, gap: 0.52, tip: '两只木鱼灵的青圈会叠，别站一块' },
+    { minion: 8, warrior: 4, wellfrog: 4, archer: 3, bowman: 3, woodfish: 2, leaper: 3, wraith: 3, shielder: 2, brood: 2, mender: 1, reboot: 1, gap: 0.52, tip: '两只木鱼灵的泡会一起追：先把近的那颗砍了' },
     { minion: 8, warrior: 5, wellfrog: 4, archer: 4, bowman: 3, woodfish: 2, leaper: 3, wraith: 4, shielder: 3, brood: 2, mender: 1, reboot: 2, gap: 0.50, tip: '井蛙四只：舌头拉扯里别被拽出安全区' },
     { minion: 8, warrior: 5, wellfrog: 4, archer: 4, bowman: 3, woodfish: 3, leaper: 4, wraith: 4, shielder: 3, brood: 2, mender: 2, reboot: 2, gap: 0.48, tip: '第 15 回合：井底的水滴得最密' },
     // ---- 第五幕（R16~R20）：井底长夜 · 毕业考 ----
@@ -598,9 +601,82 @@ export const LEVEL_8 = {
   ],
 };
 
+// ============================================================
+// 第九关 · 骨塔登记庭（第 82 块）
+//
+// 剧情接 s09《名字的重量》：第九十九层，台阶尽头有一道门，门上嵌着一本簿子。
+// 门卫 047 说「到这儿就得上称了 —— 这道门认字」。
+//
+// 【这一关在问什么】前八关问的都是「你怎么躲」：躲投手的骨刀、躲队伍那条线、
+// 躲电弧网、躲井底的滴水。第九关问的是「你**先杀谁**」——
+// 称量官一上称，**全场的怪一起加速、加伤害、加减伤**，而且迟早叠到五层。
+// 拖着不解决它，同一批骷髅会每隔九秒换一副更凶的面孔；
+// 反过来，它一倒，所有层当场清零 —— 这一关的输出位是它在站着念簿子的那 2.2 秒。
+//
+// 【所以它站在很后面】keepDistance 7.0、被逼近就往后躲。这不是耍赖，
+// 是这套机制唯一成立的条件：它得比别的值钱，也得比别的难够到。
+// 第五幕会同时上两只 —— 那时候「绕后」不再是单选题。
+//
+// 场地：arena 17 —— 比寄存层（18）再收一环。这一关全是「提速 + 混编」，
+//       给太宽反而让人能一直跑；收窄之后每一次上称都会明显改变站位。
+// 数值：hp 0.34 / dmg 0.20，整体系数 hpMul 1.28 / dmgMul 1.55（和第八关同档）——
+//       **这一关不加额外数值**：称量官的五层 buff 本身就是一份很大的成长，
+//       再加 hpmul 会让后期彻底失控。压力应该来自那个等差数列，不是来自表。
+// ============================================================
+export const LEVEL_9 = {
+  id: 9,
+  name: '第九关 · 骨塔登记庭',
+  theme: 'registry',         // 第 82 块：鎏金 + 墨（scene.js 的 THEMES）
+  arena: 17,
+  order: [
+    ['minion', 1], ['warrior', 1.6], ['weigher', 1.8],
+    ['archer', 2.0], ['bowman', 2.2], ['leaper', 2.2],
+    ['wraith', 2.4], ['shielder', 2.4], ['brood', 2.6],
+    ['mender', 2.6], ['reboot', 2.8], ['hexer', 3.0],
+  ],
+  spawnRadius: 15.2,
+  spawnJitter: 0.5,
+  minPlayerDistance: 7.6,
+  minSpawnGap: 2.4,
+  gapScale: 1.35,
+  gap: 2.6,
+  upgradeAfter: [1, 2, 3, 4, 5, 8, 10, 12, 15, 17, 19, 20],
+  shopAfter: [3, 6, 9, 12, 15, 18],
+  weaponAt: 4,
+  scale: { hp: 0.34, damage: 0.20, speed: 0.04, hpMul: 1.28, dmgMul: 1.55 },
+  rounds: [
+    // ---- 第一幕（R1~R4）：上称 ----
+    { minion: 4, warrior: 1, weigher: 0, archer: 0, bowman: 0, leaper: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, reboot: 0, hexer: 0, gap: 0.88, tip: '第九十九层：门认字，簿子认名字 —— 那道金边就是那扇门' },
+    { minion: 4, warrior: 2, weigher: 1, archer: 0, bowman: 0, leaper: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, reboot: 0, hexer: 0, gap: 0.80, tip: '抱着台账的那只是称量官：它把簿子翻开，全场一起变凶' },
+    { minion: 5, warrior: 2, weigher: 1, archer: 1, bowman: 0, leaper: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, reboot: 0, hexer: 0, gap: 0.78, tip: '它翻开簿子那 1.6 秒是唯一的窗口 —— 冲进去把它砍了' },
+    { minion: 5, warrior: 2, weigher: 1, archer: 1, bowman: 1, leaper: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, reboot: 0, hexer: 0, gap: 0.74, tip: '脚下的金环就是层数：环越大，它在簿子上记的名越多' },
+    // ---- 第二幕（R5~R8）：它会躲，而且越来越难够到 ----
+    { minion: 6, warrior: 3, weigher: 1, archer: 1, bowman: 1, leaper: 1, wraith: 0, shielder: 0, brood: 0, mender: 0, reboot: 0, hexer: 0, gap: 0.72, tip: '被记名的怪更快、更疼、也更耐打 —— 别按老节奏打' },
+    { minion: 6, warrior: 3, weigher: 1, archer: 2, bowman: 1, leaper: 1, wraith: 1, shielder: 0, brood: 0, mender: 0, reboot: 0, hexer: 0, gap: 0.70, tip: '它一躲就是七格开外：用位移一次拉到位，别追着它跑' },
+    { minion: 7, warrior: 3, weigher: 1, archer: 2, bowman: 2, leaper: 2, wraith: 1, shielder: 1, brood: 0, mender: 0, reboot: 0, hexer: 0, gap: 0.66, tip: '尖帽小巫会给它回血：被奶回来的称量官等于从头念一遍' },
+    { minion: 7, warrior: 4, weigher: 1, archer: 2, bowman: 2, leaper: 2, wraith: 1, shielder: 1, brood: 1, mender: 1, reboot: 0, hexer: 0, gap: 0.64, tip: '第二只称量官要来了：两只叠得比一只快一倍' },
+    // ---- 第三幕（R9~R13）：两只轮流念 ----
+    { minion: 7, warrior: 4, weigher: 2, archer: 2, bowman: 2, leaper: 2, wraith: 2, shielder: 1, brood: 1, mender: 1, reboot: 0, hexer: 0, gap: 0.60, tip: '两只轮流上称：拆掉一只，另一只还在念 —— 但也只剩它了' },
+    { minion: 8, warrior: 4, weigher: 2, archer: 3, bowman: 2, leaper: 2, wraith: 2, shielder: 1, brood: 1, mender: 1, reboot: 1, hexer: 0, gap: 0.58, tip: '五层封顶：到那一层场上每一只都比第七关的还凶' },
+    { minion: 8, warrior: 5, weigher: 2, archer: 3, bowman: 3, leaper: 3, wraith: 2, shielder: 2, brood: 1, mender: 1, reboot: 1, hexer: 1, gap: 0.56, tip: '紫阵也回来了：被减速的时候最容易吃满一次上称' },
+    { minion: 8, warrior: 5, weigher: 2, archer: 3, bowman: 3, leaper: 3, wraith: 3, shielder: 2, brood: 2, mender: 1, reboot: 1, hexer: 1, gap: 0.54, tip: '先杀谁的答案只有一种：永远是抱着簿子的那只' },
+    { minion: 9, warrior: 5, weigher: 2, archer: 3, bowman: 3, leaper: 3, wraith: 3, shielder: 2, brood: 2, mender: 2, reboot: 1, hexer: 1, gap: 0.52, tip: '第 13 回合：这一层从来就不缺追赶的人，只缺一个名字' },
+    // ---- 第四幕（R14~R17）：封顶压力下打 ----
+    { minion: 9, warrior: 6, weigher: 2, archer: 4, bowman: 3, leaper: 4, wraith: 3, shielder: 2, brood: 2, mender: 2, reboot: 2, hexer: 1, gap: 0.50, tip: '它一倒，所有金环一起碎 —— 看到那一碎就可以松一口气了' },
+    { minion: 9, warrior: 6, weigher: 2, archer: 4, bowman: 4, leaper: 4, wraith: 3, shielder: 3, brood: 2, mender: 2, reboot: 2, hexer: 1, gap: 0.48, tip: '第五层的小兵跑得比你还快：别让它把整片场拉开' },
+    { minion: 10, warrior: 6, weigher: 2, archer: 4, bowman: 4, leaper: 4, wraith: 4, shielder: 3, brood: 2, mender: 2, reboot: 2, hexer: 2, gap: 0.46, tip: '两只紫阵叠着放：站在两个紫阵的缝里也别忘了盯着称量官' },
+    { minion: 10, warrior: 7, weigher: 2, archer: 4, bowman: 4, leaper: 4, wraith: 4, shielder: 3, brood: 2, mender: 2, reboot: 2, hexer: 2, gap: 0.44, tip: '第 17 回合：簿子已经翻到最后几页了' },
+    // ---- 第五幕（R18~R20）：门前 ----
+    { minion: 10, warrior: 7, weigher: 3, archer: 5, bowman: 4, leaper: 4, wraith: 4, shielder: 3, brood: 2, mender: 2, reboot: 2, hexer: 2, gap: 0.42, tip: '三只一起上称：这一波先认清楚哪三只抱着簿子' },
+    { minion: 11, warrior: 7, weigher: 3, archer: 5, bowman: 5, leaper: 5, wraith: 4, shielder: 3, brood: 2, mender: 2, reboot: 3, hexer: 2, gap: 0.40, tip: '倒数第二波：把三个记账的都拆了，剩下的就是一群普通骷髅' },
+    { minion: 12, warrior: 8, weigher: 3, archer: 5, bowman: 5, leaper: 5, wraith: 5, shielder: 4, brood: 2, mender: 2, reboot: 3, hexer: 2, gap: 0.38, tip: '最后一波：把自己认的那个名字，写上那本簿子' },
+  ],
+};
+
 // 关卡号 → 关卡表（主流程 / 选关 / 测试都从这里取）
 export const LEVELS_BY_ID = {
   1: LEVEL_1, 2: LEVEL_2, 3: LEVEL_3, 4: LEVEL_4, 5: LEVEL_5, 6: LEVEL_6, 7: LEVEL_7, 8: LEVEL_8,
+  9: LEVEL_9,
 };
 
 // 第 roundNo 回合（从 1 开始）的怪物属性倍率

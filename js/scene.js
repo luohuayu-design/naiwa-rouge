@@ -8,7 +8,7 @@
 // 两套配色集中在 THEMES 里，buildNightScene({ theme }) 建哪套，
 // 局中要换就调返回的 setTheme('crypt')（不改几何，只改颜色和贴图）。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=92';
+import * as THREE from '../lib/three.module.js?v=93';
 
 export const THEMES = {
   // 第一关 · 荒草地：冷月光 + 青绿边圈 + 萤火虫
@@ -126,6 +126,25 @@ export const THEMES = {
     tuft: 0x39443a, tuftVisible: false,     // 寄存层当然没有草
     fly: 0xdcecc8, flyCount: 64,            // 飘着的骨粉 / 纸灰
     ground: 'ossuary',
+  },
+  // 第九关 · 骨塔登记庭（第 82 块）：鎏金 + 墨。
+  //
+  // 前八关走过了一条很长的色调线：草地青绿 → 庭院紫 → 钟楼炭红 → 服务区霜青 →
+  // 路口暖黄 → 机房蓝绿 → 井底青蓝 → 寄存层无色（骨白灰）。第九十九层是尽头，
+  // 门认字、簿子在页码上堆着一整套规矩 —— 所以这里第一次出现**贵重的颜色**：
+  // 暖金压在一层墨色石面上。这不是为了好看：称量官上称那一片金光、被记名的怪
+  // 脚下的金环，都得和地面、边框是同一套金 —— 玩家才会把「金色」和「记账」绑在一起。
+  registry: {
+    bg: 0x14110d,
+    fog: 0x2e2820, fogDensity: 0.0132,
+    hemiSky: 0xc0a86a, hemiGround: 0x2a2418, hemiIntensity: 1.42,
+    moon: 0xfff0c4, moonIntensity: 3.15, moonBase: 2.95,
+    rim: 0x8a6a24, rimIntensity: 0.92,
+    edge: 0xffd86b, edgeOpacity: 0.34,      // 九十九层平台的鎏金边
+    stone: 0x4a4234,
+    tuft: 0x4a4234, tuftVisible: false,     // 登记庭是石地，不长草
+    fly: 0xffe08a, flyCount: 88,            // 飘着的金粉
+    ground: 'registry',
   },
 };
 
@@ -462,6 +481,7 @@ function makeGroundTexture(kind) {
   if (kind === 'server') return makeServerTexture();
   if (kind === 'well') return makeWellTexture();
   if (kind === 'ossuary') return makeOssuaryTexture();
+  if (kind === 'registry') return makeRegistryTexture();
   return makeGrassTexture();
 }
 
@@ -999,6 +1019,122 @@ function makeGrassTexture() {
     g.moveTo(x, y);
     g.lineTo(x + lean, y - len);
     g.stroke();
+  }
+
+  const tex = new THREE.CanvasTexture(cv);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(16, 16);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 8;
+  return tex;
+}
+
+// 第九十九层 · 登记庭的地面（第 82 块）：墨色石板 + 鎏金oringadow 缝 + 纸灰。
+//
+// 第三层细节，全部为「这里有规矩」服务：
+//   ① 大块明暗：灯底下磨亮的一块 / 角落积灰的一块；
+//   ② 石板 + 鎏金缝：每块尺寸随机、位置微抖，缝里走的是**金色的勾线**
+//      （不是灰缝）—— 九十九层的地是有主的地，多看一眼就知道；
+//   ③ 纸屑：登记簿撕下来的角，纸黄带竖格，散得歪；
+//   ④ 记数划痕：一小撮像「正」字那样数出来的浅口；
+//   ⑤ 金粉：最细的一层，月下的星星点点。
+// ⚠️ 石板**不能排成等距网格**：贴图要平铺 16 次，规整的网格会在十六次重复里
+//    立刻露出周期（第 81 块骨堆那个坑）。
+function makeRegistryTexture() {
+  const S = 512;
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = S;
+  const g = cv.getContext('2d');
+
+  g.fillStyle = '#262119';
+  g.fillRect(0, 0, S, S);
+
+  let seed = 990099;
+  const rnd = () => {
+    seed = (seed * 1103515245 + 12345) % 2147483648;
+    return seed / 2147483648;
+  };
+
+  // ① 大块明暗：灯底下磨亮的一块 / 角落积灰的一块
+  for (let i = 0; i < 150; i++) {
+    const x = rnd() * S, y = rnd() * S, r = 24 + rnd() * 88;
+    const rad = g.createRadialGradient(x, y, 0, x, y, r);
+    const dark = rnd() > 0.45;
+    rad.addColorStop(0, dark ? 'rgba(10,8,6,0.44)' : 'rgba(176,150,96,0.20)');
+    rad.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = rad;
+    g.beginPath();
+    g.arc(x, y, r, 0, Math.PI * 2);
+    g.fill();
+  }
+
+  // ② 石板 + 鎏金缝：每块尺寸随机、位置微抖，缝细但带一条金线
+  const ROW = 4;
+  const step = S / ROW;
+  for (let r = 0; r < ROW; r++) {
+    for (let c = 0; c < ROW; c++) {
+      const jx = (rnd() - 0.5) * 16;
+      const jy = (rnd() - 0.5) * 16;
+      const w = step - 9 - rnd() * 12;
+      const h = step - 9 - rnd() * 12;
+      const x = c * step + 4 + jx;
+      const y = r * step + 4 + jy;
+      // 板面本身比底子亮一点点（磨过的石头）
+      const lum = 0.05 + rnd() * 0.06;
+      g.fillStyle = `rgba(92,80,58,${lum})`;
+      g.fillRect(x, y, w, h);
+      // 缝：深的一道 + 金色勾线
+      g.strokeStyle = 'rgba(8,7,5,0.55)';
+      g.lineWidth = 2.4;
+      g.strokeRect(x, y, w, h);
+      g.strokeStyle = `rgba(214,178,96,${0.20 + rnd() * 0.14})`;
+      g.lineWidth = 0.9;
+      g.strokeRect(x + 1.6, y + 1.6, w - 3.2, h - 3.2);
+    }
+  }
+
+  // ③ 纸屑：撕下来的簿角，纸黄，带一点点歪
+  for (let i = 0; i < 26; i++) {
+    const x = rnd() * S, y = rnd() * S;
+    const w = 7 + rnd() * 13, h = 5 + rnd() * 8;
+    g.save();
+    g.translate(x, y);
+    g.rotate((rnd() - 0.5) * 1.1);
+    g.fillStyle = `rgba(214,204,176,${0.10 + rnd() * 0.10})`;
+    g.fillRect(0, 0, w, h);
+    // 纸上那几道竖线（登记簿的格子）
+    g.strokeStyle = `rgba(120,104,74,${0.10 + rnd() * 0.08})`;
+    g.lineWidth = 0.7;
+    for (let k = 1; k < 3; k++) {
+      g.beginPath();
+      g.moveTo((w / 3) * k, 1);
+      g.lineTo((w / 3) * k, h - 1);
+      g.stroke();
+    }
+    g.restore();
+  }
+
+  // ④ 记数划痕：一小撮「正」字那样的浅口，零散且歪
+  g.lineCap = 'round';
+  for (let i = 0; i < 34; i++) {
+    const x = rnd() * S, y = rnd() * S;
+    const len = 5 + rnd() * 9;
+    const rot = (rnd() - 0.5) * 0.5;
+    g.strokeStyle = `rgba(232,206,140,${0.08 + rnd() * 0.10})`;
+    g.lineWidth = 1.1;
+    for (let k = 0; k < 3; k++) {
+      g.beginPath();
+      g.moveTo(x + k * 3.4, y + Math.sin(rot) * k * 2);
+      g.lineTo(x + k * 3.4 + Math.cos(rot) * len * 0.4, y + Math.sin(rot) * k * 2 + Math.sin(rot + 1.2) * len);
+      g.stroke();
+    }
+  }
+
+  // ⑤ 金粉：最细的一层，让地面在月光下有星星点点的反光
+  for (let i = 0; i < 900; i++) {
+    const x = rnd() * S, y = rnd() * S;
+    g.fillStyle = `rgba(255,224,150,${0.05 + rnd() * 0.16})`;
+    g.fillRect(x, y, 1 + rnd(), 1 + rnd());
   }
 
   const tex = new THREE.CanvasTexture(cv);

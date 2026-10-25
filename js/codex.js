@@ -13,13 +13,13 @@
 // （击杀 / 弹事件卡 / 选升级卡）。
 // ============================================================
 
-import { ENEMY_TYPES } from './enemy.js?v=92';
-import { SWORD_KINDS } from './swordKinds.js?v=92';
-import { RELIC_DEFS } from './relics.js?v=92';
-import { UPGRADES } from './upgrade.js?v=92';
-import { ALL_EVENTS } from './events.js?v=92';
-import { RARITIES } from './rarity.js?v=92';
-import { codexAll, codexCount } from './profile.js?v=92';
+import { ENEMY_TYPES } from './enemy.js?v=93';
+import { SWORD_KINDS } from './swordKinds.js?v=93';
+import { RELIC_DEFS } from './relics.js?v=93';
+import { UPGRADES } from './upgrade.js?v=93';
+import { ALL_EVENTS } from './events.js?v=93';
+import { RARITIES } from './rarity.js?v=93';
+import { codexAll, codexCount } from './profile.js?v=93';
 
 export const CODEX_TABS = [
   { id: 'enemies', name: '怪物' },
@@ -47,6 +47,12 @@ function enemySub(cfg) {
     const line = statLine([['生命', cfg.hp], ['伤害', cfg.damage], ['队列移速', cfg.speed]]);
     return cfg.squad.leader ? `${line} · 散架 4 秒` : `${line} · 不追人`;
   }
+  // 称量官（第 82 块）：它自己的数值不重要，重要的是「它叠的那一层」。
+  // 写穿上称间隔和三层加成 —— 玩家得先知道「为什么突然都变快了」。
+  if (cfg.weigh) {
+    return statLine([['生命', cfg.hp], ['伤害', cfg.damage], ['速度', cfg.speed]])
+      + ` · 每 ${cfg.weigh.every} 秒上称一次`;
+  }
   const line = statLine([['生命', cfg.hp], ['伤害', cfg.damage], ['速度', cfg.speed]]);
   // 并联体（第 80 块）：真正伤人的是电弧，不从这条线上说清楚，玩家会拿它当普通近战
   if (cfg.arc) return `${line} · 电弧 1 伤 / 次`;
@@ -65,7 +71,13 @@ function enemyDesc(cfg) {
   }
   // 并联体（第 75 块，第 80 块把机制写全）：这是唯一一个「危险不在它身上、
   // 在它们之间」的怪，不说清 n 只连几条、多久咬一次、缝在哪，玩家只会觉得莫名掉血。
-  if (cfg.arc) return '区域压力：两只以上就成网 —— 场上每两只之间都拖着一条悬空电弧（2 只 1 条、3 只 3 条、4 只 6 条，不用成对出现），多远的都连。碰到电弧掉 1 点血，同一下之间隔 0.7 秒，站在交叉口不会瞬间连扣。它们之间会互相推开、两两保持 3 格以上 —— 中间那几段缝就是你唯一的活路；拆掉一只，它牵的线整片跟着断';
+  if (cfg.arc) return '区域压力：两只以上就成网 —— 场上每两只之间都拖着一条悬空电弧（2 只 1 条、3 只 3 条、4 只 6 条，不用成对出现），多远的都连。碰到电弧掉 1 点血，同一下之间隔 0.7 秒，站在交叉口不会瞬间连扣。电弧无视无敌时段（受击那一下的无敌挡不住它），所以别贴着线硬冲。它们之间会互相推开、两两保持 8 格以上 —— 中间那几段缝就是你唯一的活路；它很耐打，别想一刀断网，拆掉一只它牵的线整片跟着断';
+  // 称量官（第 82 块）：第九关唯一的正解是「先拆它」，文案必须把这句话说穿 ——
+  // 它自己几乎不打人，玩家第一反应一定是「先打围上来的」，那就正好踩进机制里。
+  if (cfg.weigh) {
+    const p = cfg.weigh.per;
+    return `记账压力：它自己几乎不打人，活儿是给**全场**叠层 —— 每 ${cfg.weigh.every} 秒翻一次簿子，场上所有存活的怪一起加：移速 +${Math.round(p.speed * 100)}%、伤害 +${Math.round(p.damage * 100)}%、减伤 +${Math.round(p.armor * 100)}%，最多 ${cfg.weigh.cap} 层（被记名的怪脚下会长出一只金环，层数越大环越大）。拖着不管，同一批骷髅会每九秒换一副更凶的面孔；**砍掉它，所有层当场清零**。所以它躲得比谁都远，也只在你够不到它的时候最快活 —— 它翻开簿子站定那 ${cfg.attackDuration} 秒，就是这一关的输出窗口`;
+  }
   if (cfg.erase) return '损失压力：它从不还手，读条 4.5 秒后把你环上的一把剑「擦掉」，然后转身往场地外跑 —— 跑出去那把剑这一局就没了。冰剑冻住 / 震剑击退 / 冲过去砍死它，都行';
   if (cfg.reboot) return '耐心压力：打死不算完 —— 躺 4 秒后原地半血重启，而且比上一次更快（最多重启 2 次）。地上那圈红光就是倒计时，守着它补刀';
   if (cfg.charge) return '机动压力：地上一道直线就是它的冲锋路线 —— 横向侧移能躲，撞完它会僵一下（那就是输出窗口）';
@@ -76,6 +88,10 @@ function enemyDesc(cfg) {
   if (cfg.spell && cfg.spell.kind === 'brood') return '兵源压力：每几秒在脚下孵 2 只小兵（名下最多 6 只）—— 不点掉她，这回合永远清不完';
   if (cfg.selfDestruct) return '追到脚边就自爆 —— 别让它贴太近';
   if (cfg.contactRange != null) return '近战型，脚下的圈就是它的攻击范围';
+  // 木鱼灵（第 82 块重写）：原来是照抄咒面图腾的 hex 圈（连数值都一样），
+  // 现在吐的是**会追人的实体泡** —— 要说清「能打爆」「绕圈能甩掉」「命中是定住，
+  // 不是减速」这三件事，不然玩家会拿躲紫阵的办法去躲泡（错了：躲不掉，得处理）。
+  if (cfg.bubble) return `纠缠压力：吐一颗青泡慢慢追你（比你还慢，但会拐弯跟着你），追上是 1 点伤害并把你定住 ${cfg.bubble.root} 秒 —— 那几秒一步都走不了，比咒面图腾的减速狠得多。泡有 ${cfg.bubble.hp} 点血，砍两下就炸，也可以靠横向绕圈把它甩掉（它拐弯很笨）。所以它不是「躲一片地」，而是「处理一个追着你的东西」`;
   if (cfg.spell && cfg.spell.kind === 'hex') return '时间压力：紫阵钉在脚下，落地掉血并减速 —— 看圈就走';
   if (cfg.spell && cfg.spell.kind === 'burn') return '空间压力：地上留一片灼地烧几秒 —— 好位置会被一点点烧掉';
   if (cfg.aura) return '目标选择压力：霜牢环钉在你脚下跟着你走，环里的怪加攻速、减伤还泛青光 —— 它还会放石刺、召卫队，优先点掉它';

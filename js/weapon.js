@@ -34,12 +34,12 @@
 //       五种元素共用同一模型，克隆后改材质 color/emissive 染色区分；
 //       图标用 assets/weapons/icon-*.svg。加载失败时用双盒拼占位剑。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=92';
-import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=92';
-import { withV } from './assetUrl.js?v=92';   // 第 80 块：glb 带版本号，SW 才走缓存优先
-import { SWORD_KINDS, KIND_ORDER } from './swordKinds.js?v=92';
-import { rollSwordDamage } from './weaponStats.js?v=92';
-import audio from './audio.js?v=92';
+import * as THREE from '../lib/three.module.js?v=93';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=93';
+import { withV } from './assetUrl.js?v=93';   // 第 80 块：glb 带版本号，SW 才走缓存优先
+import { SWORD_KINDS, KIND_ORDER } from './swordKinds.js?v=93';
+import { rollSwordDamage } from './weaponStats.js?v=93';
+import audio from './audio.js?v=93';
 
 // 轨道半径（世界单位）：贴着主角攻击范围环内侧转，视觉上「护体剑气」
 const ORBIT_R = 1.7;
@@ -322,6 +322,7 @@ export function createWeaponSystem({ scene, stats, wstats, fx, enemies }) {
       for (const tgt of targets) {
         const cd = dmg * ratio;
         enemies.takeDamage(tgt, cd, false, { quiet: true });
+        enemies.hitBubbles(tgt.pos.x, tgt.pos.z, 0.9, cd);   // 第 82 块：雷也能打到泡
         if (vis < MAX_BOLT_VIS) { bolt(e.pos, tgt.pos); vis++; }
       }
       return;
@@ -341,6 +342,9 @@ export function createWeaponSystem({ scene, stats, wstats, fx, enemies }) {
       enemies.takeDamage(o, splash, false, { quiet: true });
       totalDmg += splash;
     }
+    // 第 82 块：元素波及**（这一圈也扫得到泡）** —— 判定半径 R 和 aroundPoint
+    // 同源，玩家在属性页看到的那个数字对泡一样生效。
+    enemies.hitBubbles(e.pos.x, e.pos.z, R, splash);
 
     // 一圈元素视觉：贴地扩散环 + 少量粒子（不新开贴图，控制 draw call）
     if (fx) {
@@ -381,6 +385,9 @@ export function createWeaponSystem({ scene, stats, wstats, fx, enemies }) {
     const roll = rollSwordDamage(wstats, { targetArmor: e.cfg.armor });
     const dmg = roll.damage;
     enemies.takeDamage(e, dmg, roll.crit);
+    // 第 82 块：剑扫过的地方也把木鱼灵的泡削一下（泡不在 enemies.list 里，
+    // 走不到 takeDamage —— 得单独喂一遍）
+    enemies.hitBubbles(at.x, at.z, SWORD_HIT_R + 0.35, dmg);
     audio.sfx('swordHit');
     applyKind(kind, e, dmg);
     if (fx) fx.hit(at, roll.crit ? 0xffe9a8 : 0xbff2ff);

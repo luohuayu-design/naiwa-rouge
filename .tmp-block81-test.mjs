@@ -157,7 +157,7 @@ sec('五、接线');
 // ============================================================
 ok(/\{ id: 8, name: LEVEL_8\.name, playable: true \}/.test(mainSrc), '选关列表有第八关');
 ok(/import \{ createDeposit \} from '\.\/deposit\.js/.test(mainSrc), 'main 导入 createDeposit');
-ok(/LEVEL_8, LEVELS_BY_ID/.test(mainSrc), 'main 导入 LEVEL_8');
+ok(/LEVEL_8, LEVEL_9, LEVELS_BY_ID/.test(mainSrc), 'main 导入 LEVEL_8 / LEVEL_9（第 82 块加第九关）');
 ok(/deposit\.build\(level\.level\.deposit \|\| null\)/.test(mainSrc), 'setLevel 重建寄存柜');
 ok(/deposit\.update\(dt, \{/.test(mainSrc), '主循环更新寄存柜');
 ok(/if \(e\.type === 'ranker' \|\| e\.type === 'bearer'\) deposit\.addTag\(1\)/.test(mainSrc),

@@ -76,10 +76,16 @@ ok(wd.footY === undefined, '木鱼灵不按脚落地（原点在身体正中，�
 ok(wd.hover > 0.8 && wd.hover < 1.6, `木鱼灵靠 hover=${wd.hover} 浮起来`);
 
 // 数值 / 行为不许顺手改坏
-ok(wf.hp === 5 && wf.radius === 0.55, '井蛙血量与体积没动');
-ok(wf.tongue && wf.tongue.hp === 4 && wf.tongue.pull === 3.0, '井蛙吐舌参数没动（舌头 4 血、每秒拉 3 格）');
+// 第 82 块：井蛙 hp 5→8、舌头拖拽 pull 3.0→4.5（用户定：「改到 8，4.5」）
+ok(wf.hp === 8 && wf.radius === 0.55, `井蛙血量 8（第 82 块从 5 提高），体积没动（实际 ${wf.hp}）`);
+ok(wf.tongue && wf.tongue.hp === 4 && wf.tongue.pull === 4.5, `井蛙吐舌参数：舌头 4 血、每秒拉 4.5 格（第 82 块从 3 提高）`);
 ok(wd.hp === 4, '木鱼灵血量没动');
-ok(wd.spell && wd.spell.kind === 'hex' && wd.spell.color === 0x57e6d0, '木鱼灵还是青色回声圈');
+// 第 82 块（用户）：木鱼灵原本整套复用咒面图腾的 hex 圈（读条→脚下圈→掉血+减速），
+// 换成**追踪定身泡**：泡泡有独立血量、缓慢拐弯追人、命中把主角定住。
+ok(!wd.spell, '木鱼灵不再用 spell 圈（那是咒面图腾的东西）');
+ok(wd.bubble && wd.bubble.hp > 0 && wd.bubble.speed > 0 && wd.bubble.speed < 4.4,
+  `木鱼灵改吐追踪泡：泡 ${wd.bubble && wd.bubble.hp} 血、速度 ${wd.bubble && wd.bubble.speed}（慢于主角 4.4，能甩掉）`);
+ok(wd.bubble && wd.bubble.root > 0.8, `命中定住 ${wd.bubble && wd.bubble.root} 秒（比减速更狠）`);
 
 // ============================================================
 sec('三、动画族映射的每一段，模型里真的存在');
@@ -129,8 +135,8 @@ sec('四、别的怪没被波及');
 // ============================================================
 ok(/wolf\.glb$/.test(ENEMY_TYPES.leaper.file), '雾猎狼还在用 wolf.glb', ENEMY_TYPES.leaper.file);
 ok(/tribal\.glb$/.test(ENEMY_TYPES.hexer.file), '咒面图腾还在用 tribal.glb', ENEMY_TYPES.hexer.file);
-// 第 81 块：+无名者 / 旗手 → 20 只
-ok(Object.keys(ENEMY_TYPES).length === 20, `怪物总数 20 只（实际 ${Object.keys(ENEMY_TYPES).length}）`);
+// 第 82 块：+称量官 → 21 只
+ok(Object.keys(ENEMY_TYPES).length === 21, `怪物总数 21 只（实际 ${Object.keys(ENEMY_TYPES).length}）`);
 ok(ENEMY_TYPES.arc && ENEMY_TYPES.arc.animFamily === undefined, '并联体仍是静态网格（没乱加动画族）');
 
 // ============================================================

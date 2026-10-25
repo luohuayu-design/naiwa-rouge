@@ -84,7 +84,7 @@ sec('五、第六关新怪：并联体（成对 · 电弧网）');
   ok(!cfg.animFamily, '静态模型不写 animFamily（resolveClipAliases 安全返回空表）');
   ok(cfg.arc && cfg.arc.damage > 0 && cfg.arc.cd > 0, '电弧有伤害与节流冷却');
   ok(cfg.arc.hitR > 0 && cfg.arc.hitR < 1, `判定半径 ${cfg.arc.hitR}（不吃满屏幕）`);
-  ok(cfg.hp <= 4, `血薄（${cfg.hp}）—— 逼玩家先拆网`);
+  ok(cfg.hp >= 10, `血厚（${cfg.hp}）—— 第 82 块起并联体大幅加血，拆网要有成本`);
 
   const types = levelTypes(LEVEL_6);
   ok(types.includes('arc'), '第六关的预载表里有 arc');
@@ -114,7 +114,7 @@ sec('六、电弧网：n 只 = C(n,2) 条线，碰到掉血');
   ok(/for \(let j = i \+ 1; j < nodes\.length; j\+\+\)/.test(src), '两两组合（组合数，不是配对）');
   ok(/arcZapCd/.test(src), '有全局掉血节流');
   ok(/function distToSeg/.test(src), '用「点到线段距离」判定');
-  ok(/ctx\.hurtPlayer\(cfg\.damage \|\| 1, null\)/.test(src), '命中走 hurtPlayer');
+  ok(/ctx\.hurtPlayer\(cfg\.damage \|\| 1, 'arc'\)/.test(src), '命中走 hurtPlayer（第 82 块起 source 传 arc，无视无敌时段）');
   // C(4,2) = 6
   const n = 4;
   ok((n * (n - 1)) / 2 === 6, '4 只 = 6 条线');

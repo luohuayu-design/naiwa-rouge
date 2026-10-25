@@ -5,40 +5,40 @@
 // 目标是把三件事调顺：摇杆输入 → 角色速度/朝向 → 相机跟随。
 // 后续叠战斗时，只需要在 tick() 里加敌人更新与自动攻击，不用动输入层。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=92';
-import { buildNightScene } from './scene.js?v=92';
-import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=92';
+import * as THREE from '../lib/three.module.js?v=93';
+import { buildNightScene } from './scene.js?v=93';
+import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=93';
 // 第 80 块：给 glb 拼上版本号 → SW 缓存优先（详见 assetUrl.js）
-import { withV } from './assetUrl.js?v=92';
-import { createInput } from './input.js?v=92';
-import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=92';
-import { createStatView } from './statView.js?v=92';
-import { createWeaponStats } from './weaponStats.js?v=92';
-import { createFx } from './fx.js?v=92';
-import { createEnemySystem, ENEMY_TYPES } from './enemy.js?v=92';
+import { withV } from './assetUrl.js?v=93';
+import { createInput } from './input.js?v=93';
+import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=93';
+import { createStatView } from './statView.js?v=93';
+import { createWeaponStats } from './weaponStats.js?v=93';
+import { createFx } from './fx.js?v=93';
+import { createEnemySystem, ENEMY_TYPES } from './enemy.js?v=93';
 import {
-  createLevel, LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVEL_5, LEVEL_6, LEVEL_7, LEVEL_8, LEVELS_BY_ID, DIFFS, setDifficulty, getDifficulty, roundScale, levelStats, levelTypes,
-} from './wave.js?v=92';
-import { createRangeRing } from './rangeRing.js?v=92';
-import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=92';
-import { createWeaponSystem } from './weapon.js?v=92';
-import { createArrowRainSystem } from './arrowRain.js?v=92';
-import { SWORD_KINDS } from './swordKinds.js?v=92';
-import { createGoldSystem } from './gold.js?v=92';
-import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW } from './shop.js?v=92';
-import { createTurretSystem, TURRET } from './turret.js?v=92';
-import { createRelicSystem, RELIC_DEFS } from './relics.js?v=92';
-import { createHazards } from './hazards.js?v=92';
-import { createDeposit } from './deposit.js?v=92';   // 第 81 块：第八关的寄存柜
-import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=92';
-import audio from './audio.js?v=92';
-import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=92';
+  createLevel, LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVEL_5, LEVEL_6, LEVEL_7, LEVEL_8, LEVEL_9, LEVELS_BY_ID, DIFFS, setDifficulty, getDifficulty, roundScale, levelStats, levelTypes,
+} from './wave.js?v=93';
+import { createRangeRing } from './rangeRing.js?v=93';
+import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=93';
+import { createWeaponSystem } from './weapon.js?v=93';
+import { createArrowRainSystem } from './arrowRain.js?v=93';
+import { SWORD_KINDS } from './swordKinds.js?v=93';
+import { createGoldSystem } from './gold.js?v=93';
+import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW } from './shop.js?v=93';
+import { createTurretSystem, TURRET } from './turret.js?v=93';
+import { createRelicSystem, RELIC_DEFS } from './relics.js?v=93';
+import { createHazards } from './hazards.js?v=93';
+import { createDeposit } from './deposit.js?v=93';   // 第 81 块：第八关的寄存柜
+import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=93';
+import audio from './audio.js?v=93';
+import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=93';
 // 第 62 块：回血技能（第四关通关后永久解锁，回 5 点 / CD 25 秒）
-import { createHealSkill, HEAL_AMOUNT, HEAL_CD } from './healSkill.js?v=92';
+import { createHealSkill, HEAL_AMOUNT, HEAL_CD } from './healSkill.js?v=93';
 // 第 62 块：民心专属事件（升档走良性池、掉档走恶性池）
-import { repPoolForTier, REP_GOOD, REP_BAD } from './repEvents.js?v=92';
+import { repPoolForTier, REP_GOOD, REP_BAD } from './repEvents.js?v=93';
 // 第 62 块：攻略面板（战败提示上的「查看攻略」，手风琴三组）
-import { renderGuide, GUIDE_SECTIONS } from './guide.js?v=92';
+import { renderGuide, GUIDE_SECTIONS } from './guide.js?v=93';
 import {
   settings as readSettings, setSetting, save as saveProfile, profile,
   bumpStat, setStatMax, codexAdd, codexCount, countCard, unlockAch, hasAch, addBones, bones, resetAll,
@@ -51,53 +51,53 @@ import {
   healUnlocked, markHealUnlocked,
   rainObtained, markRainObtained,          // 第 65 块：技能的「有没有」只跟解锁有关
   hintSeen, markHintSeen,                  // 第 65 块：一次性提示卡
-} from './profile.js?v=92';
+} from './profile.js?v=93';
 // 第 44 块：礼包兑换（码表只有哈希，明细在 gift.js 顶部注释）
-import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=92';
+import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=93';
 // 第 46 块：音效包（抽象奶蛙音效包 —— 4 段奶蛙叫声，通关第一关解锁）
-import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=92';
-import * as runSave from './runSave.js?v=92';
+import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=93';
+import * as runSave from './runSave.js?v=93';
 // 第 78 块：存档导出 / 导入。数据逻辑全在这个模块里（不碰 DOM），这里只接按钮
-import * as saveIO from './saveIO.js?v=92';
+import * as saveIO from './saveIO.js?v=93';
 import {
   CAMPFIRE, CAMP_STEP, campBuy, campOwned, campLevel,
   campCost, campApply, bonesFor, diffBoneMul, levelBoneMul, coinBones, BONE,
-} from './campfire.js?v=92';
+} from './campfire.js?v=93';
 // 第 23 块：永夜火种（通关白给的 3 次永久三选一）
 import {
   BOONS, BOON_BY_ID, BOON_PICKS, boonOwned, boonStacks, boonPending, boonTotalStacks,
   grantBoons, rollBoons, takeBoon, applyBoons, boonStackText,
-} from './boons.js?v=92';
+} from './boons.js?v=93';
 // 第 21 块：夜行诅咒（自选 debuff 换骨币倍率）
-import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=92';
+import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=93';
 // 第 22 块：种子与每日挑战
 import {
   DAILY_RULES, dayKey, dayText, dailySeed, seedCode, pickDailyCurses,
   seedFromText, pickSeedRules, loadSeedRecords, saveSeedRecord, pruneSeeds,
   dailyRecord, saveDailyRecord, pruneDaily, makeRng,
-} from './seed.js?v=92';
-import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=92';
+} from './seed.js?v=93';
+import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=93';
 // 第 58 块：局外商店 · 宝箱（花骨币买，开箱随机给永久属性 / 永久法器 / 技能CD缩短）
 import {
   BOXES, BOX_BY_ID, buyBox, rollBox, metaApplyStats, applyMeta,
   // 第 74 块：盲盒按购买次数加价（三种各自独立计数）
   boxCost, boxPriceOf, boxBought, BOX_PRICE_STEP,
-} from './metaShop.js?v=92';
+} from './metaShop.js?v=93';
 // 第 59 块：每日签到（以周为单位，周一 00:00 重置）
 import {
   WEEK_TIERS, SIGN_BONES, weekCells, signSummary, signToday, signedToday,
-} from './signin.js?v=92';
-import { achById, ACHS } from './achievements.js?v=92';
+} from './signin.js?v=93';
+import { achById, ACHS } from './achievements.js?v=93';
 import {
   EVENTS, ALL_EVENTS, getEventById, pickEvent, effectLines,
   choiceHint, canAfford, costShort, REP_MIN, REP_MAX, REP_START,
   isTalk, eventChoices, resolveRoll, mergeEffects,
-} from './events.js?v=92';
+} from './events.js?v=93';
 // 第 32 块：主线《笑不出来的那一夜》（18 夜，一夜一关，前 3 夜已有关卡）
 import {
   STORY_ARC, STORY_CHAPTERS, STORY_ENDINGS, MARK_INFO,
   storyChapterAt, storyChapterById, storyEndingKey,
-} from './story.js?v=92';
+} from './story.js?v=93';
 
 // 标记模块已经跑起来了：index.html 的兜底自检靠它判断
 // 「模块根本没执行」还是「执行了但加载慢」。
@@ -1232,19 +1232,24 @@ async function boot() {
 
   // 受击：先看金钟罩（第 13 块，护体期间完全免疫），
   // 再过无敌帧，最后按防御减伤扣血；血量归零即结束
-  // source：怪物传的是怪对象，漏电地板传的是字符串 'hazard'（第 63 块）。
-  // 两者故意走不同分支：
-  //   · 场地伤害**不吃无敌帧、也不给无敌帧** —— 否则站在电上等于白刷无敌，
-  //     反而比不站更安全（这是必须堵掉的漏洞）；
-  //   · 场地伤害**无视防御**（第 76 块，用户定案）：走 stats.damageTrue，
-  //     多少就扣多少，堆防御不会让它变轻（绝缘斗篷照旧整下免掉）；
-  //   · 场地伤害不触发棘甲反伤（那不是「怪打你」）；
+  // source：怪物传的是怪对象，漏电地板传的是字符串 'hazard'（第 63 块），
+  // 并联体的电弧传的是字符串 'arc'（第 82 块）。
+  // 三者故意走不同分支：
+  //   · 场地伤害 / 电路伤害**不吃无敌帧、也不给无敌帧** —— 否则站在电上等于
+  //     白刷无敌，反而比不站更安全（这是必须堵掉的漏洞）；
+  //   · 场地伤害**无视防御**（第 76 块，用户定案）：走 stats.damageTrue；
+  //     电路伤害（第 82 块，用户定案）**吃防御**，但**无视无敌时段** ——
+  //     它还是「怪在电你」，防御该减的减，只是无敌帧挡不住它（电弧是持续压线，
+  //     不是一下一下的撞击）。
+  //   · 场地伤害 / 电路伤害都不触发棘甲反伤（那不是「怪打你」的撞击）；
   //   · 穿了绝缘斗篷就完全免掉（它存在的意义）。
   function hurtPlayer(amount, source) {
     if (adminOn) return;   // 管理员沙盒：生命无限，不吃任何伤害
     const isHazard = source === 'hazard';
+    const isArc = source === 'arc';          // 第 82 块：电路伤害
+    const noIframe = isHazard || isArc;      // 不吃无敌帧
     if (gameState !== 'playing') return;
-    if (!isHazard && iframe > 0) return;
+    if (!noIframe && iframe > 0) return;
     if (isHazard && (relics.levels().insulator || 0) > 0) {
       fx.ring(pos, { from: 0.4, to: 1.5, color: 0x7fd4ff, life: 0.3, opacity: 0.5, y: 0.1 });
       return;
@@ -1259,17 +1264,16 @@ async function boot() {
       return;
     }
     // 荆棘（第 21 块）：本局选了它就按比例加重；金钟罩在上面已经整下挡掉了，不吃这一项
-    // 第 76 块（用户定案）：**场地伤害无视防御** —— 漏电地板 / 井底滴水走 damageTrue，
-    // 堆多少防御都不会让它变轻。这条让「地形」重新变成一件要认真躲的事，
-    // 而不是「防御堆起来之后踩着电洗澡」。
+    // 第 76 块（用户定案）：**场地伤害无视防御** —— 漏电地板 / 井底滴水走 damageTrue；
+    // 第 82 块（用户定案）：**电路伤害无视无敌时段但吃防御** —— 电弧走 stats.damage。
     const raw = amount * (1 + runCurseDmg);
     if (isHazard) stats.damageTrue(raw);
     else stats.damage(raw);
     // 棘甲法器（第 29 块）：挨打时对身边一圈怪反伤（被动解场，不需要操作）
-    if (!isHazard && relics.thornsHit) relics.thornsHit(pos);
+    if (!noIframe && relics.thornsHit) relics.thornsHit(pos);
     // 木鱼法器（第 71 块）：挨打时震一圈，把身边怪击退 + 短暂定身（解围用）
-    if (!isHazard && relics.woodfishHit) relics.woodfishHit(pos);
-    if (!isHazard) iframe = IFRAME;
+    if (!noIframe && relics.woodfishHit) relics.woodfishHit(pos);
+    if (!noIframe) iframe = IFRAME;
     shake = readSettings().shake ? 0.55 : 0;   // 设置里可以关掉抖屏
     audio.sfx('hurt');
     hurtFx.classList.add('on');
@@ -1297,14 +1301,21 @@ async function boot() {
     const lifesteal = stats.get('lifesteal');
     let healed = 0;
     let anyCrit = false;
+    let meleeDmg = 0;
     for (const h of hits) {
       const e = h.target;
       const roll = stats.rollDamage({ targetArmor: e.cfg && e.cfg.armor });
       enemies.takeDamage(e, roll.damage, roll.crit);
+      meleeDmg = roll.damage;
       if (roll.crit) anyCrit = true;
       // 吸血：按实际造成的伤害回血（每一只分别结算，属性为 0 时不触发）
       if (lifesteal > 0 && roll.damage > 0) healed += roll.damage * lifesteal;
+      // 第 82 块：挥到哪，就把那儿的木鱼灵泡砸一下（泡有血，两下就没）
+      enemies.hitBubbles(e.pos.x, e.pos.z, 1.0, roll.damage);
     }
+    // 第 82 块：贴在身上的泡也会被这一下挥掉 —— 不然会出现「泡已经贴脸了、
+    // 却只能站着挨那一下定身」的憋屈局面。
+    enemies.hitBubbles(pos.x, pos.z, BODY_R + 0.75, meleeDmg);
     if (healed > 0) {
       stats.heal(healed);
       renderHud();
@@ -1869,6 +1880,7 @@ async function boot() {
     camera.position.set(camFocus.x + camOffset.x, camOffset.y, camFocus.z + camOffset.z);
     camera.updateProjectionMatrix();
     clearCurse();                     // 上一局残留的减速不许带进来
+    clearRoot();                      // 第 82 块：同理，定住也不许带进来
     applyCampfire();                  // 篝火（第 19 块）：局外成长在开局一次性落账
     applyMeta(stats, wstats, { weapon, arrowRain, relics });  // 第 58 块：局外商店永久效果（属性+技能CD+永久法器）
     // 第 23 块：永夜火种（通关白给的永久属性）也在这里落账。
@@ -2021,6 +2033,7 @@ async function boot() {
     { id: 6, name: LEVEL_6.name, playable: true },   // 第 63 块：第六关 · 骨塔机房
     { id: 7, name: LEVEL_7.name, playable: true },   // 第 71 块：第七关 · 骨塔井底
     { id: 8, name: LEVEL_8.name, playable: true },   // 第 81 块：第八关 · 骨塔寄存层
+    { id: 9, name: LEVEL_9.name, playable: true },   // 第 82 块：第九关 · 骨塔登记庭
   ];
   // 选关面板点了哪一关 —— beginGame 时按它切关卡（点的时候还没进战斗）
   let pendingLevelId = 1;
@@ -4222,6 +4235,7 @@ async function boot() {
     diffOverride = saved.prevDiff || (saved.daily ? DAILY_RULES.diff : null);
     initRunRng(saved.seed || 0);
     clearCurse();
+    clearRoot();                    // 第 82 块：读档回战场时也不该还钉着
     for (const [id, n] of Object.entries(saved.bag || {})) {
       if (id in BAG_ITEMS) bag[id] = Math.max(0, n | 0);
     }
@@ -5954,6 +5968,7 @@ async function boot() {
     }
     if (isWin && pendingCurses.length >= 3) tryAch('curse_3');
     clearCurse();                   // 这一局的诅咒不带到结算界面
+    clearRoot();                    // 第 82 块：结算界面不该还顶着一层泡壳
     // 第 38 块：输 / 重刷已通关（无永夜火种可领） → 当场清档；
     // 首次通关（boonGain>0，要回标题页领永夜火种）→ 延后到 closeBoons 再清，
     // 这样「选完永夜火种之前还能读档」、选完就消失。
@@ -6213,12 +6228,19 @@ async function boot() {
         fovAdd: CAM_FOV_ADD,
         speedFov: () => speedFovOn,
       },
+      // 第 82 块：无敌帧剩余（测试「电路伤害无视无敌时段」要能读它）
+      iframe: () => +iframe.toFixed(2),
+      setIframe: (v) => { iframe = Math.max(0, v || 0); return +iframe.toFixed(2); },
+      // 第 82 块：被木鱼灵的泡定住的剩余秒数（0 = 能走）
+      rootT: () => +rootT.toFixed(2),
+      rootPlayer: (sec) => { rootPlayer(sec); return +rootT.toFixed(2); },
       // level 是可变引用（切关卡会整体重建），必须用 getter，否则测试盯着的是旧的回合机器
       get level() { return level; },
       get levelId() { return curLevelId; },
       get state() { return gameState; },        // 'title' / 'playing' / 'upgrade' …（第 41 块测试要断言存档退出后回到 title）
       get arenaRadius() { return ARENA_R; },   // 可走半径随关卡变（第 35 块：四关 20）
       levels: LEVELS_BY_ID,
+      levelDef: (id) => LEVELS_BY_ID[id] || LEVEL_1,   // 第 82 块：关卡**数据**（回合表 / 主题 / arena）
       enemyTypes: ENEMY_TYPES,      // 第 75 块：测试要直接读配置（新怪的数值 / 模型路径）
       setLevel: (id) => { setLevel(id); return curLevelId; },
       // 第 72 块：按关预载。loaded() = 内存里已有哪些怪的模型；
@@ -7243,6 +7265,11 @@ async function boot() {
     curseFactor = 1;
     renderCurse();
   }
+  // 第 82 块：换关 / 重开时把定身也清掉（上一局被泡罩着退出的话，下一局不该还钉着）
+  function clearRoot() {
+    rootT = 0;
+    if (rootShell) rootShell.visible = false;
+  }
   function cursePlayer({ factor = 0.62, duration = 2.6 } = {}) {
     const wasClean = curseT <= 0;    // 已经被咒着时不再叠音（紫圈会叠）
     if (curseT <= 0) curseFactor = factor;
@@ -7276,6 +7303,45 @@ async function boot() {
     return Math.abs(_visV.x) <= margin && Math.abs(_visV.y) <= margin;
   }
 
+  // ---------------- 第 82 块：木鱼灵的泡「把你定住」 ----------------
+  // 和咒面图腾的减速（curseT）是两回事：减速是移速打折，还能挪；定住是
+  // 完全动不了。所以单独一个计时器 + 一个看得见的青色泡壳 —— 玩家必须
+  // 一眼看出「我现在是走不动了」而不是「我的操作掉了」。
+  let rootT = 0;
+  let rootShell = null;
+  let rootSeen = false;
+  function ensureRootShell() {
+    if (rootShell) return rootShell;
+    const geo = new THREE.SphereGeometry(1, 16, 12);
+    const mat = new THREE.MeshBasicMaterial({
+      color: 0x6ff0e0, transparent: true, opacity: 0.26,
+      depthWrite: false, blending: THREE.AdditiveBlending,
+    });
+    rootShell = new THREE.Mesh(geo, mat);
+    rootShell.renderOrder = 4;
+    rootShell.visible = false;
+    scene.add(rootShell);
+    return rootShell;
+  }
+  function rootPlayer(sec) {
+    const first = !rootSeen;
+    if (first) rootSeen = true;
+    rootT = Math.max(rootT, sec);
+    if (first) showToast('被泡住了', '木鱼灵的泡把你定住了 —— 走不动的那 1 秒，把追上来的东西打掉');
+    if (fx) fx.ring(pos, { from: 0.3, to: 1.7, color: 0x6ff0e0, life: 0.4, opacity: 0.75, y: 0.06 });
+  }
+  function updateRoot(dt) {
+    const s = rootShell;
+    if (rootT <= 0) { if (s) s.visible = false; return; }
+    rootT = Math.max(0, rootT - dt);
+    const shell = ensureRootShell();
+    shell.visible = true;
+    shell.position.set(pos.x, 0.85, pos.z);
+    shell.scale.setScalar(0.62 * (1 + 0.05 * Math.sin(elapsed * 11)));
+    shell.material.opacity = 0.20 + 0.12 * (rootT > 0.35 ? 1 : rootT / 0.35);
+    if (rootT <= 0) shell.visible = false;
+  }
+
   const combatCtx = {
     playerPos: pos,
     playerRadius: BODY_R,
@@ -7283,6 +7349,12 @@ async function boot() {
     get arenaRadius() { return ARENA_R; },   // 随关卡变（第三关 19，第 33 块）
     hurtPlayer,
     cursePlayer,
+    // 第 82 块：木鱼灵的泡要问「主角现在是不是无敌」—— 无敌帧里被泡擦过去
+    // 不该被定住（那一瞬间主角是「刚好闪过去了」，定住会让人觉得判定有问题）。
+    isInvincible: () => iframe > 0,
+    // 第 82 块：被泡命中 —— 期间**一步都走不动**（不像咒面图腾的减速还能挪），
+    // 求救窗口只有 1.2 秒，这段时间里 reactor 还是会继续自动出手。
+    rootPlayer: (sec) => { rootPlayer(sec); },
     // 第 63 块：擦名者偷剑的三个口子
     //   stealSword  被偷走一把（从环上摘掉），返回 kind
     //   onErase     偷成功那一下（提示 + 音效）
@@ -7363,11 +7435,12 @@ async function boot() {
     if (inGame) {
       elapsed += dt;
       updateCurse(dt);
+      updateRoot(dt);        // 第 82 块：被泡定住的倒计时（到点自动解除）
 
       // 1) 输入 → 目标速度（屏幕 y 向下 = 世界 +Z，相机在 +Z 方向看向场景）
       //    移速取属性面板里的实时值：升级加成就立刻跑得更快
-      // 被咒面图腾的咒打中时移速打折（第 20 块）
-      const moveSpeed = stats.get('moveSpeed') * (curseT > 0 ? curseFactor : 1);
+      // 被咒面图腾的咒打中时移速打折（第 20 块）；第 82 块：被木鱼灵的泡罩住时直接钉死
+      const moveSpeed = stats.get('moveSpeed') * (curseT > 0 ? curseFactor : 1) * (rootT > 0 ? 0 : 1);
       const dir = input.read();
       const targetVX = dir.x * moveSpeed;
       const targetVZ = dir.y * moveSpeed;

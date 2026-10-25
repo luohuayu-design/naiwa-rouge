@@ -24,13 +24,13 @@
 import {
   profile, bones, addBones, metaShopState, metaAddMod, metaGrantRelic,
   metaGrantSkillCd, metaLog, metaBought, save,
-} from './profile.js?v=92';
-import { RELIC_DEFS } from './relics.js?v=92';
+} from './profile.js?v=93';
+import { RELIC_DEFS } from './relics.js?v=93';
 
 // ---------------- 三档宝箱 ----------------
 // tier 0/1/2 对应「最低可出现的池子档位」；mag 是木匣基准的强度倍率；
 // special / specialW 只有银、金能出稀有项；curse 是诅咒（强制负面）概率。
-// cost 是**首价**（第 74 块）：每买一次按首价 +6% 线性加价，三种各自独立计数。
+// cost 是**首价**（第 74 块）：每买一次按首价 +5% 线性加价，三种各自独立计数。
 export const BOXES = [
   { id: 'wood',   tier: 0, name: '木匣', icon: '📦', cost: 30,  curse: 0.35, mag: 1.0, special: false, specialW: 0 },
   { id: 'silver', tier: 1, name: '银匣', icon: '🎁', cost: 100, curse: 0.18, mag: 1.6, special: true,  specialW: 0.12 },
@@ -41,12 +41,14 @@ export const BOX_BY_ID = Object.fromEntries(BOXES.map((b) => [b.id, b]));
 
 // ---------------- 第 74 块：按购买次数线性涨价 ----------------
 // 和篝火一个思路（篝火是每级 +35%）但**缓得多**：盲盒有 35% / 18% / 7% 的诅咒率，
-// 买的时候本来就在赌，加价再猛就没人开了。每买一次 +6% **首价**（不是复利）：
-//   木匣 30 → 第 10 次 48 → 第 20 次 66 → 第 30 次 84
-//   银匣 100 → 第 10 次 160 → 第 20 次 220
-//   金匣 280 → 第 10 次 448 → 第 20 次 616
+// 买的时候本来就在赌，加价再猛就没人开了。每买一次 +5% **首价**（不是复利）：
+//   木匣 30 → 第 10 次 45 → 第 20 次 60 → 第 30 次 75
+//   银匣 100 → 第 10 次 150 → 第 20 次 200
+//   金匣 280 → 第 10 次 420 → 第 20 次 560
+// 第 82 块（用户反馈「涨得太快」）：6% → 5%。玩家实际体感是「同一个箱子连着买，
+// 三四十次之后就开不动了」——线性加价本来就是要慢慢收，不被它逼着只买便宜的。
 // 三种箱子各数各的（买木匣不会把金匣抬贵），否则玩家会被逼着只买便宜的。
-export const BOX_PRICE_STEP = 0.06;
+export const BOX_PRICE_STEP = 0.05;
 
 // 第 n 次买这个箱子要多少钱（n = 已经买过几次）
 export function boxCost(boxId, boughtN = 0) {

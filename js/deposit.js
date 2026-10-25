@@ -23,7 +23,7 @@
 // 视觉全部程序化（一个柜体 + 一张 canvas 柜面），零新资产：
 // 柜面画 3×3 的寄存格，每进一块牌子就填一格，满了整面发黄光。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=92';
+import * as THREE from '../lib/three.module.js?v=93';
 
 export function createDeposit({ scene, fx, playerPos, playerRadius = 0.32, hurtPlayer }) {
   const CAP = 8;           // 满柜需要几块牌子

@@ -44,7 +44,8 @@ sec('二、并联体：配置（间距 / 折线 / 不自转）');
 // ============================================================
 const cfgArc = enemySrc.match(/arc: \{\s*\n\s*name: '并联体'/);
 ok(!!cfgArc, 'ENEMY_TYPES 里还是叫并联体');
-ok(/minGap: 3\.0/.test(enemySrc), 'arc.minGap = 3.0（两两最小间距）');
+ok(/minGap: 8\.0/.test(enemySrc), 'arc.minGap = 8.0（第 82 块：两两实时最小间距，从 3.0 提高）');
+ok(/hp: 12/.test(enemySrc), '并联体 hp = 12（第 82 块：从 3.2 大幅提高）');
 ok(/segs: 4/.test(enemySrc) && /dots: 2/.test(enemySrc), '电弧折 4 段 + 2 个流光（实机调参后的值）');
 ok(/jitter: 0\.10/.test(enemySrc), '折线横向抖动 0.10');
 ok(/width: 0\.145/.test(enemySrc), '线宽 0.145（0.075 在实机里细得看不见）');
@@ -81,7 +82,7 @@ ok(/if \(cfg\.arc\) return '区域压力/.test(codexSrc), 'enemyDesc 里有 arc 
 const arcDesc = (codexSrc.match(/if \(cfg\.arc\) return '([^']+)'/) || [, ''])[1];
 console.log('    [' + arcDesc.length + ' 字] ' + arcDesc.slice(0, 60) + '…');
 ok(arcDesc.includes('0.7 秒'), '说清伤害间隔（0.7 秒）', '');
-ok(arcDesc.includes('3 格'), '说清它们之间保持 3 格');
+ok(arcDesc.includes('8 格'), '说清它们之间保持 8 格（第 82 块从 3 格提高）');
 ok(/2 只 1 条/.test(arcDesc) && /3 只 3 条/.test(arcDesc) && /4 只 6 条/.test(arcDesc),
   '把 n 只连几条列出来（不用自己算组合数）');
 ok(arcDesc.includes('不用成对'), '明说不必成对出现');

@@ -59,8 +59,10 @@ sec('二、hurtPlayer：场地伤害走真伤通道');
   // 绝缘斗篷 / 不吃无敌帧这两条既有语义要保住
   ok(/if \(isHazard && \(relics\.levels\(\)\.insulator \|\| 0\) > 0\)/.test(mainSrc),
     '绝缘斗篷照旧整下免掉（在真伤之前就 return）');
-  ok(/if \(!isHazard && iframe > 0\) return;/.test(mainSrc),
-    '场地伤害照旧不吃无敌帧');
+  // 第 82 块：电弧也进了「不吃无敌帧」这一档，所以判据从 isHazard 换成 noIframe
+  ok(/const noIframe = isHazard \|\| isArc;/.test(mainSrc), 'noIframe = 场地伤害 或 电弧');
+  ok(/if \(!noIframe && iframe > 0\) return;/.test(mainSrc),
+    '场地伤害与电弧都不吃无敌帧');
 }
 
 // ============================================================

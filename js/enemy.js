@@ -25,12 +25,12 @@
 // 第四关三只（wraith/leaper/mender，第 35 块，第 52 块换模型），
 // 各自在下面 ENEMY_TYPES 里有详细注释。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=92';
-import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=92';
-import { clone as cloneSkinned } from '../lib/jsm/utils/SkeletonUtils.js?v=92';
-import { distance2D } from './stats.js?v=92';
-import { createRangeRing } from './rangeRing.js?v=92';
-import { withV } from './assetUrl.js?v=92';
+import * as THREE from '../lib/three.module.js?v=93';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=93';
+import { clone as cloneSkinned } from '../lib/jsm/utils/SkeletonUtils.js?v=93';
+import { distance2D } from './stats.js?v=93';
+import { createRangeRing } from './rangeRing.js?v=93';
+import { withV } from './assetUrl.js?v=93';
 
 // KayKit 模型正面朝 +Z；如果哪天换模型发现怪倒着走，把这里改成 Math.PI
 export const ENEMY_MODEL_YAW = 0;
@@ -780,13 +780,17 @@ export const ENEMY_TYPES = {
   // 所以它不是「一个敌人」，而是「一片会移动的禁区」：场上每多一只，
   // 可站的空地就少几条缝。解法只有一个 —— 把并联体本身拆掉，它牵的线整片跟着断。
   //
-  // 【间距】它们之间会被一股「同性相斥」的力推开，**两两最近距离不小于
-  // minGap（3.0 格）**（第 80 块，用户要求：原来会全挤在主角身边堆成一坨，
-  // 电弧全被压成零长度，禁区就成了一个点）。这条也是玩家的口子：
-  // 3 只摆开 → 中间必然留出三角形空地，那是唯一的活路。
+  // 【间距】它们之间会被一股「同性相斥」的力推开，**两两实时距离不小于
+  // minGap**（第 80 块 3.0 格 → 第 82 块 8.0 格）。
+  // 第 82 块用户原话：「两个电箱之间距离还是太近，要求两两之间距离足够大
+  // （说的是实时距离，不是生成距离）」—— 3.0 之所以看着还是近，不是配置小，
+  // 是**软推**：每帧只补 15% 的差额，而追击每帧把两只压近 0.05+ 格，
+  // 稳态距离实际落在 2.6~2.7。现在改成硬约束（见 separateArcs）+ 8.0 格，
+  // 一条电弧横跨小半个场地，缝够宽、线够长，禁区才像「网」而不是「点」。
   //
   // 它自己也会近战（蹭到就电一下），但那不是重点；重点是那张网。
-  // 数值给得低（hp 3.2 / 伤害 0.9），因为电弧已经在持续消耗你的血。
+  // 生命值（第 82 块用户要求「大幅提高」）：3.2 → 12（约 3.8 倍）。
+  // 禁区必须「拆得起但拆得慢」—— 一刀就断的话，网等于不存在。
   //
   // 模型：Kenney《Space Kit》的 machine_generator（CC0，28KB）——
   // 静态网格、没有骨骼动画，所以不写 animFamily（resolveClipAliases 会安全地返回空表）。
@@ -799,7 +803,7 @@ export const ENEMY_TYPES = {
     sourceHeight: 0.40,    // 实测包围盒最高点（Kenney 的 1 单位 ≈ 1 格）
     height: 1.30,          // 放大到近人高：一块浮在半空的铁疙瘩
     radius: 0.55,
-    hp: 3.2,
+    hp: 12,                // 第 82 块：3.2 → 12（用户「大幅提高」）。拆一只 ≈ 六七秒
     armor: 0,
     speed: 1.75,
     damage: 0.9,
@@ -819,7 +823,9 @@ export const ENEMY_TYPES = {
       hitR: 0.42,          // 判定半径（再加主角自己的半径）
       damage: 1,
       cd: 0.70,            // 全局节流：同一刻只吃一次
-      minGap: 3.0,         // 两两最小间距（格）—— 小于它就被推开
+      minGap: 8.0,         // 两两**实时**最小间距（格）—— 小于它立刻被推到 8.0
+      // 第 82 块：分离改成硬约束之后，这个值就是真实距离，不再是「软推的期望值」。
+      // 8.0 格 ≈ 场地直径（38）的 21%：一条电弧横跨小半个机房。
       segs: 4,             // 一条电弧折成几段（锯齿感）
       jitter: 0.10,        // 折线横向抖动幅度（格）
       dots: 2,             // 沿线流动的光点数（电流在流的感觉全靠它）
@@ -855,9 +861,9 @@ export const ENEMY_TYPES = {
     footY: -0.078,         // 实测身体最低点在原点下 0.078，抬回来才真正踩地
     height: 1.70,
     radius: 0.55,
-    hp: 5,
+    hp: 8,                 // 第 82 块：5 → 8（用户「井蛙血再厚一点」，但不像并联体那样翻几倍 ——
+                           // 它站在场边占桩，本来就该是能抽空点掉的目标）
     armor: 0,
-    speed: 1.05,
     // 占桩施法：不主动贴脸，保持距离好吐舌
     attackRange: 9.0,       // 舌头的最大够得到距离
     keepDistance: 6.0,      // 比这个近就后退
@@ -866,7 +872,7 @@ export const ENEMY_TYPES = {
       hp: 4,                // 舌头的独立血量（需砍断）
       range: 9.0,           // 和 attackRange 一致：够得到才吐
       keepDistance: 6.0,
-      pull: 3.0,            // 伸出期间每秒把主角往井蛙方向拉 3.0 格
+      pull: 4.5,            // 第 82 块：3.0 → 4.5（用户「提高舌头拖拽强度」）—— 每秒拉 4.5 格
       extend: 1.6,          // 伸出持续 1.6 秒（到点没砍断就收回）
       recover: 2.2,         // 收回（没砍断）后的冷却
       stun: 1.3,            // 被砍断后的硬直（冰冻式定身）
@@ -894,7 +900,12 @@ export const ENEMY_TYPES = {
   // 所以单独开一族 fish（见 CLIP_FAMILIES.fish）。
   // ⚠️ 这只模型的原点在身体正中（实测身体 −1.289 ~ +1.367），直接放会有一半埋进地里，
   // 所以不按脚落地，而是靠 hover 抬成「浮空灵体」（见 updateOne 的 hover 分支）。
-  // 行为：直接复用 hexer 的「回声声波圈」（spell.kind:'hex'），只是换成青色。
+  // 行为（第 82 块重写）：**吐追踪泡**。
+  //   · 一颗实体泡从它嘴里出来，缓慢地追着你跑（2.6 格/秒，你 4.4）；
+  //   · 泡有自己的血量（4），打爆就没了 —— 站着不打它，它会一直跟；
+  //   · 追上就扣血，并把你**定住 1.2 秒**（连走都走不动，不只是减速）。
+  // 它给的压力是「解一个追着你的东西」，而不是「离开一片地」——
+  // 和咒面图腾那种「脚下读条圈，走出去就好」完全不是一回事。
   woodfish: {
     name: '木鱼灵',
     file: 'assets/monsters/puffer-fish.glb',
@@ -906,15 +917,24 @@ export const ENEMY_TYPES = {
     hp: 4,
     armor: 0,
     speed: 1.05,
-    attackRange: 8.0,
+    attackRange: 8.0,      // 够得到就吐（泡自己会接着追，所以这个距离不是安全线）
     keepDistance: 5.0,
     damage: 1,
     attackInterval: 3.4,
-    windup: 1.5,
-    attackDuration: 2.0,
-    castTime: 1.5,
-    spell: { kind: 'hex', radius: 2.4, color: 0x57e6d0 },   // 青色回声圈（复用 hexer 方案）
-    debuff: { factor: 0.62, duration: 2.6 },
+    windup: 0.7,           // 吸气 —— 看到它鼓起来就是吐泡的前摇
+    attackDuration: 1.2,
+    bubble: {
+      hp: 4,               // 泡的独立血量（打爆就散）
+      speed: 2.6,          // 飞行速度：比主角（4.4）慢得多，横向拉开就甩得掉
+      turn: 1.2,           // 每秒最多转 1.2 弧度 —— 拐弯很笨，绕圈能把它遛晕
+      life: 6.0,           // 最长存活（追不到就自己散）
+      r: 0.42,             // 命中判定半径
+      root: 1.2,           // 命中把你定住多久（秒）
+      damage: 1,
+      color: 0x57e6d0,     // 青色，和它的自发光同色
+      y: 1.00,             // 悬浮高度（正好在奶蛙胸口高度）
+      count: 1,            // 一次吐几颗
+    },
     spawnTime: 1.0,
     deathTime: 1.6,
     selfDestruct: false,
@@ -1031,6 +1051,74 @@ export const ENEMY_TYPES = {
     anim: {
       walk: ANIM.walk, idle: ANIM.idle, attack: ANIM.punch,
       death: ANIM.death, spawn: ANIM.spawn,
+    },
+  },
+
+  // ============================================================
+  // 第九关 · 骨塔登记庭（第 82 块）—— 称量官
+  // ============================================================
+  // 剧情接 s09《名字的重量》：第九十九层的门上嵌着一本簿子，门卫 047 说
+  // 「到这儿就得上称了，这道门认字」。所以这一层的核心不是某只怪有多凶，
+  // 而是**全场一起变凶**：称量官每隔一阵把簿子翻开一次，把那种台的个数叠一层。
+  //
+  // 【机制·一句话】它自己几乎不打人（它的职责不是输出），活儿是**给全场记账**：
+  //   每完成一次「上称」，场上**所有**存活的怪都加一层「记名」——
+  //   移速 +7% / 伤害 +9% / 减伤 +5%，最多 5 层。
+  // 也就是说：它每活着念一次簿子，整关的难度就往上抬一格；它念到第 5 次，
+  // 场上就是一群快三分之一、疼一半还多、还更耐打的骷髅。
+  //
+  // 【怎么破】只有一条路 —— **把它先拆了**。它一倒，场上所有层立刻掉光
+  // （脚下的金环一起碎掉），整关立刻回到原难度。所以它站得很靠后
+  // （keepDistance 7.0，比你还快地躲），而且每次上称都要站定 2.2 秒 ——
+  // 那 2.2 秒是这一关唯一的输出窗口。
+  //
+  // 【为什么做「全场」而不是「点一只」】用户定的：「给全场怪物都加 buff，
+  // 显示明显特效」。点名只有一只是可以无视的（打别的就行），全场叠层没法绕，
+  // 只能把它拆掉 —— 压力直接指到它身上。
+  //
+  // 模型：**故意复用** `hooded-scribe.glb`（第五关擦名者那只，CC0）——
+  // 第八关的无名者/旗手已经开过这个先例（换皮肤 + 换行为 ≠ 换模型），
+  // 因为兜帽长袍 + 抱一本台账（程序化 prop，见 attachTag 的 'ledger'）
+  // 正好就是「记账的」。它这身鎏金和第五关那身紫黑一眼能分开。
+  weigher: {
+    name: '称量官',
+    file: 'assets/monsters/hooded-scribe.glb',
+    sourceHeight: 2.652,   // 和擦名者同一只模型（实测值一致）
+    footY: 0.0,            // 同一只模型，落地面一样
+    height: 2.15,          // 比擦名者（1.95）高一头：它站在正厅的台阶上，该有个仰望的姿势
+    radius: 0.60,
+    hp: 16,                // 全场 buff 的发动机必须耐打：一刀就能切断等于没有机制
+    armor: 0,
+    speed: 1.25,           // 比擦名者慢一点点（它也躲，但躲不利索 —— 毕竟抱着一本簿子）
+    attackRange: 10.0,     // 够得到就念（它没有近距离的概念，离多远都一样念）
+    keepDistance: 7.0,
+    damage: 1,             // 它自己几乎不打人：这个值只在贴脸近战的那一下才用
+    attackInterval: 9.0,   // 上称节奏：放任四五次，场上就全是强化版的骷髅了
+    windup: 1.6,           // 翻开簿子的前摇 —— 这一秒半就是信号
+    attackDuration: 2.2,   // 必须 > windup（第 69 块的教训），否则读条中被提前切回 chase
+    weigh: {
+      cap: 5,              // 最多叠五层
+      every: 9.0,
+      radius: Infinity,    // 全场：不看距离，场另一头的骷髅也躲不掉
+      color: 0xffd86b,
+      per: {
+        speed: 0.07,       // 每层：移速 +7%
+        damage: 0.09,      // 每层：伤害 +9%
+        armor: 0.05,       // 每层：减伤 +5%（乘法叠加，见 takeDamage）
+      },
+    },
+    tag: 'ledger',         // 抱着的台账（程序化贴图，零资产）
+    spawnTime: 1.0,
+    deathTime: 1.9,        // 倒得慢一点：这一下值得多看一眼
+    selfDestruct: false,
+    color: 0xffd86b,       // 鎏金
+    tint: 0xd8c48a,        // 整体压一层旧金（紫黑兜帽 → 暗金长袍）
+    glow: { color: 0x8a6a1e, intensity: 0.85 },
+    animFamily: 'humanoid',
+    clipOverrides: { cast: 'Spellcast_Long', death: 'Death_A', hit: 'Hit_A' },
+    anim: {
+      walk: 'walk', idle: 'idle', cast: 'cast',
+      death: 'death', spawn: 'spawn',
     },
   },
 };
@@ -1344,6 +1432,47 @@ function makeTagTexture() {
   return tagTex;
 }
 
+let ledgerTex = null;
+// 台账的封面（第 82 块）：暗棕皮面 + 烫金边 + 一道歪着的划痕（有人在这里划掉过一行）。
+// 和木牌同一套思路（Basic 材质 + isTag 摘出去），夜里不会有「看不见」的情况。
+function makeLedgerTexture() {
+  if (ledgerTex) return ledgerTex;
+  if (typeof document === 'undefined') return null;
+  const W = 128, H = 160;
+  const cv = document.createElement('canvas');
+  cv.width = W; cv.height = H;
+  const g = cv.getContext('2d');
+  g.fillStyle = '#3a2a1a';
+  g.fillRect(0, 0, W, H);
+  // 皮纹
+  for (let i = 0; i < 26; i++) {
+    g.strokeStyle = `rgba(${90 + Math.random() * 30 | 0},${64 + Math.random() * 24 | 0},38,0.20)`;
+    g.lineWidth = 0.8 + Math.random();
+    const y = Math.random() * H;
+    g.beginPath();
+    g.moveTo(0, y);
+    g.bezierCurveTo(W * 0.35, y + (Math.random() - 0.5) * 5, W * 0.7, y + (Math.random() - 0.5) * 5, W, y);
+    g.stroke();
+  }
+  // 烫金边 + 烫金标题条
+  g.strokeStyle = 'rgba(226,188,102,0.85)';
+  g.lineWidth = 3;
+  g.strokeRect(2.5, 2.5, W - 5, H - 5);
+  g.fillStyle = 'rgba(226,188,102,0.55)';
+  g.fillRect(W * 0.22, H * 0.20, W * 0.56, 5);
+  g.fillRect(W * 0.30, H * 0.62, W * 0.40, 3);
+  // 被划掉的那一行
+  g.strokeStyle = 'rgba(240,226,190,0.40)';
+  g.lineWidth = 2.2;
+  g.beginPath();
+  g.moveTo(W * 0.20, H * 0.52);
+  g.lineTo(W * 0.82, H * 0.47);
+  g.stroke();
+  ledgerTex = new THREE.CanvasTexture(cv);
+  ledgerTex.colorSpace = THREE.SRGBColorSpace;
+  return ledgerTex;
+}
+
 // 把木牌挂到模型上。
 // ⚠️ 挂在 model 里要**反向缩放**：model.scale 是 (height/sourceHeight) ≈ 1.5，
 // 直接挂一块 0.38 的牌子会被放大成 0.57，而且位置也会跟着放大。
@@ -1381,7 +1510,10 @@ function attachTag(model, kind, s) {
     // 侧前方偏出 0.60 / 0.26：旗手那顶红兜帽又高又宽（比 cfg.height 还高一截），
     // 偏移只有 0.40 时牌子有一半藏在帽檐后面。侧前方也让牌面更正面地迎向镜头。
     holder.position.set(0.60, 0.0, 0.26);
-  } else {
+  } else if (kind === 'board') {
+    // ⚠️ 这里必须显式判 'board'（无名者的胸牌），不能写 else ——
+    // 第 82 块加 'ledger' 时写成 else，称量官身上就同时挂了「胸牌 + 台账」两块板，
+    // 图鉴缩略图上表现为「背后多出一块莫名其妙的木片」，而且完全不报错。
     // 无名者：胸前一块小牌。模型正面是 +z（ENEMY_MODEL_YAW = 0）。
     // z 从 0.30 一路加到 0.56：这只模型胸口有自己的**围巾/护胸**，凸出到 0.3 以上，
     // 牌子挂 0.30 会整个埋进围巾里（图鉴缩略图上就是「无名者身上没有牌子」）。
@@ -1390,6 +1522,35 @@ function attachTag(model, kind, s) {
     board.position.set(0, 0.96, 0.56);
     board.frustumCulled = false;
     holder.add(board);
+  }
+  if (kind === 'ledger') {
+    // 称量官手里的台账（第 82 块）：抱在胸前偏左、封面朝镜头。
+    // 位置按 hooded-scribe 的身形量的（height 1.95）：胸口在 1.1 上下，
+    // 再往左偏一点能被兜帽和袖子衬出来 —— 放在正中间会被长袍整件糊住。
+    const cover = makeLedgerTexture();
+    const book = new THREE.Mesh(
+      new THREE.BoxGeometry(0.52, 0.64, 0.10),
+      cover
+        ? new THREE.MeshBasicMaterial({ map: cover, toneMapped: false })
+        : new THREE.MeshBasicMaterial({ color: 0x6b4a2e, toneMapped: false }),
+    );
+    // 高度 1.06 → 0.94：1.06 正好压在兜帽檐上、把半张脸挡住，看着像「举着一块牌子」；
+    // 0.94 落在胸口，兜帽的阴影衬着它，才像抱在怀里。
+    book.position.set(-0.28, 0.94, 0.44);
+    book.rotation.set(-0.18, 0.26, 0.10);
+    book.frustumCulled = false;
+    holder.add(book);
+    // 金色的捆绳（两道横线）：一眼分清「这不是那块木牌」
+    for (const dy of [-0.16, 0.16]) {
+      const band = new THREE.Mesh(
+        new THREE.BoxGeometry(0.545, 0.05, 0.108),
+        new THREE.MeshBasicMaterial({ color: 0xe2bc66, toneMapped: false }),
+      );
+      band.position.set(-0.28, 0.94 + dy, 0.44);
+      band.rotation.copy(book.rotation);
+      band.frustumCulled = false;
+      holder.add(band);
+    }
   }
   // 打个标记：spawn 里那几个「遍历所有 mesh 改材质」的段落要跳过木牌
   // （tint / glow / ghost 都会把它的颜色冲掉）。
@@ -1817,6 +1978,10 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
       hp: maxHp,
       maxHp,
       damage,
+      dmg0: damage,      // 第 82 块：伤害的**原始值**（称量官的记名层要在这里叠，不能叠在自己身上）
+      named: 0,          // 第 82 块：被记过几层（0 = 无名）
+      namedArmor: 0,
+      namedRing: null,
       speed,
       state: 'spawn',
       t: 0,
@@ -1918,6 +2083,12 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     if (fx) fx.spawnRing(e.pos, cfg.color);
 
     list.push(e);
+    // 第 82 块：称量官已经在场上叠过层的话，新上场的人一样是「记过名的」——
+    // 这一层的规矩不认「你刚来」。（放在 push 之后：dressWeigh 要挂金环到 root 上）
+    if (weighTier > 0) dressWeigh(e);
+    // 第 82 块：并联体一落地就摆到离每一台都 ≥ minGap 的位置（见 seatArc）。
+    // 放在 push 之后、onSpawn 之前：新怪信息卡弹出来时它已经在正确位置上了。
+    if (cfg.arc) seatArc(e);
     // 第 81 块：队伍成员（无名者 / 旗手）生成后立刻编队。
     // 放在 push 之后：onSpawn 回调里（新怪信息卡）就已经能看见它属于哪一队。
     if (cfg.squad) joinSquad(e, opts.newSquad, opts.squadRef);
@@ -1947,10 +2118,12 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
       if (e.tongueHp <= 0) severTongue(e);
       return false;   // 井蛙本体此刻不受击
     }
-    // 减伤有两个来源，乘法叠加：
-    //   auraArmor —— 主祭霜牢环（第 28 块）
-    //   shieldUp  —— 盾斧兽人举盾（第 29 块，举盾时减伤 70%）
-    const red = Math.min(0.95, (e.auraArmor || 0) + (e.shieldUp && e.cfg.shield ? e.cfg.shield.reduce : 0));
+    // 减伤有三个来源，乘法叠加：
+    //   auraArmor  —— 主祭霜牢环（第 28 块）
+    //   shieldUp   —— 盾斧兽人举盾（第 29 块，举盾时减伤 70%）
+    //   namedArmor —— 第九关称量官的「记名」叠层（第 82 块，每层 per.armor）
+    const red = Math.min(0.95, (e.auraArmor || 0) + (e.namedArmor || 0)
+      + (e.shieldUp && e.cfg.shield ? e.cfg.shield.reduce : 0));
     // 第 81 块：旗手倒下后的 4 秒里，整队受双倍伤害 —— 这是清场的唯一窗口，
     // 玩家必须先砍旗手再回头吃这 4 秒，不然只能一只只硬磨。
     const stunMul = e.squadStunMul || 1;
@@ -2009,6 +2182,9 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     e.deathT = 0;
     e.hp = 0;
     e.bar.spr.visible = false;
+    // 第 82 块：称量官一倒，**全场层数立刻清零** —— 这是第九关唯一的解，
+    // 反馈必须发生在这一瞬间（没有「等一句 UI 提示」的余地）。
+    if (e.cfg.weigh) clearWeigh(e);
     // 跟随玩家的霜牢环：主祭一倒环就消（不挂在它身上，得手动收）
     if (e.auraRing && e.cfg.aura && e.cfg.aura.followPlayer) e.auraRing.mesh.visible = false;
     hideChargeLine(e);   // 骨骑死在蓄力里：预警线立刻收掉（第 29 块）
@@ -2159,14 +2335,23 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
   }
 
   // 「同性相斥」：两只并联体靠得太近就互相推开（第 80 块，用户要求）。
-  // 不做成转向力 —— 直接位移最稳：追击再猛也压不到 minGap 以内，
-  // 而玩家要的正是「中间那段缝」。
+  // 不做成转向力 —— 直接位移最稳：追击再猛也压不到 minGap 以内。
+  //
+  // 第 82 块改成**硬约束**（用户：「距离还是太近，要实时距离够大」）：
+  //   旧写法 push = (gap-d) * 0.5 * k，k ≈ 1-exp(-10dt) ≈ 0.15/帧 —— 每帧只补
+  //   15% 的差额，而追击每帧把两只压近 0.05+ 格。收支平衡时稳态距离比 minGap
+  //   小 0.3，三只互相抵消还要再打折，用户量到的「实时距离」就是 2.6 出头。
+  //   现在每帧把差额**补满**，只有单帧位移限速（怕出生时瞬移）。
+  //   限速 9.5 格/秒是追击速度（1.75）的五倍多 —— 每帧补得比压得快，压不下来。
+  const ARC_PUSH_MAX = 9.5;      // 分离时的位移速度上限（格/秒）
+
   function separateArcs(nodes, dt) {
     if (nodes.length < 2) return;
-    const gap = nodes[0].cfg.arc.minGap || 3.0;
-    const k = 1 - Math.exp(-10 * dt);      // 每秒逼近 ~99.99%，够快又不抖
-    // 迭代两轮：三只挤成一坨时，一轮推完可能又互相抵消
-    for (let pass = 0; pass < 2; pass++) {
+    const gap = nodes[0].cfg.arc.minGap || 8.0;
+    const maxStep = ARC_PUSH_MAX * Math.min(dt, 0.05);
+    // 4 轮：三只挤成一坨时，一轮推完会互相抵消；夹回边界之后也得再审一遍
+    for (let pass = 0; pass < 4; pass++) {
+      let moved = false;
       for (let i = 0; i < nodes.length; i++) {
         const a = nodes[i];
         for (let j = i + 1; j < nodes.length; j++) {
@@ -2174,26 +2359,64 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
           let dx = b.pos.x - a.pos.x;
           let dz = b.pos.z - a.pos.z;
           let d = Math.hypot(dx, dz);
-          if (d >= gap) continue;
+          const need = gap - d;
+          if (need <= 1e-4) continue;
           if (d < 1e-3) {
             // 出生点完全重叠：按序号挑一个确定的方向拆开（不能用随机会抖）
             const ang = i * 2.399 + j * 1.618;
-            dx = Math.cos(ang); dz = Math.sin(ang); d = 1e-3;
+            dx = Math.cos(ang); dz = Math.sin(ang); d = 0;
           } else {
             dx /= d; dz /= d;
           }
-          const push = (gap - d) * 0.5 * k;
+          const push = Math.min(need * 0.5, maxStep);
           a.pos.x -= dx * push; a.pos.z -= dz * push;
           b.pos.x += dx * push; b.pos.z += dz * push;
+          moved = true;
         }
       }
+      // 推开之后可能出界：夹回来（不然它们会站在场地外面放电）。
+      // 夹回会让距离缩一点 —— 所以放在轮内、下一轮接着补。
+      const lim = arenaR - 0.6;
+      for (const e of nodes) {
+        const r = Math.hypot(e.pos.x, e.pos.z);
+        if (r > lim) { e.pos.x = (e.pos.x / r) * lim; e.pos.z = (e.pos.z / r) * lim; }
+      }
+      if (!moved) break;
     }
-    // 推开之后可能出界：夹回来（不然它们会站在场地外面放电）
-    const lim = arenaR - 0.6;
-    for (const e of nodes) {
+  }
+
+  // 出生落座（第 82 块）：新并联体一落地就直接摆到「离每一台都 ≥ gap」的位置。
+  // spawn 状态的节点被 updateArcNet 排除（不画线），所以不能等分离力慢慢推 ——
+  // 否则刚升起来那 0.8 秒是贴在一起的两块铁疙瘩，玩家第一眼看到的就是「太近」。
+  // 这里允许一次到位（spawn 动画期间位移看不出来）。
+  function seatArc(e) {
+    const gap = (e.cfg.arc && e.cfg.arc.minGap) || 8.0;
+    for (let pass = 0; pass < 6; pass++) {
+      let moved = false;
+      for (const o of list) {
+        if (o === e || !o.cfg.arc || o.state === 'dead') continue;
+        let dx = e.pos.x - o.pos.x;
+        let dz = e.pos.z - o.pos.z;
+        let d = Math.hypot(dx, dz);
+        if (d >= gap) continue;
+        if (d < 1e-3) {
+          const ang = (list.indexOf(e) + list.indexOf(o)) * 2.399;
+          dx = Math.cos(ang); dz = Math.sin(ang); d = 0;
+        } else {
+          dx /= d; dz /= d;
+        }
+        e.pos.x += dx * (gap - d);
+        e.pos.z += dz * (gap - d);
+        moved = true;
+      }
+      const lim = arenaR - 0.6;
       const r = Math.hypot(e.pos.x, e.pos.z);
       if (r > lim) { e.pos.x = (e.pos.x / r) * lim; e.pos.z = (e.pos.z / r) * lim; }
+      if (!moved) break;
     }
+    // 位置是自己挪的，root 还停在原来的出生点 —— 这里补一次，不然会「瞬移」一下
+    e.root.position.x = e.pos.x;
+    e.root.position.z = e.pos.z;
   }
 
   function updateArcNet(dt, ctx) {
@@ -2307,7 +2530,9 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
             zapped = true;
             arcZapCd = cfg.cd || 0.7;
             arcFlash = 1;
-            ctx.hurtPlayer(cfg.damage || 1, null);
+            // 第 82 块（用户）：「电路伤害无视无敌时段」—— source 传 'arc'，
+            // main.js 的 hurtPlayer 见到它就跳过无敌帧判定（跟漏电地板同等待遇）。
+            ctx.hurtPlayer(cfg.damage || 1, 'arc');
             if (fx && ctx.playerPos) {
               fx.burst(ctx.playerPos, { color: 0x9ee8ff, count: 10, speed: 1.8, life: 0.32, size: 0.08, y: 0.8, up: 1.1 });
             }
@@ -2471,6 +2696,178 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
       if (hit || gone) {
         scene.remove(s.mesh);
         shots.splice(i, 1);
+      }
+    }
+  }
+
+  // ============================================================
+  // 第七关 · 木鱼灵吐的追踪泡（第 82 块）
+  // ============================================================
+  // 为什么做成一个**实体**而不是又一个地面圈：到第七关为止，「地上先画个圈、
+  // 圈亮了掉血」已经有四种了（咒面图腾紫阵 / 焚火魔灼地 / 弓手红圈 / 井底滴水），
+  // 玩家练的是「读地面」。再叠一个同类的只会让人麻木 —— 而木鱼灵原本就是照抄
+  // 咒面图腾那套（spell.kind:'hex' 换个颜色，连数值都一样）。用户：「换一种」。
+  //
+  // 追踪泡换个维度：它是一个**会跟着你走的东西**，该处理而不是该躲开。
+  // 三条手感线（都在 cfg.bubble 里）：
+  //   · 追得上但追得慢：2.6 格/秒（你 4.4），转向也只有 1.2 弧度/秒 ——
+  //     贴着它绕半圈它就甩到后面去了（骨头... 证据见 block82 CDP 用例）；
+  //   · 能被打爆：4 血，一记结实的近战就没 —— 但那一下你得站着打，
+  //     而那一下的时间里别的怪在逼近；
+  //   · 打不掉就吃亏：追上就是一格血，并把你**定住 1.2 秒**（彻底挪不动，
+  //     比咒面图腾的减速狠：减速还能挪，定住是连拉都拉不开）。
+  // ============================================================
+  const bubbles = [];
+  let bubbleGeo = null, bubbleMatBase = null;
+
+  function bubbleAssets() {
+    if (bubbleGeo) return;
+    bubbleGeo = new THREE.SphereGeometry(1, 14, 10);
+    bubbleMatBase = new THREE.MeshBasicMaterial({
+      color: 0x57e6d0, transparent: true, opacity: 0.34,
+      depthWrite: false, side: THREE.DoubleSide,
+      blending: THREE.AdditiveBlending,
+    });
+  }
+
+  // 吐泡：从它身前冒出来，初始方向 = 「那一刻玩家所在的方向」（不预判，
+  // 所以它一吐出来方向就是歪的 —— 你一直动它就一直在后面追）
+  function spawnBubble(e, ctx, idx = 0) {
+    const cfg = e.cfg.bubble;
+    bubbleAssets();
+    const dx = ctx.playerPos.x - e.pos.x;
+    const dz = ctx.playerPos.z - e.pos.z;
+    const base = Math.atan2(dx, dz);
+    // 一次吐好几颗时扇形分开（现在只吐一颗，留着以后调）
+    const spread = cfg.count > 1 ? (idx - (cfg.count - 1) / 2) * 0.34 : 0;
+    const a = base + spread;
+    const sp = cfg.speed;
+    const x = e.pos.x + Math.sin(a) * (e.cfg.radius + 0.25);
+    const z = e.pos.z + Math.cos(a) * (e.cfg.radius + 0.25);
+    const y = cfg.y ?? 1.0;
+    const mat = bubbleMatBase.clone();
+    mat.color.setHex(cfg.color ?? 0x57e6d0);
+    const mesh = new THREE.Mesh(bubbleGeo, mat);
+    mesh.frustumCulled = false;
+    mesh.position.set(x, y, z);
+    mesh.scale.setScalar(cfg.r ?? 0.42);
+    mesh.renderOrder = 2;
+    scene.add(mesh);
+    bubbles.push({
+      mesh, mat, x, z, y,
+      vx: Math.sin(a) * sp, vz: Math.cos(a) * sp,
+      turn: cfg.turn ?? 1.2,
+      hp: cfg.hp, maxHp: cfg.hp,
+      r: cfg.r ?? 0.42,
+      dmg: cfg.damage ?? 1,
+      root: cfg.root ?? 1.2,
+      life: cfg.life ?? 6,
+      t: 0, phase: Math.random() * 6.28, flash: 0,
+    });
+    if (fx) {
+      fx.burst({ x, z }, {
+        color: cfg.color ?? 0x57e6d0, count: 6, speed: 1.3,
+        life: 0.3, size: 0.09, y, up: 0.8, gravity: 3,
+      });
+    }
+  }
+
+  function removeBubble(i) {
+    const b = bubbles[i];
+    if (!b) return;
+    scene.remove(b.mesh);
+    b.mat.dispose();
+    bubbles.splice(i, 1);
+  }
+
+  // 泡消失的统一出口（被打爆 vs 到寿，视觉不一样：爆得响一点）
+  function popBubble(i, byPlayer) {
+    const b = bubbles[i];
+    if (!b) return;
+    const color = b.mat.color.getHex();
+    if (fx) {
+      fx.burst({ x: b.x, z: b.z }, {
+        color, count: byPlayer ? 14 : 7, speed: byPlayer ? 2.6 : 1.3,
+        life: 0.4, size: 0.11, y: b.y, up: 1.2, gravity: 4,
+      });
+      fx.ring({ x: b.x, z: b.z }, {
+        from: b.r * 0.6, to: b.r * 2.8, color, life: 0.26, opacity: 0.6, y: 0.08,
+      });
+    }
+    removeBubble(i);
+  }
+
+  // 从外面进来的伤害（主角近战 / 环剑 / 雷剑连锁……凡是「在 (x,z) 打出了伤害」）
+  // 都顺手糊一下泡。返回打爆了几颗 —— 测试和成就都读得到。
+  function hitBubbles(x, z, r, dmg) {
+    let popped = 0;
+    for (let i = bubbles.length - 1; i >= 0; i--) {
+      const b = bubbles[i];
+      const d = Math.hypot(b.x - x, b.z - z);
+      if (d > r + b.r) continue;
+      b.hp -= dmg;
+      if (b.hp > 0) {
+        b.flash = 1;
+        if (fx) fx.hit({ x: b.x, z: b.z }, b.mat.color.getHex());
+        continue;
+      }
+      popBubble(i, true);
+      popped++;
+    }
+    return popped;
+  }
+
+  function updateBubbles(dt, ctx) {
+    for (let i = bubbles.length - 1; i >= 0; i--) {
+      const b = bubbles[i];
+      b.life -= dt;
+      b.t += dt;
+      if (b.flash > 0) b.flash = Math.max(0, b.flash - dt * 6);
+
+      // ---- 转向：每秒最多转 turn 弧度。拐弯笨是它唯一的破绽 ----
+      const dx = ctx.playerPos.x - b.x;
+      const dz = ctx.playerPos.z - b.z;
+      const d = Math.hypot(dx, dz) || 1;
+      const sp = Math.hypot(b.vx, b.vz) || 1e-4;
+      const cur = Math.atan2(b.vx, b.vz);
+      const want = Math.atan2(dx, dz);
+      let diff = ((want - cur + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
+      const na = cur + Math.min(Math.abs(diff), b.turn * dt) * Math.sign(diff);
+      b.vx = Math.sin(na) * sp;
+      b.vz = Math.cos(na) * sp;
+      b.x += b.vx * dt;
+      b.z += b.vz * dt;
+
+      // ---- 视觉：椭球呼吸 + 上下浮动 + 挨打闪一下；血少了壳就变薄（看得出快碎了）----
+      const wob = 1 + Math.sin(b.t * 6.5 + b.phase) * 0.08;
+      b.mesh.position.set(b.x, b.y + Math.sin(b.t * 3.1 + b.phase) * 0.07, b.z);
+      b.mesh.scale.set(b.r * wob, b.r / wob, b.r * wob);
+      const frac = Math.max(0, b.hp / b.maxHp);
+      b.mat.opacity = 0.18 + 0.20 * frac + b.flash * 0.55;
+
+      // ---- 命中：一格血 + 定住（无敌帧里擦过去的就不该被定住）----
+      if (d <= b.r + ctx.playerRadius) {
+        const inv = ctx.isInvincible ? ctx.isInvincible() : false;
+        ctx.hurtPlayer(b.dmg, null);
+        if (!inv && ctx.rootPlayer) ctx.rootPlayer(b.root);
+        if (fx) {
+          fx.burst({ x: b.x, z: b.z }, {
+            color: 0x9ff5ea, count: 16, speed: 3.0, life: 0.45, size: 0.13, y: b.y, up: 1.6,
+          });
+        }
+        removeBubble(i);
+        continue;
+      }
+      // ---- 飞出场地 / 到寿：安静地散掉 ----
+      const rr = Math.hypot(b.x, b.z);
+      if (rr > ctx.arenaRadius + 1.5 || b.life <= 0) {
+        if (fx) {
+          fx.burst({ x: b.x, z: b.z }, {
+            color: b.mat.color.getHex(), count: 5, speed: 1.2,
+            life: 0.26, size: 0.08, y: b.y, up: 0.6, gravity: 5,
+          });
+        }
+        removeBubble(i);
       }
     }
   }
@@ -3346,6 +3743,10 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
       e.auraRing.update(dt);
     }
 
+    // 第 82 块：记名金环（第九关称量官叠的层）。它一直呼吸，层数越大环越大 ——
+    // 「这一层现在记到第几层」看一眼场面就知道。
+    if (e.namedRing) e.namedRing.update(dt);
+
     // 受击闪白（复制一份 emissive，闪完原样还回去）
     if (e.flashT > 0) {
       e.flashT -= dt;
@@ -3495,6 +3896,14 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     if (dist > 0.001) {
       e.root.rotation.y = lerpAngle(e.root.rotation.y, Math.atan2(dx, dz), 1 - Math.exp(-9 * dt));
     }
+
+    // ---- 第七关 · 木鱼灵：吐追踪泡（第 82 块）----
+    // 必须排在「巫师 spell」分支之前（见 handleBubbleCaster）。
+    if (e.cfg.bubble) { handleBubbleCaster(e, dt, ctx, dx, dz, dist); return; }
+
+    // ---- 第九关 · 称量官：给全场记账（第 82 块）----
+    // 它没有 spell / projectile / volley，占不到「施法者」那条骨架，所以自己开一条。
+    if (e.cfg.weigh) { handleWeigher(e, dt, ctx, dx, dz, dist); return; }
 
     // ---- 雾鬼：隐身 / 显形循环（第 35 块；第 61 块改规则）----
     // 隐身时不可被索敌、打不着；**但贴脸不再强制显形**，只能等它自己露头。
@@ -4203,10 +4612,246 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     }
   }
 
+  // ============================================================
+  // 第九关 · 称量官的「上称」（第 82 块）：**全场**叠层
+  // ============================================================
+  // 一句话：**每完成一次上称，场上所有怪一起强一层** —— 不是给某只怪贴个标签。
+  //
+  // 三个数值落脚点（都在 cfg.weigh.per 里）：
+  //   移速 —— moveToward 里乘上去（所有受益的怪都变快）；
+  //   伤害 —— 写在 e.damage 上（它本来就是每只怪自己的实例字段）；
+  //   减伤 —— 写在 e.namedArmor 上，走 takeDamage 那套乘法叠加。
+  //
+  // ⚠️ 伤害必须留一份**原始值**（e.dmg0）：e.damage 是按回合倍率算出来的实例值，
+  // 而层数是「清零 → 再叠回去」两步走的 —— 没有原始值，每次 +9% 的对象就是
+  // 上一次已经加过的那个数，来回几次就离谱了。
+  //
+  // 视觉三条一起上（用户要「明显特效」）：
+  //   ① 前摇：一圈金色大环从它脚下扩到整个场地 —— 看到就该往它那边挤；
+  //   ② 结算：每只被记账的怪脚底炸一朵金花，并长出一只金环（环随层数长大）；
+  //   ③ 常驻：记过名的怪**一直带着那只环** —— 一眼能数出这层记到第几层。
+  //   它倒下时所有金环同时炸开 —— 那一碎是这一关最好的一帧。
+  const WEIGH = () => (ENEMY_TYPES.weigher && ENEMY_TYPES.weigher.weigh) || null;
+  let weighTier = 0;
+
+  // 给一只怪套上「当前层数」的账（伤害/减伤落到实例上，移速在 moveToward 里实时读）
+  function dressWeigh(e) {
+    const cfg = WEIGH();
+    if (!cfg) return;
+    const t = Math.min(cfg.cap, weighTier);
+    e.named = t;
+    e.namedArmor = cfg.per.armor * t;
+    if (e.dmg0 != null) e.damage = e.dmg0 * (1 + cfg.per.damage * t);
+    updateNamedRing(e);
+  }
+
+  // 每只「记过名」的怪脚下一只金环（半径随层数长大：第 5 层的环几乎有两人宽）
+  function updateNamedRing(e) {
+    const cfg = WEIGH();
+    if (!cfg) return;
+    const t = e.named || 0;
+    if (t <= 0) {
+      if (e.namedRing) { e.root.remove(e.namedRing.mesh); e.namedRing.dispose(); e.namedRing = null; }
+      return;
+    }
+    const want = 0.60 + t * 0.18;
+    if (e.namedRing) {
+      e.namedRing.setRadius(want);
+      e.namedRing.baseR = want;
+      return;
+    }
+    const ring = createRangeRing({
+      radius: want, color: cfg.color, opacity: 0.55, pulse: 0.06, y: 0.045,
+    });
+    e.namedRing = ring;
+    e.namedRing.baseR = want;
+    e.root.add(ring.mesh);
+  }
+
+  // 上称：升一层 + 全场上
+  function performWeigh(e) {
+    const cfg = WEIGH();
+    if (!cfg) return;
+    weighTier = Math.min(cfg.cap, weighTier + 1);
+    for (const o of list) {
+      if (o.state === 'dead' || o.state === 'down') continue;
+      dressWeigh(o);
+      if (fx) {
+        fx.burst(o.pos, {
+          color: cfg.color, count: 9, speed: 2.2, life: 0.5, size: 0.11,
+          y: 0.5, up: 1.6, gravity: 3,
+        });
+      }
+    }
+    if (fx) {
+      // 全场铺过去的一圈金光 —— 这一下就是「全都记上了」
+      fx.ring(e.pos, { from: 0.6, to: arenaR, color: cfg.color, life: 0.85, opacity: 0.7, y: 0.05 });
+      fx.ring(e.pos, { from: 0.4, to: arenaR * 0.72, color: 0xfff0c4, life: 0.5, opacity: 0.5, y: 0.07 });
+      fx.text(e.pos, `第 ${weighTier} 层`, { color: '#ffe08a', size: 0.8, y: e.cfg.height + 0.9 });
+    }
+  }
+
+  // 称量官倒下：**所有层一起掉**（这是这一关唯一的解，必须给足反馈）
+  function clearWeigh(e) {
+    const cfg = WEIGH();
+    if (!cfg || weighTier <= 0) return;
+    weighTier = 0;
+    for (const o of list) {
+      if (!o.named) continue;
+      o.named = 0;
+      o.namedArmor = 0;
+      if (o.dmg0 != null) o.damage = o.dmg0;
+      if (o.namedRing) {
+        if (fx) {
+          fx.burst(o.pos, {
+            color: cfg.color, count: 6, speed: 1.8, life: 0.4, size: 0.09, y: 0.4, up: 1.2, gravity: 4,
+          });
+        }
+        o.root.remove(o.namedRing.mesh);
+        o.namedRing.dispose();
+        o.namedRing = null;
+      }
+    }
+    if (fx && e) {
+      fx.ring(e.pos, { from: 0.5, to: arenaR * 0.95, color: 0xf2e6c8, life: 0.7, opacity: 0.55, y: 0.06 });
+    }
+  }
+
+  // 称量官的行为：和巫师同一套「躲远 + 站定 + 读条」骨架，
+  // 但读条结束不是掷法术，而是 performWeigh（给全场叠一层）。
+  // 它没有 spell / projectile / volley，所以要自己占一条分支。
+  function handleWeigher(e, dt, ctx, dx, dz, dist) {
+    const cfg = e.cfg.weigh;
+    if (e.attackCd == null) e.attackCd = cfg.every * 0.55;   // 上场后不用等满一个周期
+    if (e.state === 'attack') {
+      if (!e.hitDone && e.t >= e.cfg.windup) {
+        e.hitDone = true;
+        performWeigh(e);
+      }
+      if (e.t >= e.cfg.attackDuration) {
+        e.state = 'chase';
+        e.t = 0;
+        e.attackCd = Math.max(0.3, (cfg.every - e.cfg.attackDuration) / (1 + e.auraHaste));
+        e.currentAnim = e.cfg.anim.walk;
+        e.play(e.cfg.anim.walk, { fade: 0.18 });
+      }
+      return;
+    }
+
+    // 太近就退开（它躲得比谁都积极 —— 拆不掉它，这一关就一直在叠）
+    if (dist < e.cfg.keepDistance) {
+      moveToward(e, -dx, -dz, dist, dt, ctx);
+      if (e.currentAnim !== e.cfg.anim.walk) {
+        e.currentAnim = e.cfg.anim.walk;
+        e.play(e.cfg.anim.walk, { fade: 0.2 });
+      }
+      return;
+    }
+    if (dist > e.cfg.attackRange) {
+      moveToward(e, dx, dz, dist, dt, ctx);
+      if (e.currentAnim !== e.cfg.anim.walk) {
+        e.currentAnim = e.cfg.anim.walk;
+        e.play(e.cfg.anim.walk, { fade: 0.2 });
+      }
+      return;
+    }
+
+    e.attackCd -= dt;
+    if (e.attackCd <= 0) {
+      e.state = 'attack';
+      e.t = 0;
+      e.hitDone = false;
+      e.currentAnim = e.cfg.anim.cast;
+      e.play(e.cfg.anim.cast, { once: true, fade: 0.12, duration: e.cfg.attackDuration });
+      // 前摇那条金环扩到整个场地 —— 这是「马上要全员加强」的信号，看到就该往它那边挤
+      if (fx) {
+        fx.ring(e.pos, {
+          from: 0.5, to: arenaR, color: cfg.color,
+          life: e.cfg.windup, opacity: 0.42, y: 0.05,
+        });
+      }
+      return;
+    }
+    if (e.currentAnim !== e.cfg.anim.idle) {
+      e.currentAnim = e.cfg.anim.idle;
+      e.play(e.cfg.anim.idle, { fade: 0.2 });
+    }
+  }
+
+  // ---------------- 第七关 · 木鱼灵：吐追踪泡（第 82 块）----------------
+  // 骨架和巫师一样（保持距离 → 站定 → 前摇 → 出手），但出手吐的是**实体泡**。
+  //
+  // ⚠️ 为什么不能继续走 spell 那套：咒面图腾是「读条 → 脚下圈 → 掉血 + 减速」，
+  // 木鱼灵照抄一遍（kind 都是 'hex'，只是颜色不同、连 windup/attackInterval
+  // 都一样）就成了「换个颜色的同一只怪」——用户：「攻击模式和咒面图腾有重合」。
+  // 现在它吐出去的是一个会自己追的东西，读的是另一个维度的信息（速度差、
+  // 拐弯半径、血量），和紫阵那一套不撞车。
+  function handleBubbleCaster(e, dt, ctx, dx, dz, dist) {
+    const cfg = e.cfg.bubble;
+    if (e.attackCd == null) e.attackCd = e.cfg.attackInterval;
+
+    if (e.state === 'attack') {
+      if (!e.hitDone && e.t >= e.cfg.windup) {
+        e.hitDone = true;
+        for (let i = 0; i < (cfg.count || 1); i++) spawnBubble(e, ctx, i);
+      }
+      if (e.t >= e.cfg.attackDuration) {
+        e.state = 'chase';
+        e.t = 0;
+        e.attackCd = Math.max(0.3, (e.cfg.attackInterval - e.cfg.attackDuration) / (1 + e.auraHaste));
+        e.currentAnim = e.cfg.anim.walk;
+        e.play(e.cfg.anim.walk, { fade: 0.18 });
+      }
+      return;
+    }
+
+    // 太近就往后退（它不是近战法师，吐泡也得一口气）
+    if (dist < e.cfg.keepDistance) {
+      moveToward(e, -dx, -dz, dist, dt, ctx);
+      if (e.currentAnim !== e.cfg.anim.walk) {
+        e.currentAnim = e.cfg.anim.walk;
+        e.play(e.cfg.anim.walk, { fade: 0.2 });
+      }
+      return;
+    }
+    // 太远就慢慢挪进来（比主角慢，追不上正跑的你）
+    if (dist > e.cfg.attackRange) {
+      moveToward(e, dx, dz, dist, dt, ctx);
+      if (e.currentAnim !== e.cfg.anim.walk) {
+        e.currentAnim = e.cfg.anim.walk;
+        e.play(e.cfg.anim.walk, { fade: 0.2 });
+      }
+      return;
+    }
+
+    e.attackCd -= dt;
+    if (e.attackCd <= 0) {
+      e.state = 'attack';
+      e.t = 0;
+      e.hitDone = false;
+      e.currentAnim = e.cfg.anim.cast;
+      e.play(e.cfg.anim.cast, { once: true, fade: 0.12, duration: e.cfg.attackDuration });
+      // 起手提示：脚下一圈青色脉冲（和投手蓄力环一个意思）
+      if (fx) {
+        fx.ring(e.pos, {
+          from: 0.3, to: 1.6, color: cfg.color ?? 0x57e6d0,
+          life: e.cfg.windup, opacity: 0.46, y: 0.055,
+        });
+      }
+      return;
+    }
+    if (e.currentAnim !== e.cfg.anim.idle) {
+      e.currentAnim = e.cfg.anim.idle;
+      e.play(e.cfg.anim.idle, { fade: 0.2 });
+    }
+  }
+
   function moveToward(e, dx, dz, dist, dt, ctx) {
     if (dist < 0.0001) return;
     // 冰缓：被冰剑命中后移速打折（slowFactor = 减速比例）
-    const sp = e.speed * (e.slowT > 0 ? (1 - Math.min(0.9, e.slowFactor || 0)) : 1);
+    // 第 82 块：第九关「记名」叠层也给移速（每层 per.speed，见 cfg.weigh）
+    const namedBoost = 1 + (e.named || 0) * ((WEIGH() && WEIGH().per.speed) || 0);
+    const sp = e.speed * (e.slowT > 0 ? (1 - Math.min(0.9, e.slowFactor || 0)) : 1) * namedBoost;
     const step = sp * dt;
 
     // 曲线接近：把「指向玩家」的方向绕竖轴旋转一个随时间摆动的角度，
@@ -4262,6 +4907,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     updateSquads(dt, ctx);      // 第 81 块：无名者的队形（平移 / 对齐 / 撞人 / 换向）
     updateMendFx(dt);
     updateShots(dt, ctx);
+    updateBubbles(dt, ctx);   // 第 82 块：木鱼灵吐的追踪泡（会自己拐弯追人）
     updateZones(dt, ctx);
     updateArrows(dt, ctx);
     updateSpikes(dt, ctx);
@@ -4303,6 +4949,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
       e.bar.mat.dispose();
       if (e.ring) e.ring.dispose();
       if (e.auraRing) e.auraRing.dispose();
+      if (e.namedRing) e.namedRing.dispose();   // 第 82 块：称量官的金环
       disposeChargeLine(e);
       disposeLeapRing(e);
       e.mixer.stopAllAction();
@@ -4425,6 +5072,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
       e.bar.mat.dispose();
       if (e.ring) e.ring.dispose();
       if (e.auraRing) e.auraRing.dispose();
+      if (e.namedRing) e.namedRing.dispose();   // 第 82 块：称量官的金环
       disposeChargeLine(e);
       disposeLeapRing(e);
       e.mixer.stopAllAction();
@@ -4435,6 +5083,8 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     shots.length = 0;
     for (const v of zones) scene.remove(v.disc, v.rim, v.tick);
     zones.length = 0;
+    for (const b of bubbles) { scene.remove(b.mesh); b.mat.dispose(); }   // 第 82 块：追踪泡
+    bubbles.length = 0;
     for (const a of arrows) scene.remove(a.mesh);
     arrows.length = 0;
     spikesQ.length = 0;
@@ -4442,6 +5092,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     spikesFx.length = 0;
     pendingHits.length = 0;
     squads.length = 0;          // 第 81 块：重开一局不留旧队伍引用
+    weighTier = 0;              // 第 82 块：记名层数也得跟着清（换关重来）
   }
 
   // 战士/投手的攻击时长：没单独写就默认 0.9 秒（动画按比例加速/减速），
@@ -4461,6 +5112,15 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     applyDot, applySlow, applyFreeze, chainTargets,
     shotCount: () => shots.length,
     zoneCount: () => zones.length,      // 场上正在倒计时的圈（三种法术都算）
+    // 第 82 块：木鱼灵吐的追踪泡 —— 几颗在飞、每颗在哪还有多少血。
+    // 打爆一颗的上报走 hitBubbles()，由主角近战 / 环剑 / 连锁调用。
+    bubbleCount: () => bubbles.length,
+    bubbles: () => bubbles.map((b) => ({
+      x: +b.x.toFixed(2), z: +b.z.toFixed(2),
+      hp: +b.hp.toFixed(2), maxHp: b.maxHp,
+      life: +b.life.toFixed(2), root: b.root,
+    })),
+    hitBubbles,
     arrowCount: () => arrows.length,    // 正在下落/插在地上的箭
     spikeCount: () => spikesQ.length + spikesFx.length,   // 石刺（待爆+视觉，测试用）
     guardCount: () => list.filter((e) => e.guard && e.state !== 'dead').length,
@@ -4483,6 +5143,11 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     hiddenCount: () => list.filter((e) => e.ghostHidden && e.state !== 'dead').length,
     leaperCount: () => list.filter((e) => e.cfg.leap && e.state !== 'dead').length,
     jumpingCount: () => list.filter((e) => e.cfg.leap && e.state === 'jump').length,
+    // 第 82 块：第九关称量官的「记名」层 —— 现在第几层、场上有几只被记过名。
+    // 「几只」比「多少层」更能说明问题：层是全场的一份，每只怪都叠着同样的数。
+    weighTier: () => weighTier,
+    namedCount: () => list.filter((e) => (e.named || 0) > 0 && e.state !== 'dead').length,
+    namedRingCount: () => list.filter((e) => e.namedRing && e.state !== 'dead').length,
     menderCount: () => list.filter((e) => e.cfg.spell && e.cfg.spell.kind === 'mend' && e.state !== 'dead').length,
     // 第 63 块：
     //   擦名者 —— 场上还有几只（含正在逃跑的）；stolenCount = 一共被偷走几把剑还没还
@@ -4491,6 +5156,18 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     //   n 只节点应该正好 C(n,2) 条线（4 只 = 6 条），测试和调试都靠这两个数。
     arcNodes: () => list.filter((e) => e.cfg.arc && e.state !== 'dead' && e.state !== 'spawn').length,
     arcLines: () => arcPool.filter((m) => m.visible).length,
+    //   第 82 块：并联体**实时**两两间距 —— 用户明确要求「实时距离」而不是生成距离，
+    //   所以断言必须读这个（每帧分离之后的值），不能读 spawn 时的落点。
+    arcGaps: () => {
+      const ns = list.filter((e) => e.cfg.arc && e.state !== 'dead');
+      const out = [];
+      for (let i = 0; i < ns.length; i++) {
+        for (let j = i + 1; j < ns.length; j++) {
+          out.push(+Math.hypot(ns[j].pos.x - ns[i].pos.x, ns[j].pos.z - ns[i].pos.z).toFixed(2));
+        }
+      }
+      return out;
+    },
     //   第 81 块：无名者的队伍。每队给出人数、朝向、状态和每只的实际槽位，
     //   测试要断言「一排站得直」和「旗手死了整队散架」都靠它。
     squadCount: () => squads.length,

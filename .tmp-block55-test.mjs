@@ -111,7 +111,7 @@ ok(/export function markEnemyMet/.test(profSrc) && /save\(\);/.test(profSrc.spli
 
 // B2 enemy.js：onSpawn 在 push 之后调（回调里能看见这只怪已经在场上）
 ok(/export function createEnemySystem\(\{[^}]*onSpawn/.test(enemySrc), 'createEnemySystem 接了 onSpawn');
-ok(/list\.push\(e\);[\s\S]{0,320}?if \(onSpawn\) onSpawn\(e\);[\s\S]{0,80}?return e;/.test(enemySrc),
+ok(/list\.push\(e\);[\s\S]{0,900}?if \(onSpawn\) onSpawn\(e\);[\s\S]{0,80}?return e;/.test(enemySrc),
   'onSpawn 在 list.push 之后、return 之前触发');
 
 // B3 main.js：接线 + 守卫 + 冻结

@@ -1155,7 +1155,7 @@ export const STORY_CHAPTERS = [
   },
 
   {
-    id: 's09', no: 9, act: 2, levelId: null, atRound: null,
+    id: 's09', no: 9, act: 2, levelId: 9, atRound: 2,   // 第 82 块：接第九关「骨塔登记庭」
     icon: '📖', title: '名字的重量', who: '骷髅门卫 047', place: '骨塔第九十九层',
     story:
       '第九十九层是最后一层台阶。台阶尽头有一道门，门上嵌着一本厚厚的簿子。\n'
