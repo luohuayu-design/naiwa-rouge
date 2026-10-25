@@ -45,8 +45,12 @@ ok(ER.attackRange > 5.0, '起手距离仍大于判定圈（不会贴着脸读条
 const enemySrc = read('js/enemy.js');
 ok(/const viz = ctx\.onScreen \? ctx\.onScreen\(e\.pos\) : true/.test(enemySrc),
   'chase 分支每帧问一次「玩家看得见吗」');
-ok(/if \(dist > keep \+ 0\.45 \|\| !viz\)/.test(enemySrc),
-  '看不见就往玩家身边挪（第 75 块：靠近条件改成 keep，会主动走过来）');
+// 第 77 块把「看不见 → 靠近」从合并条件里拆出来、提到最前面了：
+// 原来 (dist > keep+0.45 || !viz) 和后面的死区会互相夹死，它卡在视野边缘永不读条。
+ok(/if \(!viz && dist > 2\.0\)/.test(enemySrc),
+  '看不见就往玩家身边挪（第 77 块：这条判断提到最前，先靠近再谈死区）');
+ok(enemySrc.indexOf('if (!viz && dist > 2.0)') < enemySrc.indexOf('if (dist > keep + 0.45)'),
+  '「看不见就靠近」排在「够远就靠近」之前（不然两条打架）');
 const mainSrc0 = read('js/main.js');
 ok(/function onScreen\(at, margin = 0\.9\)/.test(mainSrc0), 'main.js 有 onScreen 投影判定');
 ok(/\.project\(camera\)/.test(mainSrc0), 'onScreen 真的用 camera.project 投到屏幕坐标');

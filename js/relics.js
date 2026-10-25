@@ -16,10 +16,10 @@
 // 与环剑（自动索敌、消耗制）和炮台（固定点位）互补；价格定在
 // 商店里「买得起但要攒一攒」的档，让 9/12/15/18 回合的商店有取舍。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=88';
-import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=88';
-import { distance2D } from './stats.js?v=88';
-import audio from './audio.js?v=88';
+import * as THREE from '../lib/three.module.js?v=89';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=89';
+import { distance2D } from './stats.js?v=89';
+import audio from './audio.js?v=89';
 
 export const RELIC_DEFS = {
   spikes: {

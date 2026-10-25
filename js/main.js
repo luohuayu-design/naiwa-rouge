@@ -5,37 +5,37 @@
 // 目标是把三件事调顺：摇杆输入 → 角色速度/朝向 → 相机跟随。
 // 后续叠战斗时，只需要在 tick() 里加敌人更新与自动攻击，不用动输入层。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=88';
-import { buildNightScene } from './scene.js?v=88';
-import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=88';
-import { createInput } from './input.js?v=88';
-import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=88';
-import { createStatView } from './statView.js?v=88';
-import { createWeaponStats } from './weaponStats.js?v=88';
-import { createFx } from './fx.js?v=88';
-import { createEnemySystem, ENEMY_TYPES } from './enemy.js?v=88';
+import * as THREE from '../lib/three.module.js?v=89';
+import { buildNightScene } from './scene.js?v=89';
+import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=89';
+import { createInput } from './input.js?v=89';
+import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=89';
+import { createStatView } from './statView.js?v=89';
+import { createWeaponStats } from './weaponStats.js?v=89';
+import { createFx } from './fx.js?v=89';
+import { createEnemySystem, ENEMY_TYPES } from './enemy.js?v=89';
 import {
   createLevel, LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVEL_5, LEVEL_6, LEVEL_7, LEVELS_BY_ID, DIFFS, setDifficulty, getDifficulty, roundScale, levelStats, levelTypes,
-} from './wave.js?v=88';
-import { createRangeRing } from './rangeRing.js?v=88';
-import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=88';
-import { createWeaponSystem } from './weapon.js?v=88';
-import { createArrowRainSystem } from './arrowRain.js?v=88';
-import { SWORD_KINDS } from './swordKinds.js?v=88';
-import { createGoldSystem } from './gold.js?v=88';
-import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW } from './shop.js?v=88';
-import { createTurretSystem, TURRET } from './turret.js?v=88';
-import { createRelicSystem, RELIC_DEFS } from './relics.js?v=88';
-import { createHazards } from './hazards.js?v=88';
-import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=88';
-import audio from './audio.js?v=88';
-import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=88';
+} from './wave.js?v=89';
+import { createRangeRing } from './rangeRing.js?v=89';
+import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=89';
+import { createWeaponSystem } from './weapon.js?v=89';
+import { createArrowRainSystem } from './arrowRain.js?v=89';
+import { SWORD_KINDS } from './swordKinds.js?v=89';
+import { createGoldSystem } from './gold.js?v=89';
+import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW } from './shop.js?v=89';
+import { createTurretSystem, TURRET } from './turret.js?v=89';
+import { createRelicSystem, RELIC_DEFS } from './relics.js?v=89';
+import { createHazards } from './hazards.js?v=89';
+import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=89';
+import audio from './audio.js?v=89';
+import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=89';
 // 第 62 块：回血技能（第四关通关后永久解锁，回 5 点 / CD 25 秒）
-import { createHealSkill, HEAL_AMOUNT, HEAL_CD } from './healSkill.js?v=88';
+import { createHealSkill, HEAL_AMOUNT, HEAL_CD } from './healSkill.js?v=89';
 // 第 62 块：民心专属事件（升档走良性池、掉档走恶性池）
-import { repPoolForTier, REP_GOOD, REP_BAD } from './repEvents.js?v=88';
+import { repPoolForTier, REP_GOOD, REP_BAD } from './repEvents.js?v=89';
 // 第 62 块：攻略面板（战败提示上的「查看攻略」，手风琴三组）
-import { renderGuide, GUIDE_SECTIONS } from './guide.js?v=88';
+import { renderGuide, GUIDE_SECTIONS } from './guide.js?v=89';
 import {
   settings as readSettings, setSetting, save as saveProfile, profile,
   bumpStat, setStatMax, codexAdd, codexCount, countCard, unlockAch, hasAch, addBones, bones, resetAll,
@@ -48,51 +48,53 @@ import {
   healUnlocked, markHealUnlocked,
   rainObtained, markRainObtained,          // 第 65 块：技能的「有没有」只跟解锁有关
   hintSeen, markHintSeen,                  // 第 65 块：一次性提示卡
-} from './profile.js?v=88';
+} from './profile.js?v=89';
 // 第 44 块：礼包兑换（码表只有哈希，明细在 gift.js 顶部注释）
-import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=88';
+import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=89';
 // 第 46 块：音效包（抽象奶蛙音效包 —— 4 段奶蛙叫声，通关第一关解锁）
-import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=88';
-import * as runSave from './runSave.js?v=88';
+import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=89';
+import * as runSave from './runSave.js?v=89';
+// 第 78 块：存档导出 / 导入。数据逻辑全在这个模块里（不碰 DOM），这里只接按钮
+import * as saveIO from './saveIO.js?v=89';
 import {
   CAMPFIRE, CAMP_STEP, campBuy, campOwned, campLevel,
   campCost, campApply, bonesFor, diffBoneMul, levelBoneMul, coinBones, BONE,
-} from './campfire.js?v=88';
+} from './campfire.js?v=89';
 // 第 23 块：永夜火种（通关白给的 3 次永久三选一）
 import {
   BOONS, BOON_BY_ID, BOON_PICKS, boonOwned, boonStacks, boonPending, boonTotalStacks,
   grantBoons, rollBoons, takeBoon, applyBoons, boonStackText,
-} from './boons.js?v=88';
+} from './boons.js?v=89';
 // 第 21 块：夜行诅咒（自选 debuff 换骨币倍率）
-import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=88';
+import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=89';
 // 第 22 块：种子与每日挑战
 import {
   DAILY_RULES, dayKey, dayText, dailySeed, seedCode, pickDailyCurses,
   seedFromText, pickSeedRules, loadSeedRecords, saveSeedRecord, pruneSeeds,
   dailyRecord, saveDailyRecord, pruneDaily, makeRng,
-} from './seed.js?v=88';
-import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=88';
+} from './seed.js?v=89';
+import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=89';
 // 第 58 块：局外商店 · 宝箱（花骨币买，开箱随机给永久属性 / 永久法器 / 技能CD缩短）
 import {
   BOXES, BOX_BY_ID, buyBox, rollBox, metaApplyStats, applyMeta,
   // 第 74 块：盲盒按购买次数加价（三种各自独立计数）
   boxCost, boxPriceOf, boxBought, BOX_PRICE_STEP,
-} from './metaShop.js?v=88';
+} from './metaShop.js?v=89';
 // 第 59 块：每日签到（以周为单位，周一 00:00 重置）
 import {
   WEEK_TIERS, SIGN_BONES, weekCells, signSummary, signToday, signedToday,
-} from './signin.js?v=88';
-import { achById, ACHS } from './achievements.js?v=88';
+} from './signin.js?v=89';
+import { achById, ACHS } from './achievements.js?v=89';
 import {
   EVENTS, ALL_EVENTS, getEventById, pickEvent, effectLines,
   choiceHint, canAfford, costShort, REP_MIN, REP_MAX, REP_START,
   isTalk, eventChoices, resolveRoll, mergeEffects,
-} from './events.js?v=88';
+} from './events.js?v=89';
 // 第 32 块：主线《笑不出来的那一夜》（18 夜，一夜一关，前 3 夜已有关卡）
 import {
   STORY_ARC, STORY_CHAPTERS, STORY_ENDINGS, MARK_INFO,
   storyChapterAt, storyChapterById, storyEndingKey,
-} from './story.js?v=88';
+} from './story.js?v=89';
 
 // 标记模块已经跑起来了：index.html 的兜底自检靠它判断
 // 「模块根本没执行」还是「执行了但加载慢」。
@@ -2469,6 +2471,158 @@ async function boot() {
     renderSettings();
     applySettings();
   });
+
+  // ---------------- 存档导出 / 导入（第 78 块） ----------------
+  // 用户第 11 条「清缓存不丢档」。老实说：浏览器没有任何办法替玩家保住
+  // localStorage —— 清缓存、换手机、换浏览器时页面自己一点办法都没有
+  // （没有跨设备持久存储，也不能偷偷写到玩家网盘）。所以只给一条「手动备份」：
+  // 导成一份文件 / 一串码，换设备时导回来。
+  //
+  // 数据层的活全在 saveIO.js（不碰 DOM，Node 里能直接跑契约测试）：
+  // 打快照、剥掉设备设置、base64 编解码、校验、摘要、落地。
+  // 这里只负责「按钮 → 文件下载 / 剪贴板 / 弹窗」这几件事。
+  const ioFileInput = document.getElementById('ioFileInput');
+  const saveCodeAsk = document.getElementById('saveCodeAsk');
+  const saveCodeInput = document.getElementById('saveCodeInput');
+  const saveCodeErr = document.getElementById('saveCodeErr');
+
+  function openSaveCodeAsk() {
+    if (!saveCodeAsk) return;
+    saveCodeInput.value = '';
+    saveCodeErr.classList.remove('on');
+    saveCodeAsk.classList.add('on');
+    saveCodeAsk.setAttribute('aria-hidden', 'false');
+    // 手机上直接弹键盘（桌面端 focus 没副作用）
+    setTimeout(() => { try { saveCodeInput.focus(); } catch (_) { /* 忽略 */ } }, 60);
+  }
+  function closeSaveCodeAsk() {
+    if (!saveCodeAsk) return;
+    saveCodeAsk.classList.remove('on');
+    saveCodeAsk.setAttribute('aria-hidden', 'true');
+    try { saveCodeInput.blur(); } catch (_) { /* 忽略 */ }
+  }
+
+  // 导入前的最后一道：把「这份存档里有什么 / 本机现在是什么」摆出来，
+  // 让玩家看清了再决定要不要盖掉。盖了不能撤销，所以必须二次确认。
+  async function importPayload(payload) {
+    const s = saveIO.summarize(payload);
+    const mine = saveIO.summarize(saveIO.snapshot());
+    const when = s.at ? s.at.slice(0, 16).replace('T', ' ') : '时间不明';
+    const lines = [
+      `存档时间　${when}`,
+      `骨币 ${s.bones} · 篝火 ${s.campLv} 级 · 火种 ${s.boonLv} 层`,
+      `图鉴 ${s.enemies} 种怪 · ${s.cards} 张卡 · 成就 ${s.ach} 个`,
+      `战绩 ${s.runs} 局 · 通关 ${s.wins} 次 · 剧情 ${s.story} 夜`,
+      '',
+      `本机现在是：骨币 ${mine.bones} · 篝火 ${mine.campLv} 级 · 成就 ${mine.ach} 个`,
+      '导入会盖掉本机的进度，盖了不能撤回。',
+    ];
+    const ok = await askConfirm('导入这份存档？', lines.join('\n'), { okText: '导入', cancelText: '取消' });
+    if (!ok) return;
+    const r = saveIO.apply(payload);
+    if (!r.ok) { audio.sfx('soldout'); showToast('导入失败', r.err); return; }
+    audio.sfx('crit');
+    // 内存里的档案是各模块自己缓存的（profile.js 的 cache），只改 localStorage
+    // 不会立刻生效；刷新一次最干净，也省得去逐个模块 reloadFromStorage。
+    showToast('导入完成', '刷新一下，进度就是这份存档的了');
+    setTimeout(() => { try { location.reload(); } catch (_) { /* 忽略 */ } }, 800);
+  }
+
+  // 文件那条路（.json 全文）
+  function importFromText(txt) {
+    const r = saveIO.parseJsonFile(txt);
+    if (!r.ok) {
+      audio.sfx('soldout');
+      showToast('这个文件读不出来', r.err);
+      return;
+    }
+    importPayload(r.payload);
+  }
+
+  // ① 导出文件：Blob + 隐藏 <a download>，不依赖后端也不用压缩
+  document.getElementById('ioExportFile').addEventListener('click', () => {
+    const snap = saveIO.snapshot();
+    const name = saveIO.fileName();
+    let url = '';
+    try {
+      const blob = new Blob([saveIO.payloadJson(snap)], { type: 'application/json' });
+      url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = name;
+      document.body.appendChild(a);       // Firefox 要求 a 在文档里才认 click()
+      a.click();
+      a.remove();
+    } catch (_) {
+      audio.sfx('soldout');
+      showToast('导出失败', '这个浏览器不让下载，改用「复制存档码」那一项');
+      if (url) URL.revokeObjectURL(url);
+      return;
+    }
+    setTimeout(() => { if (url) URL.revokeObjectURL(url); }, 4000);
+    audio.sfx('card');
+    const s = saveIO.summarize(snap);
+    showToast('存档已导出', `${name} · 骨币 ${s.bones} · 篝火 ${s.campLv} 级`);
+  });
+
+  // ② 复制存档码：一串 base64（没有换行没有空格），微信里发给自己不会被截断
+  document.getElementById('ioExportCode').addEventListener('click', async () => {
+    const code = saveIO.payloadCode(saveIO.snapshot());
+    const ok = await copyText(code);
+    if (!ok) {
+      audio.sfx('soldout');
+      showToast('复制失败', '这个浏览器不让写剪贴板，改用「导出文件」那一项');
+      return;
+    }
+    audio.sfx('card');
+    showToast('存档码已复制', `${code.length} 个字符 · 存进备忘录或发给自己，换设备时粘回来`);
+  });
+
+  // ③ 导入文件：手机内置浏览器常拦下载，但导进来这条路基本都通
+  document.getElementById('ioImportFile').addEventListener('click', () => {
+    if (!ioFileInput) return;
+    ioFileInput.value = '';      // 同一个文件连选两次，change 也要能再触发
+    ioFileInput.click();
+  });
+  if (ioFileInput) {
+    ioFileInput.addEventListener('change', () => {
+      const f = ioFileInput.files && ioFileInput.files[0];
+      if (!f) return;
+      const reader = new FileReader();
+      reader.onload = () => importFromText(String(reader.result || ''));
+      reader.onerror = () => {
+        audio.sfx('soldout');
+        showToast('读不到这个文件', '改用「粘贴存档码」那一项试试');
+      };
+      reader.readAsText(f);
+    });
+  }
+
+  // ④ 粘贴存档码：先弹输入框（容错空格 / 换行，微信转发会自动折行），
+  //    解析通过才走确认弹窗；解析不通过就在输入框里直接报错，不关窗
+  document.getElementById('ioImportCode').addEventListener('click', openSaveCodeAsk);
+  if (saveCodeAsk) {
+    const doParse = () => {
+      const r = saveIO.parseAny(saveCodeInput.value);
+      if (!r.ok) {
+        saveCodeErr.textContent = r.err;
+        saveCodeErr.classList.add('on');
+        audio.sfx('soldout');
+        try { saveCodeInput.focus(); } catch (_) { /* 忽略 */ }
+        return;
+      }
+      audio.sfx('uiSwitch');
+      closeSaveCodeAsk();
+      importPayload(r.payload);
+    };
+    document.getElementById('saveCodeYes').addEventListener('click', doParse);
+    document.getElementById('saveCodeNo').addEventListener('click', closeSaveCodeAsk);
+    saveCodeAsk.addEventListener('click', (e) => { if (e.target === saveCodeAsk) closeSaveCodeAsk(); });
+    // Enter 不提交（这里可能粘一大段，回车换行是正常输入），Esc 关窗
+    saveCodeInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeSaveCodeAsk();
+    });
+  }
 
   function showSettings() {
     renderSettings();

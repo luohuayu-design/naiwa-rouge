@@ -66,8 +66,10 @@ sec('四、擦名者会主动走过来（移速 / 保持距离）');
   ok(cfg.windup > 0 && cfg.attackDuration > cfg.windup, 'attackDuration 必须大于 windup（第 69 块的坑）');
 
   const src = readFileSync(new URL('./js/enemy.js', import.meta.url), 'utf8');
-  ok(/if \(dist > keep \+ 0\.45 \|\| !viz\)/.test(src), '靠近条件从 attackRange 改成 keep');
-  ok(/if \(dist < keep - 0\.35\)/.test(src), '后退留了死区（不再在 keep 那条线上抖）');
+  ok(/if \(dist > keep \+ 0\.45\)/.test(src), '靠近条件从 attackRange 改成 keep');
+  // 第 77 块：死区底线从 keep-0.35 降到 keep-1.5 —— 原来的 0.35 会和
+  // 「看不见就靠近」在视野边缘（竖屏横向约 4 格 vs keep 4.2）互相夹死。
+  ok(/if \(dist < keep - 1\.5\)/.test(src), '后退留了死区（第 77 块降到 keep-1.5，不与靠近重叠）');
 }
 
 // ============================================================

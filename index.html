@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#080f14">
 <link rel="icon" href="data:,">
 <title>蛙步 · 夜行</title>
-<link rel="stylesheet" href="style.css?v=88">
+<link rel="stylesheet" href="style.css?v=89">
 </head>
 <body>
 
@@ -595,6 +595,19 @@
       <button class="lv-back" id="setBack" type="button">‹ 返回</button>
     </div>
     <div class="set-list" id="setList"></div>
+    <!-- 存档备份（第 78 块，用户第 11 条）：清缓存 / 换设备时把进度带走。
+         文件与文本码两条路都留着 —— 手机上文件下载常被内置浏览器拦，文本码那条才是退路。 -->
+    <div class="set-io">
+      <div class="set-io-hd">存档备份</div>
+      <div class="set-io-btns">
+        <button class="set-io-btn" id="ioExportFile" type="button">导出文件</button>
+        <button class="set-io-btn" id="ioExportCode" type="button">复制存档码</button>
+        <button class="set-io-btn" id="ioImportFile" type="button">导入文件</button>
+        <button class="set-io-btn" id="ioImportCode" type="button">粘贴存档码</button>
+      </div>
+      <input id="ioFileInput" type="file" accept=".json,application/json" hidden>
+      <div class="set-io-tip">换手机、清缓存前先导出一份。导入只覆盖进度，音量 / 摇杆这些设置保留本机的。</div>
+    </div>
     <div class="set-foot">
       <button class="set-reset" id="setReset" type="button">重置全部进度</button>
       <div class="lv-foot">设置立刻生效，存在本机浏览器里</div>
@@ -625,6 +638,21 @@
     <div class="md-btns">
       <button class="md-btn" id="caCancel" type="button">再想想</button>
       <button class="md-btn primary" id="caOk" type="button">确定</button>
+    </div>
+  </div>
+</div>
+
+<!-- 粘贴存档码（第 78 块）：手机上文件下载常被内置浏览器拦，这条是不依赖下载的退路 -->
+<div id="saveCodeAsk" class="modal" aria-hidden="true">
+  <div class="md-card">
+    <div class="md-title">粘贴存档码</div>
+    <div class="md-sub">把之前「复制存档码」得到的那一整段文本粘进来，空格和换行都不用管。</div>
+    <textarea class="md-input md-area" id="saveCodeInput" rows="4" spellcheck="false"
+      autocomplete="off" placeholder="NWSAVE1:…" aria-label="存档码"></textarea>
+    <div class="md-err" id="saveCodeErr" aria-hidden="true">这段码不对</div>
+    <div class="md-btns">
+      <button class="md-btn" id="saveCodeNo" type="button">取消</button>
+      <button class="md-btn primary" id="saveCodeYes" type="button">下一步</button>
     </div>
   </div>
 </div>
@@ -733,7 +761,7 @@
         </div>
         <button class="notice-copy" data-copy="https://luohuayu-design.github.io/naiwa-rouge/" type="button">📋 复制</button>
       </div>
-      <p class="nb-p nb-note">进度写在你这台设备的浏览器里：换设备、清缓存、用无痕模式都会丢档，别乱清。</p>
+      <p class="nb-p nb-note">进度写在你这台设备的浏览器里：换设备、清缓存、用无痕模式都会丢档，别乱清。真要换手机，先去「设置 → 存档备份」导出一份，到新设备上再导回来。</p>
     </div>
     <label class="notice-chk"><input type="checkbox" id="noticeHideToday"> 今日内不再弹出</label>
     <button class="notice-btn" id="noticeOk" type="button">我知道了</button>
@@ -833,7 +861,7 @@
 <!-- 不用 importmap：老手机浏览器（iOS 16.4 以下、旧版微信/安卓 WebView）
      不支持 import maps，会让整个模块解析失败、加载页永远停在 0%。
      项目内所有 import 都写成相对路径，直接靠原生 ES Module 解析。 -->
-<script type="module" src="js/main.js?v=88"></script>
+<script type="module" src="js/main.js?v=89"></script>
 
 <!-- 兜底自检：模块没跑起来时把原因写出来，别让用户对着 0% 干等 -->
 <script>

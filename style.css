@@ -852,6 +852,24 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
   transition:border-color .16s,background .16s}
 .set-reset:hover{border-color:rgba(255,120,100,.7);background:rgba(80,24,18,.7)}
 
+/* 存档备份（第 78 块）：设置面板里的导出 / 导入区 */
+.set-io{margin-top:16px;padding-top:14px;border-top:1px solid rgba(126,235,196,.14)}
+.set-io-hd{font-size:11.5px;font-weight:700;letter-spacing:.16em;color:#8df0c6;margin-bottom:10px}
+.set-io-btns{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.set-io-btn{padding:9px 6px;border-radius:10px;font:inherit;font-size:11.5px;font-weight:700;
+  letter-spacing:.06em;cursor:pointer;color:#bff5dd;
+  border:1px solid rgba(126,235,196,.24);background:rgba(12,30,26,.72);
+  transition:border-color .16s,background .16s,color .16s}
+.set-io-btn:hover{border-color:rgba(126,235,196,.55);background:rgba(16,44,37,.85)}
+.set-io-btn:active{color:#06231a;border-color:#2fbf8d;background:#2fbf8d}
+.set-io-tip{margin-top:9px;font-size:10.5px;line-height:1.7;color:rgba(160,204,188,.55)}
+/* 存档码是多行文本，别套密码框那套「居中 + 大字距」。
+   必须写成 .md-input.md-area —— 单写 .md-area 权重和后面的 .md-input 一样，
+   排在前面就被覆盖回去了（居中 / 字距全回来）。
+   font-size 仍留 16px：iOS 上小于 16px 的输入框一聚焦就自动放大页面。 */
+.md-input.md-area{margin-top:16px;letter-spacing:0;text-align:left;font-size:16px;font-weight:500;
+  line-height:1.5;min-height:88px;resize:vertical;font-family:ui-monospace,Menlo,Consolas,monospace}
+
 /* 图鉴（第 18 块）：页签 + 条目列表 */
 .cx-tabs{margin-top:12px;display:flex;gap:6px}
 .cx-tabs button{flex:1;padding:8px 0;border-radius:10px;font:inherit;font-size:12px;font-weight:700;
@@ -984,6 +1002,9 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
 /* 通用确认弹窗（第 41 块）：要盖过篝火页（21）和永夜火种面板（22） */
 #confirmAsk{z-index:40}
 #confirmAsk .md-sub{white-space:pre-line}
+/* 第 78 块：粘贴存档码是从设置页（.tt-sub-scr，21）里弹出来的，
+   不抬就整个被盖在下面 —— 和确认弹窗同一个层级 */
+#saveCodeAsk{z-index:40}
 .modal.on{opacity:1;pointer-events:auto}
 .md-card{width:min(92vw,380px);padding:22px 20px 18px;border-radius:18px;text-align:center;
   border:1px solid rgba(126,235,196,.26);
