@@ -401,16 +401,16 @@ export const LEVEL_6 = {
   // 漏电地板：位置固定，相位错开（每一块的通电时间点不一样，
   // 否则整片地板会一起亮，玩家只能干等 —— 那是罚站，不是走位）
   hazards: [
-    { x: 6.4, z: 0, r: 2.6, cycle: 5.0, on: 1.4, warm: 0.8, damage: 1 },
-    { x: -6.4, z: 0, r: 2.6, cycle: 5.0, on: 1.4, warm: 0.8, damage: 1 },
-    { x: 0, z: 6.4, r: 2.6, cycle: 5.0, on: 1.4, warm: 0.8, damage: 1 },
-    { x: 0, z: -6.4, r: 2.6, cycle: 5.0, on: 1.4, warm: 0.8, damage: 1 },
-    { x: 8.6, z: 8.6, r: 2.2, cycle: 6.2, on: 1.2, warm: 0.8, damage: 1 },
-    { x: -8.6, z: -8.6, r: 2.2, cycle: 6.2, on: 1.2, warm: 0.8, damage: 1 },
+    { x: 6.4, z: 0, r: 2.6, cycle: 5.0, on: 1.4, warm: 0.8, damage: 2 },
+    { x: -6.4, z: 0, r: 2.6, cycle: 5.0, on: 1.4, warm: 0.8, damage: 2 },
+    { x: 0, z: 6.4, r: 2.6, cycle: 5.0, on: 1.4, warm: 0.8, damage: 2 },
+    { x: 0, z: -6.4, r: 2.6, cycle: 5.0, on: 1.4, warm: 0.8, damage: 2 },
+    { x: 8.6, z: 8.6, r: 2.2, cycle: 6.2, on: 1.2, warm: 0.8, damage: 2 },
+    { x: -8.6, z: -8.6, r: 2.2, cycle: 6.2, on: 1.2, warm: 0.8, damage: 2 },
   ],
   rounds: [
     // ---- 第一幕（R1~R4）：机房 · 风扇还在转 ----
-    { minion: 3, warrior: 0, reboot: 0, arc: 0, leaper: 0, archer: 0, bowman: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, gap: 0.90, tip: '骨塔地下机房：地上有几块格栅在漏电，别站上去' },
+    { minion: 3, warrior: 0, reboot: 0, arc: 0, leaper: 0, archer: 0, bowman: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, gap: 0.90, tip: '骨塔地下机房：地上有几块格栅在漏电 —— 防御挡不住，别站上去' },
     { minion: 4, warrior: 1, reboot: 0, arc: 0, leaper: 0, archer: 0, bowman: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, gap: 0.80, tip: '通电前会闪一下橙光 —— 看到就往外走' },
     { minion: 4, warrior: 1, reboot: 0, arc: 0, leaper: 0, archer: 1, bowman: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, gap: 0.80, tip: '弧线走位：绕开格栅，别直着冲' },
     // ---- 第二幕（R5~R8）：重启体登场 ----
@@ -485,7 +485,7 @@ export const LEVEL_7 = {
   ],
   rounds: [
     // ---- 第一幕（R1~R3）：井底 · 水还在滴 ----
-    { minion: 3, warrior: 0, wellfrog: 0, archer: 0, bowman: 0, woodfish: 0, leaper: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, reboot: 0, gap: 0.90, tip: '骨塔井底：头顶有水滴下来，看到青环就挪开' },
+    { minion: 3, warrior: 0, wellfrog: 0, archer: 0, bowman: 0, woodfish: 0, leaper: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, reboot: 0, gap: 0.90, tip: '骨塔井底：头顶有水滴下来 —— 无视防御，看到青环就挪开' },
     { minion: 4, warrior: 1, wellfrog: 0, archer: 0, bowman: 0, woodfish: 0, leaper: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, reboot: 0, gap: 0.80, tip: '窄井里转身不方便，别贴着边走' },
     { minion: 4, warrior: 1, wellfrog: 0, archer: 1, bowman: 0, woodfish: 0, leaper: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, reboot: 0, gap: 0.80, tip: '还是横着走躲骨刀' },
     // ---- 第二幕（R4~R7）：井蛙登场 ----

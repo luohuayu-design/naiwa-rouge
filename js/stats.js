@@ -173,6 +173,17 @@ export function createStats(defs = STAT_DEFS) {
     return taken;
   }
 
+  // 真伤（第 76 块，用户定案）：**完全不经过防御减免**，多少就扣多少。
+  // 现在只有场地伤害（第六关的漏电地板、第七关的井底滴水）走这条路 ——
+  // 它让「站到危险地形上」这件事永远疼，堆防御堆不出一个电不死的蛙。
+  // 注意：荆棘（runCurseDmg）之类的惩罚仍然在调用方乘完再传进来，
+  // 这里只负责「不减伤」这一件事。
+  function damageTrue(raw) {
+    const taken = Math.max(0, raw);
+    hp.cur = Math.max(0, hp.cur - taken);
+    return taken;
+  }
+
   // 每次调用 maxHp 变化后同步一次（升级加血上限时用）
   function syncHp(grow = 0) {
     hp.cur = Math.min(get('maxHp'), hp.cur + grow);
@@ -228,7 +239,7 @@ export function createStats(defs = STAT_DEFS) {
 
   return {
     base, get, addMod, removeBySource, preview,
-    hp, heal, damage, syncHp, clampHp,
+    hp, heal, damage, damageTrue, syncHp, clampHp,
     mitigate: mitigateFn, rollDamage, snapshot, grouped,
     dumpMods, loadMods,
     defs,

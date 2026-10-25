@@ -17,8 +17,8 @@
 //   boonPending  还没领的永久选择次数（通关 +3；关页面也不丢，回标题会补弹）
 // ============================================================
 
-import { profile, save } from './profile.js?v=86';
-import { rarityWeight } from './rarity.js?v=86';
+import { profile, save } from './profile.js?v=87';
+import { rarityWeight } from './rarity.js?v=87';
 
 // 每次通关给几次永久选择（用户定案：三次）
 export const BOON_PICKS = 3;
@@ -62,7 +62,8 @@ export const BOONS = [
   {
     id: 'b_hide', name: '铜皮', glyph: '🛡', rarity: 1, maxStack: Infinity,
     stat: 'armor', flat: 0.1,
-    title: '防御 +0.1', desc: '每次挨打实打实少掉 0.1 点伤害（伤害 = 攻击 − 防御），可以一直叠。',
+    title: '防御 +0.1', desc: '每次挨打实打实少掉 0.1 点伤害（伤害 = 攻击 − 防御），可以一直叠。'
+      + ' 但漏电地板、井底滴水这类地形伤害不吃防御。',
   },
   {
     id: 'b_purse', name: '拾荒', glyph: '🪙', rarity: 1, maxStack: Infinity,
@@ -99,7 +100,8 @@ export const BOONS = [
   {
     id: 'b_plate', name: '厚甲', glyph: '🪨', rarity: 3, maxStack: Infinity,
     stat: 'armor', flat: 0.25,
-    title: '防御 +0.25', desc: '比铜皮厚一倍多，被围住时每一下都实打实少掉 0.25 点。',
+    title: '防御 +0.25', desc: '比铜皮厚一倍多，被围住时每一下都实打实少掉 0.25 点。'
+      + ' 地形伤害（漏电 / 滴水）依旧按原样扣。',
   },
   // ---------------- 传说 ----------------
   {

@@ -10,10 +10,10 @@ globalThis.localStorage = {
   removeItem: (k) => store.delete(k),
 };
 
-const { profile, bones, addBones, metaShopState, resetAll } = await import('./js/profile.js?v=86');
+const { profile, bones, addBones, metaShopState, resetAll } = await import('./js/profile.js?v=87');
 const {
   BOXES, BOX_BY_ID, BOX_PRICE_STEP, boxCost, boxPriceOf, boxBought, buyBox, rollBox,
-} = await import('./js/metaShop.js?v=86');
+} = await import('./js/metaShop.js?v=87');
 
 let pass = 0; const fails = [];
 const ok = (name, cond, extra = '') => {
