@@ -5,7 +5,7 @@
 //   C 擦名者：偷剑 → 杀掉还回来 / 跑掉就永久没了
 //   D 路口灯：把隐身雾鬼照出来
 //   E 第六关漏电地板：站上去掉血、绝缘斗篷免疫并把电导给怪
-//   F 重启体：打死 → 躺尸 → 半血重启 → 第三次才真死
+//   F 重启体：打死 → 躺尸 → 半血重启 → 第二次才真死（第 75 块起重启额度 2 → 1）
 //   G 全程 0 JS 报错
 //
 // 跑法：先 `python -m http.server 8124`（cwd=naiwa-rouge），再 `node .tmp-block63-cdp.js`
@@ -467,7 +467,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     ok(mbHp1 < mbHp0, `旁边的怪被电到了（${mbHp0} → ${mbHp1}）`, `${mbHp0}/${mbHp1}`);
 
     // ============================================================
-    console.log('\n[F] 重启体：打死 → 躺尸 → 半血重启 → 第三次真死');
+    console.log('\n[F] 重启体：打死 → 躺尸 → 半血重启 → 第二次真死（额度 1 次）');
     // ============================================================
     await ev("__game.enemies.killAll(), 1");
     await sleep(400);
@@ -496,18 +496,11 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
       `重启后是半血（${hpAfterReboot} / ${rbMax}）`, String(hpAfterReboot));
     ok(Math.abs(Math.round(rbMax * 0.55) - hpAfterReboot) <= 1, '血量 ≈ 上限的 55%', `${hpAfterReboot}/${rbMax}`);
 
-    // 第 2 次打死 → 还要再躺一次
-    await sleep(600);
-    await ev("__game.block63.hit('reboot', 99999), 1");
-    await sleep(250);
-    ok(await ev('__game.block63.down()') === 1, '第二次打死：还是躺下（2 次重启额度没用完）');
-    await waitFor("window.__rb.state !== 'down'", 8000, '第二次重启');
-
-    // 第 3 次 → 真死
+    // 第 2 次打死 → 真死（第 75 块用户定案：重启额度 2 → 1，只躺一次）
     await sleep(600);
     await ev("__game.block63.hit('reboot', 99999), 1");
     await sleep(300);
-    ok(await ev('window.__rb.state') === 'dead', '第三次打死：真的死了（最多重启 2 次）', await ev("window.__rb.state"));
+    ok(await ev('window.__rb.state') === 'dead', '第二次打死：真的死了（最多重启 1 次）', await ev("window.__rb.state"));
     ok(await ev('__game.block63.down()') === 0, '没有残留的躺尸状态');
 
     // ============================================================

@@ -7,7 +7,7 @@
 //   E 技能栏让开教程卡（--sk-lift + syncSkillLift）
 import fs from 'fs';
 import { ringObtained, markRingObtained } from './js/profile.js';
-import { UPGRADES } from './js/upgrade.js?v=87';
+import { UPGRADES } from './js/upgrade.js';
 
 let pass = 0, fail = 0;
 const fails = [];

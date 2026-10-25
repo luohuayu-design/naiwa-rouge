@@ -1,6 +1,9 @@
 // 第 74 块契约测试：盲盒线性涨价 + 生命回复削弱 + 篝火/局外商店合并
 // 用法：node .tmp-block74-test.mjs
 import { readFileSync } from 'node:fs';
+// 版本号别写死（HANDOFF 铁律）：写死会加载出两份同名模块实例 ——
+// 只要测试跨模块共享可变状态（如 profile 里的骨币），resetAll 就会作用在另一份上，断言全错。
+const V = readFileSync(new URL('./index.html', import.meta.url), 'utf8').match(/\?v=(\d+)/)[1];
 
 // localStorage 桩（profile.js 只在函数体内访问它）
 const store = new Map();
@@ -10,10 +13,10 @@ globalThis.localStorage = {
   removeItem: (k) => store.delete(k),
 };
 
-const { profile, bones, addBones, metaShopState, resetAll } = await import('./js/profile.js?v=87');
+const { profile, bones, addBones, metaShopState, resetAll } = await import(`./js/profile.js?v=${V}`);
 const {
   BOXES, BOX_BY_ID, BOX_PRICE_STEP, boxCost, boxPriceOf, boxBought, buyBox, rollBox,
-} = await import('./js/metaShop.js?v=87');
+} = await import(`./js/metaShop.js?v=${V}`);
 
 let pass = 0; const fails = [];
 const ok = (name, cond, extra = '') => {

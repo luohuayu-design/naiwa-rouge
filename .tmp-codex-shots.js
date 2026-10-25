@@ -4,6 +4,8 @@
 // 第 52 块：9 只怪换了模型（Quaternius），13 张图全部重出过。
 // 第 63 块：新增擦名者（KayKit Rogue_Hooded）/ 重启体（three.js RobotExpressive），15 张。
 // 第 71 块：新增井蛙（wolf 换绿）/ 木鱼灵（tribal 换青），17 张。
+// 第 77 块：井蛙换 Quaternius Frog、木鱼灵换 Quaternius 河豚，重出这两张。
+//           传参只出指定的怪（例：node .tmp-codex-shots.js wellfrog woodfish），不传就全出。
 const { spawn } = require('child_process');
 const os = require('os');
 const path = require('path');
@@ -14,7 +16,9 @@ const PORT = 9356;
 const PAGE = 'http://127.0.0.1:8124/?debug=1&title';
 const UD = path.join(os.tmpdir(), 'naiwa-cdp-51shot63');
 const OUT = path.join(__dirname, 'assets', 'codex');
-const V = '82';
+// 版本号别写死：以 index.html 为准（HANDOFF 测试纪律）
+const V = (fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8').match(/\?v=(\d+)/) || [, '1'])[1];
+const ONLY = process.argv.slice(2);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 (async () => {
@@ -84,7 +88,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     })()`);
     console.log('怪物条目：', setup.join(', '));
 
-    for (const type of setup) {
+    for (const type of (ONLY.length ? setup.filter((t) => ONLY.includes(t)) : setup)) {
       const url = await ev(`(async () => {
         const S = window.__cxShot;
         const { THREE, E, rd, scene, cam, shadowMat } = S;

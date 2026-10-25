@@ -5,6 +5,8 @@ desktop.ini
 .idea/
 .vscode/
 .tmp-cand/
+# 第 77 块：挑怪物模型时的候选 glb（真选中的两只已经放进 assets/monsters/）
+.tmp-pick/
 .tmp-view.html
 .tmp-shot-view.js
 

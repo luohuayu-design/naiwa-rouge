@@ -1,6 +1,6 @@
 // 第 72 块契约测试：按关预载（加载变快）
 import { readFileSync } from 'node:fs';
-import { LEVELS_BY_ID, levelTypes } from './js/wave.js?v=87';
+import { LEVELS_BY_ID, levelTypes } from './js/wave.js';
 
 let pass = 0, fail = 0;
 const ok = (name, cond) => { if (cond) { pass++; } else { fail++; console.log('  x ' + name); } };

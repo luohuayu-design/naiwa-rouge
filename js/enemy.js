@@ -25,11 +25,11 @@
 // 第四关三只（wraith/leaper/mender，第 35 块，第 52 块换模型），
 // 各自在下面 ENEMY_TYPES 里有详细注释。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=87';
-import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=87';
-import { clone as cloneSkinned } from '../lib/jsm/utils/SkeletonUtils.js?v=87';
-import { distance2D } from './stats.js?v=87';
-import { createRangeRing } from './rangeRing.js?v=87';
+import * as THREE from '../lib/three.module.js?v=88';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=88';
+import { clone as cloneSkinned } from '../lib/jsm/utils/SkeletonUtils.js?v=88';
+import { distance2D } from './stats.js?v=88';
+import { createRangeRing } from './rangeRing.js?v=88';
 
 // KayKit 模型正面朝 +Z；如果哪天换模型发现怪倒着走，把这里改成 Math.PI
 export const ENEMY_MODEL_YAW = 0;
@@ -56,6 +56,7 @@ const ANIM = {
 //   飞行   Flying_Idle / Fast_Flying / Headbutt / Punch / Death / HitReact
 //   团块   Idle / Walk / Jump / Bite_Front / Death / HitRecieve
 //   四足   Idle / Walk / Gallop / Attack / Death / Idle_HitReact_Left
+//   鱼形   Swimming_Normal / Swimming_Fast / Swimming_Impulse / Attack / Death / Out_Of_Water（第 77 块）
 // 这里把「玩家能感知的动作」抽象成 idle/walk/attack/cast/... 几个语义键，
 // 由加载时翻译成该模型真实存在的 clip 名。缺哪段就退到 idle（不会出现 T pose 定格）。
 const CLIP_FAMILIES = {
@@ -80,6 +81,13 @@ const CLIP_FAMILIES = {
   robot: {
     idle: 'Idle', walk: 'Walking', run: 'Running', attack: 'Punch', cast: 'Wave',
     death: 'Death', hit: 'No', spawn: 'Idle',
+  },
+  // 第 77 块：Quaternius 的鱼（木鱼灵）。只有 6 段，全是「游」相关，
+  // 没有站立/走路的概念 —— 所以 walk 也映射成游泳，cast 借 Attack（一个前冲咬）。
+  fish: {
+    idle: 'Swimming_Normal', walk: 'Swimming_Normal', run: 'Swimming_Fast',
+    attack: 'Attack', cast: 'Attack', death: 'Death',
+    hit: 'Swimming_Impulse', spawn: 'Swimming_Normal',
   },
 };
 
@@ -812,13 +820,18 @@ export const ENEMY_TYPES = {
   // ============================================================
   // 第七关 · 骨塔井底（第 71 块）—— 井蛙
   // ============================================================
-  // 占位模型：复用 wolf.glb（雾猎狼的模型），整体压一层绿（tint），后续换真·CC0 只改 file。
+  // 模型（第 77 块换真模型）：Quaternius《Animated Easy Enemies》的 Frog，CC0 1.0，
+  // 经 poly.pizza 下载（https://poly.pizza/m/37wofOCOzG）。
+  // 骨架是 KayKit 同款 CharacterArmature，14 段动画（Idle/Walk/Run/Punch/Jump/Death/HitReact…），
+  // 所以直接用人形族；吐舌借用 Punch（伸胳膊那一下正好当「弹舌头」）。
+  // 身世：直立的蛙人，不是四足趴地的 —— 刚好配它「站桩吐舌」的定位。
   // 行为：站桩「吐舌头」—— 瞬向主角位置吐舌、把主角往自己方向拉，舌头有独立血量，
   // 需砍断（舌头伸出期间对井蛙的挥击先扣舌头血量，逻辑见 updateOne 的 handleTongue）。
   wellfrog: {
     name: '井蛙',
-    file: 'assets/monsters/wolf.glb',
-    sourceHeight: 2.707,   // 复用 wolf.glb 的实测身高（和雾猎狼一致，缩放才准）
+    file: 'assets/monsters/frog.glb',
+    sourceHeight: 2.50,    // 第 77 块实测（正交相机读像素：2.500，和 fox/tribal 同口径）
+    footY: -0.078,         // 实测身体最低点在原点下 0.078，抬回来才真正踩地
     height: 1.70,
     radius: 0.55,
     hp: 5,
@@ -842,9 +855,8 @@ export const ENEMY_TYPES = {
     spawnTime: 1.0,
     deathTime: 1.6,
     selfDestruct: false,
-    color: 0x4fae6a,        // 蛙身绿
-    tint: 0x3f9a5a,         // 给 wolf 模型压一层绿（占位换色）
-    animFamily: 'quad',
+    color: 0x4fae6a,        // 蛙身绿（UI/血条/伤害数字用）
+    animFamily: 'humanoid',
     glow: { color: 0x1f6a3a, intensity: 0.5 },
     anim: {
       walk: 'walk', idle: 'idle', attack: 'attack',
@@ -855,13 +867,20 @@ export const ENEMY_TYPES = {
   // ============================================================
   // 第七关 · 骨塔井底（第 71 块）—— 木鱼灵
   // ============================================================
-  // 占位模型：复用 tribal.glb（咒面图腾的模型），整体压一层青（tint）。
+  // 模型（第 77 块换真模型）：Quaternius《Animated Cute Fish》的河豚，CC0 1.0，
+  // 经 poly.pizza 下载（https://poly.pizza/m/UKHtgpxTOk）。
+  // 骨架是 Fish_Armature，6 段动画（Swimming_Normal/Fast/Impulse、Attack、Death、Out_Of_Water），
+  // 所以单独开一族 fish（见 CLIP_FAMILIES.fish）。
+  // ⚠️ 这只模型的原点在身体正中（实测身体 −1.289 ~ +1.367），直接放会有一半埋进地里，
+  // 所以不按脚落地，而是靠 hover 抬成「浮空灵体」（见 updateOne 的 hover 分支）。
   // 行为：直接复用 hexer 的「回声声波圈」（spell.kind:'hex'），只是换成青色。
   woodfish: {
     name: '木鱼灵',
-    file: 'assets/monsters/tribal.glb',
-    sourceHeight: 4.238,   // 复用 tribal.glb 的实测身高（和咒面图腾一致）
-    height: 2.52,
+    file: 'assets/monsters/puffer-fish.glb',
+    sourceHeight: 2.656,   // 第 77 块实测（正交相机读像素）
+    height: 2.25,          // 河豚圆胖、还有一圈刺，同样身高比人形「显大」，收到 2.25 才不压 UI
+    hover: 1.10,           // 浮空高度（配合 updateOne 的呼吸浮动）—— 不写 footY，靠 hover 抬
+                           // 缩放 0.847 后身体是 −1.09 ~ +1.16，抬 1.10 正好贴着地面浮起
     radius: 0.60,
     hp: 4,
     armor: 0,
@@ -879,11 +898,9 @@ export const ENEMY_TYPES = {
     deathTime: 1.6,
     selfDestruct: false,
     color: 0x57e6d0,
-    tint: 0x4aa89a,        // 给 tribal 模型压一层青（占位换色，和紫色咒面图腾区分）
-    footY: 0.246,
-    animFamily: 'flying',
-    clipOverrides: { cast: 'Punch' },
-    glow: { color: 0x1a8a7a, intensity: 0.55 },
+    animFamily: 'fish',
+    // 自发光往青色偏：河豚本体是橄榄绿，和井蛙撞色；压一层青才像「灵」
+    glow: { color: 0x2ec8b8, intensity: 0.72 },
     anim: {
       walk: 'walk', idle: 'idle', cast: 'cast',
       death: 'death', spawn: 'spawn',
@@ -1166,6 +1183,9 @@ export async function buildPreviewModel(type) {
   model.scale.setScalar(s);
   // 脚底对齐（同 spawn）：实测脚底在原点以下的模型要往上抬一点，不然缩略图会「陷」进影子
   if (cfg.footY != null && cfg.footY < 0) model.position.y = -cfg.footY * s;
+  // 浮空怪（并联体 / 木鱼灵）：局内是靠 root 抬高 hover，缩略图也照抬，
+  // 否则原点在身体正中的模型会在图鉴里半截埋进影子（第 77 块一并修掉）
+  if (cfg.hover) model.position.y += cfg.hover;
   model.traverse((o) => {
     if (!o.isMesh) return;
     o.castShadow = false;
@@ -2514,6 +2534,10 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     if (e.cfg.spin && e.state !== 'dead') {
       e.root.position.y = (e.cfg.hover || 0) + Math.sin(e.t * 2.2) * 0.10;
       e.model.rotation.y = ENEMY_MODEL_YAW + e.t * e.cfg.spin;
+    } else if (e.cfg.hover && e.state !== 'dead') {
+      // ---- 木鱼灵（第 77 块）：鱼型灵体只浮空、不自转 ----
+      // 河豚模型的原点在身体正中，不抬就有一半埋进地里；这里纯粹上下呼吸。
+      e.root.position.y = e.cfg.hover + Math.sin(e.t * 2.2) * 0.10;
     }
 
     // ---- 冰缓：减速倒计时（移速在 moveToward 里按 slowT 折算） ----
@@ -2668,7 +2692,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
       } else if (e.deathT > fadeStart) {
         const k = Math.min(1, (e.deathT - fadeStart) / 0.45);
         e.root.scale.setScalar(Math.max(0.001, 1 - k * 0.9));
-        e.root.position.y = -0.45 * k;
+        e.root.position.y = (e.cfg.hover || 0) - 0.45 * k;
       }
       return;
     }
@@ -3067,8 +3091,22 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
       // 第 69 块（用户「还没找到它就被偷了」的根治）：起手之前先问一句
       // 「玩家现在看得见它吗」。看不见就继续朝玩家挪，而不是在屏幕外偷偷读条。
       const viz = ctx.onScreen ? ctx.onScreen(e.pos) : true;
-      // 进/退各留一条死区，否则它会在 keep 那条线上左右抖（第 75 块）
-      if (dist < keep - 0.35) {
+      // 第 77 块：把「看不见 → 靠近」提到最前面，并给后退留一条足够低的底线。
+      // 原来的顺序是死区（dist < keep-0.35 就退）在前、「!viz 就靠近」在后，
+      // 这两条在「刚好卡在视野边缘」时会互相夹死：靠近一步 → 进入死区 → 后退一步 →
+      // 又出死区 → 再靠近 …… 它就在 ~3.85 格原地左右抖，永远轮不到读条。
+      // 竖屏横向可见只有约 4 格（`onScreen` 还留了 0.9 的余量），keep 又是 4.2，
+      // 所以这个夹缝真的会被踩到 —— 表现是「擦名者整局站在那儿不动，一把剑都没擦」。
+      // 现在两条规则不再重叠：要么一路靠近到看得见，要么真的贴太近（< keep-1.5）才退。
+      if (!viz && dist > 2.0) {
+        moveToward(e, dx, dz, dist, dt, ctx);
+        if (e.currentAnim !== e.cfg.anim.walk) {
+          e.currentAnim = e.cfg.anim.walk;
+          e.play(e.cfg.anim.walk, { fade: 0.2 });
+        }
+        return;
+      }
+      if (dist < keep - 1.5) {
         moveToward(e, -dx, -dz, dist, dt, ctx);
         if (e.currentAnim !== e.cfg.anim.walk) {
           e.currentAnim = e.cfg.anim.walk;
@@ -3076,7 +3114,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
         }
         return;
       }
-      if (dist > keep + 0.45 || !viz) {
+      if (dist > keep + 0.45) {
         // 第 75 块：靠近条件从 attackRange（7）改成 keep（4.2）——
         // 它会一路走到你身边 4 格处才停，而不是在 7 格外站着等读条。
         moveToward(e, dx, dz, dist, dt, ctx);

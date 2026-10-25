@@ -256,10 +256,14 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     await sleep(1200);
     const w1 = JSON.parse(await ev("JSON.stringify({x: window.__er2.pos.x, z: window.__er2.pos.z, t: performance.now()})"));
     const walkSp = Math.hypot(w1.x - w0.x, w1.z - w0.z) / ((w1.t - w0.t) / 1000);
-    ok(walkSp > 0.3 && walkSp < 0.9, `平时移速实测 ${walkSp.toFixed(2)} 格/秒（约 0.55）`, walkSp.toFixed(2));
+    // 第 75 块把 speed 从 0.55 提到 1.35（用户：「它该主动靠近」）——
+    // 实测会略低于配置值（走走停停、进出死区），所以只卡「动得起来、但没瞬移」这段区间。
+    ok(walkSp > 0.5 && walkSp < 1.6, `平时移速实测 ${walkSp.toFixed(2)} 格/秒（配置 1.35）`, walkSp.toFixed(2));
 
     // ============================================================
-    console.log('\n[E] 纵向 8 格：看得见就在 7 格起手（证明不是简单把距离砍到 4）');
+    console.log('\n[E] 纵向 8 格：看得见就一路走到主角身边 ~4 格才起手');
+    // ⚠️ 第 75 块用户定案改了行为：靠近阈值从 attackRange(7) 改成 keepDistance(4.2)，
+    // 「站在 7 格外读条」已经是有意去掉的 —— 现在它会贴身缠上来，走到 4 格左右才起手。
     // ============================================================
     await ev('__game.enemies.killAll(), 1');
     await sleep(300);
@@ -279,8 +283,9 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
       if (w && w.state === 'attack') { upOnset = w; break; }
       await sleep(100);
     }
-    ok(!!upOnset && upOnset.dist > 5.5,
-      `纵向是走到 7 格就起手（${upOnset && upOnset.dist} 格 > 5.5）`, JSON.stringify(upOnset));
+    ok(!!upOnset && upOnset.dist <= 5.0,
+      `纵向走到 keep 附近才起手（${upOnset && upOnset.dist} 格 ≤ 5.0，从 8.2 格一路贴上来）`, JSON.stringify(upOnset));
+    ok(!!upOnset && upOnset.dist > 1.5, `但没贴到脸上（${upOnset && upOnset.dist} 格 > 1.5）`, JSON.stringify(upOnset));
 
     // ============================================================
     console.log('\n[F] JS 报错');
