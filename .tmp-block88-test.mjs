@@ -118,7 +118,8 @@ ok(hintNoNum.length === 0, '有上限加成的选项都写了数字', hintNoNum.
 // 3.1 代价（cost.hp）与扣血（hp < 0）一律没动
 const costHp = [...readFileSync('js/events.js', 'utf8').matchAll(/cost: \{ hp: ([0-9.]+)/g)].map((m) => +m[1]);
 ok(costHp.length >= 5, `代价型 cost.hp 还是 ${costHp.length} 处`, String(costHp.length));
-ok(costHp.every((v) => v <= 2), '代价没被一起放大（还是 1~2 点）', costHp.join(','));
+// 第 90 块把代价翻倍了（1→2、2→4），这里改判「本块没动」= 值仍是 2 / 4 两档
+ok(costHp.every((v) => v === 2 || v === 4), '代价没被本块放大（第 90 块才翻成 2 / 4）', costHp.join(','));
 let negCnt = 0;
 for (const ev of ALL_EVENTS) {
   for (const c of eventChoices(ev)) {
@@ -130,7 +131,8 @@ for (const ev of ALL_EVENTS) {
     walk(c.effects);
   }
 }
-ok(negCnt >= 60, `扣血选项 ${negCnt} 处保持原样（没跟着翻倍）`, String(negCnt));
+// 第 90 块把扣血数值统一翻倍了，但**条目数**不变 —— 这里只锁条目数
+ok(negCnt >= 60, `扣血选项 ${negCnt} 处，条目数没变（数值第 90 块才翻倍）`, String(negCnt));
 
 // 3.2 临时上限（下回合 maxHp mod）也不在这次范围内
 const tempMaxHp = [...readFileSync('js/events.js', 'utf8').matchAll(/stat: 'maxHp'/g)].length;

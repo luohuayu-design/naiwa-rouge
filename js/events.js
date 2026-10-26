@@ -49,18 +49,18 @@
 // ctx: { round, hasWeapon, gold, rep, hp, maxHp, luck }
 //   luck 用来写 cond（幸运够高才遇得到的吉兆事件，第 11 块）。
 // ============================================================
-import { STAT_DEFS } from './stats.js?v=100';
-import { WEAPON_STAT_DEFS } from './weaponStats.js?v=100';
+import { STAT_DEFS } from './stats.js?v=101';
+import { WEAPON_STAT_DEFS } from './weaponStats.js?v=101';
 // 第 31 块：事件扩容（40 条随机事件 + 3 条连锁后续）单独放一个文件，
 // 不然这个文件会涨到 5000 行。抽取规则、effectLines 等工具函数仍在本文件。
-import { EXTRA_EVENTS, EXTRA_CHAIN_EVENTS } from './eventsExtra.js?v=100';
+import { EXTRA_EVENTS, EXTRA_CHAIN_EVENTS } from './eventsExtra.js?v=101';
 // 第 62 块：民心专属事件（良性 / 恶性两池）。它们不进随机池（全标 chainOnly），
 // 只由 main.js 的「民心档位变化队列」点名播放；这里并进 ALL_EVENTS 是为了
 // getEventById 能找到它们（以及图鉴能翻到）。
-import { REP_EVENTS } from './repEvents.js?v=100';
+import { REP_EVENTS } from './repEvents.js?v=101';
 // 第 64 块：主线番外（10 条）。全部带 cond，读 ctx.story —— 只有走过对应那一夜的
 // 人才会抽到，所以不会稀释新玩家的池子；并进 RANDOM_EVENTS 参与随机。
-import { SIDE_EVENTS } from './eventsSide.js?v=100';
+import { SIDE_EVENTS } from './eventsSide.js?v=101';
 
 export const REP_MIN = 0;
 // 第 61 块（用户报「民心到 100 之后不会继续提升」）：上限 100 → 120。
@@ -129,8 +129,8 @@ const CORE_EVENTS = [
         say: '天没亮，锤子声就停了。信使踩着新铺的木板过了桥，回头冲你挥了挥手。',
       },
       {
-        label: '自己搭两根木头', hint: '生命 -1 · 民心 +5',
-        cost: { hp: 1 }, effects: { rep: 5 },
+        label: '自己搭两根木头', hint: '生命 -2 · 民心 +5',
+        cost: { hp: 2 }, effects: { rep: 5 },
         say: '木头压得你肩膀发麻，桥勉强能走人。信使说：「你这人，实在。」',
       },
       {
@@ -149,8 +149,8 @@ const CORE_EVENTS = [
     story: '鼓点从坡对面滚过来，三只骷髅围着一面破鼓，敲得摇头晃脑。草里的骨头跟着节奏抖。\n原来它们也有排练。',
     choices: [
       {
-        label: '摸过去割了鼓皮', hint: '生命 -1 · 下回合怪物移速 -15%',
-        effects: { hp: -1, level: { speedScale: 0.85 } },
+        label: '摸过去割了鼓皮', hint: '生命 -2 · 下回合怪物移速 -15%',
+        effects: { hp: -2, level: { speedScale: 0.85 } },
         say: '刀尖挑开鼓皮的一瞬，鼓手愣了一下，然后茫然地看向自己的手。',
       },
       {
@@ -508,7 +508,7 @@ const CORE_EVENTS = [
         effects: {
           roll: [
             { p: 0.7, effects: { hp: 4 } },
-            { p: 0.3, effects: { hp: -1 } },
+            { p: 0.3, effects: { hp: -2 } },
           ],
         },
         say: '味道像烧着的草莓。喉咙辣了一下，然后全身都热起来。',
@@ -614,8 +614,8 @@ const CORE_EVENTS = [
             chain: { in: 3, id: 'beggarReturn' },
           },
           {
-            label: '只给一半', hint: '民心 +3 · 下回合生命 -1',
-            effects: { rep: 3, hp: -1 },
+            label: '只给一半', hint: '民心 +3 · 生命 -2',
+            effects: { rep: 3, hp: -2 },
             say: '「只有一半。」',
             close: '「一半也够。」它啃得很慢，把最后一点渣留在碗底。',
             chain: { in: 3, id: 'beggarReturn' },
@@ -812,7 +812,7 @@ const CORE_EVENTS = [
         effects: {
           roll: [
             { p: 0.5, effects: { gold: 15 } },
-            { p: 0.5, effects: { hp: -2 } },
+            { p: 0.5, effects: { hp: -4 } },
           ],
         },
         say: '井底的水面晃了一下，映出的不是你的脸。',
@@ -981,7 +981,7 @@ const CORE_EVENTS = [
             effects: {
               roll: [
                 { p: 0.6, effects: { level: { countScale: 0.75 } } },
-                { p: 0.4, effects: { hp: -1, level: { countScale: 1.1 } } },
+                { p: 0.4, effects: { hp: -2, level: { countScale: 1.1 } } },
               ],
             },
             say: '「坟上长草。」',
@@ -1011,8 +1011,8 @@ const CORE_EVENTS = [
         say: '「守夜的。」\n他终于停下，「帮我抬一下他。我一个人抬不动，他比我高。」',
         replies: [
           {
-            label: '过去抬', hint: '生命 -1 · 民心 +5',
-            cost: { hp: 1 },
+            label: '过去抬', hint: '生命 -2 · 民心 +5',
+            cost: { hp: 2 },
             effects: { rep: 5 },
             say: '「来，我抬脚。」',
             close: '骨头比看上去重。放进坑里的时候，他小声说了句什么，你没听清。',
@@ -1043,8 +1043,8 @@ const CORE_EVENTS = [
             close: '刻到「磨坊 老三」的时候，他的手停了一下，然后接着往下刻。',
           },
           {
-            label: '帮他把坑挖深', hint: '生命 -1 · 民心 +5 · 下回合防御 +1',
-            cost: { hp: 1 },
+            label: '帮他把坑挖深', hint: '生命 -2 · 民心 +5 · 下回合防御 +1',
+            cost: { hp: 2 },
             effects: { rep: 5, mods: [{ stat: 'armor', flat: 1 }] },
             say: '（你拿过另一把铲子，跳下坑。）',
             close: '两个人挖到半夜。上来的时候，你的手抖得握不住水袋。',
@@ -1156,7 +1156,7 @@ const CORE_EVENTS = [
             effects: {
               roll: [
                 { p: 0.7, effects: { hp: 4 } },
-                { p: 0.3, effects: { hp: -1 } },
+                { p: 0.3, effects: { hp: -2 } },
               ],
             },
             say: '「来一碗。热的就行。」',
@@ -1179,7 +1179,7 @@ const CORE_EVENTS = [
             effects: {
               roll: [
                 { p: 0.7, effects: { hp: 4 } },
-                { p: 0.3, effects: { hp: -1 } },
+                { p: 0.3, effects: { hp: -2 } },
               ],
             },
             say: '「三枚。给我满一点。」',
@@ -1234,8 +1234,8 @@ const CORE_EVENTS = [
         say: '「井边……井里有声音。」\n他把金币攥得发白，「我不想要了。你拿去吧。」',
         replies: [
           {
-            label: '带他一起去井边', hint: '金币 +9 · 生命 -1',
-            effects: { gold: 9, hp: -1 },
+            label: '带他一起去井边', hint: '金币 +9 · 生命 -2',
+            effects: { gold: 9, hp: -2 },
             say: '「走，我带你去看。有声音也别怕。」',
             close: '井底确实有声音。你伸手下去，捞上来一把湿漉漉的金币，也带走了一道抓痕。',
           },
@@ -1399,7 +1399,7 @@ const CORE_EVENTS = [
           {
             label: '赌一把', hint: '金币 -5 · 五成赢回 14，五成挨一下',
             cost: { gold: 5 },
-            effects: { roll: [{ p: 0.5, effects: { gold: 14 } }, { p: 0.5, effects: { hp: -1 } }] },
+            effects: { roll: [{ p: 0.5, effects: { gold: 14 } }, { p: 0.5, effects: { hp: -2 } }] },
             say: '（你把五个金币放在石头上。）',
             close: '骰子转了很久。停下来的时候，它盯着看了半天，然后把整摞钱推给你，一句话没说。',
           },
@@ -1421,13 +1421,13 @@ const CORE_EVENTS = [
         say: '「一半的意思是，」它伸出两根指骨，「你押命，我押钱。输了，你掉一层皮；赢了，这摞都归你。」',
         replies: [
           {
-            label: '押上（金币 -5 · 五成幸运 +1 / 五成生命 -1）',
-            hint: '金币 -5 · 五成幸运 +1，五成生命 -1',
+            label: '押上（金币 -5 · 五成幸运 +1 / 五成生命 -2）',
+            hint: '金币 -5 · 五成幸运 +1，五成生命 -2',
             cost: { gold: 5 },
             effects: {
               roll: [
                 { p: 0.5, effects: { permanent: [{ stat: 'luck', flat: 1 }] } },
-                { p: 0.5, effects: { hp: -1 } },
+                { p: 0.5, effects: { hp: -2 } },
               ],
             },
             say: '（你把五个金币推过去，把手放在骰子上。）',
@@ -1518,7 +1518,7 @@ const CORE_EVENTS = [
       {
         label: '买下（赌一把）', hint: '金币 -7 · 可能挖到 18，也可能白挖一夜',
         cost: { gold: 7 },
-        effects: { roll: [{ p: 0.55, effects: { gold: 18 } }, { p: 0.45, effects: { hp: -1 } }] },
+        effects: { roll: [{ p: 0.55, effects: { gold: 18 } }, { p: 0.45, effects: { hp: -2 } }] },
         say: '你按着图找到了那处打叉的地方，挖到天快亮。',
       },
       {
@@ -1623,8 +1623,8 @@ const CORE_EVENTS = [
     story: '一辆货车翻在沟里，轮子还在转。商人蹲在旁边，一边骂一边把货往岸上拖。\n他看见你，先护住了最上面那只箱子。',
     choices: [
       {
-        label: '帮他把车抬上来', hint: '民心 +8 · 生命 -1 · 下次商店 8 折',
-        effects: { rep: 8, hp: -1, discount: 0.2 },
+        label: '帮他把车抬上来', hint: '民心 +8 · 生命 -2 · 下次商店 8 折',
+        effects: { rep: 8, hp: -2, discount: 0.2 },
         say: '车辕压得你肩膀发麻。阿昌连声道谢，塞给你一块木牌：「下次见着我的摊子，拿这个来，给你便宜两成。」',
       },
       {
@@ -1684,8 +1684,8 @@ const CORE_EVENTS = [
         say: '指骨在石头上转了半圈，停住。它们齐刷刷地抬起头。',
       },
       {
-        label: '押两根手指（自己的）', hint: '生命 -2 · 掷一把：金币 +20 / 什么都没有',
-        cost: { hp: 2 },
+        label: '押两根手指（自己的）', hint: '生命 -4 · 掷一把：金币 +20 / 什么都没有',
+        cost: { hp: 4 },
         effects: {
           roll: [
             { p: 0.4, effects: { gold: 20 } },
@@ -1707,11 +1707,11 @@ const CORE_EVENTS = [
     story: '路在这里分成三条：左边往下，草叶上全是水；中间那条被人踩得发白；右边最窄，尽头有一点灯光。\n石磨上刻着一行字，被磨得只剩「……别回头」三个字。',
     choices: [
       {
-        label: '走左边的水草路', hint: '掷一把：金币 +9 / 生命 -2',
+        label: '走左边的水草路', hint: '掷一把：金币 +9 / 生命 -4',
         effects: {
           roll: [
             { p: 0.55, effects: { gold: 9 } },
-            { p: 0.45, effects: { hp: -2 } },
+            { p: 0.45, effects: { hp: -4 } },
           ],
         },
         say: '水没过脚踝，冷得发麻。走了很久，鞋子还在，别的东西有丢有捡。',
@@ -1740,7 +1740,7 @@ const CORE_EVENTS = [
             { p: 0.25, effects: { mods: [{ stat: 'attack', pct: 0.30 }] } },
             { p: 0.25, effects: { mods: [{ stat: 'attackSpeed', pct: 0.25 }] } },
             { p: 0.25, effects: { mods: [{ stat: 'armor', flat: -6 }] } },
-            { p: 0.25, effects: { hp: -2 } },
+            { p: 0.25, effects: { hp: -4 } },
           ],
         },
         say: '第一口是甜的，第二口就没了味道。你把坛子放下时，手在抖。',
@@ -1763,8 +1763,8 @@ const CORE_EVENTS = [
     story: '一个背着瓦罐的瘦子拦住你，罐口塞着布，布上有暗褐色的印子。\n「血我收，」他说，「活的、热的，价钱好说。」',
     choices: [
       {
-        label: '卖给他两罐', hint: '生命 -2 · 金币 +14',
-        cost: { hp: 2 },
+        label: '卖给他两罐', hint: '生命 -4 · 金币 +14',
+        cost: { hp: 4 },
         effects: { gold: 14 },
         say: '他割开你的手腕，接了满满两罐。奇怪的是不怎么疼，只是冷。',
       },
@@ -1787,11 +1787,11 @@ const CORE_EVENTS = [
     story: '路边石头上压着一张纸，被雨泡软了。上面画的不是山也不是路，是一堆连起来的点。\n你看了很久，忽然发现自己正站在这张图的正中间。',
     choices: [
       {
-        label: '对着天找那些点', hint: '掷一把：幸运 +1（永久）/ 生命 -2',
+        label: '对着天找那些点', hint: '掷一把：幸运 +1（永久）/ 生命 -4',
         effects: {
           roll: [
             { p: 0.5, effects: { permanent: [{ stat: 'luck', flat: 1 }] } },
-            { p: 0.5, effects: { hp: -2 } },
+            { p: 0.5, effects: { hp: -4 } },
           ],
         },
         say: '云散了一瞬。你数到第七个点的时候，后颈起了一层鸡皮。',
@@ -1814,11 +1814,11 @@ const CORE_EVENTS = [
     story: '土里斜插着一把弓，弓臂上还缠着半截手指。看方向，是有人临死前想把它拉出来，没拉出来。\n弓弦居然还是紧的。',
     choices: [
       {
-        label: '把它挖出来', hint: '掷一把：下回合剑伤害 +40% / 生命 -2',
+        label: '把它挖出来', hint: '掷一把：下回合剑伤害 +40% / 生命 -4',
         effects: {
           roll: [
             { p: 0.6, effects: { mods: [{ stat: 'swordDamage', pct: 0.25, scope: 'weapon' }] } },
-            { p: 0.4, effects: { hp: -2 } },
+            { p: 0.4, effects: { hp: -4 } },
           ],
         },
         say: '手指松开了。弓在你手里比看上去沉。',
@@ -1866,22 +1866,22 @@ const CORE_EVENTS = [
     story: '池塘静得像一块黑玻璃。你走近时，水里那个人没有跟着走近。\n它站在原地，抬着头，很耐心地看着你。',
     choices: [
       {
-        label: '问它一个问题', hint: '掷一把：好消息 +15 金币 / 坏消息 生命 -2 / 沉默',
+        label: '问它一个问题', hint: '掷一把：好消息 +15 金币 / 坏消息 生命 -4 / 沉默',
         effects: {
           roll: [
             { p: 0.34, effects: { gold: 15 } },
-            { p: 0.33, effects: { hp: -2 } },
+            { p: 0.33, effects: { hp: -4 } },
             { p: 0.33, effects: {} },
           ],
         },
         say: '你问完，水面轻轻动了一下。答案是给出去了，还是没给，你分不出来。',
       },
       {
-        label: '伸手去碰水面', hint: '掷一把：幸运 +1（永久）/ 生命 -3',
+        label: '伸手去碰水面', hint: '掷一把：幸运 +1（永久）/ 生命 -6',
         effects: {
           roll: [
             { p: 0.45, effects: { permanent: [{ stat: 'luck', flat: 1 }] } },
-            { p: 0.55, effects: { hp: -3 } },
+            { p: 0.55, effects: { hp: -6 } },
           ],
         },
         say: '指尖碰到水的瞬间，倒影也伸出了手。水凉得像铁。',
@@ -1979,8 +1979,8 @@ const CORE_EVENTS = [
         say: '你睡了没一会儿。醒来时天没亮，但身上暖了——草里那层痕，比原来离墙更近了一点。',
       },
       {
-        label: '守着，一整夜不闭眼', hint: '生命 -1 · 下回合攻速 +20%',
-        effects: { hp: -1, mods: [{ stat: 'attackSpeed', pct: 0.20 }] },
+        label: '守着，一整夜不闭眼', hint: '生命 -2 · 下回合攻速 +20%',
+        effects: { hp: -2, mods: [{ stat: 'attackSpeed', pct: 0.20 }] },
         say: '你把这一夜熬穿了。天亮时手指僵得掰不开，但脑子比谁都清楚。',
       },
       {

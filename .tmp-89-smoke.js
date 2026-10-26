@@ -2,7 +2,7 @@
 //   ① 卡池：锐目 10/18/32、致命附带 4/7/12、福星 +3%、剑锋 11/19/34
 //   ② 真取卡之后 stats / wstats 的累计值对得上（不是只有数据改了）
 //   ③ 商店磨剑石 +3% / 18 金币，买完剑暴击从 10% 变 13%
-//   ④ 页面加载干净（v=100）
+//   ④ 页面加载干净（版本号与 index.html 一致）
 // 跑法：先起 `python -m http.server 8124`（cwd=naiwa-rouge），再 `node .tmp-89-smoke.js`
 const { spawn } = require('child_process');
 const os = require('os');
@@ -111,7 +111,11 @@ const near = (a, b, eps = 1e-6) => Math.abs(a - b) < eps;
     // ---------- 1. 加载干净 ----------
     console.log('\n[1] 页面与版本');
     const mainSrc = await ev(`(() => { const s = document.querySelector('script[src*="main.js"]'); return s ? s.src : ''; })()`);
-    ok(/v=100/.test(mainSrc), `main.js 走 v=100（${mainSrc.split('/').pop()}）`, mainSrc);
+    // 版本号不再写死：以 index.html 为准，js 必须与它同一个 v=（第 80 块起的纪律）
+    const idxSrc = await ev(`fetch('index.html').then(r => r.text())`);
+    const verMatch = idxSrc.match(/v=(\d+)/);
+    const ver = verMatch ? verMatch[1] : '';
+    ok(ver && new RegExp('v=' + ver).test(mainSrc), `main.js 与 index.html 同版本（v=${ver}）`, mainSrc);
     ok(await ev('typeof __game.upgrade.list.length === "number"'), '卡池可读');
 
     await ev('__game.setPendingLevel(1)');
