@@ -28,7 +28,13 @@ export const STAT_DEFS = [
   // 第 87 块：再生降到 0.05/秒 —— 面板必须显示两位小数，
   // 否则 0.05 和 0.09 都被 toFixed(1) 抹成「0.1」，玩家会以为数值没变。
   { key: 'hpRegen',     name: '生命回复', base: 0,    fmt: (v) => (v > 0 && v < 0.1 ? v.toFixed(2) : v.toFixed(1)) + '/秒',   group: '生存', desc: '每秒自动恢复的生命' },
-  { key: 'armor',       name: '防御',     base: 0,    fmt: num1, group: '生存', desc: '每次挨打实际伤害 = 攻击 − 防御，最少打掉 1 点' },
+  { key: 'armor',       name: '防御',     base: 0,    fmt: num1, group: '生存',
+    // 第 93 块：加了保底减伤之后，描述必须把上限写死在面板上 ——
+    // 否则玩家把防御堆到 6 点以后会以为「面板没生效」。
+    desc: '每次挨打实际伤害 = 攻击 − 防御（最少 1 点）；但防御最多减掉 70% —— 堆得再高，每一下也至少吃 30% 伤害',
+    // note 是「反直觉规则」的专用小字：属性页在数值下面单独占一行显示。
+    // 只有真的需要额外说明的属性才填，别把面板撑成一堵墙。
+    note: '上限：每一下至少吃 30% 伤害' },
   // 第 13 块：金钟罩。base 0 用 flat 获得；多拿一层周期缩短（见 main.js 的 AEGIS）。
   { key: 'aegis',       name: '金钟罩',   base: 0,    fmt: (v) => v >= 1 ? `每 ${Math.max(10, 15 - (Math.ceil(v) - 1) * 1.5).toFixed(1)}s 护体 3s` : '—',
     group: '生存', desc: '拥有后进入周期无敌：每 15 秒护体 3 秒、完全不受伤害；多拿一层周期缩短 1.5 秒（最快 10 秒）' },
@@ -98,9 +104,24 @@ export function nearestNInRange(from, list, range, count = 1, isAlive = () => tr
 // 旧的「防御 /(100+防御)」百分比公式被替换 —— 现在防御是实打实的减法，
 // 每一点防御都把每一次受击砍掉一点伤害，堆叠收益是线性的。
 // 抽成独立函数导出：主角近战、环剑、元素伤害都用同一套减伤公式
-export function mitigate(raw, armor) {
+//
+// 第 93 块（用户定案）：**防御最多减掉 70%，每一下至少吃 30%**（ARMOR_FLOOR）。
+// 为什么必须加这条保底：伤害曲线九关只从 1 长到 7（第九关 R20 取整后才 7 点），
+// 而防御在单局里能堆到 6 以上（甲壳无获取上限、厚甲/铜皮可无限叠、事件还给永久防御）。
+// 纯减法下一旦防御 ≥ 攻击 − 1，伤害就锁死在 1 点 —— 之后每多叠一点防御全是废的，
+// 玩家变成「站着挨 20 多下才倒」的肉桩，后期所有攻击威胁一起消失。
+// 加了保底之后防御从「免疫开关」变成一条边际收益递减的曲线，永远不会完全免伤。
+//
+// floorPct 默认 0 = **完全不改变旧行为**：
+//   · 主角自己受伤（damage()）传 ARMOR_FLOOR —— 这是唯一走保底的地方；
+//   · 打怪那一侧（rollDamage / rollSwordDamage / 箭雨 / 环剑）不传，
+//     所以骨甲、称量官叠层这些「怪物减伤」不会被保底打穿。
+export const ARMOR_FLOOR = 0.30;
+
+export function mitigate(raw, armor, floorPct = 0) {
   if (raw <= 0) return 0;
-  return Math.max(1, raw - Math.max(0, armor));
+  const flat = raw - Math.max(0, armor);
+  return Math.max(1, flat, raw * floorPct);
 }
 
 // defs 可以换成武器自己的属性表（weaponStats.js），逻辑完全一样
@@ -171,8 +192,9 @@ export function createStats(defs = STAT_DEFS) {
   }
 
   // 受伤：先按防御减伤，再扣血。返回实际扣掉的血量（0 = 没破防）
+  // 第 93 块：主角受伤带 ARMOR_FLOOR 保底 —— 防御再高也吃三成伤害，详见 mitigate() 注释。
   function damage(raw) {
-    const taken = mitigate(raw, get('armor'));
+    const taken = mitigate(raw, get('armor'), ARMOR_FLOOR);
     hp.cur = Math.max(0, hp.cur - taken);
     return taken;
   }

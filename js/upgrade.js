@@ -34,9 +34,9 @@
 //   标了 scope:'weapon' 的项改的是武器表（剑系 / 元素系），其余改主角表。
 //   两块表都要传进来，没传 wstats 时武器项会退化到主角表（只为兼容老调用）。
 // ============================================================
-import { STAT_DEFS } from './stats.js?v=103';
-import { WEAPON_STAT_DEFS } from './weaponStats.js?v=103';
-import { RARITIES, rarityWeight, oddsOf } from './rarity.js?v=103';
+import { STAT_DEFS } from './stats.js?v=104';
+import { WEAPON_STAT_DEFS } from './weaponStats.js?v=104';
+import { RARITIES, rarityWeight, oddsOf } from './rarity.js?v=104';
 
 // 一张卡改的是哪块表
 function tableFor(scope, stats, wstats) {
@@ -221,7 +221,8 @@ export const FAMILIES = [
     id: 'shell', tag: 'def', glyph: '⬢', name: '甲壳', w0: 0.90, gw: +0.040,
     stat: 'armor', mode: 'flat', vals: [0.3, 0.55, 1.0],
     title: (v) => `防御 +${trim(v)}`,
-    desc: () => '每次受击实际伤害 = 攻击 − 防御，可以一直叠（单次受击最少仍掉 1 点）',
+    desc: () => '每次受击实际伤害 = 攻击 − 防御，可以一直叠（单次受击最少仍掉 1 点）。'
+      + ' 但防御最多减掉 70% —— 堆得再高，每一下也至少吃 30% 伤害。',
   },
   {
     // 第 87 块（用户定案）：数值整体砍到原来的 1/4 —— 0.2/0.36/0.65 → 0.05/0.09/0.16。

@@ -1779,11 +1779,15 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
   color:rgba(176,214,198,.78);pointer-events:none}
 .st-rows{margin-top:11px;display:flex;flex-direction:column;gap:7px;max-height:250px;overflow:auto}
 .st-group{font-size:10.5px;letter-spacing:.16em;color:rgba(150,190,174,.55);margin-top:3px}
-.st-row{display:flex;align-items:center;gap:8px;padding:7px 11px;border-radius:10px;
+.st-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:7px 11px;border-radius:10px;
   border:1px solid rgba(126,235,196,.12);background:rgba(10,24,21,.68)}
 .st-row .st-name{font-size:12px;color:rgba(210,236,222,.85)}
 .st-row .st-val{margin-left:auto;font-size:13px;font-weight:800;color:#ffe9a8}
 .st-row .st-base{font-size:10px;color:rgba(150,190,174,.5);font-weight:400}
+/* 第 93 块：属性页的「反直觉规则」小字（目前只有防御的 70% 上限）——
+   独占一行、压到最低对比度，只在需要解释的属性上出现。 */
+.st-row .st-note{flex:0 0 100%;font-size:10.5px;line-height:1.45;
+  color:rgba(255,209,122,.72);letter-spacing:.02em}
 
 /* ============================================================
    第 57 块：宣传有礼 / 菜单卡顿优化 / 一摞 UI 修复

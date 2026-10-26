@@ -19,10 +19,13 @@ sec('一、stats.damageTrue：不减防，也不吃「保底 1」');
   ok(st.get('armor') === 10, '防御确实堆到 10', String(st.get('armor')));
 
   // 普通伤害：减法 + 保底 1 → 再高防御也留 1 点
+  // 第 93 块：玩家受伤多了 ARMOR_FLOOR=0.30 保底 ——
+  //   防御 10 打 5 点伤害，现在最多压到 5×0.3=1.5（改造前是 1）。
+  //   这条断言跟着改，否则本套会红；「会不会免疫」由 block93 负责守。
   const before = st.hp.cur;
   const takenN = st.damage(5);
-  ok(takenN === 1, `普通伤害 5 被防御 10 压到 ${takenN}（保底 1）`);
-  ok(st.hp.cur === before - 1, '普通伤害扣了 1 点血');
+  ok(Math.abs(takenN - 1.5) < 1e-9, `普通伤害 5 被防御 10 压到 ${takenN}（第 93 块：攻击的 30% 保底）`);
+  ok(Math.abs(st.hp.cur - (before - 1.5)) < 1e-9, '普通伤害扣了 1.5 点血（不再是 1）');
 
   // 真伤：多少扣多少
   const hpBefore = st.hp.cur;
