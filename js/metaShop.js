@@ -24,8 +24,8 @@
 import {
   profile, bones, addBones, metaShopState, metaAddMod, metaGrantRelic,
   metaGrantSkillCd, metaLog, metaBought, save,
-} from './profile.js?v=101';
-import { RELIC_DEFS } from './relics.js?v=101';
+} from './profile.js?v=102';
+import { RELIC_DEFS } from './relics.js?v=102';
 
 // ---------------- 三档宝箱 ----------------
 // tier 0/1/2 对应「最低可出现的池子档位」；mag 是木匣基准的强度倍率；

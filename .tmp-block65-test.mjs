@@ -74,8 +74,8 @@ ok(Math.abs(s5r20.hp - (1 + 0.28 * 19) * 1.15) < 1e-9, '第五关 R20 血量 = �
 ok(Math.abs(s6r20.damage - (1 + 0.17 * 19) * 1.35) < 1e-9, '第六关 R20 伤害 = 基础 × 1.35');
 ok(s5r1.damage > 1.3 && s5r1.damage < 1.4, '第五关 R1 伤害也 ×1.35（整关一起乘）', s5r1.damage.toFixed(3));
 ok(s5r20.damage / s4r20.damage > 1.3, '第五关比第四关明显更疼', (s5r20.damage / s4r20.damage).toFixed(3));
-// 速度没动
-ok(Math.abs(s5r20.speed - (1 + 0.035 * 19)) < 1e-9, '速度没被顺手改掉');
+// 第 91 块：速度斜率从 0.035 提到 0.045（用户「移动更快」），这里改判新值
+ok(Math.abs(s5r20.speed - (1 + 0.045 * 19)) < 1e-9, '速度是第 91 块的新斜率 0.045（不再是 0.035）');
 // 第四关不含 mul 时行为完全老样
 ok(Math.abs(s4r20.damage - (1 + 0.15 * 19)) < 1e-9, '第四关数值与老版本一致（回归）');
 wave.setDifficulty('normal');

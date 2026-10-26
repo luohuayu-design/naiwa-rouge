@@ -25,12 +25,12 @@
 // 第四关三只（wraith/leaper/mender，第 35 块，第 52 块换模型），
 // 各自在下面 ENEMY_TYPES 里有详细注释。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=101';
-import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=101';
-import { clone as cloneSkinned } from '../lib/jsm/utils/SkeletonUtils.js?v=101';
-import { distance2D } from './stats.js?v=101';
-import { createRangeRing } from './rangeRing.js?v=101';
-import { withV } from './assetUrl.js?v=101';
+import * as THREE from '../lib/three.module.js?v=102';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=102';
+import { clone as cloneSkinned } from '../lib/jsm/utils/SkeletonUtils.js?v=102';
+import { distance2D } from './stats.js?v=102';
+import { createRangeRing } from './rangeRing.js?v=102';
+import { withV } from './assetUrl.js?v=102';
 
 // KayKit 模型正面朝 +Z；如果哪天换模型发现怪倒着走，把这里改成 Math.PI
 export const ENEMY_MODEL_YAW = 0;
@@ -1787,6 +1787,10 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     // 这一条加上「各自随机休息」和「曲线接近」，是打散怪群的第一层手段。
     const speedMul = 0.85 + Math.random() * 0.30;
     const speed = spdBase * (opts.speedScale ?? 1) * speedMul;
+    // 第 91 块：**出手频率**（新维度）。冷却一律除以它 → 数值越大出手越密。
+    // 下限 0.25 是防呆：任何倍率事故都不该让冷却变成 0（那会每帧出手）。
+    // 注意这里只管「间隔」，前摇 / 预警圈时长一律不动 —— 见 cdOf 的注释。
+    const haste = Math.max(0.25, opts.hasteScale ?? 1);
 
     const root = new THREE.Group();
     root.position.set(at.x, 0, at.z);
@@ -1943,6 +1947,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
       namedArmor: 0,
       namedRing: null,
       speed,
+      haste,             // 第 91 块：本只怪的出手频率倍率（见 cdOf）
       state: 'spawn',
       t: 0,
       attackCd: 0.4 + Math.random() * 0.5,
@@ -1974,8 +1979,9 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
       auraHaste: 0,      // 本帧站在谁的霜牢环里（由 update 里的 collectAuras 写）
       auraArmor: 0,
       glowT: 0,          // 被霜牢环加成的发光过渡（0~1，样貌改变用）
-      // 卫队继承主祭本局的成长倍率（第 28 块）：召唤时按这个落账
-      summonScale: { hp: opts.hpScale ?? 1, dmg: opts.damageScale ?? 1 },
+      // 卫队 / 孵兵继承主祭本局的成长倍率（第 28 块）：召唤时按这个落账。
+      // 第 91 块补 haste —— 不然后期的菌王召出来的卫队还是 R1 的出手频率。
+      summonScale: { hp: opts.hpScale ?? 1, dmg: opts.damageScale ?? 1, haste },
       baseEmissive: mats.map((m) => (m.emissive ? m.emissive.clone() : null)),
       currentAnim: '',
       // ---- 第三关（第 29 块）----
@@ -2986,6 +2992,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
       }, {
         hpScale: (e.summonScale && e.summonScale.hp) ?? 1,
         damageScale: (e.summonScale && e.summonScale.dmg) ?? 1,
+        hasteScale: (e.summonScale && e.summonScale.haste) ?? 1,
       });
       if (m) m.summonedBy = e;
     }
@@ -3345,7 +3352,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     retractTongue(e);
     const tg = e.cfg.tongue;
     e.freezeT = Math.max(e.freezeT, tg.stun);
-    e.attackCd = tg.recover + tg.stun;
+    e.attackCd = (tg.recover + tg.stun) / (e.haste || 1);
     if (fx) {
       fx.ring(e.pos, { from: 0.3, to: e.radius + 1.4, color: 0x8fd86a, life: 0.4, opacity: 0.7, y: 0.06 });
       fx.burst(e.pos, { color: 0x8fd86a, count: 12, speed: 2.4, life: 0.5, size: 0.12, y: 0.5, up: 1.5 });
@@ -3360,7 +3367,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
       // 舌头伸出期间：井蛙本体那根血条复用语为「舌头血量」提示
       e.bar.spr.visible = true;
       e.bar.draw(e.tongueHp / tg.hp, e.tongueHp, tg.hp);
-      if (e.tongueT >= tg.extend) { retractTongue(e); e.attackCd = tg.recover; }
+      if (e.tongueT >= tg.extend) { retractTongue(e); e.attackCd = tg.recover / (e.haste || 1); }
       return;
     }
     // idle：靠近到 keepDistance 再站定；冷却好了且主角在射程内就吐舌
@@ -3734,7 +3741,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
         if (e.t >= lp.recover) {
           e.state = 'chase';
           e.t = 0;
-          e.attackCd = Math.max(0.6, e.cfg.attackInterval - lp.recover);
+          e.attackCd = cdOf(e, e.cfg.attackInterval - lp.recover, 0.6);
         }
         return;
       }
@@ -3838,7 +3845,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
         if (e.t >= ch.recover) {
           e.state = 'chase';
           e.t = 0;
-          e.attackCd = Math.max(0.4, e.cfg.attackInterval - ch.recover);
+          e.attackCd = cdOf(e, e.cfg.attackInterval - ch.recover, 0.4);
         }
         return;
       }
@@ -3952,7 +3959,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
         if (e.t >= e.cfg.attackDuration) {
           e.state = 'chase';
           e.t = 0;
-          e.attackCd = Math.max(0.5, e.cfg.attackInterval - e.cfg.attackDuration);
+          e.attackCd = cdOf(e, e.cfg.attackInterval - e.cfg.attackDuration, 0.5);
           e.currentAnim = e.cfg.anim.walk;
           e.play(e.cfg.anim.walk, { fade: 0.18 });
         }
@@ -4037,6 +4044,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
               guard: { master: e, angle: a, radius: e.cfg.summon.orbit },
               hpScale: (e.summonScale && e.summonScale.hp) ?? 1,
               damageScale: (e.summonScale && e.summonScale.dmg) ?? 1,
+              hasteScale: (e.summonScale && e.summonScale.haste) ?? 1,
               scale: e.cfg.summon.scale ?? 1,   // 第 53 块：卫队 0.7 倍，衬出菌王的块头
             });
             if (fx) fx.spawnRing(e.pos, 0x9ee8ff);
@@ -4053,7 +4061,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
         if (e.t >= e.cfg.attackDuration) {
           e.state = 'chase';
           e.t = 0;
-          e.attackCd = Math.max(0.3, (e.cfg.attackInterval - e.cfg.attackDuration) / (1 + e.auraHaste));
+          e.attackCd = cdOf(e, e.cfg.attackInterval - e.cfg.attackDuration, 0.3, true);
           e.currentAnim = e.cfg.anim.walk;
           e.play(e.cfg.anim.walk, { fade: 0.18 });
         }
@@ -4123,7 +4131,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
         if (e.t >= e.cfg.attackDuration) {
           e.state = 'chase';
           e.t = 0;
-          e.attackCd = Math.max(0.3, (e.cfg.attackInterval - e.cfg.attackDuration) / (1 + e.auraHaste));
+          e.attackCd = cdOf(e, e.cfg.attackInterval - e.cfg.attackDuration, 0.3, true);
           e.currentAnim = e.cfg.anim.walk;
           e.play(e.cfg.anim.walk, { fade: 0.18 });
         }
@@ -4177,7 +4185,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
         if (e.t >= e.cfg.attackDuration) {
           e.state = 'chase';
           e.t = 0;
-          e.attackCd = Math.max(0.2, (e.cfg.attackInterval - e.cfg.attackDuration) / (1 + e.auraHaste));
+          e.attackCd = cdOf(e, e.cfg.attackInterval - e.cfg.attackDuration, 0.2, true);
           e.currentAnim = e.cfg.anim.walk;
           e.play(e.cfg.anim.walk, { fade: 0.18 });
         }
@@ -4248,7 +4256,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
         if (e.t >= e.cfg.attackDuration) {
           e.state = 'chase';
           e.t = 0;
-          e.attackCd = (e.cfg.attackInterval - e.cfg.attackDuration) / (1 + e.auraHaste);
+          e.attackCd = cdOf(e, e.cfg.attackInterval - e.cfg.attackDuration, 0.2, true);
           e.currentAnim = e.cfg.anim.walk;
           e.play(e.cfg.anim.walk, { fade: 0.18 });
         }
@@ -4410,7 +4418,12 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
   // 它没有 spell / projectile / volley，所以要自己占一条分支。
   function handleWeigher(e, dt, ctx, dx, dz, dist) {
     const cfg = e.cfg.weigh;
-    if (e.attackCd == null) e.attackCd = cfg.every * 0.55;   // 上场后不用等满一个周期
+    // 第 91 块：它的上称节奏只吃**一半**的攻速成长（开方）。
+    // 五层记名本来就是一份独立的、全场叠加的成长；再全额吃回合攻速
+    // 等于两套成长相乘 —— R20 会 5.8 秒上一次称，29 秒叠满，这一关直接失控。
+    // 开方之后仍然「越到后面越急」（R20 上称间隔 9 → 7.2 秒），但不至于失去控制。
+    const wgHaste = Math.sqrt(e.haste || 1);
+    if (e.attackCd == null) e.attackCd = 0.55 * cfg.every / wgHaste;   // 上场后不用等满一个周期
     if (e.state === 'attack') {
       if (!e.hitDone && e.t >= e.cfg.windup) {
         e.hitDone = true;
@@ -4419,7 +4432,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
       if (e.t >= e.cfg.attackDuration) {
         e.state = 'chase';
         e.t = 0;
-        e.attackCd = Math.max(0.3, (cfg.every - e.cfg.attackDuration) / (1 + e.auraHaste));
+        e.attackCd = Math.max(0.3, (cfg.every - e.cfg.attackDuration) / wgHaste / (1 + e.auraHaste));
         e.currentAnim = e.cfg.anim.walk;
         e.play(e.cfg.anim.walk, { fade: 0.18 });
       }
@@ -4750,7 +4763,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
   // 拐弯半径、血量），和紫阵那一套不撞车。
   function handleBubbleCaster(e, dt, ctx, dx, dz, dist) {
     const cfg = e.cfg.bubble;
-    if (e.attackCd == null) e.attackCd = e.cfg.attackInterval;
+    if (e.attackCd == null) e.attackCd = e.cfg.attackInterval / (e.haste || 1);
 
     if (e.state === 'attack') {
       if (!e.hitDone && e.t >= e.cfg.windup) {
@@ -4760,7 +4773,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
       if (e.t >= e.cfg.attackDuration) {
         e.state = 'chase';
         e.t = 0;
-        e.attackCd = Math.max(0.3, (e.cfg.attackInterval - e.cfg.attackDuration) / (1 + e.auraHaste));
+        e.attackCd = cdOf(e, e.cfg.attackInterval - e.cfg.attackDuration, 0.3, true);
         e.currentAnim = e.cfg.anim.walk;
         e.play(e.cfg.anim.walk, { fade: 0.18 });
       }
@@ -4806,6 +4819,26 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
       e.currentAnim = e.cfg.anim.idle;
       e.play(e.cfg.anim.idle, { fade: 0.2 });
     }
+  }
+
+  // ============================================================
+  // 第 91 块：出手冷却的唯一出口
+  // ============================================================
+  // 为什么要有这个函数：出手机制有九套（近战 / 投手 / 弓手 / 法术 / 跳劈 /
+  // 冲锋 / 井蛙舌头 / 木鱼灵 / 称量官上称），每套各自算 attackCd。要做
+  // 「越到后面出手越密」，只能在**同一个地方**把时效除进去，否则迟早漏一套
+  // （漏掉的那只会变成「只有它不吃成长」，玩家反而觉得那只是 BUG）。
+  //
+  // 语义：
+  //   base   本来的间隔余量（cfg.attackInterval - 收势 / 僵直 ……）
+  //   floor  原来各处写死的下限（0.2~0.6 秒），防止连成每帧一次
+  //   withAura  是否吃霜牢环加成（原本只有四套远程/近战吃，别顺手改成全都吃）
+  //
+  // ⚠️ 前摇（cfg.windup）、红圈预警、弹道飞行时间**一律不在这里**。
+  // 用户要的是「攻击更快」，不是「更没法躲」—— 后者会把走位游戏变成猜谜。
+  function cdOf(e, base, floor = 0.2, withAura = false) {
+    const hs = (e.haste || 1) * (withAura ? 1 + (e.auraHaste || 0) : 1);
+    return Math.max(floor, base / hs);
   }
 
   function moveToward(e, dx, dz, dist, dt, ctx) {

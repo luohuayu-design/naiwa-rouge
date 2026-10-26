@@ -16,9 +16,18 @@
 //   数量：3 → 25 只/回合（见 rounds）
 //   生命：每回合 +16%（第 20 回合 ×4.06，战士 3 → 12 血）
 //   伤害：每回合 +10%（第 20 回合 ×2.90，1 → 2~6 点）
-//   速度：每回合 +3.5%（第 20 回合 ×1.67，小兵 2.15 → 3.58，主角 4.4 仍能拉开但很紧）
+//   速度：每回合 +4.5%（第 20 回合 ×1.86，小兵 2.30 → 4.27，主角 4.4 —— 后期会咬到你脚后跟）
+//   攻速：每回合 +0.70%，**再乘后期加速**（第 91 块）——
+//          R1 ×1.00 → R5 ×1.04 → R10 ×1.13 → R15 ×1.27 → R20 ×1.45。
+//          冷却除以它，前摇不动：出手更频繁，但仍然看得见红圈。
 //   小兵基础 1 血，四舍五入后第 5 回合起变 2 血（R1~R4 仍是一刀一只）；
 //   战士 3 血，第 5 回合 5 血、第 10 回合 7 血、第 15 回合 10 血、第 20 回合 12 血。
+//
+// 第 91 块为什么要加后两条轴：用户「让难度梯度更明显，例如攻击更快、移动更快、
+// 伤害更高，而不只是叠个数和生命」。血量/伤害本来就很陡（4 倍 / 3 倍），
+// 但那是「打得更久」，不是「更凶」—— 玩家在 R20 面对的还是同一批慢吞吞的骷髅，
+// 只是更耐打。加出手频率 + 提高移速之后，后期的怪会**真的追上来、真的连打**，
+// 这一关从「推」变成「跑」。
 //
 // 第三种怪：骷髅投手（远程弹道）第 11 回合登场，见 enemy.js 的 archer 配置。
 // 第四种怪：骷髅弓手（红圈落箭）第 12 回合登场，见 enemy.js 的 bowman 配置。
@@ -59,7 +68,7 @@ export const LEVEL_1 = {
   shopAfter: [3, 6, 9, 12, 15, 18],                      // 打完这些回合弹商店（在三选一之后）
   weaponAt: 5,                       // 打完这回合获得第一件武器「环剑」
   // 属性随回合成长：1 + k × (回合 - 1)
-  scale: { hp: 0.16, damage: 0.10, speed: 0.035 },
+  scale: { hp: 0.16, damage: 0.10, speed: 0.045, haste: 0.0070, curve: 0.28 },
   rounds: [
     { minion: 3,  warrior: 0, archer: 0, gap: 0.90, tip: '小兵从草里钻出来了' },
     { minion: 4,  warrior: 0, archer: 0, gap: 0.80, tip: '数量多起来了，边走边拍' },
@@ -123,7 +132,7 @@ export const LEVEL_2 = {
   upgradeAfter: [1, 2, 3, 4, 5, 8, 10, 12, 15, 17, 19, 20],
   shopAfter: [3, 6, 9, 12, 15, 18],
   weaponAt: 4,
-  scale: { hp: 0.20, damage: 0.12, speed: 0.035 },
+  scale: { hp: 0.20, damage: 0.12, speed: 0.045, haste: 0.0075, curve: 0.28 },
   rounds: [
     // ---- 第一幕（R1~R5）：骨塔的院子。先认路，投手提前登场 ----
     { minion: 3,  warrior: 0, archer: 0, bowman: 0, hexer: 0, pyro: 0, hierarch: 0, gap: 0.90, tip: '骨塔的院子，草都不长' },
@@ -193,7 +202,7 @@ export const LEVEL_3 = {
   upgradeAfter: [1, 2, 3, 4, 5, 8, 10, 12, 15, 17, 19, 20],
   shopAfter: [3, 6, 9, 12, 15, 18],
   weaponAt: 4,
-  scale: { hp: 0.24, damage: 0.14, speed: 0.035 },
+  scale: { hp: 0.24, damage: 0.14, speed: 0.045, haste: 0.0080, curve: 0.28 },
   rounds: [
     // ---- 第一幕（R1~R4）：焦土院子 ----
     { minion: 3,  warrior: 0, charger: 0, archer: 0, bowman: 0, shielder: 0, brood: 0, gap: 0.90, tip: '钟楼的院子里全是灰，踩上去像雪' },
@@ -250,7 +259,7 @@ export const LEVEL_4 = {
   upgradeAfter: [1, 2, 3, 4, 5, 8, 10, 12, 15, 17, 19, 20],
   shopAfter: [3, 6, 9, 12, 15, 18],
   weaponAt: 4,
-  scale: { hp: 0.26, damage: 0.15, speed: 0.035 },
+  scale: { hp: 0.26, damage: 0.15, speed: 0.045, haste: 0.0085, curve: 0.28 },
   rounds: [
     // ---- 第一幕（R1~R3）：霜面停车场 ----
     { minion: 3,  warrior: 0, charger: 0, leaper: 0, archer: 0, bowman: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, gap: 0.90, tip: '雾堤服务区：地上有霜，看脚下' },
@@ -328,7 +337,7 @@ export const LEVEL_5 = {
   shopAfter: [3, 6, 9, 12, 15, 18],
   weaponAt: 4,
   // 第 65 块：用户实测「五六关偏软」→ 伤害 ×1.35、血量 ×1.15（整关一起乘）
-  scale: { hp: 0.28, damage: 0.16, speed: 0.035, hpMul: 1.15, dmgMul: 1.35 },
+  scale: { hp: 0.28, damage: 0.16, speed: 0.045, haste: 0.0090, curve: 0.28, hpMul: 1.15, dmgMul: 1.35 },
   rounds: [
     // ---- 第一幕（R1~R3）：路口 · 油灯还亮着 ----
     { minion: 3,  warrior: 0, leaper: 0, archer: 0, bowman: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, eraser: 0, gap: 0.90, tip: '草甸路口：四条路，油灯还亮着' },
@@ -397,7 +406,7 @@ export const LEVEL_6 = {
   shopAfter: [3, 6, 9, 12, 15, 18],
   weaponAt: 4,
   // 第 65 块：同第五关 —— 伤害 ×1.35、血量 ×1.15
-  scale: { hp: 0.30, damage: 0.17, speed: 0.035, hpMul: 1.15, dmgMul: 1.35 },
+  scale: { hp: 0.30, damage: 0.17, speed: 0.045, haste: 0.0095, curve: 0.28, hpMul: 1.15, dmgMul: 1.35 },
   // 漏电地板：位置固定，相位错开（每一块的通电时间点不一样，
   // 否则整片地板会一起亮，玩家只能干等 —— 那是罚站，不是走位）
   hazards: [
@@ -480,7 +489,7 @@ export const LEVEL_7 = {
   shopAfter: [3, 6, 9, 12, 15, 18],
   weaponAt: 4,
   // 第 71 块：延续六关的整体系数再略加（hp 1.20 / dmg 1.45）
-  scale: { hp: 0.32, damage: 0.19, speed: 0.035, hpMul: 1.20, dmgMul: 1.45 },
+  scale: { hp: 0.32, damage: 0.19, speed: 0.045, haste: 0.0100, curve: 0.28, hpMul: 1.20, dmgMul: 1.45 },
   // 滴水落点：井底的水从头顶滴下来，三滴错相、随机落点（不依赖某只怪在场）
   hazards: [
     { kind: 'drip', random: true, cx: 0, cz: 0, spread: 8.5, r: 1.7, cycle: 3.4, on: 0.5, warm: 1.1, damage: 1, off: 0.0 },
@@ -560,7 +569,7 @@ export const LEVEL_8 = {
   upgradeAfter: [1, 2, 3, 4, 5, 8, 10, 12, 15, 17, 19, 20],
   shopAfter: [3, 6, 9, 12, 15, 18],
   weaponAt: 4,
-  scale: { hp: 0.34, damage: 0.20, speed: 0.035, hpMul: 1.28, dmgMul: 1.55 },
+  scale: { hp: 0.34, damage: 0.20, speed: 0.045, haste: 0.0105, curve: 0.28, hpMul: 1.28, dmgMul: 1.55 },
   // 寄存柜：不在场地里，立在边界石圈外面（像间哨亭）。
   //   x/z 是柜子中心，r 是它的碰撞半径，summon 是封柜开门时放出来的怪。
   //   玩家走到场地边缘（r≈17.7）离柜子 1.5 格，落在「取牌」范围（3.6）里。
@@ -637,7 +646,7 @@ export const LEVEL_9 = {
   upgradeAfter: [1, 2, 3, 4, 5, 8, 10, 12, 15, 17, 19, 20],
   shopAfter: [3, 6, 9, 12, 15, 18],
   weaponAt: 4,
-  scale: { hp: 0.34, damage: 0.20, speed: 0.04, hpMul: 1.28, dmgMul: 1.55 },
+  scale: { hp: 0.34, damage: 0.20, speed: 0.045, haste: 0.0110, curve: 0.28, hpMul: 1.28, dmgMul: 1.55 },
   rounds: [
     // ---- 第一幕（R1~R4）：上称 ----
     { minion: 4, warrior: 1, weigher: 0, archer: 0, bowman: 0, leaper: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, reboot: 0, hexer: 0, gap: 0.88, tip: '第九十九层：门认字，簿子认名字 —— 那道金边就是那扇门' },
@@ -677,9 +686,9 @@ export const LEVELS_BY_ID = {
 // 难度（第 18 块）：乘在每回合的成长倍率上。普通 = 原版数值，一局一选，
 // 不进设置面板（难度是「这一局玩多狠」的选择，不是机器偏好）。
 export const DIFFS = {
-  normal: { name: '普通', hp: 1, damage: 1, speed: 1, desc: '原汁原味的荒草地' },
-  nightmare: { name: '噩梦', hp: 1.35, damage: 1.25, speed: 1.04, desc: '怪更硬更疼，脚程也快一点' },
-  hell: { name: '地狱', hp: 1.8, damage: 1.55, speed: 1.08, desc: '一步走错就倒下，给头铁的蛙' },
+  normal: { name: '普通', hp: 1, damage: 1, speed: 1, haste: 1, desc: '原汁原味的荒草地' },
+  nightmare: { name: '噩梦', hp: 1.35, damage: 1.25, speed: 1.04, haste: 1.04, desc: '怪更硬更疼，脚程和出手都快一点' },
+  hell: { name: '地狱', hp: 1.8, damage: 1.55, speed: 1.08, haste: 1.10, desc: '一步走错就倒下，给头铁的蛙' },
 };
 let diff = DIFFS.normal;
 export function setDifficulty(key) {
@@ -697,10 +706,25 @@ export function roundScale(roundNo, level = LEVEL_1) {
   // 用户嫌后两关太软，要「伤害 +35%、血量 +15%」——加在乘数上比改 slope 直观：
   //   slope 是「每回合长多少」，改它会顺带把 R1 也一起抬起来；
   //   mul 是「整关一起乘」，晚期的疼度线性可预测。
+  //
+  // 第 91 块：**关内梯度**。之前只有 hp / damage / speed 三个维度在长，
+  // 前两项还很陡，玩家感受到的只有「怪变多、变肉」；出手频率全程不变，
+  // 移速到 R20 也才 ×1.67。现在多一根轴 + 一条后期加速曲线：
+  //
+  //   haste  「出手频率」倍率（全新）。所有冷却都 / haste，**前摇/预警圈不变** ——
+  //          所以是「更频繁」，不是「更突然」，玩家仍然看得见、躲得掉。
+  //   curve  「后期加速」。t = 本回合走到整关的几成（0~1），
+  //          ramp = 1 + curve × t² —— 平方意味着前五回合几乎不动、
+  //          最后五回合陡增。**只作用于 haste**：血量/伤害已经是线性陡坡，
+  //          再叠平方会把后期直接变成不可通关（第九关 hp 本来就 ×8 了）。
+  const N = Math.max(1, ((level.rounds && level.rounds.length) || 20) - 1);
+  const t = Math.min(1, k / N);
+  const ramp = 1 + (s.curve || 0) * t * t;
   return {
     hp: (1 + s.hp * k) * diff.hp * (s.hpMul || 1),
     damage: (1 + s.damage * k) * diff.damage * (s.dmgMul || 1),
     speed: (1 + s.speed * k) * diff.speed,
+    haste: (1 + (s.haste || 0) * k) * ramp * (diff.haste || 1),
   };
 }
 
@@ -929,6 +953,7 @@ export function createLevel(level, { enemies, fx, getPlayerPos, onRound, onRound
         const sc = roundScale(roundIndex + 1, level);
         const e = enemies.spawn(sp.type, at, {
           hpScale: sc.hp, damageScale: sc.damage, speedScale: sc.speed,
+          hasteScale: sc.haste,     // 第 91 块：出手频率（enemy.js 的 e.haste）
         });
         if (e) spawned++;
       }
