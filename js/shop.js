@@ -26,9 +26,9 @@
 // 第 11 块：每件货都带 rarity（0 普通 ~ 4 传说），店里按品质加权抽取 ——
 // 幸运越高，摆出来的货越往金/红那一头走（见 rarity.js）。
 // ============================================================
-import { rarityWeight } from './rarity.js?v=98';
-import { TURRET } from './turret.js?v=98';
-import { RELIC_DEFS } from './relics.js?v=98';
+import { rarityWeight } from './rarity.js?v=99';
+import { TURRET } from './turret.js?v=99';
+import { RELIC_DEFS } from './relics.js?v=99';
 
 export const SHOP_ITEMS = [
   // ---------------- 生命药水（第 13 块起：买进背包，作战中随时用） ----------------
@@ -36,10 +36,11 @@ export const SHOP_ITEMS = [
   // 8 → 5 / 18 → 12。它现在是「钱够就能把血灌满」的续命位，
   // 和属性、剑、法器那种「一件就买断」的货分开算。
   {
-    id: 'potion', type: 'heal', amount: 3, price: 5,
+    // 第 88 块：3 → 4 —— 上限从 6 抬到 10 以后，回 3 只顶 30%，一罐药会显得像开玩笑
+    id: 'potion', type: 'heal', amount: 4, price: 5,
     rarity: 0,
     glyph: '⚗', name: '生命药水',
-    desc: '回复 3.0 生命（不超上限）。买进背包，作战中随时打开喝；同一家店可以反复买。',
+    desc: '回复 4.0 生命（不超上限）。买进背包，作战中随时打开喝；同一家店可以反复买。',
   },
   {
     id: 'bigPotion', type: 'healFull', price: 12,
@@ -55,10 +56,11 @@ export const SHOP_ITEMS = [
     desc: '近战攻击力 +1.0（永久）。只加奶蛙自己的普攻，不加剑。',
   },
   {
-    id: 'shell', type: 'stat', stat: 'maxHp', flat: 2, heal: 2, price: 14,
+    // 第 88 块：上限 2 → 4（血量存量转型）。价格刻意不跟着涨 —— 转型期要让人愿意买血。
+    id: 'shell', type: 'stat', stat: 'maxHp', flat: 4, heal: 4, price: 14,
     rarity: 1,
     glyph: '🛡', name: '硬壳',
-    desc: '生命上限 +2.0（永久），并把多出来的血补满。',
+    desc: '生命上限 +4.0（永久），并把多出来的血补满。',
   },
   {
     id: 'feather', type: 'stat', stat: 'moveSpeed', pct: 0.08, price: 12,

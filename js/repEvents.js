@@ -30,7 +30,7 @@ export const REP_GOOD = [
     choices: [
       {
         label: '接过来，谢她一句',
-        hint: '生命上限 +1（本局永久）',
+        hint: '生命上限 +2（本局永久）',
         effects: { permanent: [{ stat: 'maxHp', flat: 1 }] },
         say: '灯不亮，但拿在手里是暖的。苇把灯递过来就退开半步，好像怕你嫌她多事。你说谢谢的时候，她低头笑了一下，转身跑回坡上。',
       },
@@ -53,7 +53,7 @@ export const REP_GOOD = [
     choices: [
       {
         label: '当面吃掉',
-        hint: '最大生命上限 +1（本局永久）· 民心 +2',
+        hint: '最大生命上限 +2（本局永久）· 民心 +2',
         effects: { rep: 2, permanent: [{ stat: 'maxHp', flat: 1 }] },
         say: '饼确实硬，你嚼了很久。老婆子一直用眼角看你，看到你吃完才把炉盖合上，说了句「明天早点来」。',
       },
@@ -84,7 +84,7 @@ export const REP_GOOD = [
       },
       {
         label: '让他把铃给我，他自己回去睡',
-        hint: '生命上限 +2（本局永久）· 民心 +3',
+        hint: '生命上限 +4（本局永久）· 民心 +3',
         effects: { rep: 3, permanent: [{ stat: 'maxHp', flat: 2 }] },
         say: '老隼愣了愣，把铃摘下来放在你手里，走的时候嘴里嘟囔「犟驴」。第二天你在车辕上看到他留下的半壶热水，壶还是温的 —— 他根本没走远。',
       },
@@ -101,7 +101,7 @@ export const REP_GOOD = [
     choices: [
       {
         label: '收下，说下回带酒来',
-        hint: '最大生命上限 +1 · 防御 +0.5（本局永久）',
+        hint: '最大生命上限 +2 · 防御 +0.5（本局永久）',
         effects: { permanent: [{ stat: 'maxHp', flat: 1 }, { stat: 'armor', flat: 0.5 }] },
         say: '昆笑了一下，说这条街上的酒都被他喝遍了，就等你那壶。护手的箍是热的，走在夜风里，那点热能顶到手腕上。',
       },
@@ -133,7 +133,7 @@ export const REP_GOOD = [
       },
       {
         label: '先把孩子们推到坡后',
-        hint: '生命上限 +2 · 防御 +1（本局永久）· 民心 +5',
+        hint: '生命上限 +4 · 防御 +1（本局永久）· 民心 +5',
         effects: { rep: 5, permanent: [{ stat: 'maxHp', flat: 2 }, { stat: 'armor', flat: 1 }] },
         say: '你把最小的那个抱到坡后，转身一个人站到了路中央。孩子们在坡后仍然喊，喊得比刚才更响。那一刻你忽然明白：你替他们挡的不是怪物，是他们以后还敢走夜路的胆子。',
       },

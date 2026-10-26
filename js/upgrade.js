@@ -34,9 +34,9 @@
 //   标了 scope:'weapon' 的项改的是武器表（剑系 / 元素系），其余改主角表。
 //   两块表都要传进来，没传 wstats 时武器项会退化到主角表（只为兼容老调用）。
 // ============================================================
-import { STAT_DEFS } from './stats.js?v=98';
-import { WEAPON_STAT_DEFS } from './weaponStats.js?v=98';
-import { RARITIES, rarityWeight, oddsOf } from './rarity.js?v=98';
+import { STAT_DEFS } from './stats.js?v=99';
+import { WEAPON_STAT_DEFS } from './weaponStats.js?v=99';
+import { RARITIES, rarityWeight, oddsOf } from './rarity.js?v=99';
 
 // 一张卡改的是哪块表
 function tableFor(scope, stats, wstats) {
@@ -210,7 +210,9 @@ export const FAMILIES = [
   // ---------------- 生存 ----------------
   {
     id: 'hide', tag: 'def', glyph: '❤', name: '厚皮', w0: 1.40, gw: -0.060,
-    stat: 'maxHp', mode: 'flat', vals: [2, 4, 7], heal: 'same',
+    // 第 88 块：2/4/7 → 3/6/10。基础上限已抬到 10，这张卡是整个「血量存量」路线的主动力，
+    // 提档后一张稀有卡 ≈ 一整条命，才撑得住后期靠血皮硬扛高伤。
+    stat: 'maxHp', mode: 'flat', vals: [3, 6, 10], heal: 'same',
     title: (v) => `生命上限 +${trim(v)}`,
     desc: () => '上限提高的同时立刻回满这些血',
   },
@@ -291,9 +293,10 @@ const UNIQUE = [
     id: 'undying', tag: 'def', glyph: '♾', name: '不灭',
     rarity: 4,
     w0: 0.50, gw: +0.030,
-    title: '生命上限 +3 · 生命回复 +0.08/秒',
-    desc: '传说：上限抬满并立刻补 3 点，同时开始自己回血',
-    stat: 'maxHp', flat: 3, heal: 3,
+    // 第 88 块：上限 3 → 6（血量存量路线，传说卡要顶得上两张普通厚皮）
+    title: '生命上限 +6 · 生命回复 +0.08/秒',
+    desc: '传说：上限抬满并立刻补 6 点，同时开始自己回血',
+    stat: 'maxHp', flat: 6, heal: 6,
     extras: [{ stat: 'hpRegen', flat: 0.08 }],
   },
   {

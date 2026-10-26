@@ -94,7 +94,8 @@ ok(healFullCnt >= 2, `「生命回满」的选项 ${healFullCnt} 处`, String(he
 const L1 = effectLines({ hp: 2 }).join(' · ');
 ok(/生命上限 \+2\.0（补满）/.test(L1), 'effectLines({hp:2}) → 生命上限 +2.0（补满）', L1);
 const L2 = effectLines({ healFull: true }).join(' · ');
-ok(/生命上限 \+2 · 生命回满/.test(L2), 'effectLines({healFull}) → 生命上限 +2 · 生命回满', L2);
+// 第 88 块：HEALFULL_UP 2 → 4，文案跟着走
+ok(/生命上限 \+4 · 生命回满/.test(L2), 'effectLines({healFull}) → 生命上限 +4 · 生命回满', L2);
 const L3 = effectLines({ hp: -1 }).join(' · ');
 ok(/生命 -1\.0/.test(L3), '扣血文案不受影响（生命 -1.0）', L3);
 
@@ -106,7 +107,7 @@ ok(/syncHp\(effects\.hp\)/.test(hpBlock), '加完上限立刻补同样多的血�
 ok(/hpgain:/.test(hpBlock), '上限走独立 src（hpgain:），不会被回合清理撤掉');
 ok(!/stats\.heal\(effects\.hp\)/.test(mainSrc), '不再有裸的 stats.heal(effects.hp)');
 ok(/HEALFULL_UP/.test(mainSrc), '「生命回满」有独立的上限增量常量');
-ok(/const HEALFULL_UP = 2/.test(mainSrc), 'HEALFULL_UP = 2');
+ok(/const HEALFULL_UP = 4/.test(mainSrc), 'HEALFULL_UP = 4（第 88 块：2 → 4）');
 // 「回满」也要抬上限
 const fullBlock = (mainSrc.match(/if \(effects\.healFull\) \{[\s\S]{0,320}?\n    \}/) || [''])[0];
 ok(/stat: 'maxHp'/.test(fullBlock), '「回满」也先抬上限');
@@ -119,7 +120,8 @@ const big = SHOP_ITEMS.find((s) => s.id === 'bigPotion');
 ok(!!potion && !!big, '两瓶药还在');
 ok(potion.price === 5, `小药价格 8 → ${potion.price}`, String(potion.price));
 ok(big.price === 12, `大药价格 18 → ${big.price}`, String(big.price));
-ok(potion.type === 'heal' && potion.amount === 3, '小药还是回 3 点（消耗品定位不变）');
+// 第 88 块：上限抬到 10 后小药 3 → 4；定位仍然是「回复」而**不加上限**
+ok(potion.type === 'heal' && potion.amount === 4 && potion.stat === undefined, '小药回 4 点，仍是纯回复（不加上限）');
 ok(big.type === 'healFull', '大药还是回满');
 ok(/反复买/.test(potion.desc) && /反复买/.test(big.desc), '说明里写了同店可反复买');
 // 售罄：药水类跳过

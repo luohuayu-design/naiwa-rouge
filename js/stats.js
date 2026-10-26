@@ -22,7 +22,9 @@ export const num1 = (v) => v.toFixed(1);
 // 主角属性定义：name 显示名、base 初始值、fmt 显示格式、group 面板分组、desc 一句话说明
 export const STAT_DEFS = [
   // ---- 生存 ----
-  { key: 'maxHp',       name: '生命上限', base: 6,    fmt: num1, group: '生存', desc: '归零即本局失败；伤害按小数扣除' },
+  // 第 88 块（用户定案，转型）：生命模型从「低血量 + 靠回血硬抗」改成「高血量存量扛后期」。
+  // 基础 6 → 10，配合各途径的上限提档；回血已在第 87 块砍到 1/4，两条腿不再互相顶。
+  { key: 'maxHp',       name: '生命上限', base: 10,   fmt: num1, group: '生存', desc: '归零即本局失败；伤害按小数扣除' },
   // 第 87 块：再生降到 0.05/秒 —— 面板必须显示两位小数，
   // 否则 0.05 和 0.09 都被 toFixed(1) 抹成「0.1」，玩家会以为数值没变。
   { key: 'hpRegen',     name: '生命回复', base: 0,    fmt: (v) => (v > 0 && v < 0.1 ? v.toFixed(2) : v.toFixed(1)) + '/秒',   group: '生存', desc: '每秒自动恢复的生命' },

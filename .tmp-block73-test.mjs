@@ -88,7 +88,7 @@ const TITLE_CASES = [
   ['swordFang', '剑暴击伤害 +80%'], ['swordSpin', '剑转速 +50%'],
   ['venom', '毒伤 +0.12/秒'], ['chill', '冰冻 +0.6 秒'],
   ['volt', '闪电伤害 +20%'], ['spring', '血剑回血 +10%'],
-  ['hide', '生命上限 +2'], ['shell', '防御 +0.3'], ['regen', '生命回复 +0.05/秒'],
+  ['hide', '生命上限 +3'], ['shell', '防御 +0.3'], ['regen', '生命回复 +0.05/秒'],
   ['vamp', '近战吸血 +3%'], ['step', '移动速度 +10%'], ['cross', '移速 +8% · 攻速 +8%'],
 ];
 for (const [id, title] of TITLE_CASES) {
@@ -219,8 +219,9 @@ ok('chanceTable 里的 rarity 和卡一致',
   const s = createStats();
   const before = s.hp.cur;
   applyUpgrade(s, UPGRADES.find((u) => u.id === 'hideB'), 1, createWeaponStats(), null);
-  ok('厚皮Ⅲ 上限 +7 且立刻回满这 7 点',
-    near(s.get('maxHp'), before + 7) && near(s.hp.cur, s.get('maxHp')),
+  // 第 88 块：厚皮三档 2/4/7 → 3/6/10
+  ok('厚皮Ⅲ 上限 +10 且立刻回满这 10 点',
+    near(s.get('maxHp'), before + 10) && near(s.hp.cur, s.get('maxHp')),
     `${before} → ${s.hp.cur}/${s.get('maxHp')}`);
 }
 // 副属性（致命 / 游刃）三档也要跟着涨
