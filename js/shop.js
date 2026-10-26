@@ -26,9 +26,9 @@
 // 第 11 块：每件货都带 rarity（0 普通 ~ 4 传说），店里按品质加权抽取 ——
 // 幸运越高，摆出来的货越往金/红那一头走（见 rarity.js）。
 // ============================================================
-import { rarityWeight } from './rarity.js?v=94';
-import { TURRET } from './turret.js?v=94';
-import { RELIC_DEFS } from './relics.js?v=94';
+import { rarityWeight } from './rarity.js?v=95';
+import { TURRET } from './turret.js?v=95';
+import { RELIC_DEFS } from './relics.js?v=95';
 
 export const SHOP_ITEMS = [
   // ---------------- 生命药水（第 13 块起：买进背包，作战中随时用） ----------------
@@ -194,6 +194,15 @@ export const SHOP_ITEMS = [
     glyph: '🪵', name: '木鱼图样',
     desc: '井底捡的木鱼槌：主角挨打 / 击杀时震一圈，把身边怪击退并短暂定身。窄井里被围时的救命底牌。再买可升级（最多 3 级）。',
   },
+  // ---------------- 第八关新增（第 84 块）：镇牌铃 ----------------
+  // 用户定案：第 9 / 12 回合的商店**常驻**摆它（不参与抽签，见 SHOP_PINNED）。
+  // 它不打架，只把寄存柜收牌的概率往下压 —— 属于「花钱买平安」那种法器。
+  {
+    id: 'buySeal', type: 'relic', relic: 'seal', price: 26, needRound: 9, needLevel: 8,
+    rarity: 3,
+    glyph: '🔕', name: '镇牌铃',
+    desc: `挂在寄存柜门上的铜铃：掉牌概率从 ${Math.round(RELIC_DEFS.seal.tagChance[0] * 100)}% 压到 ${Math.round(RELIC_DEFS.seal.tagChance[1] * 100)}%，再买还能更低 —— 柜子攒得慢，寄存处看守就来得晚。挡回去的牌子每 ${RELIC_DEFS.seal.coinPer} 块化一枚骨币。`,
+  },
 ];
 
 // 商店里买不到 / 已卖光时给出原因（渲染禁用态用）
@@ -221,13 +230,20 @@ export function itemLocked(item, ctx = {}) {
 // 每次进店摆几件
 export const SHOP_SHOW = 4;
 
+// 第 84 块：**常驻货** —— 这几个回合进店时，这些货一定摆在架子上。
+// 用户定案：「第 9 回合、12 回合的商店加入法器购买（不是随机，是常驻）」。
+// 常驻只占固定格子（4 件里 1 件常驻 → 剩下 3 件照旧抽签），
+// 而且**仍然要过可用性判定**：铃已满级 / 没到解锁回合时不会硬摆出来。
+export const SHOP_PINNED = { 9: ['buySeal'], 12: ['buySeal'] };
+
 // 抽本次商店的货物：返回一个**不含重复**的物品数组（默认 4 件）。
 // hasWeapon = 已拿到环剑（没有时剑类买了也用不了，先不进池）
 // round     = 当前回合（没到解锁回合的法器不进池；缺省 99 = 全部可摆）
 // luck      = 幸运：按品质加权（第 11 块），幸运高更容易摆出金/红货
+// pinned    = 常驻货的 id 列表（第 84 块）：先占位，再抽其余的
 // rng 可注入，测试里能固定结果。
 export function rollShopItems(rng = Math.random, {
-  hasWeapon = false, round = 99, level = 99, turretCount = 0, relicLevels = null, count = SHOP_SHOW, luck = 0,
+  hasWeapon = false, round = 99, level = 99, turretCount = 0, relicLevels = null, count = SHOP_SHOW, luck = 0, pinned = [],
 } = {}) {
   const usable = SHOP_ITEMS.filter((it) => {
     if (it.needWeapon && !hasWeapon) return false;
@@ -237,10 +253,16 @@ export function rollShopItems(rng = Math.random, {
     if (it.type === 'relic' && (relicLevels?.[it.relic] || 0) >= RELIC_DEFS[it.relic].maxLevel) return false;
     return true;
   });
-  const rest = usable.slice();
-  // 按「品质系数 × 幸运」加权，不放回地抽 count 件。
+  // 常驻货先落位（可能是 0 件：没解锁 / 已满级 / id 写错都会自然跳过）
+  const forced = [];
+  for (const id of pinned) {
+    const it = usable.find((x) => x.id === id);
+    if (it && !forced.includes(it)) forced.push(it);
+  }
+  const rest = usable.filter((it) => !forced.includes(it));
+  // 按「品质系数 × 幸运」加权，不放回地抽剩下的格子。
   // ⚠️ want 必须先算：rest 会越抽越短，边抽边算会提前收工（少摆几件）。
-  const want = Math.min(count, rest.length);
+  const want = Math.max(0, Math.min(count, forced.length + rest.length) - forced.length);
   const picked = [];
   while (picked.length < want) {
     const total = rest.reduce((a, it) => a + rarityWeight(it, luck), 0);
@@ -252,5 +274,5 @@ export function rollShopItems(rng = Math.random, {
     }
     picked.push(rest.splice(idx, 1)[0]);
   }
-  return picked;
+  return forced.concat(picked);
 }

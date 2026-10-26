@@ -22,8 +22,26 @@
 //
 // 视觉全部程序化（一个柜体 + 一张 canvas 柜面），零新资产：
 // 柜面 4×2 八个格子，每进一块牌子填一格；封柜时整面转红金并写「封柜」。
+//
+// 【第 84 块：掉牌不再是必然】用户原话：「每个怪死后只有 50% 左右的概率生成
+// 牌子进柜」。于是这里多了一张概率表 TAG_SEAL —— 表里第 0 位是「没买法器」，
+// 后三位是法器「镇牌铃」的 1~3 级。**概率的真相源就在这张表**，
+// relics.js 的镇牌铃描述文案也从这里取数字，两边不会漂移。
+// 判定放在 main.js 的死亡钩子里（deposit 只管收牌，不掷骰）。
+// 买了铃以后柜子上会挂铜铃（挂几个 = 几级），柜面左上角多一个「镇」字。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=94';
+import * as THREE from '../lib/three.module.js?v=95';
+
+// 没有法器时：一半的怪会留牌子（用户定的 50%）。
+export const TAG_BASE = 0.50;
+// 镇牌铃 0~3 级对应的掉牌概率（第 0 位必须等于 TAG_BASE）。
+export const TAG_SEAL = [TAG_BASE, 0.34, 0.22, 0.13];
+
+// 给定铃的等级，返回这一发掉牌的概率。
+export function tagChance(sealLv = 0) {
+  const lv = Math.max(0, Math.min(TAG_SEAL.length - 1, Math.round(sealLv) || 0));
+  return TAG_SEAL[lv];
+}
 
 export function createDeposit({ scene, fx, playerPos, playerRadius = 0.32, hurtPlayer }) {
   const CAP = 8;           // 满柜需要几块牌子
@@ -41,6 +59,12 @@ export function createDeposit({ scene, fx, playerPos, playerRadius = 0.32, hurtP
   let locked = false;      // 已封柜：不能再加牌，也不能再清
   let lockT = 0;           // 封柜倒计时（>0 表示正在倒数）
   let flashT = 0;
+
+  // 第 84 块：镇牌铃的等级（0 = 没买）。铃铛挂在柜门上方，挂几个就是几级。
+  // ⚠️ 这个值**不随 build()/reset() 清零** —— 它是法器状态，属于整局，
+  //    不属于这一关的柜子；重进第八关时柜子是新的，铃还得在。
+  let sealLv = 0;
+  let sealGroup = null;    // 柜门上方那串铜铃（三个，按等级显示）
 
   // ---------------- 柜面（canvas） ----------------
   // 4×2 的八格：填满的格子放一块木牌（和骷髅胸前那块同款），空格子黑着。
@@ -86,6 +110,15 @@ export function createDeposit({ scene, fx, playerPos, playerRadius = 0.32, hurtP
         g.lineTo(cx + cw * 0.74, cy + ch * 0.44);
         g.stroke();
       }
+    }
+
+    // 第 84 块：挂了镇牌铃 → 左上角一个「镇」字（暗金，不抢 8 格的视觉）
+    if (sealLv > 0) {
+      g.fillStyle = 'rgba(255,214,138,0.92)';
+      g.font = 'bold 34px system-ui, sans-serif';
+      g.textAlign = 'left';
+      g.textBaseline = 'top';
+      g.fillText('镇', 16, 12);
     }
 
     // 计数（右下角）：封柜时写「封柜」
@@ -170,8 +203,62 @@ export function createDeposit({ scene, fx, playerPos, playerRadius = 0.32, hurtP
     lockRing.visible = false;
     root.add(lockRing);
 
+    // 第 84 块：柜门上方那串镇牌铃（买了法器才有；挂几个 = 几级）。
+    // 挂在这里而不是跟着主角走 —— 铃管的是柜子，让它在柜子上才说得通。
+    sealGroup = new THREE.Group();
+    {
+      const cordMat = new THREE.MeshBasicMaterial({ color: 0x6b5330 });
+      const cord = new THREE.Mesh(new THREE.BoxGeometry(0.92, 0.035, 0.035), cordMat);
+      cord.position.y = 0.17;
+      sealGroup.add(cord);
+      const bellMat = new THREE.MeshStandardMaterial({
+        color: 0xc9952f, roughness: 0.42, metalness: 0.55,
+        emissive: new THREE.Color(0x6a3f08), emissiveIntensity: 0.6,
+      });
+      const clapMat = new THREE.MeshBasicMaterial({ color: 0xffe0a0 });
+      const bells = [];
+      const bx = [0, -0.31, 0.31];        // 1 级挂中间，2 级添左，3 级添右
+      for (let i = 0; i < 3; i++) {
+        const b = new THREE.Group();
+        const cup = new THREE.Mesh(new THREE.SphereGeometry(0.075, 10, 8), bellMat);
+        cup.scale.set(1, 1.15, 1);
+        const clap = new THREE.Mesh(new THREE.SphereGeometry(0.028, 8, 6), clapMat);
+        clap.position.y = -0.085;
+        b.add(cup, clap);
+        b.position.set(bx[i], 0.07 - Math.abs(bx[i]) * 0.06, 0);
+        sealGroup.add(b);
+        bells.push(b);
+      }
+      sealGroup.userData.bells = bells;
+      sealGroup.position.set(0, 2.08, 0.60);
+      sealGroup.visible = false;
+    }
+    root.add(sealGroup);
+    applySeal();
+
     scene.add(root);
     redraw();
+  }
+
+  // 第 84 块：按铃的等级显示 0~3 个铜铃
+  function applySeal() {
+    if (!sealGroup) return;
+    sealGroup.visible = sealLv > 0;
+    const bells = sealGroup.userData.bells || [];
+    for (let i = 0; i < bells.length; i++) bells[i].visible = i < sealLv;
+  }
+
+  // 由 main.js 在「买到 / 读档 / 换关重建柜子」三个时刻调用。
+  // ⚠️ 等级没变也要走一遍 applySeal()：build() 每次都造了新的柜子，
+  //    新柜子的铃铛默认是藏着的，只比等级会让铃「消失」。
+  function setSeal(lv) {
+    const n = Math.max(0, Math.min(3, Math.round(lv) || 0));
+    if (n !== sealLv) {
+      sealLv = n;
+      redraw();
+    }
+    applySeal();
+    return sealLv;
   }
 
   function clearRoot() {
@@ -187,6 +274,7 @@ export function createDeposit({ scene, fx, playerPos, playerRadius = 0.32, hurtP
     }
     root = null;
     lockRing = null;
+    sealGroup = null;      // 铃铛跟着柜子一起拆了；等级 sealLv 保留（下一关重建时补回来）
     if (faceTex) { faceTex.dispose(); faceTex = null; }
     faceCanvas = null;
     glowMat = null;
@@ -299,7 +387,7 @@ export function createDeposit({ scene, fx, playerPos, playerRadius = 0.32, hurtP
   }
 
   return {
-    build, update, reset, addTag, takeAll, clearTags,
+    build, update, reset, addTag, takeAll, clearTags, setSeal,
     pos: () => (def ? { x: def.x, z: def.z, r: def.r } : null),
     // 玩家是不是站在可以按「取牌」的范围内
     near: () => {
@@ -314,6 +402,7 @@ export function createDeposit({ scene, fx, playerPos, playerRadius = 0.32, hurtP
     // 调试 / 测试口
     state: () => ({
       count, cap: CAP, locked, lock: +Math.max(0, lockT).toFixed(2),
+      seal: sealLv, chance: tagChance(sealLv),
       x: def ? def.x : 0, z: def ? def.z : 0, r: def ? def.r : 0,
       near: !!(def && Math.hypot(playerPos.x - def.x, playerPos.z - def.z) <= RANGE),
     }),

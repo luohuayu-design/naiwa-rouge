@@ -133,7 +133,8 @@ ok(relics.RELIC_DEFS.lantern && relics.RELIC_DEFS.lantern.maxLevel === 3, '路�
 ok(relics.RELIC_DEFS.insulator && relics.RELIC_DEFS.insulator.maxLevel === 3, '绝缘斗篷 3 级');
 ok(relics.RELIC_DEFS.lantern.desc.length === 3 && relics.RELIC_DEFS.insulator.desc.length === 3, '两件法器每级都有说明');
 // 第 71 块 +木鱼
-ok(Object.keys(relics.RELIC_DEFS).length === 8, '法器一共 8 件', Object.keys(relics.RELIC_DEFS).join(','));
+// 第 84 块 +镇牌铃（第八关寄存柜专用）→ 9 件
+ok(Object.keys(relics.RELIC_DEFS).length === 9, '法器一共 9 件', Object.keys(relics.RELIC_DEFS).join(','));
 
 // ============================================================
 sec('D、怪物表：擦名者 / 重启体');

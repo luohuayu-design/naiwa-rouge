@@ -108,18 +108,52 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     ok(st0.cap === 8, '柜子容量 8', JSON.stringify(st0));
     ok(st0.count === 0, '开局柜子是空的');
 
-    // ---------- 2. 任何怪死都掉牌 ----------
-    console.log('\n[2] 掉牌');
+    // ---------- 2. 掉牌是概率（第 84 块：约一半的怪留牌子）----------
+    console.log('\n[2] 掉牌概率 / 提示');
     await ev('__game.block63.deposit.clear()');
-    await ev('(() => { const p = __game.pos(); __game.block63.enemies.spawn("warrior", p.x + 1.4, p.z); return true; })()');
-    await sleep(1600);
-    // 小兵自爆撞人；用 takeDamage 直接打更稳
-    const before = await ev('__game.block63.deposit.count()');
-    const killed = await ev('__game.block63.enemies.kill("warrior")');
-    console.log('    打死', killed, '只战士');
-    await sleep(500);
-    const after = await ev('__game.block63.deposit.count()');
-    ok(after > before, '普通怪（战士）死了也掉牌', `${before} → ${after}`);
+    const ch0 = await ev('__game.block63.deposit.chance()');
+    ok(ch0 === 0.5, '没买铃时概率 50%', String(ch0));
+    // 一帧里连杀 40 只（kill 走正常死亡链路，会掉牌），数掉了几块。
+    // 两个坑：① 刚 spawn 的怪 state 是 'spawn'，**免疫伤害** —— 得先把状态改成 chase；
+    //        ② 快满 7 块就先清一次，封柜之后柜子不再收牌，统计会失真。
+    const ROLL_EACH = `(() => {
+      const H = __game.block63;
+      H.deposit.clear();
+      let n = 0;
+      for (let i = 0; i < 40; i++) {
+        if (H.deposit.count() >= 7) H.deposit.clear();
+        const b = H.deposit.count();
+        H.enemies.spawn('warrior', 5.5, 5.5);
+        H.enemies.set('warrior', { state: 'chase', t: 0 });
+        H.enemies.kill('warrior');
+        if (H.deposit.count() > b) n++;
+      }
+      H.enemies.kill();          // 收尾：靶子别留到下一段去干扰
+      return n;
+    })()`;
+    const roll40 = await ev(ROLL_EACH);
+    console.log('    40 只里掉了 ' + roll40 + ' 块');
+    ok(roll40 > 4 && roll40 < 36, '大约一半（4 < n < 36）', String(roll40));
+
+    // 专门验一次「掉牌 → 进柜 → 弹提示」
+    await ev('__game.block63.deposit.clear()');
+    let got1 = 0;
+    for (let i = 0; i < 30 && got1 === 0; i++) {
+      await ev(`(() => {
+        const H = __game.block63;
+        H.enemies.spawn('warrior', 5.5, 5.5);
+        H.enemies.set('warrior', { state: 'chase', t: 0 });
+        H.enemies.kill('warrior');
+        return true;
+      })()`);
+      got1 = await ev('__game.block63.deposit.count()');
+    }
+    ok(got1 === 1, '掉牌会真的进柜（0 → 1）', String(got1));
+    const t1 = await ev('__game.block63.deposit.toast()');
+    ok(t1.on === true, '进柜时弹出提示');
+    ok(/柜子里已经有 \d+ 个牌子了/.test(t1.title), '提示里带当前块数', t1.title);
+    ok(t1.sub.includes('满 8 个会释放 BOSS'), '提示写了「满 8 个会释放 BOSS」', t1.sub);
+    ok(t1.sub.includes('快去取出牌子'), '提示让玩家快去取牌', t1.sub);
 
     // ---------- 3. 满 8 封柜 → 5 秒后召唤看守 ----------
     console.log('\n[3] 封柜 / 召唤');
@@ -221,6 +255,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     console.log('\n[7] 超时');
     await ev('__game.block63.enemies.kill()');      // 清场：这 12 秒别被怪打断
     await sleep(200);
+    await ev('__game.block63.deposit.clear()');     // 清场本身也会掉牌（第 84 块），先清干净
     await ev('__game.block63.deposit.add(3)');
     await ev('__game.warp(__game.block63.deposit.pos().x, __game.block63.deposit.pos().z + 2.4)');
     await sleep(200);
@@ -235,8 +270,63 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     ok(await ev('document.getElementById("codePanel").classList.contains("on")') === false, '超时 → 面板关掉');
     ok(await ev('__game.block63.deposit.count()') === 3, '超时不清柜');
 
-    // ---------- 8. 教程（&hints） ----------
-    console.log('\n[8] 第八关教程');
+    // ---------- 8. 镇牌铃（第 84 块）----------
+    console.log('\n[8] 镇牌铃');
+    await ev('__game.block63.deposit.clear()');
+    ok(await ev('__game.block63.deposit.seal()') === 0, '一开始没买铃');
+    await ev('__game.block63.buyRelic("seal", 1)');
+    await sleep(300);
+    ok(await ev('__game.block63.deposit.seal()') === 1, '买一级 → 铃 1 级');
+    ok(await ev('__game.block63.deposit.chance()') === 0.34, '掉牌概率降到 34%', String(await ev('__game.block63.deposit.chance()')));
+    ok(await ev('__game.block63.deposit.state().seal') === 1, '柜子 state 里读得到铃等级');
+    const bellCount = `(() => {
+      let n = -1;
+      __game.scene.traverse((o) => {
+        if (o.userData && Array.isArray(o.userData.bells)) n = o.userData.bells.filter((b) => b.visible).length;
+      });
+      return n;
+    })()`;
+    ok(await ev(bellCount) === 1, '柜门上方真的挂了 1 个铜铃', String(await ev(bellCount)));
+    await ev('__game.block63.buyRelic("seal", 1)');
+    await sleep(300);
+    ok(await ev('__game.block63.deposit.chance()') === 0.22, '二级 22%', String(await ev('__game.block63.deposit.chance()')));
+    ok(await ev(bellCount) === 2, '二级挂 2 个铜铃', String(await ev(bellCount)));
+    // 挡牌计数：买铃之后杀一批，挡回的牌子数应该涨
+    const blockedBefore = await ev('__game.block63.deposit.blocked()');
+    await ev(`(() => {
+      const H = __game.block63;
+      for (let i = 0; i < 30; i++) {
+        if (H.deposit.count() >= 7) H.deposit.clear();
+        H.enemies.spawn('warrior', 5.5, 5.5);
+        H.enemies.set('warrior', { state: 'chase', t: 0 });
+        H.enemies.kill('warrior');
+      }
+      H.enemies.kill();
+      return true;
+    })()`);
+    const blockedAfter = await ev('__game.block63.deposit.blocked()');
+    ok(blockedAfter > blockedBefore, '被挡回的牌子会累计', `${blockedBefore} → ${blockedAfter}`);
+
+    // ---------- 9. 第 9 / 12 回合的商店常驻 ----------
+    console.log('\n[9] 商店常驻');
+    await ev('__game.block63.deposit.clear()');
+    await ev('__game.shop.open(9)');
+    await sleep(400);
+    const stock9 = await ev('__game.shop.stock.map((i) => i.id)');
+    ok(Array.isArray(stock9) && stock9.includes('buySeal'), '第八关第 9 回合一定有镇牌铃', JSON.stringify(stock9));
+    ok(stock9.length === 4, '常驻不挤掉格子（仍 4 件）', String(stock9.length));
+    ok(stock9[0] === 'buySeal', '摆在第一格', stock9[0]);
+    await ev('__game.shop.close()');
+    await sleep(300);
+    await ev('__game.shop.open(12)');
+    await sleep(400);
+    const stock12 = await ev('__game.shop.stock.map((i) => i.id)');
+    ok(stock12.includes('buySeal'), '第 12 回合也有', JSON.stringify(stock12));
+    await ev('__game.shop.close()');
+    await sleep(300);
+
+    // ---------- 10. 教程（&hints） ----------
+    console.log('\n[10] 第八关教程');
     ok(jsErrors.length === 0, '全程无 JS 报错', jsErrors.slice(0, 3).join(' | '));
   } catch (err) {
     console.log('\n!! 异常：' + err.message);

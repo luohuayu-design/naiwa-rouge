@@ -5,40 +5,40 @@
 // 目标是把三件事调顺：摇杆输入 → 角色速度/朝向 → 相机跟随。
 // 后续叠战斗时，只需要在 tick() 里加敌人更新与自动攻击，不用动输入层。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=94';
-import { buildNightScene } from './scene.js?v=94';
-import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=94';
+import * as THREE from '../lib/three.module.js?v=95';
+import { buildNightScene } from './scene.js?v=95';
+import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=95';
 // 第 80 块：给 glb 拼上版本号 → SW 缓存优先（详见 assetUrl.js）
-import { withV } from './assetUrl.js?v=94';
-import { createInput } from './input.js?v=94';
-import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=94';
-import { createStatView } from './statView.js?v=94';
-import { createWeaponStats } from './weaponStats.js?v=94';
-import { createFx } from './fx.js?v=94';
-import { createEnemySystem, ENEMY_TYPES } from './enemy.js?v=94';
+import { withV } from './assetUrl.js?v=95';
+import { createInput } from './input.js?v=95';
+import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=95';
+import { createStatView } from './statView.js?v=95';
+import { createWeaponStats } from './weaponStats.js?v=95';
+import { createFx } from './fx.js?v=95';
+import { createEnemySystem, ENEMY_TYPES } from './enemy.js?v=95';
 import {
   createLevel, LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVEL_5, LEVEL_6, LEVEL_7, LEVEL_8, LEVEL_9, LEVELS_BY_ID, DIFFS, setDifficulty, getDifficulty, roundScale, levelStats, levelTypes,
-} from './wave.js?v=94';
-import { createRangeRing } from './rangeRing.js?v=94';
-import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=94';
-import { createWeaponSystem } from './weapon.js?v=94';
-import { createArrowRainSystem } from './arrowRain.js?v=94';
-import { SWORD_KINDS } from './swordKinds.js?v=94';
-import { createGoldSystem } from './gold.js?v=94';
-import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW } from './shop.js?v=94';
-import { createTurretSystem, TURRET } from './turret.js?v=94';
-import { createRelicSystem, RELIC_DEFS } from './relics.js?v=94';
-import { createHazards } from './hazards.js?v=94';
-import { createDeposit } from './deposit.js?v=94';   // 第 81 块：第八关的寄存柜
-import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=94';
-import audio from './audio.js?v=94';
-import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=94';
+} from './wave.js?v=95';
+import { createRangeRing } from './rangeRing.js?v=95';
+import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=95';
+import { createWeaponSystem } from './weapon.js?v=95';
+import { createArrowRainSystem } from './arrowRain.js?v=95';
+import { SWORD_KINDS } from './swordKinds.js?v=95';
+import { createGoldSystem } from './gold.js?v=95';
+import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW, SHOP_PINNED } from './shop.js?v=95';
+import { createTurretSystem, TURRET } from './turret.js?v=95';
+import { createRelicSystem, RELIC_DEFS } from './relics.js?v=95';
+import { createHazards } from './hazards.js?v=95';
+import { createDeposit, tagChance } from './deposit.js?v=95';   // 第 81 块：寄存柜；第 84 块：掉牌概率
+import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=95';
+import audio from './audio.js?v=95';
+import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=95';
 // 第 62 块：回血技能（第四关通关后永久解锁，回 5 点 / CD 25 秒）
-import { createHealSkill, HEAL_AMOUNT, HEAL_CD } from './healSkill.js?v=94';
+import { createHealSkill, HEAL_AMOUNT, HEAL_CD } from './healSkill.js?v=95';
 // 第 62 块：民心专属事件（升档走良性池、掉档走恶性池）
-import { repPoolForTier, REP_GOOD, REP_BAD } from './repEvents.js?v=94';
+import { repPoolForTier, REP_GOOD, REP_BAD } from './repEvents.js?v=95';
 // 第 62 块：攻略面板（战败提示上的「查看攻略」，手风琴三组）
-import { renderGuide, GUIDE_SECTIONS } from './guide.js?v=94';
+import { renderGuide, GUIDE_SECTIONS } from './guide.js?v=95';
 import {
   settings as readSettings, setSetting, save as saveProfile, profile,
   bumpStat, setStatMax, codexAdd, codexCount, countCard, unlockAch, hasAch, addBones, bones, resetAll,
@@ -51,53 +51,53 @@ import {
   healUnlocked, markHealUnlocked,
   rainObtained, markRainObtained,          // 第 65 块：技能的「有没有」只跟解锁有关
   hintSeen, markHintSeen,                  // 第 65 块：一次性提示卡
-} from './profile.js?v=94';
+} from './profile.js?v=95';
 // 第 44 块：礼包兑换（码表只有哈希，明细在 gift.js 顶部注释）
-import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=94';
+import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=95';
 // 第 46 块：音效包（抽象奶蛙音效包 —— 4 段奶蛙叫声，通关第一关解锁）
-import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=94';
-import * as runSave from './runSave.js?v=94';
+import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=95';
+import * as runSave from './runSave.js?v=95';
 // 第 78 块：存档导出 / 导入。数据逻辑全在这个模块里（不碰 DOM），这里只接按钮
-import * as saveIO from './saveIO.js?v=94';
+import * as saveIO from './saveIO.js?v=95';
 import {
   CAMPFIRE, CAMP_STEP, campBuy, campOwned, campLevel,
   campCost, campApply, bonesFor, diffBoneMul, levelBoneMul, coinBones, BONE,
-} from './campfire.js?v=94';
+} from './campfire.js?v=95';
 // 第 23 块：永夜火种（通关白给的 3 次永久三选一）
 import {
   BOONS, BOON_BY_ID, BOON_PICKS, boonOwned, boonStacks, boonPending, boonTotalStacks,
   grantBoons, rollBoons, takeBoon, applyBoons, boonStackText,
-} from './boons.js?v=94';
+} from './boons.js?v=95';
 // 第 21 块：夜行诅咒（自选 debuff 换骨币倍率）
-import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=94';
+import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=95';
 // 第 22 块：种子与每日挑战
 import {
   DAILY_RULES, dayKey, dayText, dailySeed, seedCode, pickDailyCurses,
   seedFromText, pickSeedRules, loadSeedRecords, saveSeedRecord, pruneSeeds,
   dailyRecord, saveDailyRecord, pruneDaily, makeRng,
-} from './seed.js?v=94';
-import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=94';
+} from './seed.js?v=95';
+import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=95';
 // 第 58 块：局外商店 · 宝箱（花骨币买，开箱随机给永久属性 / 永久法器 / 技能CD缩短）
 import {
   BOXES, BOX_BY_ID, buyBox, rollBox, metaApplyStats, applyMeta,
   // 第 74 块：盲盒按购买次数加价（三种各自独立计数）
   boxCost, boxPriceOf, boxBought, BOX_PRICE_STEP,
-} from './metaShop.js?v=94';
+} from './metaShop.js?v=95';
 // 第 59 块：每日签到（以周为单位，周一 00:00 重置）
 import {
   WEEK_TIERS, SIGN_BONES, weekCells, signSummary, signToday, signedToday,
-} from './signin.js?v=94';
-import { achById, ACHS } from './achievements.js?v=94';
+} from './signin.js?v=95';
+import { achById, ACHS } from './achievements.js?v=95';
 import {
   EVENTS, ALL_EVENTS, getEventById, pickEvent, effectLines,
   choiceHint, canAfford, costShort, REP_MIN, REP_MAX, REP_START,
   isTalk, eventChoices, resolveRoll, mergeEffects,
-} from './events.js?v=94';
+} from './events.js?v=95';
 // 第 32 块：主线《笑不出来的那一夜》（18 夜，一夜一关，前 3 夜已有关卡）
 import {
   STORY_ARC, STORY_CHAPTERS, STORY_ENDINGS, MARK_INFO,
   storyChapterAt, storyChapterById, storyEndingKey,
-} from './story.js?v=94';
+} from './story.js?v=95';
 
 // 标记模块已经跑起来了：index.html 的兜底自检靠它判断
 // 「模块根本没执行」还是「执行了但加载慢」。
@@ -696,6 +696,8 @@ async function boot() {
   // ============================================================
   const fx = createFx(scene);
   let kills = 0;
+  // 第 84 块：镇牌铃挡回来的牌子数（每 coinPer 块化一枚骨币）。跟着一局走，重开清零。
+  let sealBlocked = 0;
 
   const enemies = createEnemySystem({
     scene, fx, arenaRadius: ARENA_R,
@@ -716,11 +718,36 @@ async function boot() {
       // 第五/六关的两只新怪（第 63 块）
       if (e.type === 'eraser' && codexCount('enemies', 'eraser') >= 10) tryAch('eraser_10');
       if (e.type === 'reboot' && codexCount('enemies', 'reboot') >= 10) tryAch('reboot_10');
-      // 第 83 块（用户定案）：**任何**一只怪倒下，木牌都会进寄存柜。
-      // 旧版只有两种队形怪掉牌，现在队形系统整个删了，柜子改成按「击杀数」记账：
-      // 杀得越快，柜子越快满；满了封柜 5 秒，然后寄存处看守自己走出来。
-      // 每局开始时 deposit 还没 build（没有 def），addTag 会自己 return —— 安全。
-      deposit.addTag(1);
+      // 第 84 块（用户定案）：掉牌改成**概率** —— 约一半的怪会留下牌子，不是每只都掉。
+      // （第 83 块是 100%，一关 500 多只怪会把柜子开几十次。）概率的真相源在
+      // deposit.js 的 TAG_SEAL，法器「镇牌铃」每升一级往下压一档。
+      //
+      // 只在有柜子的关才掷骰：别的关 deposit.pos() 是 null，掷了也是白发，
+      // 还白白吃掉随机流（种子局里会让后面的事件抽签跟着偏）。
+      if (deposit.pos()) {
+        const before = deposit.count();
+        if (rngOf('deposit')() < tagChance(relics.sealLevel())) {
+          const n = deposit.addTag(1);
+          // 提示（用户定案）：每进一块牌子都报一句「现在几块了」。
+          // 同一帧连杀好几只（雷剑清场）时会被后一条覆盖 —— 这正是想要的，
+          // 玩家只关心最新的那个数字。
+          if (n > before) {
+            showToast(`柜子里已经有 ${n} 个牌子了`, '满 8 个会释放 BOSS · 快去取出牌子');
+          }
+        } else if (relics.sealLevel() > 0) {
+          // 镇牌铃（第 84 块）：牌子被铃挡回去了。挡回去也不是白挡 ——
+          // 每攒够 coinPer 块就化一枚骨币，否则玩家买了铃只会觉得「什么都感觉不到」。
+          // ⚠️ sealBlocked 是**累计值**（不取模），只用来判断「又够一轮了」；
+          //    这样调试口读到的数一直单调增，测试和排查都省事。
+          sealBlocked++;
+          const per = relics.sealCoinPer();
+          if (sealBlocked % per === 0) {
+            coins += 1;
+            renderGold();
+            showToast('镇牌铃', `挡回 ${per} 块牌子 · 化出一枚骨币`);
+          }
+        }
+      }
       // 木鱼法器（第 71 块）：击杀时也震一圈（挨打/击杀都触发）
       if (relics.woodfishHit) relics.woodfishHit(e.pos);
       // 小兵是自爆 → 爆炸声；其他怪是被打死 → 骨头散架声
@@ -2134,6 +2161,7 @@ async function boot() {
     hintDone = false;
     hintEl.classList.remove('off');
     runRarities = new Set();          // 本局品质集合重置（cards_all_kinds 用）
+    sealBlocked = 0;                  // 第 84 块：镇牌铃的挡牌计数一局一清
     storyMarked.clear();              // 第 32 块：印记去重表一局一清（重打可以重新选，档案照样累计）
     setDifficulty(diffOverride || profile().difficulty || 'normal');   // 难度一局一选，开局生效
     setLevel(pendingLevelId);         // 第 20 块：按选关重建这一关（含场景皮肤）
@@ -2344,6 +2372,8 @@ async function boot() {
       event: makeRng(runSeed ^ 0xc2b2ae35),
       gold: makeRng(runSeed ^ 0x27d4eb2f),
       talk: makeRng(runSeed ^ 0x165667b1),
+      // 第 84 块：掉落牌的掷骰单独一条流 —— 掉不掉牌子不该把事件抽签的序列带偏
+      deposit: makeRng(runSeed ^ 0x7feb352d),
     } : null;
     return runSeed;
   }
@@ -3938,6 +3968,7 @@ async function boot() {
       turretCount: turrets.count(),
       relicLevels: relics.levels(),
       luck: stats.get('luck'),          // 幸运：更容易摆出金/红货（第 11 块）
+      pinned: SHOP_PINNED[roundNo] || [],   // 第 84 块：第 9 / 12 回合的常驻货（镇牌铃）
     });
     gameState = 'shop';
     input.joystick.release();
@@ -4083,6 +4114,9 @@ async function boot() {
     } else if (item.type === 'relic') {
       const lv = relics.buy(item.relic);
       const def = RELIC_DEFS[item.relic];
+      // 第 84 块：镇牌铃挂在柜门上，买到就立刻显形。
+      // （不能只等主循环 —— 商店打开时 gameState 是 shop，那段不一定在跑）
+      if (item.relic === 'seal') deposit.setSeal(relics.sealLevel());
       showToast(`${def.name} ${lv} 级`, def.desc[lv - 1] + (lv < def.maxLevel ? ' · 再买可升级' : ' · 已满级'));
     }
     renderHud();
@@ -4271,6 +4305,9 @@ async function boot() {
     hazards.build(level.level.hazards || []);   // 第 63 块：只有第六关有漏电地板
     // 第 81 块：寄存柜（只有第八关有）。build 会先 reset 自己，别的关传 undefined 即清空。
     deposit.build(level.level.deposit || null);
+    // 第 84 块：柜子是新建的，镇牌铃得按当前等级重新挂上去
+    // （build 每次都造新柜子，新柜子的铃默认藏着）
+    deposit.setSeal(relics.sealLevel());
     // 右上角：第几关 + 地区名（"第五关 · 草甸路口" → "第五关" / "草甸路口"）
     const nm = String(level.level.name || '').split('·');
     if (whLevelEl) whLevelEl.textContent = (nm[0] || `第 ${curLevelId} 关`).trim();
@@ -6939,6 +6976,16 @@ async function boot() {
           count: () => deposit.count(),
           add: (n) => deposit.addTag(n == null ? 1 : n),
           clear: () => { deposit.clearTags(); return true; },
+          // 第 84 块：镇牌铃 / 掉牌概率 / 被挡回的牌子数 / 刚才那条提示的原文
+          // （提示是 showToast 弹的，测试要能读到它到底写了什么）
+          seal: () => relics.sealLevel(),
+          chance: () => tagChance(relics.sealLevel()),
+          blocked: () => sealBlocked,
+          toast: () => ({
+            on: waveToast.classList.contains('on'),
+            title: wtTitle.textContent,
+            sub: wtSub.textContent,
+          }),
           // 第 83 块：取牌小游戏的全套口子（CDP 里要能「不按屏幕就输对」）
           open: () => openCode(),
           code: () => codeTarget,
@@ -6974,7 +7021,12 @@ async function boot() {
           phase: (p) => { hazards.setPhase(p); return hazards.stateOf(0); },
         },
         relics: () => relics.levels(),
-        buyRelic: (k, n = 1) => { for (let i = 0; i < n; i++) relics.buy(k); return relics.levels(); },
+        buyRelic: (k, n = 1) => {
+          for (let i = 0; i < n; i++) relics.buy(k);
+          // 第 84 块：绕过了 buyItem，铃的显形要自己补一下
+          deposit.setSeal(relics.sealLevel());
+          return relics.levels();
+        },
         debugLantern: () => (relics.debugLantern ? relics.debugLantern(pos) : null),
         debugInsulator: () => (relics.debugInsulator ? relics.debugInsulator(pos) : null),
         // 擦名者：场上几只 / 一共被偷走几把剑还没还
@@ -7362,9 +7414,11 @@ async function boot() {
         roll: (rng, luck) => rollShopItems(rng || rngOf('shop'), {
           hasWeapon: weapon.granted,
           round: level.roundNo,
+          level: curLevelId,
           turretCount: turrets.count(),
           relicLevels: relics.levels(),
           luck: luck ?? stats.get('luck'),
+          pinned: SHOP_PINNED[level.roundNo] || [],   // 第 84 块：常驻货
         }),
         render: () => renderShop(),
       },
@@ -7840,6 +7894,10 @@ async function boot() {
       turrets.update(dt, { playerPos: pos });
       hazards.update(dt, { playerPos: pos });          // 第 63 块：漏电地板
       // 第 83 块：寄存柜（收木牌 / 封柜倒数 / 5 秒后把「寄存处看守」放出来）
+      // 第 84 块：顺手把镇牌铃的等级对一次账 —— 买到 / 读档 / 换关重建柜子
+      // 三个时刻都会让柜子上的铃变样，每帧对一次比在三处各写一遍稳
+      // （等级没变时 setSeal 只做几次 visible 赋值，不重画画布）。
+      deposit.setSeal(relics.sealLevel());
       deposit.update(dt, {
         onSummon: () => {
           const hub = deposit.pos();

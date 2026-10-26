@@ -178,7 +178,8 @@ const mismatched = jsFiles.filter((f) => {
   const vs = [...s.matchAll(/\?v=(\d+)/g)].map((m) => m[1]);
   return vs.some((x) => x !== V);
 });
-ok(V === '94', 'index.html 版本号 v=94', V);
+// 第 84 块 bump 到 95：这里跟着改，断言仍然是「index.html 与所有 js 一致」
+ok(V === '95', 'index.html 版本号 v=95', V);
 ok(mismatched.length === 0, 'js 里的 ?v= 全部一致', mismatched.join(','));
 
 console.log(`\n=== 第 83 块契约：通过 ${pass} / 失败 ${fail} ===`);

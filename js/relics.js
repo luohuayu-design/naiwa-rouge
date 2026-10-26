@@ -16,11 +16,15 @@
 // 与环剑（自动索敌、消耗制）和炮台（固定点位）互补；价格定在
 // 商店里「买得起但要攒一攒」的档，让 9/12/15/18 回合的商店有取舍。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=94';
-import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=94';
-import { withV } from './assetUrl.js?v=94';   // 第 80 块：glb 带版本号，SW 才走缓存优先
-import { distance2D } from './stats.js?v=94';
-import audio from './audio.js?v=94';
+import * as THREE from '../lib/three.module.js?v=95';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=95';
+import { withV } from './assetUrl.js?v=95';   // 第 80 块：glb 带版本号，SW 才走缓存优先
+import { distance2D } from './stats.js?v=95';
+import { TAG_BASE, TAG_SEAL } from './deposit.js?v=95';   // 第 84 块：掉牌概率的真相源
+import audio from './audio.js?v=95';
+
+// 百分比文案（概率表里存的是 0.5 这种小数）
+const pct = (v) => `${Math.round(v * 100)}%`;
 
 export const RELIC_DEFS = {
   spikes: {
@@ -121,11 +125,30 @@ export const RELIC_DEFS = {
       '半径 3.2、击退 1.7、定身 0.65 秒',
       '半径 3.6、击退 2.0、定身 0.8 秒 —— 木鱼一响，井蛙退避'],
   },
+  // ---------------- 第八关新增（第 84 块）：镇牌铃 ----------------
+  // 用户定案：「每个怪死后只有 50% 左右的概率留牌子」+「商店常驻卖一件降低
+  // 掉牌概率的法器」。铃挂在寄存柜门上，牌子飞过来被它挡回去 —— 柜子攒得慢，
+  // 寄存处看守就来得晚。挡回去的牌子也不白扔：每 10 块化成一枚骨币。
+  //
+  // 和绝缘斗篷一样是**关卡专属**法器：没有寄存柜的关卡里它什么也不做，
+  // 因为「掉牌」这件事本身只在第八关存在 —— 所以商店给了 needLevel: 8。
+  // 概率表的真相源在 deposit.js 的 TAG_SEAL，这里只负责取数字和显示。
+  seal: {
+    name: '镇牌铃',
+    maxLevel: 3,
+    tagChance: TAG_SEAL,
+    coinPer: 10,                 // 每挡回几块牌子化一枚骨币
+    desc: [
+      `掉牌概率 ${pct(TAG_BASE)} → ${pct(TAG_SEAL[1])}：柜子攒得慢，看守晚来一步；挡回的牌子每 10 块化一枚骨币`,
+      `掉牌概率再压到 ${pct(TAG_SEAL[2])} —— 一关下来柜子开不了几次`,
+      `掉牌概率压到 ${pct(TAG_SEAL[3])} · 铃一响，牌子基本进不去`,
+    ],
+  },
 };
 
 export function createRelicSystem({ scene, fx, enemies, onLanternReveal }) {
-  const levels = { spikes: 0, frost: 0, bell: 0, thorns: 0, stove: 0, lantern: 0, insulator: 0, woodfish: 0 };
-  const cds = { spikes: 0, frost: 0, bell: 0, thorns: 0, stove: 0, lantern: 0, insulator: 0, woodfish: 0 };
+  const levels = { spikes: 0, frost: 0, bell: 0, thorns: 0, stove: 0, lantern: 0, insulator: 0, woodfish: 0, seal: 0 };
+  const cds = { spikes: 0, frost: 0, bell: 0, thorns: 0, stove: 0, lantern: 0, insulator: 0, woodfish: 0, seal: 0 };
 
   // ---------------- 视觉 ----------------
   // 地刺（第 24 块）：KayKit「尖刺地板」里只取尖刺部分（CC0，带手绘贴图），
@@ -286,6 +309,34 @@ export function createRelicSystem({ scene, fx, enemies, onLanternReveal }) {
   lanternRim.renderOrder = 2;
   scene.add(lanternRim);
 
+  // ---------------- 镇牌铃（第 84 块）----------------
+  // 腰侧挂的一枚小铜铃（铜色球 + 小锤 + 一段绳），走动时轻轻摆。
+  // 柜子那头还有一串同款铃，由 deposit.setSeal() 挂 —— 主角身上这枚只表示「你带着它」。
+  const sealGroup = new THREE.Group();
+  {
+    const bellMat = new THREE.MeshStandardMaterial({
+      color: 0xc9952f, roughness: 0.42, metalness: 0.55,
+      emissive: new THREE.Color(0x6a3f08), emissiveIntensity: 0.5,
+    });
+    const cup = new THREE.Mesh(new THREE.SphereGeometry(0.085, 12, 10), bellMat);
+    cup.scale.set(1, 1.15, 1);
+    const clap = new THREE.Mesh(
+      new THREE.SphereGeometry(0.032, 8, 6),
+      new THREE.MeshBasicMaterial({ color: 0xffe0a0 })
+    );
+    clap.position.y = -0.095;
+    const cord = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.012, 0.012, 0.17, 6),
+      new THREE.MeshBasicMaterial({ color: 0x6b5330 })
+    );
+    cord.position.y = 0.15;
+    sealGroup.add(cup, clap, cord);
+    sealGroup.userData.cup = cup;
+  }
+  sealGroup.visible = false;
+  scene.add(sealGroup);
+  let sealSwing = 0;       // 摆动相位
+
   function buy(kind) {
     const def = RELIC_DEFS[kind];
     if (!def || levels[kind] >= def.maxLevel) return levels[kind] || 0;
@@ -302,6 +353,7 @@ export function createRelicSystem({ scene, fx, enemies, onLanternReveal }) {
       lanternGroup.visible = true;
       lanternRim.visible = true;
     }
+    if (kind === 'seal') sealGroup.visible = true;
     return levels[kind];
   }
 
@@ -589,6 +641,17 @@ export function createRelicSystem({ scene, fx, enemies, onLanternReveal }) {
       lanternRim.material.opacity = 0.10 + 0.32 * lanternPulse;
     }
 
+    // 镇牌铃（第 84 块）：挂在右腰侧，跟着主角走 + 轻摆
+    if (levels.seal > 0) {
+      sealSwing += dt * 2.6;
+      sealGroup.position.set(
+        playerPos.x + 0.34,
+        0.82 + Math.sin(sealSwing) * 0.03,
+        playerPos.z + 0.20,
+      );
+      sealGroup.rotation.z = Math.sin(sealSwing) * 0.20;
+    }
+
     // 绝缘斗篷（第 63 块）：被动，只有踩在**通电**的地板上才发力
     const il = levels.insulator;
     if (il > 0 && hazards && hazards.isPowered && hazards.isPowered(playerPos.x, playerPos.z)) {
@@ -651,6 +714,7 @@ export function createRelicSystem({ scene, fx, enemies, onLanternReveal }) {
     levels.lantern = 0;
     levels.insulator = 0;
     levels.woodfish = 0;
+    levels.seal = 0;
     cds.spikes = 0;
     cds.frost = 0;
     cds.bell = 0;
@@ -659,6 +723,7 @@ export function createRelicSystem({ scene, fx, enemies, onLanternReveal }) {
     cds.lantern = 0;
     cds.insulator = 0;
     cds.woodfish = 0;
+    cds.seal = 0;
     thornPulse = 0;
     stovePulse = 0;
     stoveAngle = 0;
@@ -671,6 +736,8 @@ export function createRelicSystem({ scene, fx, enemies, onLanternReveal }) {
     lanternGroup.visible = false;
     lanternRim.visible = false;
     lanternPulse = 0;
+    sealGroup.visible = false;
+    sealSwing = 0;
   }
 
   // 存档续玩（第 17 块）：按存档重放等级（buy 不扣钱，扣钱在外层）
@@ -682,6 +749,7 @@ export function createRelicSystem({ scene, fx, enemies, onLanternReveal }) {
     warmRim.visible = false;
     lanternGroup.visible = false;
     lanternRim.visible = false;
+    sealGroup.visible = false;
     let n = 0;
     for (const [k, lv] of Object.entries(saved || {})) {
       for (let i = 0; i < (lv | 0); i++) { buy(k); n++; }
@@ -692,6 +760,11 @@ export function createRelicSystem({ scene, fx, enemies, onLanternReveal }) {
   return {
     buy, update, reset, restore, thornsHit, woodfishHit,
     levels: () => ({ ...levels }),
+    // 第 84 块：镇牌铃 —— 当前掉牌概率 / 每挡回几块换一枚骨币 / 当前等级
+    // （表里第 0 位就是「没买铃」的 50%，所以直接按等级取即可）
+    sealLevel: () => levels.seal,
+    sealChance: () => RELIC_DEFS.seal.tagChance[levels.seal] ?? TAG_BASE,
+    sealCoinPer: () => RELIC_DEFS.seal.coinPer,
     DEF: RELIC_DEFS,
     // 调试（第 29 块）：手动敲一次钟（截图/测试用）
     debugBell: (at) => ringBell(Math.max(1, levels.bell), at),
