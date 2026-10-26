@@ -5,40 +5,40 @@
 // 目标是把三件事调顺：摇杆输入 → 角色速度/朝向 → 相机跟随。
 // 后续叠战斗时，只需要在 tick() 里加敌人更新与自动攻击，不用动输入层。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=102';
-import { buildNightScene } from './scene.js?v=102';
-import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=102';
+import * as THREE from '../lib/three.module.js?v=103';
+import { buildNightScene } from './scene.js?v=103';
+import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=103';
 // 第 80 块：给 glb 拼上版本号 → SW 缓存优先（详见 assetUrl.js）
-import { withV } from './assetUrl.js?v=102';
-import { createInput } from './input.js?v=102';
-import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=102';
-import { createStatView } from './statView.js?v=102';
-import { createWeaponStats } from './weaponStats.js?v=102';
-import { createFx } from './fx.js?v=102';
-import { createEnemySystem, ENEMY_TYPES } from './enemy.js?v=102';
+import { withV } from './assetUrl.js?v=103';
+import { createInput } from './input.js?v=103';
+import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=103';
+import { createStatView } from './statView.js?v=103';
+import { createWeaponStats } from './weaponStats.js?v=103';
+import { createFx } from './fx.js?v=103';
+import { createEnemySystem, ENEMY_TYPES } from './enemy.js?v=103';
 import {
   createLevel, LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVEL_5, LEVEL_6, LEVEL_7, LEVEL_8, LEVEL_9, LEVELS_BY_ID, DIFFS, setDifficulty, getDifficulty, roundScale, levelStats, levelTypes,
-} from './wave.js?v=102';
-import { createRangeRing } from './rangeRing.js?v=102';
-import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=102';
-import { createWeaponSystem } from './weapon.js?v=102';
-import { createArrowRainSystem } from './arrowRain.js?v=102';
-import { SWORD_KINDS } from './swordKinds.js?v=102';
-import { createGoldSystem } from './gold.js?v=102';
-import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW, SHOP_PINNED } from './shop.js?v=102';
-import { createTurretSystem, TURRET } from './turret.js?v=102';
-import { createRelicSystem, RELIC_DEFS } from './relics.js?v=102';
-import { createHazards } from './hazards.js?v=102';
-import { createDeposit, tagChance } from './deposit.js?v=102';   // 第 81 块：寄存柜；第 84 块：掉牌概率
-import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=102';
-import audio from './audio.js?v=102';
-import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=102';
+} from './wave.js?v=103';
+import { createRangeRing } from './rangeRing.js?v=103';
+import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=103';
+import { createWeaponSystem } from './weapon.js?v=103';
+import { createArrowRainSystem } from './arrowRain.js?v=103';
+import { SWORD_KINDS } from './swordKinds.js?v=103';
+import { createGoldSystem } from './gold.js?v=103';
+import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW, SHOP_PINNED } from './shop.js?v=103';
+import { createTurretSystem, TURRET } from './turret.js?v=103';
+import { createRelicSystem, RELIC_DEFS } from './relics.js?v=103';
+import { createHazards } from './hazards.js?v=103';
+import { createDeposit, tagChance } from './deposit.js?v=103';   // 第 81 块：寄存柜；第 84 块：掉牌概率
+import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=103';
+import audio from './audio.js?v=103';
+import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=103';
 // 第 62 块：回血技能（第四关通关后永久解锁，回 5 点 / CD 25 秒）
-import { createHealSkill, HEAL_AMOUNT, HEAL_CD } from './healSkill.js?v=102';
+import { createHealSkill, HEAL_AMOUNT, HEAL_CD } from './healSkill.js?v=103';
 // 第 62 块：民心专属事件（升档走良性池、掉档走恶性池）
-import { repPoolForTier, REP_GOOD, REP_BAD } from './repEvents.js?v=102';
+import { repPoolForTier, REP_GOOD, REP_BAD } from './repEvents.js?v=103';
 // 第 62 块：攻略面板（战败提示上的「查看攻略」，手风琴三组）
-import { renderGuide, GUIDE_SECTIONS } from './guide.js?v=102';
+import { renderGuide, GUIDE_SECTIONS } from './guide.js?v=103';
 import {
   settings as readSettings, setSetting, save as saveProfile, profile,
   bumpStat, setStatMax, codexAdd, codexCount, countCard, unlockAch, hasAch, addBones, bones, resetAll,
@@ -51,53 +51,53 @@ import {
   healUnlocked, markHealUnlocked,
   rainObtained, markRainObtained,          // 第 65 块：技能的「有没有」只跟解锁有关
   hintSeen, markHintSeen,                  // 第 65 块：一次性提示卡
-} from './profile.js?v=102';
+} from './profile.js?v=103';
 // 第 44 块：礼包兑换（码表只有哈希，明细在 gift.js 顶部注释）
-import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=102';
+import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=103';
 // 第 46 块：音效包（抽象奶蛙音效包 —— 4 段奶蛙叫声，通关第一关解锁）
-import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=102';
-import * as runSave from './runSave.js?v=102';
+import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=103';
+import * as runSave from './runSave.js?v=103';
 // 第 78 块：存档导出 / 导入。数据逻辑全在这个模块里（不碰 DOM），这里只接按钮
-import * as saveIO from './saveIO.js?v=102';
+import * as saveIO from './saveIO.js?v=103';
 import {
   CAMPFIRE, CAMP_STEP, campBuy, campOwned, campLevel,
   campCost, campApply, bonesFor, diffBoneMul, levelBoneMul, coinBones, BONE,
-} from './campfire.js?v=102';
+} from './campfire.js?v=103';
 // 第 23 块：永夜火种（通关白给的 3 次永久三选一）
 import {
   BOONS, BOON_BY_ID, BOON_PICKS, boonOwned, boonStacks, boonPending, boonTotalStacks,
   grantBoons, rollBoons, takeBoon, applyBoons, boonStackText,
-} from './boons.js?v=102';
+} from './boons.js?v=103';
 // 第 21 块：夜行诅咒（自选 debuff 换骨币倍率）
-import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=102';
+import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=103';
 // 第 22 块：种子与每日挑战
 import {
   DAILY_RULES, dayKey, dayText, dailySeed, seedCode, pickDailyCurses,
   seedFromText, pickSeedRules, loadSeedRecords, saveSeedRecord, pruneSeeds,
   dailyRecord, saveDailyRecord, pruneDaily, makeRng,
-} from './seed.js?v=102';
-import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=102';
+} from './seed.js?v=103';
+import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=103';
 // 第 58 块：局外商店 · 宝箱（花骨币买，开箱随机给永久属性 / 永久法器 / 技能CD缩短）
 import {
   BOXES, BOX_BY_ID, buyBox, rollBox, metaApplyStats, applyMeta,
   // 第 74 块：盲盒按购买次数加价（三种各自独立计数）
   boxCost, boxPriceOf, boxBought, BOX_PRICE_STEP,
-} from './metaShop.js?v=102';
+} from './metaShop.js?v=103';
 // 第 59 块：每日签到（以周为单位，周一 00:00 重置）
 import {
   WEEK_TIERS, SIGN_BONES, weekCells, signSummary, signToday, signedToday,
-} from './signin.js?v=102';
-import { achById, ACHS } from './achievements.js?v=102';
+} from './signin.js?v=103';
+import { achById, ACHS } from './achievements.js?v=103';
 import {
   EVENTS, ALL_EVENTS, getEventById, pickEvent, effectLines,
   choiceHint, canAfford, costShort, REP_MIN, REP_MAX, REP_START,
   isTalk, eventChoices, resolveRoll, mergeEffects,
-} from './events.js?v=102';
+} from './events.js?v=103';
 // 第 32 块：主线《笑不出来的那一夜》（18 夜，一夜一关，前 3 夜已有关卡）
 import {
   STORY_ARC, STORY_CHAPTERS, STORY_ENDINGS, MARK_INFO,
   storyChapterAt, storyChapterById, storyEndingKey,
-} from './story.js?v=102';
+} from './story.js?v=103';
 
 // 标记模块已经跑起来了：index.html 的兜底自检靠它判断
 // 「模块根本没执行」还是「执行了但加载慢」。
@@ -2186,6 +2186,24 @@ async function boot() {
       runSave.clearRun(pendingClearUid);
       pendingClearUid = null;
     }
+
+    // ⑥ 主角站位：pos 是模块级 Vector3，不归零的话新局会从**上一局结束的地方**开局
+    //    （第 86 块漏了这一条 —— 那时「离开 → 回来」必然刷新整页，位置自然回原点）。
+    //    侧倒姿势与攻击范围环也一并在 restoreRunVisuals() 里扶正。
+    pos.set(0, 0, 0);
+    vel.set(0, 0, 0);
+    restoreRunVisuals();
+  }
+
+  // 结算时为了「倒下 / 通关」的画面，有两样是**收起来**的：奶蛙侧躺、攻击范围环隐藏。
+  // 它们都活在「整页一个世界」里，以前靠刷新复位；现在回主界面再开一局 / 读档
+  // 用的还是同一份世界，必须在开局处手动扶正 —— 不然后面的局会是「躺着的蛙」
+  // 加「永远不出现的攻击范围圈」，而且不报任何错。
+  function restoreRunVisuals() {
+    frog.root.rotation.z = 0;          // endGame 里失败会侧倒 -π/2
+    frog.root.position.copy(pos);
+    playerRing.mesh.position.set(pos.x, 0.028, pos.z);
+    playerRing.setVisible(true);
   }
 
   async function beginGame({ tutorial = false } = {}) {
@@ -2238,6 +2256,7 @@ async function boot() {
     repEvFired.clear();
     // 第 36 块：开局把相机焦点贴到角色身上，别从上一局死的地方慢慢飞过来
     camFocus.set(pos.x, 0, pos.z);
+    restoreRunVisuals();      // 第 92 块：姿势 / 攻击范围环复位（幂等，resetRunState 里也调过）
     camFov = CAM_FOV_BASE;
     camera.fov = CAM_FOV_BASE;
     camera.position.set(camFocus.x + camOffset.x, camOffset.y, camFocus.z + camOffset.z);
@@ -4656,6 +4675,9 @@ async function boot() {
     hintEl.classList.add('off');
     renderHud();
     renderSkill();
+    // 第 92 块：上一局如果刚结算过，奶蛙还侧躺着、攻击范围环还是隐藏的 ——
+    // 读档进战场前扶正（以前靠整页刷新的那次 reload 顺手复位）。
+    restoreRunVisuals();
     gameState = 'playing';
     level.startAt(saved.round, saved.roundMod);   // 里面会触发 onRound → 立刻重写一次快照
   }
@@ -5961,6 +5983,9 @@ async function boot() {
     }
     if (after === 'reload') {
       location.reload();
+    } else if (after === 'title') {
+      // 第 92 块：结算页领完火种 → 回主界面（原来这里 reload，玩家看到的是整页重开）
+      exitToTitle();
     }
   }
 
@@ -6422,7 +6447,7 @@ async function boot() {
     }
     // 通关才能拿永久火种：按钮直接改成「先领火种」，别让人错过
     if (rsBtn) {
-      rsBtn.textContent = boonGain ? `领取 ${boonGain} 次永夜火种` : '再来一次';
+      rsBtn.textContent = boonGain ? `领取 ${boonGain} 次永夜火种` : '回到主界面';
       rsBtn.classList.toggle('boon', !!boonGain);
     }
     // 第 62 块：第四关通关 → 永久解锁「回血」技能（档案里记一个布尔，之后每局都带着）
@@ -6611,14 +6636,33 @@ async function boot() {
     meetEl.setAttribute('aria-hidden', 'true');
   }
 
+  // ---------------- 结算之后的出口：回主界面（第 92 块） ----------------
+  // 用户报的 bug：结算页点「再来一次」会**整页刷新**，看着像游戏崩了重开。
+  // 以前确实靠 location.reload() 来保证「下一局是干净的」—— 那是最省事的办法，
+  // 但代价是重新拉一遍资源（怪模型 7MB + 场地贴图）、重建场景、黑屏一两秒。
+  // 现在不需要了：第 86 块的 resetRunState() 已经保证新一局从干净状态起步
+  // （属性 / 武器 / 金币 / 敌人 / 计时全清），所以这里只收浮层、回标题页。
+  function exitToTitle() {
+    audio.sfx('uiSwitch');
+    hideFailTip();                     // 失败提示可能还盖在结算卡上
+    resultEl.classList.remove('on');
+    resultEl.setAttribute('aria-hidden', 'true');
+    closeGuide();                      // 「查看攻略」如果开着，一起收掉
+    // 第一关首通会弹「获得新音效包」（第 46 块），它和结算卡是两条独立路径。
+    // 玩家直接回主界面 = 这次不换，按「保持当前」记档（设置里随时能改），
+    // 别让它下次又拦一次 —— 传 st.id 只为让那句 toast 说对是「留着」还是「已换上」。
+    if (packGetEl && packGetEl.classList.contains('on')) closePackGet(packState().id === 'frog');
+    showTitle();                       // 世界留在原地定格（和「存档并退出」一致）
+  }
+
   document.getElementById('rsBtn').addEventListener('click', () => {
-    // 有没领的永久火种就先选：选完 closeBoons 会自己 reload 开下一局
-    if (boonPending() > 0 && showBoons({ after: 'reload' })) {
+    // 有没领的永久火种就先选：选完 closeBoons 自己回主界面（after: 'title'）
+    if (boonPending() > 0 && showBoons({ after: 'title' })) {
       resultEl.classList.remove('on');
       resultEl.setAttribute('aria-hidden', 'true');
       return;
     }
-    location.reload();
+    exitToTitle();
   });
 
   // 调试钩子：只有 ?debug=1 才挂到 window，方便自动化测试读内部状态（正常游玩不暴露）

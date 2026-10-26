@@ -11,7 +11,7 @@
 // 存「本周一的日期」而不是 ISO 周序号：跨年跨月都不会算错，也方便人直接读档。
 // 所有奖励只在 signToday() 里发，重复调用当天第二次直接返回 signed。
 // ============================================================
-import { profile, save, addBones, bones } from './profile.js?v=102';
+import { profile, save, addBones, bones } from './profile.js?v=103';
 
 export const SIGN_BONES = 20;                 // 每天签到的基础骨币
 export const WEEK_TIERS = [                   // 周内累计里程碑（不要求连续）
