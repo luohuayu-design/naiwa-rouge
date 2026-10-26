@@ -5,40 +5,40 @@
 // 目标是把三件事调顺：摇杆输入 → 角色速度/朝向 → 相机跟随。
 // 后续叠战斗时，只需要在 tick() 里加敌人更新与自动攻击，不用动输入层。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=93';
-import { buildNightScene } from './scene.js?v=93';
-import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=93';
+import * as THREE from '../lib/three.module.js?v=94';
+import { buildNightScene } from './scene.js?v=94';
+import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=94';
 // 第 80 块：给 glb 拼上版本号 → SW 缓存优先（详见 assetUrl.js）
-import { withV } from './assetUrl.js?v=93';
-import { createInput } from './input.js?v=93';
-import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=93';
-import { createStatView } from './statView.js?v=93';
-import { createWeaponStats } from './weaponStats.js?v=93';
-import { createFx } from './fx.js?v=93';
-import { createEnemySystem, ENEMY_TYPES } from './enemy.js?v=93';
+import { withV } from './assetUrl.js?v=94';
+import { createInput } from './input.js?v=94';
+import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=94';
+import { createStatView } from './statView.js?v=94';
+import { createWeaponStats } from './weaponStats.js?v=94';
+import { createFx } from './fx.js?v=94';
+import { createEnemySystem, ENEMY_TYPES } from './enemy.js?v=94';
 import {
   createLevel, LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVEL_5, LEVEL_6, LEVEL_7, LEVEL_8, LEVEL_9, LEVELS_BY_ID, DIFFS, setDifficulty, getDifficulty, roundScale, levelStats, levelTypes,
-} from './wave.js?v=93';
-import { createRangeRing } from './rangeRing.js?v=93';
-import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=93';
-import { createWeaponSystem } from './weapon.js?v=93';
-import { createArrowRainSystem } from './arrowRain.js?v=93';
-import { SWORD_KINDS } from './swordKinds.js?v=93';
-import { createGoldSystem } from './gold.js?v=93';
-import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW } from './shop.js?v=93';
-import { createTurretSystem, TURRET } from './turret.js?v=93';
-import { createRelicSystem, RELIC_DEFS } from './relics.js?v=93';
-import { createHazards } from './hazards.js?v=93';
-import { createDeposit } from './deposit.js?v=93';   // 第 81 块：第八关的寄存柜
-import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=93';
-import audio from './audio.js?v=93';
-import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=93';
+} from './wave.js?v=94';
+import { createRangeRing } from './rangeRing.js?v=94';
+import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=94';
+import { createWeaponSystem } from './weapon.js?v=94';
+import { createArrowRainSystem } from './arrowRain.js?v=94';
+import { SWORD_KINDS } from './swordKinds.js?v=94';
+import { createGoldSystem } from './gold.js?v=94';
+import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW } from './shop.js?v=94';
+import { createTurretSystem, TURRET } from './turret.js?v=94';
+import { createRelicSystem, RELIC_DEFS } from './relics.js?v=94';
+import { createHazards } from './hazards.js?v=94';
+import { createDeposit } from './deposit.js?v=94';   // 第 81 块：第八关的寄存柜
+import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=94';
+import audio from './audio.js?v=94';
+import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=94';
 // 第 62 块：回血技能（第四关通关后永久解锁，回 5 点 / CD 25 秒）
-import { createHealSkill, HEAL_AMOUNT, HEAL_CD } from './healSkill.js?v=93';
+import { createHealSkill, HEAL_AMOUNT, HEAL_CD } from './healSkill.js?v=94';
 // 第 62 块：民心专属事件（升档走良性池、掉档走恶性池）
-import { repPoolForTier, REP_GOOD, REP_BAD } from './repEvents.js?v=93';
+import { repPoolForTier, REP_GOOD, REP_BAD } from './repEvents.js?v=94';
 // 第 62 块：攻略面板（战败提示上的「查看攻略」，手风琴三组）
-import { renderGuide, GUIDE_SECTIONS } from './guide.js?v=93';
+import { renderGuide, GUIDE_SECTIONS } from './guide.js?v=94';
 import {
   settings as readSettings, setSetting, save as saveProfile, profile,
   bumpStat, setStatMax, codexAdd, codexCount, countCard, unlockAch, hasAch, addBones, bones, resetAll,
@@ -51,53 +51,53 @@ import {
   healUnlocked, markHealUnlocked,
   rainObtained, markRainObtained,          // 第 65 块：技能的「有没有」只跟解锁有关
   hintSeen, markHintSeen,                  // 第 65 块：一次性提示卡
-} from './profile.js?v=93';
+} from './profile.js?v=94';
 // 第 44 块：礼包兑换（码表只有哈希，明细在 gift.js 顶部注释）
-import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=93';
+import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=94';
 // 第 46 块：音效包（抽象奶蛙音效包 —— 4 段奶蛙叫声，通关第一关解锁）
-import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=93';
-import * as runSave from './runSave.js?v=93';
+import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=94';
+import * as runSave from './runSave.js?v=94';
 // 第 78 块：存档导出 / 导入。数据逻辑全在这个模块里（不碰 DOM），这里只接按钮
-import * as saveIO from './saveIO.js?v=93';
+import * as saveIO from './saveIO.js?v=94';
 import {
   CAMPFIRE, CAMP_STEP, campBuy, campOwned, campLevel,
   campCost, campApply, bonesFor, diffBoneMul, levelBoneMul, coinBones, BONE,
-} from './campfire.js?v=93';
+} from './campfire.js?v=94';
 // 第 23 块：永夜火种（通关白给的 3 次永久三选一）
 import {
   BOONS, BOON_BY_ID, BOON_PICKS, boonOwned, boonStacks, boonPending, boonTotalStacks,
   grantBoons, rollBoons, takeBoon, applyBoons, boonStackText,
-} from './boons.js?v=93';
+} from './boons.js?v=94';
 // 第 21 块：夜行诅咒（自选 debuff 换骨币倍率）
-import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=93';
+import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=94';
 // 第 22 块：种子与每日挑战
 import {
   DAILY_RULES, dayKey, dayText, dailySeed, seedCode, pickDailyCurses,
   seedFromText, pickSeedRules, loadSeedRecords, saveSeedRecord, pruneSeeds,
   dailyRecord, saveDailyRecord, pruneDaily, makeRng,
-} from './seed.js?v=93';
-import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=93';
+} from './seed.js?v=94';
+import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=94';
 // 第 58 块：局外商店 · 宝箱（花骨币买，开箱随机给永久属性 / 永久法器 / 技能CD缩短）
 import {
   BOXES, BOX_BY_ID, buyBox, rollBox, metaApplyStats, applyMeta,
   // 第 74 块：盲盒按购买次数加价（三种各自独立计数）
   boxCost, boxPriceOf, boxBought, BOX_PRICE_STEP,
-} from './metaShop.js?v=93';
+} from './metaShop.js?v=94';
 // 第 59 块：每日签到（以周为单位，周一 00:00 重置）
 import {
   WEEK_TIERS, SIGN_BONES, weekCells, signSummary, signToday, signedToday,
-} from './signin.js?v=93';
-import { achById, ACHS } from './achievements.js?v=93';
+} from './signin.js?v=94';
+import { achById, ACHS } from './achievements.js?v=94';
 import {
   EVENTS, ALL_EVENTS, getEventById, pickEvent, effectLines,
   choiceHint, canAfford, costShort, REP_MIN, REP_MAX, REP_START,
   isTalk, eventChoices, resolveRoll, mergeEffects,
-} from './events.js?v=93';
+} from './events.js?v=94';
 // 第 32 块：主线《笑不出来的那一夜》（18 夜，一夜一关，前 3 夜已有关卡）
 import {
   STORY_ARC, STORY_CHAPTERS, STORY_ENDINGS, MARK_INFO,
   storyChapterAt, storyChapterById, storyEndingKey,
-} from './story.js?v=93';
+} from './story.js?v=94';
 
 // 标记模块已经跑起来了：index.html 的兜底自检靠它判断
 // 「模块根本没执行」还是「执行了但加载慢」。
@@ -716,9 +716,11 @@ async function boot() {
       // 第五/六关的两只新怪（第 63 块）
       if (e.type === 'eraser' && codexCount('enemies', 'eraser') >= 10) tryAch('eraser_10');
       if (e.type === 'reboot' && codexCount('enemies', 'reboot') >= 10) tryAch('reboot_10');
-      // 第 81 块：无名者 / 旗手倒下 → 木牌进寄存柜。
-      // 这是第八关的核心循环：杀得越多，柜子越快满；满了柜子会把人放回场上。
-      if (e.type === 'ranker' || e.type === 'bearer') deposit.addTag(1);
+      // 第 83 块（用户定案）：**任何**一只怪倒下，木牌都会进寄存柜。
+      // 旧版只有两种队形怪掉牌，现在队形系统整个删了，柜子改成按「击杀数」记账：
+      // 杀得越快，柜子越快满；满了封柜 5 秒，然后寄存处看守自己走出来。
+      // 每局开始时 deposit 还没 build（没有 def），addTag 会自己 return —— 安全。
+      deposit.addTag(1);
       // 木鱼法器（第 71 块）：击杀时也震一圈（挨打/击杀都触发）
       if (relics.woodfishHit) relics.woodfishHit(e.pos);
       // 小兵是自爆 → 爆炸声；其他怪是被打死 → 骨头散架声
@@ -828,12 +830,196 @@ async function boot() {
     scene, fx, playerPos: pos, playerRadius: BODY_R, hurtPlayer,
   });
 
-  // ---------------- 寄存柜（第 81 块，第八关） ----------------
-  // 只伤玩家 / 收木牌 / 放队伍，和 hazards 是两套东西（它不是「危险区」，是「对象」）。
-  // 放队伍的回调要能 spawn，所以函数体在运行时才取 enemies —— 那时已经建好了。
+  // ---------------- 寄存柜（第 81 块立，第 83 块重做，第八关） ----------------
+  // 它只做三件事：收牌子（任何怪死都 +1）、封柜倒数、到点把看守放出来。
+  // 「取牌」不再是站桩，而是柜子旁边的按钮 + 四位数字（见下面的 depositUiTick）。
+  // 召唤回调要能 spawn，所以函数体在运行时才取 enemies —— 那时已经建好了。
   const deposit = createDeposit({
     scene, fx, playerPos: pos, playerRadius: BODY_R, hurtPlayer,
   });
+
+  // ============================================================
+  // 第八关「寄存柜 · 取牌」：四位数字小游戏（第 83 块）
+  // ============================================================
+  // 用户定案：**世界不冻结**（边打边输）。所以这里没有 gameState='code' 这种状态，
+  // 面板只是一个贴右下角的浮层；玩家松开摇杆去按键时，怪照样在走。
+  // 时间压力：12 秒。超时 / 输错 → 关闭 + 3 秒冷却，牌子一块不少地留在柜里。
+  // 输对 → 柜里**所有**牌子一起取走（计数归零），下次从 0 开始攒。
+  //
+  // ⚠️ 三个关键点（都是老坑）：
+  //   ① 面板只在自己的矩形里吃点击，绝不盖全屏（盖全屏 = 摇杆和技能键全哑）；
+  //   ② 关闭一律走 closeCode()，别在别处直接 classList.remove —— 计数 / 冷却会漏；
+  //   ③ gameState 一离开 playing（回合结算 / 三选一 / 提示卡）就主动关掉，
+  //      否则面板会浮在结算卡上面（第 67 / 70 块的层级事故都是这么来的）。
+  const depositBtn = document.getElementById('depositBtn');
+  const codePanel = document.getElementById('codePanel');
+  const cpWant = document.getElementById('cpWant');
+  const cpSlots = [...document.querySelectorAll('#cpSlots i')];
+  const cpFill = document.getElementById('cpFill');
+  const cpKeys = document.getElementById('cpKeys');
+  const cpFoot = document.getElementById('cpFoot');
+  const cpClose = document.getElementById('cpClose');
+  const CP_TIME = 12;      // 一次输入给多少秒
+  const CP_RETRY = 3;      // 失败后多久能再按
+  let codeOpen = false;
+  let codeTarget = '';
+  let codeTyped = '';
+  let codeLeft = 0;
+  let codeCd = 0;
+  let codeJudgeT = 0;      // 输满四位后的小延迟：让人看清第四位再判
+  // 第 83 块（真 bug）：这一轮输入是否已经判过了。
+  // 没有它的话，倒计时归零之后**每一帧**都会再调一次 finishCode，
+  // 每次 finishCode 都会 clearTimeout + 重新 setTimeout(760) → 那个定时器
+  // 永远等不到 760ms，面板就再也不关（表现为「超时了面板还挂着」）。
+  let codeDone = false;
+  let codeShutTimer = null;
+  let lastDepositLocked = false;
+
+  function newCode() {
+    // 四位、首位非 0 更好记（1000~9999）
+    return String(1000 + Math.floor(Math.random() * 9000));
+  }
+
+  function renderCodeSlots() {
+    for (let i = 0; i < cpSlots.length; i++) {
+      const ch = codeTyped[i] || '';
+      cpSlots[i].textContent = ch;
+      cpSlots[i].classList.toggle('on', !!ch);
+    }
+  }
+
+  function openCode() {
+    if (codeOpen) return false;
+    if (gameState !== 'playing') return false;
+    if (codeCd > 0 || deposit.locked()) return false;
+    if (!deposit.near() || deposit.count() <= 0) return false;
+    codeOpen = true;
+    codeDone = false;
+    codeTarget = newCode();
+    codeTyped = '';
+    codeLeft = CP_TIME;
+    codeJudgeT = 0;
+    cpWant.textContent = codeTarget;
+    cpFoot.textContent = '输错或超时，牌子还留在柜里';
+    cpFill.style.transform = 'scaleX(1)';
+    codePanel.classList.remove('bad', 'good');
+    codePanel.classList.add('on');
+    codePanel.setAttribute('aria-hidden', 'false');
+    renderCodeSlots();
+    audio.sfx('uiSwitch');
+    return true;
+  }
+
+  function closeCode(why) {
+    if (!codeOpen) return;
+    codeOpen = false;
+    codePanel.classList.remove('on', 'bad', 'good');
+    codePanel.setAttribute('aria-hidden', 'true');
+    if (codeShutTimer) { clearTimeout(codeShutTimer); codeShutTimer = null; }
+    if (why === 'esc') codeCd = Math.max(codeCd, 0.6);   // 主动关掉也要愣一下，别连点乱猜
+  }
+
+  function finishCode(ok, msg) {
+    if (codeDone) return;        // 一轮只结一次（倒计时归零后每帧都会走到这里）
+    codeDone = true;
+    codePanel.classList.add(ok ? 'good' : 'bad');
+    cpFoot.textContent = msg;
+    codeCd = ok ? 0 : CP_RETRY;
+    if (codeShutTimer) clearTimeout(codeShutTimer);
+    codeShutTimer = setTimeout(() => {
+      codeShutTimer = null;
+      closeCode(ok ? 'ok' : 'bad');
+    }, ok ? 620 : 760);
+  }
+
+  function judgeCode() {
+    if (!codeOpen) return;
+    if (codeTyped.length < 4) return;
+    if (codeTyped === codeTarget) {
+      const n = deposit.takeAll();
+      audio.sfx('upgrade');
+      showToast('牌子取走了', `柜里 ${n} 块全拿出来 —— 从头攒`);
+      finishCode(true, `对了 · ${n} 块全收走`);
+      return;
+    }
+    audio.sfx('die');
+    finishCode(false, '不对 · 白跑一趟，牌子还在柜里');
+  }
+
+  function typeCode(k) {
+    if (!codeOpen || codeDone) return;
+    if (codeJudgeT > 0) return;                 // 判定中不许再按
+    if (k === 'del') {
+      codeTyped = codeTyped.slice(0, -1);
+      renderCodeSlots();
+      return;
+    }
+    if (k === 'ok') { judgeCode(); return; }
+    if (!/^[0-9]$/.test(k)) return;
+    if (codeTyped.length >= 4) return;
+    codeTyped += k;
+    renderCodeSlots();
+    if (codeTyped.length === 4) codeJudgeT = 0.22;   // 满四位 → 停一下再判（自动判定）
+  }
+
+  cpKeys.addEventListener('click', (ev) => {
+    const b = ev.target.closest('button[data-k]');
+    if (!b) return;
+    typeCode(b.dataset.k);
+  });
+  cpClose.addEventListener('click', () => closeCode('esc'));
+  depositBtn.addEventListener('click', () => {
+    if (deposit.locked()) return;
+    if (codeCd > 0) return;
+    openCode();
+  });
+
+  // 每帧：按钮显隐 / 封柜倒数 / 面板计时（只在 playing 里跑）
+  function depositUiTick(dt) {
+    // 面板：离开 playing（结算 / 三选一 / 提示卡 / 死亡）立刻收掉
+    if (codeOpen) {
+      if (gameState !== 'playing') {
+        closeCode('esc');
+      } else {
+        if (codeJudgeT > 0) {
+          codeJudgeT -= dt;
+          if (codeJudgeT <= 0) { codeJudgeT = 0; judgeCode(); }
+        } else {
+          codeLeft -= dt;
+          cpFill.style.transform = `scaleX(${Math.max(0, codeLeft / CP_TIME)})`;
+          if (codeLeft <= 0 && !codeDone && codeTyped.length < 4) {
+            audio.sfx('die');
+            finishCode(false, '慢了一步 · 牌子还在柜里');
+          }
+        }
+      }
+    } else if (codeCd > 0) {
+      codeCd = Math.max(0, codeCd - dt);
+    }
+
+    const st = deposit.state();
+    if (st.locked && !lastDepositLocked) {
+      showToast('寄存柜满了', '5 秒后开门 —— 现在清不掉了');
+      audio.sfx('event');
+    }
+    lastDepositLocked = st.locked;
+
+    // 按钮：封柜时变成倒数（不可点），平时贴到柜边才出现
+    const showLock = st.locked;
+    const showTake = !showLock && st.near && st.count > 0 && !codeOpen && gameState === 'playing';
+    if (showLock) {
+      depositBtn.textContent = `封柜 ${st.lock.toFixed(1)}`;
+      depositBtn.classList.add('on', 'lock');
+      depositBtn.disabled = true;
+    } else {
+      depositBtn.classList.remove('lock');
+      depositBtn.disabled = codeCd > 0;
+      depositBtn.textContent = codeCd > 0
+        ? `稍等 ${codeCd.toFixed(1)}`
+        : (st.count > 0 ? `取牌 · ${st.count}/${st.cap}` : '取牌');
+      depositBtn.classList.toggle('on', showTake || (codeCd > 0 && st.near && st.count > 0));
+    }
+  }
 
   // 事件给的「下次商店折扣」（第 11 块）：一次性，进店结账用掉就清。
   // 和民心折扣相乘，所以高民心 + 折扣牌能把价格压到六折左右。
@@ -1643,6 +1829,10 @@ async function boot() {
   let hintOpen = false;
   let hintBack = 'playing';       // 关掉后回哪个状态（正常都是 playing）
   const hintQueue = [];           // 待弹的 key（FIFO）
+  // 第 83 块：一张卡讲不完的机制（第八关寄存柜）走 steps ——
+  // hintSteps 非空时，「知道了」变成「下一步」，逐条渲染同一张卡。
+  let hintSteps = null;
+  let hintStepIx = 0;
 
   const HINTS = {
     heal: {
@@ -1653,6 +1843,60 @@ async function boot() {
         '冷却 25 秒 —— 外圈那条绿环走完一圈就好了，中间的数字是还差几秒。',
         '<b>满血时按不动</b>（不会白扔一次冷却）。它不占背包、不用回商店，'
           + '打不过想跑的时候，这一口常常就是能不能活着走掉的区别。',
+      ],
+    },
+    // 第 83 块：第八关开局的专用教程（用户要求「这一块要专门设计新手教程」）。
+    // 数据里写 steps：每一步一张卡，按钮从「下一步」变成「知道了」，
+    // 世界在整个教程期间是冻住的（gameState='hint'）—— 讲机制的时候就该停。
+    deposit: {
+      kicker: '第八关 · 寄存柜',
+      steps: [
+        {
+          kicker: '第八关 · 寄存柜 1/4',
+          title: '每一只怪倒下，都会把木牌留在这间柜子里',
+          text: [
+            '场边那间木头柜子是这一层的<b>寄存柜</b>。这一层的骷髅胸前都挂着一块木牌 —— '
+              + '牌子上本来刻着名字，被雾吹过只剩一道划痕。',
+            '它们倒下时，牌子会被柜子收进去。柜面上有 <b>8 个格子</b>，'
+              + '每进一块牌子就填满一格，右下角的数字是「已经收了几块」。',
+            '注意：这一关<b>任何一只怪</b>死了都会掉牌，不只是某几种。',
+          ],
+        },
+        {
+          kicker: '第八关 · 寄存柜 2/4',
+          title: '走到柜子旁边，会出现一个「取牌」按钮',
+          text: [
+            '站到柜子边（<b>3.6 格</b>内），屏幕底下会冒出「取牌」按钮 —— '
+              + '上面写着柜里现在有几块牌子。',
+            '按下去不是直接把牌拿走：柜子会亮出一串<b>四位数字</b>（比如 3928），'
+              + '你要用面板上的键盘把它敲进去。',
+            '为什么要多这一道：这是本关唯一「你自己能控制节奏」的地方，'
+              + '多花两秒，换掉一场硬仗。',
+          ],
+        },
+        {
+          kicker: '第八关 · 寄存柜 3/4',
+          title: '输满四位自动判定，错了牌子一块不少',
+          text: [
+            '面板<b>不会暂停游戏</b> —— 你按键盘的时候，怪还在往你身上走。'
+              + '一次给 <b>12 秒</b>，右下角的细条就是剩余时间。',
+            '输满四位<b>自动判定</b>：对了，柜里<b>所有</b>牌子一起被取走（计数归零）；'
+              + '错了或者超时，面板会关掉，<b>3 秒后</b>才能再按一次。',
+            '所以它是有代价的：想清柜，就得在安全的时候腾出手来。',
+          ],
+        },
+        {
+          kicker: '第八关 · 寄存柜 4/4',
+          title: '攒满 8 块 → 封柜 5 秒 → 寄存处看守',
+          text: [
+            '八格全满的那一刻，柜子<b>当场封柜</b>：牌再也取不出来，地上亮起一圈金环，'
+              + '<b>5 秒</b>之后柜门打开。',
+            '走出来的东西叫<b>寄存处看守</b>：血量厚、有横扫 / 砸地 / 投牌三套攻击，'
+              + '半血之后还会暴怒（更快、更疼）。它不是普通怪，是一场硬仗。',
+            '所以这一关的正解是<b>算账</b>：在满 8 块之前找空档清一次，'
+              + '而不是等它开门之后硬拼。',
+          ],
+        },
       ],
     },
     cast: {
@@ -1668,14 +1912,25 @@ async function boot() {
     },
   };
 
+  // 渲染当前这一页（单页卡 = steps 里只有一条）
+  function renderHintPage() {
+    if (!hintSteps) return;
+    const st = hintSteps[hintStepIx] || hintSteps[0];
+    hiKicker.textContent = st.kicker || '';
+    hiTitle.textContent = st.title || '';
+    hiText.innerHTML = (st.text || []).map((t) => `<div>${t}</div>`).join('');
+    hiOk.textContent = hintStepIx < hintSteps.length - 1 ? '下一步' : '知道了';
+  }
+
   function showHint(key, back) {
     const cfg = HINTS[key];
     if (!cfg || hintOpen) return false;
     hintOpen = true;
     hintBack = back || 'playing';
-    hiKicker.textContent = cfg.kicker;
-    hiTitle.textContent = cfg.title;
-    hiText.innerHTML = cfg.text.map((t) => `<div>${t}</div>`).join('');
+    // 单页卡（heal / cast）也当成只有一步的 steps —— 只有一条代码路径
+    hintSteps = cfg.steps || [{ kicker: cfg.kicker, title: cfg.title, text: cfg.text }];
+    hintStepIx = 0;
+    renderHintPage();
     hintCard.classList.add('on');
     hintCard.setAttribute('aria-hidden', 'false');
     markHintSeen(key);
@@ -1691,12 +1946,23 @@ async function boot() {
   function closeHint() {
     if (!hintOpen) return;
     hintOpen = false;
+    hintSteps = null;
+    hintStepIx = 0;
     hintCard.classList.remove('on');
     hintCard.setAttribute('aria-hidden', 'true');
     gameState = hintBack === 'hint' ? 'playing' : hintBack;
     syncSkillLift();
   }
-  hiOk.addEventListener('click', closeHint);
+  hiOk.addEventListener('click', () => {
+    // 还有下一页就翻页，最后一页才收卡
+    if (hintSteps && hintStepIx < hintSteps.length - 1) {
+      hintStepIx++;
+      renderHintPage();
+      audio.sfx('uiSwitch');
+      return;
+    }
+    closeHint();
+  });
   hintCard.addEventListener('pointerdown', (e) => { if (e.target === hintCard) closeHint(); });
 
   // 排队：只有在真的能玩的时候才弹（教程 / 三选一 / 商店期间不插队）
@@ -1710,6 +1976,15 @@ async function boot() {
     if (hintOpen || !hintQueue.length) return false;
     if (gameState !== 'playing') return false;
     return showHint(hintQueue.shift());
+  }
+
+  // 第 83 块：第八关开局讲一次寄存柜（一档只讲一次，写进档案 tut）。
+  // ⚠️ 和「新怪信息卡」同一个约定（第 55 块）：生产默认开，调试要显式加 &hints ——
+  // 它会冻结世界，老 CDP 套件一开局就被拦（block63/75 的花式超时都是这么来的）。
+  function queueDepositHint() {
+    if (curLevelId !== 8) return false;
+    if (DEBUG && !params.has('hints')) return false;
+    return queueHint('deposit');
   }
 
   // 第一局「已经解锁回血」的开局：教一次那个绿十字（用户第 1 条）
@@ -1901,6 +2176,7 @@ async function boot() {
     // 在「已经有回血」的第一局开局讲一次那个绿十字 —— 它在技能栏最上面，
     // 玩家很容易以为那是个装饰。只讲一次（档案 tut.heal），之后不再拦路。
     queueHealHint();
+    queueDepositHint();               // 第 83 块：第八关开局专门讲寄存柜
     perfReset();                      // 第 59 块：新一局从玩家选的画质档重新开始（清掉上一局的自动降档）
     schedulePrefetch();               // 第 80 块：4 秒后悄悄把下一关的怪模型拉下来
   }
@@ -6231,6 +6507,16 @@ async function boot() {
       // 第 82 块：无敌帧剩余（测试「电路伤害无视无敌时段」要能读它）
       iframe: () => +iframe.toFixed(2),
       setIframe: (v) => { iframe = Math.max(0, v || 0); return +iframe.toFixed(2); },
+      // 第 83 块：主角当前位置（测试要按它摆靶子 / 站到柜边）
+      pos: () => ({ x: +pos.x.toFixed(2), z: +pos.z.toFixed(2) }),
+      // 第 83 块：把主角直接挪到某点（测「走到柜边冒出取牌按钮」要能站过去，
+      // 摇杆在 CDP 里推不准）。相机焦点一起贴过去，免得下一帧被死区跟随拉回来。
+      warp: (x, z) => {
+        pos.x = x || 0; pos.z = z || 0;
+        camFocus.set(pos.x, 0, pos.z);
+        camera.position.set(pos.x + camOffset.x, camOffset.y, pos.z + camOffset.z);
+        return { x: pos.x, z: pos.z };
+      },
       // 第 82 块：被木鱼灵的泡定住的剩余秒数（0 = 能走）
       rootT: () => +rootT.toFixed(2),
       rootPlayer: (sec) => { rootPlayer(sec); return +rootT.toFixed(2); },
@@ -6607,6 +6893,45 @@ async function boot() {
       },
       // 第 63 块：第五/六关的现场（漏电地板 / 擦名者 / 重启体 / 新法器）
       block63: {
+        // 第 83 块：怪物的通用观测 / 注入口（第八关的掉牌、看守的三套攻击都要造靶子）
+        enemies: {
+          list: () => enemies.all().map((e) => ({
+            type: e.type, state: e.state, hp: +e.hp.toFixed(2),
+            x: +e.pos.x.toFixed(2), z: +e.pos.z.toFixed(2),
+          })),
+          spawn: (type, x, z) => {
+            const e = enemies.spawn(type, { x, z });
+            return e ? e.type : null;
+          },
+          // 打死（不传 type = 全场清空）。走 takeDamage，走正常死亡链路（会掉牌）
+          kill: (type) => {
+            let n = 0;
+            for (const e of enemies.all()) {
+              if (type && e.type !== type) continue;
+              if (e.state === 'dead') continue;
+              enemies.takeDamage(e, 1e9);
+              n++;
+            }
+            return n;
+          },
+          // 拿一只活体的引用（CDP 里要改它的血 / 速度 / 位置，光看坐标不够）
+          live: (type) => enemies.all().find((e) => e.type === type && e.state !== 'dead') || null,
+          place: (type, x, z) => {
+            const e = enemies.all().find((o) => o.type === type && o.state !== 'dead');
+            if (!e) return false;
+            e.pos.x = x; e.pos.z = z;
+            return true;
+          },
+          set: (type, patch) => {
+            const e = enemies.all().find((o) => o.type === type && o.state !== 'dead');
+            if (!e || !patch) return false;
+            Object.assign(e, patch);
+            return true;
+          },
+          strikes: () => enemies.wardenStrikes(),
+          tags: () => enemies.wardenTags(),
+          warden: () => enemies.wardenState(),
+        },
         // 第 81 块：第八关的寄存柜（观测 + 手动灌牌子，测试不用真杀 8 只）
         deposit: {
           state: () => deposit.state(),
@@ -6614,6 +6939,30 @@ async function boot() {
           count: () => deposit.count(),
           add: (n) => deposit.addTag(n == null ? 1 : n),
           clear: () => { deposit.clearTags(); return true; },
+          // 第 83 块：取牌小游戏的全套口子（CDP 里要能「不按屏幕就输对」）
+          open: () => openCode(),
+          code: () => codeTarget,
+          typed: () => codeTyped,
+          left: () => +Math.max(0, codeLeft).toFixed(2),
+          open_: () => codeOpen,
+          cd: () => +codeCd.toFixed(2),
+          hit: (k) => { typeCode(String(k)); return codeTyped; },
+          // 直接把正确数字敲进去（顺手：输满四位会自动判定）
+          solve: () => {
+            if (!codeOpen) openCode();
+            if (!codeOpen) return false;
+            codeTyped = codeTarget;
+            codeJudgeT = 0.02;
+            return true;
+          },
+          // 敲一个错的（测「输错不清柜」）
+          wrong: () => {
+            if (!codeOpen) openCode();
+            if (!codeOpen) return false;
+            codeTyped = codeTarget === '1111' ? '2222' : '1111';
+            codeJudgeT = 0.02;
+            return true;
+          },
         },
         hazards: {
           count: () => hazards.count,
@@ -7424,6 +7773,11 @@ async function boot() {
     // 也就是说：只有真的能动、能挨打、怪在动的那段时间，秒表才走。
     const inGame = (gameState === 'playing' || gameState === 'tutorial' || gameState === 'wtut')
       && !panelOpen && !bagOpen && !meetOpen && uiHold === 0;
+    // 第 83 块（真 bug）：取牌面板只在「真在打」的时候有意义 —— 一旦离开 playing
+    // （回合结算 / 商店 / 奇遇 / 提示卡 / 新怪卡 / 死亡）必须立刻收掉。
+    // depositUiTick 只挂在 playing 分支里跑，不收的话面板会一直挂在右下角，
+    // 盖在事件卡和商店上面，还看得见倒计时却谁也点不动。
+    if (codeOpen && gameState !== 'playing') closeCode('esc');
     // 第 57 块：世界渲染闸门 —— 不在「真的在打」的时候就停掉整屏 3D 渲染。
     // 为什么：菜单 / 图鉴 / 夜行记忆 / 商店都盖在画布上，且 .tt-sub-scr 之类
     // 带 backdrop-filter 模糊；画布每帧重绘 → 合成器每帧重新模糊整屏，
@@ -7485,34 +7839,31 @@ async function boot() {
       healSkill.update(dt);          // 第 62 块：回血技能的冷却
       turrets.update(dt, { playerPos: pos });
       hazards.update(dt, { playerPos: pos });          // 第 63 块：漏电地板
-      // 第 81 块：寄存柜（收木牌 / 站桩取牌 / 满了放人 / 溢出放电）
+      // 第 83 块：寄存柜（收木牌 / 封柜倒数 / 5 秒后把「寄存处看守」放出来）
       deposit.update(dt, {
-        squadAlive: () => enemies.squadAlive(),
-        onRelease: (n) => {
+        onSummon: () => {
           const hub = deposit.pos();
           if (!hub) return;
-          // 从柜子门口朝场地中心的方向站出来：旗手先，其余人跟在他身后两侧。
-          // newSquad: true —— 这一批必须自己成一队（见 enemy.js 的 joinSquad）。
+          // 从柜门朝场地中心走两步再落地：既不和柜子穿模，也不在场地外
           const d = Math.hypot(hub.x, hub.z) || 1;
-          const fx_ = -hub.x / d, fz_ = -hub.z / d;      // 柜子 → 场地中心
-          const nx = -fz_, nz = fx_;                     // 法线（队伍排开的方向）
-          // 这 6 只共用同一个 ref：第一只建队，后面几只跟着进（见 enemy.js 的 joinSquad）
-          const ref = {};
-          for (let i = 0; i < n; i++) {
-            const isLeader = i === 0;
-            const lat = isLeader ? 0 : ((i % 2 ? 1 : -1) * Math.ceil(i / 2)) * 1.0;
-            const at = {
-              x: hub.x + fx_ * (2.4 + (isLeader ? 0 : 0.3)) + nx * lat,
-              z: hub.z + fz_ * (2.4 + (isLeader ? 0 : 0.3)) + nz * lat,
-            };
-            const lim = ARENA_R - 1.2;
-            const rr = Math.hypot(at.x, at.z);
-            if (rr > lim) { at.x = (at.x / rr) * lim; at.z = (at.z / rr) * lim; }
-            enemies.spawn(isLeader ? 'bearer' : 'ranker', at, { newSquad: isLeader, squadRef: ref });
-          }
+          let x = hub.x - (hub.x / d) * 2.6;
+          let z = hub.z - (hub.z / d) * 2.6;
+          const lim = ARENA_R - 1.4;
+          const rr = Math.hypot(x, z);
+          if (rr > lim) { x = (x / rr) * lim; z = (z / rr) * lim; }
+          // 第 83 块（真 bug）：召唤物也必须吃「本回合倍率」。
+          // 不给 scale 的话，第 15 回合召唤的看守和第 1 回合一样是 20 血 ——
+          // 后期满柜召出来一只两刀就碎的纸片人，整条机制白设计。
+          const sc = roundScale(level.roundNo, level.level);
+          enemies.spawn('warden', { x, z }, {
+            hpScale: sc.hp, damageScale: sc.damage, speedScale: sc.speed,
+          });
+          showToast('寄存柜开了', '寄存处看守从柜子里走出来 —— 它收牌子，也收命');
           audio.sfx('upgrade');
         },
       });
+      // 取牌按钮 / 四位数字面板（只有 playing 里才动）
+      if (gameState === 'playing') depositUiTick(dt);
       relics.update(dt, { playerPos: pos, hazards });  // 绝缘斗篷要问地板通没通电
       aegisUpdate(dt);
       // 金币：攻击范围圈就是拾取范围（第 23 块，进圈即吸），圈外的 3 秒后自动入账

@@ -51,19 +51,21 @@ const typeNames = TYPES.map(([k]) => k);
 // 给它们各做一套新模型反而会让人以为是不同种族。
 // 第 82 块称量官同理复用 hooded-scribe（第五关擦名者那只）：兜帽长袍 + 抱一本
 // 台账就是「记账的」，第五关那身紫黑和第九关这身鎏金一眼能分开。
-// 所以现在是「条目 21 / 文件 18」。
-sec('一、21 只怪 · 有意复用的只有那三只');
-ok(TYPES.length === 21, `怪物条目 21 只（实际 ${TYPES.length}）`);   // 第 82 块 +称量官
+// 第 83 块：第八关那两只队形怪（ranker / bearer）整块删掉，换成寄存处看守 warden
+// （自己的 deposit-warden.glb）→ 条目 21 → 20，文件 18 → 19。
+// 现在唯一的有意复用只剩称量官 → hooded-scribe。
+sec('一、20 只怪 · 有意复用的只剩称量官');
+ok(TYPES.length === 20, `怪物条目 20 只（实际 ${TYPES.length}）`);   // 第 83 块 -ranker/bearer +warden
 const files = TYPES.map(([, t]) => t.file);
 ok(files.every((f) => typeof f === 'string' && f.startsWith('assets/monsters/')), '每条都写了 assets/monsters/ 下的模型');
 const dupFiles = files.filter((f, i) => files.indexOf(f) !== i);
 // 第 81 / 82 块：允许且**只允许**这三只有意复用（无名者 / 旗手 / 称量官）
-const ALLOWED_DUP = new Set(['assets/monsters/skeleton-minion.glb', 'assets/monsters/skeleton-rogue.glb', 'assets/monsters/hooded-scribe.glb']);
-ok(dupFiles.every((f) => ALLOWED_DUP.has(f)) && new Set(files).size === 18,
-  `${files.length} 条目 / ${new Set(files).size} 文件，重复的只有允许复用那三只`,
+const ALLOWED_DUP = new Set(['assets/monsters/hooded-scribe.glb']);
+ok(dupFiles.every((f) => ALLOWED_DUP.has(f)) && new Set(files).size === 19,
+  `${files.length} 条目 / ${new Set(files).size} 文件，重复的只有允许复用的那只`,
   `重复：${dupFiles.join(', ')}`);
 const names = TYPES.map(([, t]) => t.name);
-ok(new Set(names).size === names.length, '21 个中文名互不重复');
+ok(new Set(names).size === names.length, '20 个中文名互不重复');
 // 第一关四只维持 KayKit 骷髅（用户定案：只换后 9 只）
 for (const k of ['minion', 'warrior', 'archer', 'bowman']) {
   ok(ENEMY_TYPES[k].file.includes('skeleton-'), `${k} 仍是 KayKit 骷髅（${ENEMY_TYPES[k].file.split('/').pop()}）`);

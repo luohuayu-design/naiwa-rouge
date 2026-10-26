@@ -152,8 +152,9 @@ ok(RB && RB.height >= 1.8 && RB.height <= 2.0, '重启体身高 1.8~2.0', RB.hei
 // 第 71 块 +井蛙 / 木鱼灵
 // 第 81 块 +无名者 / 旗手
 // 第 82 块 +称量官
-ok(enemy.ENEMY_TYPES.minion && Object.keys(enemy.ENEMY_TYPES).filter((k) => !enemy.ENEMY_TYPES[k].planned).length === 21,
-  '启用中的怪物 21 只');
+// 第 83 块：删掉第八关的 ranker / bearer（队形整块不要了），加寄存处看守 warden
+ok(enemy.ENEMY_TYPES.minion && Object.keys(enemy.ENEMY_TYPES).filter((k) => !enemy.ENEMY_TYPES[k].planned).length === 20,
+  '启用中的怪物 20 只');
 // 第 62 块定下的尺寸（盾兵/孢生按战士 1.4 倍，三只小的统一 1.8~1.9）
 const W = enemy.ENEMY_TYPES.warrior;
 // 战士 1.38 × 1.4 = 1.93，用户拍板取整到 1.9 —— 容差放到 0.06 而不是 0.02

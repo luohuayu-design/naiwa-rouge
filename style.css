@@ -2049,3 +2049,77 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
   font-size:12px;font-weight:800;letter-spacing:.12em;color:#0d1a16;
   border:1px solid rgba(126,235,196,.6);background:linear-gradient(180deg,#b8f5d8,#63d9a8)}
 .gd-ok:active{transform:scale(.98)}
+
+/* ---------------- 第八关 · 寄存柜取牌（第 83 块） ----------------
+   两件东西：
+   ① #depositBtn —— 站到柜子旁边时从底部中间冒出来的「取牌」按钮。
+      封柜倒数时它也留着，但变成不可点、只显示「封柜 4.2」——
+      同一个元素两种状态，省得再造一个 HUD。
+   ② #codePanel —— 四位数字小游戏。**不冻结世界**（用户定案），所以它贴在
+      右下角、半透明、宽度收在 206px：左半个屏幕还是摇杆的地方。
+   ⚠️ 面板用 pointer-events:auto 只在自己的范围里吃点击，不要盖全屏。 */
+.deposit-btn{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom));
+  z-index:12;transform:translate(-50%,10px);opacity:0;pointer-events:none;
+  padding:9px 22px;border-radius:999px;cursor:pointer;font-family:inherit;
+  font-size:13px;font-weight:800;letter-spacing:.14em;color:#20160a;
+  border:1px solid rgba(255,206,120,.75);
+  background:linear-gradient(180deg,#ffe0a0,#e8b25c);
+  box-shadow:0 8px 22px rgba(0,0,0,.45),0 0 20px rgba(255,200,110,.35);
+  transition:opacity .18s ease,transform .18s ease;
+  -webkit-tap-highlight-color:transparent}
+.deposit-btn.on{opacity:1;transform:translate(-50%,0);pointer-events:auto}
+.deposit-btn.on:active{transform:translate(-50%,0) scale(.96)}
+.deposit-btn.lock{color:#ffe2bc;cursor:default;
+  border-color:rgba(255,140,80,.7);
+  background:linear-gradient(180deg,rgba(120,48,20,.92),rgba(78,28,12,.95));
+  box-shadow:0 8px 22px rgba(0,0,0,.45),0 0 22px rgba(255,120,60,.4)}
+
+.code-panel{position:fixed;right:calc(10px + env(safe-area-inset-right));
+  bottom:calc(10px + env(safe-area-inset-bottom));z-index:13;
+  width:206px;padding:10px 10px 9px;border-radius:14px;
+  display:none;flex-direction:column;gap:6px;
+  border:1px solid rgba(255,198,120,.42);
+  background:linear-gradient(180deg,rgba(26,20,12,.93),rgba(12,9,5,.95));
+  box-shadow:0 12px 30px rgba(0,0,0,.55);
+  backdrop-filter:none;/* 第 59 块：全站不用 backdrop-filter（手机上会卡） */
+  color:#f3e6cf;font-size:12px}
+.code-panel.on{display:flex}
+.code-panel.bad{border-color:rgba(255,110,90,.85);
+  box-shadow:0 12px 30px rgba(0,0,0,.55),0 0 24px rgba(255,90,60,.45)}
+.code-panel.good{border-color:rgba(140,240,200,.85);
+  box-shadow:0 12px 30px rgba(0,0,0,.55),0 0 24px rgba(120,240,190,.5)}
+@keyframes cpShake{
+  0%,100%{transform:translateX(0)} 25%{transform:translateX(-5px)}
+  50%{transform:translateX(5px)} 75%{transform:translateX(-3px)}
+}
+.code-panel.bad{animation:cpShake .3s ease}
+.cp-head{display:flex;align-items:center;justify-content:space-between;gap:6px}
+.cp-kicker{font-size:9.5px;font-weight:800;letter-spacing:.2em;color:rgba(255,206,140,.85)}
+.cp-close{width:22px;height:22px;border-radius:7px;cursor:pointer;font-family:inherit;
+  font-size:11px;color:rgba(240,220,190,.75);border:1px solid rgba(255,200,140,.3);
+  background:rgba(60,44,24,.7);padding:0;-webkit-tap-highlight-color:transparent}
+.cp-want{text-align:center;font-size:31px;font-weight:800;letter-spacing:.28em;
+  font-variant-numeric:tabular-nums;color:#ffe6b8;
+  text-shadow:0 0 18px rgba(255,200,110,.45)}
+.cp-hint{text-align:center;font-size:9.5px;color:rgba(226,200,166,.65);margin-top:-3px}
+.cp-slots{display:flex;justify-content:center;gap:6px;margin-top:1px}
+.cp-slots i{width:34px;height:38px;border-radius:8px;font-style:normal;
+  font-size:20px;font-weight:800;display:flex;align-items:center;justify-content:center;
+  color:#f6e8cc;border:1px solid rgba(255,200,140,.28);background:rgba(40,30,18,.78)}
+.cp-slots i.on{border-color:rgba(255,206,120,.85);background:rgba(82,56,26,.9);
+  box-shadow:0 0 12px rgba(255,190,100,.35)}
+.cp-bar{height:3px;border-radius:2px;background:rgba(255,200,140,.16);overflow:hidden}
+.cp-bar i{display:block;height:100%;width:100%;transform-origin:left center;
+  background:linear-gradient(90deg,#ffcf7a,#ff9a4a)}
+.cp-keys{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}
+.cp-keys button{height:38px;border-radius:9px;cursor:pointer;font-family:inherit;
+  font-size:16px;font-weight:800;color:#f6e8cc;
+  border:1px solid rgba(255,200,140,.26);background:rgba(56,42,24,.85);
+  -webkit-tap-highlight-color:transparent;transition:transform .06s ease,background .12s ease}
+.cp-keys button:active{transform:scale(.95);background:rgba(96,70,36,.95)}
+.cp-keys .cp-del{font-size:14px;color:rgba(255,190,150,.9)}
+.cp-keys .cp-ok{font-size:12px;letter-spacing:.08em;color:#221606;
+  border-color:rgba(255,210,130,.8);background:linear-gradient(180deg,#ffe0a0,#e0a94e)}
+.cp-foot{font-size:9.5px;line-height:1.5;text-align:center;color:rgba(226,200,166,.58)}
+.code-panel.bad .cp-foot{color:#ffb0a0}
+.code-panel.good .cp-foot{color:#a8f0d0}

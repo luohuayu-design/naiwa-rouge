@@ -41,21 +41,26 @@
 //   chain  { in, id }              在选项里写：in 回合后强制弹出 id 事件
 //   roll   [{p, effects}, ...]     选项内部的概率分支
 //
+// 第 83 块（用户要求）：下面 mods / level 这些**只活一回合**的数值，在模块加载时
+//   会被统一放大一次（倍数表 TEMP_SCALE / TEMP_LEVEL，在文件末尾「临时效果放大」那段），
+//   hint 里的数字同步重算 —— 所以表里写 0.2，玩家看到和实际生效的可能是 0.6。
+//   drain（每秒掉血）不放大：它本来就是这批选项里最疼的代价。
+//
 // ctx: { round, hasWeapon, gold, rep, hp, maxHp, luck }
 //   luck 用来写 cond（幸运够高才遇得到的吉兆事件，第 11 块）。
 // ============================================================
-import { STAT_DEFS } from './stats.js?v=93';
-import { WEAPON_STAT_DEFS } from './weaponStats.js?v=93';
+import { STAT_DEFS } from './stats.js?v=94';
+import { WEAPON_STAT_DEFS } from './weaponStats.js?v=94';
 // 第 31 块：事件扩容（40 条随机事件 + 3 条连锁后续）单独放一个文件，
 // 不然这个文件会涨到 5000 行。抽取规则、effectLines 等工具函数仍在本文件。
-import { EXTRA_EVENTS, EXTRA_CHAIN_EVENTS } from './eventsExtra.js?v=93';
+import { EXTRA_EVENTS, EXTRA_CHAIN_EVENTS } from './eventsExtra.js?v=94';
 // 第 62 块：民心专属事件（良性 / 恶性两池）。它们不进随机池（全标 chainOnly），
 // 只由 main.js 的「民心档位变化队列」点名播放；这里并进 ALL_EVENTS 是为了
 // getEventById 能找到它们（以及图鉴能翻到）。
-import { REP_EVENTS } from './repEvents.js?v=93';
+import { REP_EVENTS } from './repEvents.js?v=94';
 // 第 64 块：主线番外（10 条）。全部带 cond，读 ctx.story —— 只有走过对应那一夜的
 // 人才会抽到，所以不会稀释新玩家的池子；并进 RANDOM_EVENTS 参与随机。
-import { SIDE_EVENTS } from './eventsSide.js?v=93';
+import { SIDE_EVENTS } from './eventsSide.js?v=94';
 
 export const REP_MIN = 0;
 // 第 61 块（用户报「民心到 100 之后不会继续提升」）：上限 100 → 120。
@@ -243,7 +248,7 @@ const CORE_EVENTS = [
             close: '它鞠了一躬，鞠得很低，低到斗篷拖在草上。',
           },
           {
-            label: '收下，然后反悔', hint: '金币 +15 · 民心 -10 · 下回合怪物 +40%',
+            label: '收下，然后反悔', hint: '金币 +15 · 民心 -10 · 下回合怪物数量 +55%',
             effects: { gold: 15, rep: -10, level: { countScale: 1.4 } },
             say: '「成交。」（你收下金币，把刀往前挪了半寸。）',
             close: '它没有生气，只是记下了。你能感觉到，整片草坡都记住了这件事。',
@@ -1809,7 +1814,7 @@ const CORE_EVENTS = [
     story: '土里斜插着一把弓，弓臂上还缠着半截手指。看方向，是有人临死前想把它拉出来，没拉出来。\n弓弦居然还是紧的。',
     choices: [
       {
-        label: '把它挖出来', hint: '掷一把：下回合剑伤害 +25% / 生命 -2',
+        label: '把它挖出来', hint: '掷一把：下回合剑伤害 +40% / 生命 -2',
         effects: {
           roll: [
             { p: 0.6, effects: { mods: [{ stat: 'swordDamage', pct: 0.25, scope: 'weapon' }] } },
@@ -2060,7 +2065,7 @@ const CHAIN_EVENTS = [
         say: '它把线抹平，站起来拍拍屁股上的土：「两清了，守夜的。」',
       },
       {
-        label: '给它几枚金币当谢礼', hint: '金币 -5 · 民心 +4 · 下回合怪物 -20%',
+        label: '给它几枚金币当谢礼', hint: '金币 -5 · 民心 +4 · 下回合怪物数量 -40%',
         cost: { gold: 5 },
         effects: { rep: 4, level: { countScale: 0.8 } },
         say: '它捏着金币看了半天，忽然说：「……下次还来找你。」',
@@ -2164,7 +2169,7 @@ const CHAIN_EVENTS = [
         say: '沟里的草很高，正好藏住脚步。你回头时，它已经不见了。',
       },
       {
-        label: '给它包一下断腿', hint: '民心 +6 · 下回合移速 -5% · 怪物 -25%',
+        label: '给它包一下断腿', hint: '民心 +6 · 下回合移速 -5% · 怪物数量 -50%',
         effects: { rep: 6, mods: [{ stat: 'moveSpeed', pct: -0.05 }], level: { countScale: 0.75 } },
         say: '布条缠上去的时候，它一动不动，蓝火轻轻晃了一下。',
       },
@@ -2176,13 +2181,236 @@ const CHAIN_EVENTS = [
   // 现在它们（连同加长后的文本）挪到了 eventsExtra.js 的 EXTRA_EVENTS 里。
 ];
 
+// ============================================================
+// 第 83 块（用户要求）：「随机事件给的属性加成太低，根本没有选择的必要」
+//
+// 所有**只活一回合**的临时修正（mods / level），数值统一放大，hint 里的数字
+// 跟着从**新的** effects 反算 —— 保证玩家看到的永远等于实际生效的。
+//
+// 为什么放大写在代码里，而不是把 188 个选项的数字挨个改一遍：
+//   ① 这些数字散在 4 个文件里，改表就得同时手改「下回合攻击 -0.2」这种文案，
+//      两边一旦对不上，玩家看到的就是假数值（这是最难查的一类 bug）；
+//   ② 强度基准本身就会变：三选一的**永久**卡是「攻击 +1 / 攻速 +18% / 暴击 +15%」，
+//      临时卡只给 +0.2（永久卡的五分之一）当然没人选。倍数集中在一张表里，
+//      以后调手感只改这张表，不用再翻 4 个文件。
+//
+// 规则：
+//   · mods / level 放大（倍数见 TEMP_SCALE / TEMP_LEVEL）；
+//   · drain 每秒掉血**不动**：0.1/秒 × 一回合已经等于半条命，它本来就是这批选项里
+//     最疼的代价，再乘下去就没人敢点了（放大它 = 让选项消失，和用户要的相反）；
+//   · permanent 永久加成不归这里管，走原值；
+//   · 文案：hint 里「下回合X ±N」的段落按新值重写，其余（民心 / 金币 / 剧情那半句）
+//     一个字不动；纯文学描述（「属性大涨」「掷一把」）没有数字，也不会被改。
+// ============================================================
+
+// 倍数表：k = 放大倍数，cap = 上限（单项最多给到多少）。
+// 已经超过 cap 的（如「下回合防御 +8」）原样保留 —— 只放大，绝不缩水。
+const TEMP_SCALE = {
+  attack:      { k: 3.0, cap: 3.0 },   // 永久卡 +1，临时给 1.5~3 才值得赌一回合
+  attackRange: { k: 2.5, cap: 0.6 },
+  attackSpeed: { k: 3.0, cap: 0.50 },  // 永久卡 18% / 34% / 60%
+  critRate:    { k: 3.0, cap: 0.40 },  // 永久卡 15% / 27% / 48%
+  critDamage:  { k: 2.0, cap: 1.0 },
+  lifesteal:   { k: 3.0, cap: 0.25 },
+  armor:       { k: 1.5, cap: 6 },
+  maxHp:       { k: 2.0, cap: 4 },
+  hpRegen:     { k: 2.0, cap: 0.6 },   // 再高就是「一回合回满血」，选它等于通关
+  moveSpeed:   { k: 2.5, cap: 0.30 },  // 永久卡 10% / 18% / 32%
+  goldRate:    { k: 2.5, cap: 0.30 },
+  luck:        { k: 2.0, cap: 4 },
+  swordOrbit:  { k: 2.0, cap: 0.80 },
+  swordDamage: { k: 1.6, cap: 0.60 },
+};
+
+// level 的倍率是「以 1 为中心」放大的：v' = 1 - (1 - v) * k
+//   countScale 0.9（少 10%） → 0.8（少 20%）；1.1 → 1.2
+// 下限 0.5：数量的取整是 Math.round(v * cs)，给到 0.5 时「本回合只出 1 只」的
+// 怪种还留得住 1 只；再低就整回合空场，等于白送一回合（不是「变简单」，是没有了）。
+const TEMP_LEVEL = {
+  countScale: { k: 2.0, min: 0.5, max: 1.55, step: 0.05 },
+  speedScale: { k: 2.2, min: 0.70, max: 1.35, step: 0.02 },
+};
+
+// 每个临时属性在 hint 里的叫法。顺序就是匹配优先级：
+// 长的放前面（「攻击范围」不能被「攻击」抢走，「怪物移速」不能被「移速」抢走）。
+// pct: true = 属性面板里本来就用百分比显示的项（暴击 / 金币掉落率…）——
+// 它们存的是 0.08 这种小数，但一定要写成「+24%」，写成「+0.24」没人看得懂。
+const TEMP_LABELS = {
+  speedScale:  { label: '怪物移速', tokens: ['怪物移速'] },
+  countScale:  { label: '怪物数量', tokens: ['怪物数量'] },
+  attackRange: { label: '攻击范围', tokens: ['攻击范围'] },
+  attackSpeed: { label: '攻速',     tokens: ['攻击速度', '攻速'], pct: true },
+  critDamage:  { label: '暴击伤害', tokens: ['暴击伤害'], pct: true },
+  critRate:    { label: '暴击',     tokens: ['暴击率', '暴击'], pct: true },
+  hpRegen:     { label: '生命回复', tokens: ['生命回复', '每秒回血'] },
+  maxHp:       { label: '最大生命', tokens: ['最大生命', '生命上限'] },
+  lifesteal:   { label: '近战吸血', tokens: ['吸血'], pct: true },
+  armor:       { label: '防御',     tokens: ['防御'] },
+  moveSpeed:   { label: '移速',     tokens: ['移动速度', '移速'] },
+  goldRate:    { label: '金币掉落', tokens: ['金币掉落率', '金币掉落'], pct: true },
+  luck:        { label: '幸运',     tokens: ['幸运'] },
+  swordOrbit:  { label: '剑转速',   tokens: ['剑转速'], pct: true },
+  swordDamage: { label: '剑伤害',   tokens: ['剑伤害'], pct: true },
+  attack:      { label: '攻击',     tokens: ['攻击力', '攻击'] },
+};
+
+const round2 = (v) => Math.round(v * 100) / 100;
+
+// 放大单个数值（pct / flat 同一个口子，靠 stat 查表）
+function scaleTemp(stat, v) {
+  const r = TEMP_SCALE[stat];
+  if (!r) return v;                                   // 没登记的属性不碰
+  if (Math.abs(v) >= r.cap) return v;                 // 本来就够大：只放大不缩水
+  const nv = v * r.k;
+  const capped = Math.sign(nv) * Math.min(Math.abs(nv), r.cap);
+  return round2(capped);
+}
+
+function scaleLevel(key, v) {
+  const r = TEMP_LEVEL[key];
+  if (!r) return v;
+  let nv = 1 - (1 - v) * r.k;
+  nv = Math.max(r.min, Math.min(r.max, nv));
+  // 对齐到 step，避免出现 1.1800000000000002 这种值
+  return round2(Math.round(nv / r.step) * r.step);
+}
+
+// 数字 → hint 里的写法：百分比取整，普通数值一位小数（和表里原来的写法一致）
+function tempText(v, isPct) {
+  return isPct ? `${Math.round(Math.abs(v) * 100)}%` : Math.abs(v).toFixed(1);
+}
+function signedText(v, isPct) {
+  return (v >= 0 ? '+' : '-') + tempText(v, isPct);
+}
+
+// 一个 effects 对象里「临时」的那几项 → 一串待重写的段落描述
+function tempSpecs(fx) {
+  const out = [];
+  const lv = fx.level || {};
+  if (lv.countScale != null) {
+    out.push({ key: 'countScale', ...TEMP_LABELS.countScale, isPct: true, text: signedText(lv.countScale - 1, true) });
+  }
+  if (lv.speedScale != null) {
+    out.push({ key: 'speedScale', ...TEMP_LABELS.speedScale, isPct: true, text: signedText(lv.speedScale - 1, true) });
+  }
+  for (const m of fx.mods || []) {
+    const meta = TEMP_LABELS[m.stat];
+    if (!meta) continue;
+    const isPct = m.pct != null;
+    const v = isPct ? m.pct : (m.flat || 0);
+    // 显示用百分比 ≠ 存的是百分比：暴击 / 金币掉落率存的是 0.08 这种小数
+    const showPct = isPct || meta.pct === true;
+    out.push({ key: m.stat, ...meta, isPct, text: signedText(v, showPct) });
+  }
+  return out;
+}
+
+// 重写一段（hint 用「 · 」分段，段内用「、」列同一个分支的多项）
+// used：本分支已经认领过的属性（同一属性在同一分支里只改第一处）
+// carry：跨段的「省略主语」承接 —— 「…怪物数量 ×0.9（55%）或 ×1.2（45%）」的
+//        第二段只有一个 ×1.2，得知道它说的是「怪物数量」。
+// 注意：源文件里分段符的空格不统一（「 · 」和「· 」都有人在用），所以按
+// /\s*·\s*/ 切、用 ' · ' 拼，顺手把空格规整掉。
+function rewriteParts(text, specs, used, carry) {
+  return text.split('、').map((part) => {
+    if (part.includes('永久')) return part;             // 永久加成不归这里管
+    // 「或 ×1.2」这种承接上一段的写法：先把连接词摘掉再判断
+    const lead = (part.match(/^\s*(或者|或)\s*/) || [''])[0];
+    const body = lead ? part.slice(lead.length) : part;
+    let sp = null;
+    for (const s of specs) {
+      if (used.has(s) || sp) continue;
+      if (s.tokens.some((t) => body.includes(t))) sp = s;
+    }
+    if (!sp && carry.key && /^[×+\-−]/.test(body.trim())) {
+      // 承接上一段的主语，但数值要取**本分支**的 —— 概率分支里两支的数值不同，
+      // 直接复用上一段的 spec 会把「×1.2」写成上一支的「-20%」。
+      sp = specs.find((s) => s.key === carry.key) || null;
+    }
+    if (!sp) return part;
+    used.add(sp);
+    carry.key = sp.key;
+    const head = body.includes('下回合') ? '下回合' : '';
+    return `${lead}${head}${sp.label} ${sp.text}`;
+  }).join('、');
+}
+
+// 把一个 hint 里的临时数字换成新值。返回 { hint, gaps }：
+// gaps = 认不出来的属性（文案里压根没提，或有数字但格式太自由）—— 供自查用。
+function rebaseHint(hint, fx) {
+  if (!hint) return { hint, gaps: [] };
+  const branches = fx && fx.roll;
+  if (!branches) {
+    const used = new Set();
+    const specs = tempSpecs(fx || {});
+    // 源文件里的分段符空格不统一（「 · 」/「· 」），这里一并规整
+    const out = hint.split(/\s*·\s*/).map((seg) => rewriteParts(seg, specs, used, {})).join(' · ');
+    return { hint: out, gaps: specs.filter((s) => !used.has(s)).map((s) => s.key) };
+  }
+  // 概率分支：「分支甲（55%）或 分支乙（45%）」
+  const marks = hint.match(/（\d+%）/g) || [];
+  if (!marks.length) return { hint, gaps: [] };          // 纯文学描述（「属性大涨」）
+  const bodies = hint.split(/（\d+%）/);
+  const carry = {};
+  const gaps = [];
+  const out = [];
+  for (let i = 0; i < bodies.length; i++) {
+    let body = bodies[i];
+    const br = branches[Math.min(i, branches.length - 1)];
+    if (i < marks.length && body) {
+      const used = new Set();
+      const specs = tempSpecs((br && br.effects) || {});
+      body = rewriteParts(body, specs, used, carry);
+      for (const s of specs) if (!used.has(s)) gaps.push(s.key);
+    }
+    out.push(body);
+    if (i < marks.length) out.push(marks[i]);
+  }
+  return { hint: out.join(''), gaps };
+}
+
+// 把一个事件的所有选项过一遍（就地改）。同一个事件只会被处理一次：
+// EVENTS / RANDOM_EVENTS / ALL_EVENTS 三个池子共用同一批对象，
+// 不记一下就会叠乘两次、四次。
+const TEMP_BOOSTED = new Set();
+function boostTemps(ev) {
+  if (!ev || TEMP_BOOSTED.has(ev)) return ev;
+  TEMP_BOOSTED.add(ev);
+  for (const c of eventChoices(ev)) {
+    const fx = c.effects;
+    if (!fx) continue;
+    // 概率分支要递归（roll 里的每一支都有自己的 mods / level）
+    const walk = (ef) => {
+      if (!ef) return false;
+      let hit = false;
+      if (ef.roll) for (const b of ef.roll) hit = walk(b.effects) || hit;
+      for (const m of ef.mods || []) {
+        if (m.pct != null) { const nv = scaleTemp(m.stat, m.pct); if (nv !== m.pct) { m.pct = nv; hit = true; } }
+        else if (m.flat != null) { const nv = scaleTemp(m.stat, m.flat); if (nv !== m.flat) { m.flat = nv; hit = true; } }
+      }
+      if (ef.level) {
+        for (const k of ['countScale', 'speedScale']) {
+          if (ef.level[k] == null) continue;
+          const nv = scaleLevel(k, ef.level[k]);
+          if (nv !== ef.level[k]) { ef.level[k] = nv; hit = true; }
+        }
+      }
+      return hit;
+    };
+    walk(fx);
+    if (c.hint) c.hint = rebaseHint(c.hint, fx).hint;
+  }
+  return ev;
+}
+
 // 随机事件池（进 pickEvent 抽签的那一批）
-export const EVENTS = [...CORE_EVENTS, ...EXTRA_EVENTS];
+// 第 83 块：池子在这里拼，顺手过一遍临时效果放大（见上面那段长注释）。
+export const EVENTS = [...CORE_EVENTS, ...EXTRA_EVENTS].map(boostTemps);
 // 第 64 块：抽签池 = 原来 99 条 + 主线番外 10 条。
 // 番外自带 cond（要看过对应章节），所以它只是让「走过剧情的人」的池子变厚。
-export const RANDOM_EVENTS = [...EVENTS, ...SIDE_EVENTS];
+export const RANDOM_EVENTS = [...EVENTS, ...SIDE_EVENTS].map(boostTemps);
 // 全部事件（随机池 + 番外 + 连锁 + 民心事），便于按 id 查找 / 文档生成 / 图鉴
-export const ALL_EVENTS = [...RANDOM_EVENTS, ...CHAIN_EVENTS, ...EXTRA_CHAIN_EVENTS, ...REP_EVENTS];
+export const ALL_EVENTS = [...RANDOM_EVENTS, ...CHAIN_EVENTS, ...EXTRA_CHAIN_EVENTS, ...REP_EVENTS].map(boostTemps);
 // ---------------- 抽取 ----------------
 // ctx: { round, hasWeapon, gold, rep, levelId, story }；
 //   story 是 { seen, read } 两张表，番外用 cond 读它；

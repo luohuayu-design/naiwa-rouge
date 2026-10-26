@@ -18,7 +18,8 @@ for (const id of Object.keys(LEVELS_BY_ID)) {
   for (const x of t) seen.add(x);
 }
 // 第 81 块 +无名者 / 旗手 → 20 种（8 关）
-ok('全部 9 关合起来覆盖 21 种怪', seen.size === 21, String(seen.size));
+// 第 83 块：无名者 / 旗手删掉，加寄存处看守 warden → 还是 20 种
+ok('全部 9 关合起来覆盖 20 种怪', seen.size === 20, String(seen.size));
 ok('第一关只有 4 种（首屏最小集）', levelTypes(LEVELS_BY_ID[1]).length === 4);
 ok('第一关含 minion（教程要打一只）', levelTypes(LEVELS_BY_ID[1]).includes('minion'));
 ok('第五关含 eraser', levelTypes(LEVELS_BY_ID[5]).includes('eraser'));
@@ -31,8 +32,10 @@ ok('第三关不含 eraser', !levelTypes(LEVELS_BY_ID[3]).includes('eraser'));
 for (const id of Object.keys(LEVELS_BY_ID)) {
   const lv = LEVELS_BY_ID[id];
   const t = levelTypes(lv);
-  const bad = t.filter((x) => !(lv.rounds || []).some((r) => (r[x] || 0) > 0));
-  ok('第' + id + '关没有「整关 0 只」的种', bad.length === 0);
+  // 第 83 块：召唤物（第八关的寄存处看守）本来就不在回合表里，得放行
+  const summon = lv.deposit && lv.deposit.summon;
+  const bad = t.filter((x) => x !== summon && !(lv.rounds || []).some((r) => (r[x] || 0) > 0));
+  ok('第' + id + '关没有「整关 0 只」的种', bad.length === 0, bad.join(','));
 }
 
 // --- 2) 代码实现 ---

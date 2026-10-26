@@ -136,7 +136,8 @@ sec('四、别的怪没被波及');
 ok(/wolf\.glb$/.test(ENEMY_TYPES.leaper.file), '雾猎狼还在用 wolf.glb', ENEMY_TYPES.leaper.file);
 ok(/tribal\.glb$/.test(ENEMY_TYPES.hexer.file), '咒面图腾还在用 tribal.glb', ENEMY_TYPES.hexer.file);
 // 第 82 块：+称量官 → 21 只
-ok(Object.keys(ENEMY_TYPES).length === 21, `怪物总数 21 只（实际 ${Object.keys(ENEMY_TYPES).length}）`);
+// 第 83 块：-无名者/旗手 +寄存处看守 → 20 只
+ok(Object.keys(ENEMY_TYPES).length === 20, `怪物总数 20 只（实际 ${Object.keys(ENEMY_TYPES).length}）`);
 ok(ENEMY_TYPES.arc && ENEMY_TYPES.arc.animFamily === undefined, '并联体仍是静态网格（没乱加动画族）');
 
 // ============================================================

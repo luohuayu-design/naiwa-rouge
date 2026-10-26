@@ -517,34 +517,29 @@ export const LEVEL_7 = {
 };
 
 // ============================================================
-// 第八关 · 骨塔寄存层（第 81 块）
+// 第八关 · 骨塔寄存层（第 81 块立，第 83 块重做）
 //
 // 剧情接 s08《一百层台阶》：骨塔的台阶是螺旋的，每一级都刻着名字。
-// 第七十层是个大平台，上面站着几十只骷髅 —— 不动、不说话、面朝同一个方向，
-// 「像在等一个永远不会来的队伍」。它们胸前的木牌被雾吹过，只剩一道划痕。
+// 第七十层是个大平台，平台边上有间木头柜子 —— 这一层的骷髅死后，
+// 胸前那块被雾吹花了的木牌会被它收进去。
 //
-// 这一关**换了威胁的方向**：
-//   前七关所有怪都是「追你 → 你拉着跑」，玩家只需要一种应对。
-//   这里的无名者（ranker）从不追人：它们排成一横排，共享一个朝向，
-//   匀速平移，撞到墙才转向。你躲的不是某只怪，是它要走的那条线。
-//   所以走位从「跑」变成「选位置」—— 站在侧面，它们就一直往前走。
+// 【第 83 块为什么整个换掉】用户原话：「那个一起移动的问题太大，直接换掉」。
+// 旧机制是「一排不追人的骷髅 + 旗手崩散 + 柜子攒 8 块放出一支新队伍」，
+// 队形系统（槽位 / 法线对齐 / 撞墙换向 / 崩散）整块删了，两只队形怪也删了。
+// 现在的循环短得多，也硬得多：
 //
-// 两只新怪（enemy.js）：
-//   ranker 无名者 —— 队形成员。撞人掉血并把人**沿法线**挤开（不是顶着走）。
-//   bearer 旗手   —— 队伍正中举着木牌杆。打死它，整队散架 4 秒：
-//                    原地不动 + 受双倍伤害。这是本关唯一的清场窗口。
+//   任何一只怪死 → 木牌进柜（柜面 8 格可见）
+//   → 玩家可以走到柜边按「取牌」，敲对一串四位数字 → 柜里牌子全清
+//   → 攒满 8 块就**封柜**，5 秒后**寄存处看守**走出来（三套攻击 + 半血暴怒）
 //
-// 一个新物件（deposit.js）：
-//   寄存柜 —— 每死一只无名者/旗手，木牌进柜（柜面 3×3 格看得见）。
-//             攒满 8 块开门，把这一沓牌子放回场上：走出来一支新队伍。
-//             所以「杀」本身不是解，杀太快柜子就会溢出来。
-//             站在柜边不动 1.1 秒可以取走 2 块（挪一步就断）。
-//             场上活着的队伍超过 12 只时，柜子不再放人，改为放电（可躲）。
+// 所以这一关真正的压力不是「场上有多少怪」，而是「你敢不敢停下来按键」：
+// 取牌面板不暂停游戏，12 秒里怪还在追你。
 //
-// 场地：arena 18 —— 比第七关的窄井（13）宽得多，因为队伍需要横向铺开；
-//       但比第六关的机房（19）略小，走位的容错其实更低。
+// 场地：arena 18 —— 比第七关的窄井（13）宽，因为要留出绕到柜边清牌的空间；
+//       比第六关机房（19）略小，位置上的容错更低（柜子那侧只有一条窄路）。
 // 数值：hp 0.34 / dmg 0.20，整体系数 hpMul 1.28 / dmgMul 1.55（七关是 1.20 / 1.45）。
-//       无名者本身很脆（hp 2.8），威胁来自「数量 + 挤压」，不是数值。
+//       看守的数值单列在 enemy.js 的 warden（hp 20 / 三套攻击 / 半血 ×1.4），
+//       不吃这里的 hpMul 之外的额外加成 —— 一只就够硬了。
 // ============================================================
 export const LEVEL_8 = {
   id: 8,
@@ -552,9 +547,9 @@ export const LEVEL_8 = {
   theme: 'ossuary',         // 第 81 块：骨白 + 灰绿 + 干白雾（scene.js 的 THEMES）
   arena: 18,
   order: [
-    ['minion', 1], ['warrior', 1.6], ['ranker', 1.8], ['bearer', 2.0],
-    ['archer', 2.0], ['bowman', 2.2], ['leaper', 2.2], ['wraith', 2.4],
-    ['shielder', 2.4], ['mender', 2.6], ['brood', 2.6], ['reboot', 2.8],
+    ['minion', 1], ['warrior', 1.6], ['archer', 2.0], ['bowman', 2.2],
+    ['leaper', 2.2], ['wraith', 2.4], ['shielder', 2.4], ['mender', 2.6],
+    ['brood', 2.6], ['reboot', 2.8], ['charger', 2.8],
   ],
   spawnRadius: 16.2,
   spawnJitter: 0.5,
@@ -567,37 +562,36 @@ export const LEVEL_8 = {
   weaponAt: 4,
   scale: { hp: 0.34, damage: 0.20, speed: 0.035, hpMul: 1.28, dmgMul: 1.55 },
   // 寄存柜：不在场地里，立在边界石圈外面（像间哨亭）。
-  //   x/z 是柜子中心，r 是它的碰撞半径，headcount 是开门时放出几个人。
-  //   玩家走到场地边缘（r≈17.7）离柜子 1.5 格，正好在取牌范围（3.4）内。
-  //   放在场地外的好处：队伍换向点在 r=16.1，永远碰不到它 —— 不会出现
-  //   一排骷髅从柜子里穿过去的穿模。
-  deposit: { x: 0, z: -19.2, r: 1.5, headcount: 6 },
+  //   x/z 是柜子中心，r 是它的碰撞半径，summon 是封柜开门时放出来的怪。
+  //   玩家走到场地边缘（r≈17.7）离柜子 1.5 格，落在「取牌」范围（3.6）里。
+  //   summon 也进 levelTypes()，所以进关时看守的模型就一起预载好了（第 83 块）。
+  deposit: { x: 0, z: -19.2, r: 1.5, summon: 'warden' },
   rounds: [
-    // ---- 第一幕（R1~R4）：寄存层 · 一排人面朝一个方向 ----
-    { minion: 3, warrior: 0, ranker: 0, bearer: 0, archer: 0, bowman: 0, leaper: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, reboot: 0, gap: 0.90, tip: '骨塔第七十层：场边那个木柜是寄存柜 —— 死掉的骷髅，木牌会被它收进去' },
-    { minion: 4, warrior: 1, ranker: 3, bearer: 1, archer: 0, bowman: 0, leaper: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, reboot: 0, gap: 0.80, tip: '那一排骷髅不追人：它们只朝一个方向走，撞上才掉血 —— 让开就行' },
-    { minion: 4, warrior: 1, ranker: 3, bearer: 1, archer: 1, bowman: 0, leaper: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, reboot: 0, gap: 0.80, tip: '它们不会拐弯：你站在侧面，它们就一直往前走' },
-    { minion: 5, warrior: 2, ranker: 4, bearer: 1, archer: 1, bowman: 0, leaper: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, reboot: 0, gap: 0.75, tip: '队伍中间那只举着牌子 —— 它一倒，整排会站住 4 秒' },
-    // ---- 第二幕（R5~R8）：柜子满了 ----
-    { minion: 5, warrior: 2, ranker: 4, bearer: 1, archer: 1, bowman: 1, leaper: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, reboot: 0, gap: 0.72, tip: '柜子里攒满 8 块木牌就会开 —— 开之前站到柜边不动，能取走两块' },
-    { minion: 5, warrior: 2, ranker: 5, bearer: 1, archer: 1, bowman: 1, leaper: 1, wraith: 0, shielder: 0, brood: 0, mender: 0, reboot: 0, gap: 0.70, tip: '站桩取牌的时候不能动：先看清队伍走到哪了' },
-    { minion: 6, warrior: 2, ranker: 5, bearer: 1, archer: 2, bowman: 1, leaper: 1, wraith: 1, shielder: 0, brood: 0, mender: 0, reboot: 0, gap: 0.66, tip: '雾鬼也来了：一种是隐着身的，一种是明着排队走过来的' },
-    { minion: 6, warrior: 3, ranker: 9, bearer: 2, archer: 2, bowman: 1, leaper: 1, wraith: 1, shielder: 1, brood: 0, mender: 0, reboot: 0, gap: 0.62, tip: '两队各走各的：别站在两条线的交叉口' },
-    // ---- 第三幕（R9~R13）：拆旗手 ----
-    { minion: 6, warrior: 3, ranker: 9, bearer: 2, archer: 2, bowman: 1, leaper: 2, wraith: 1, shielder: 1, brood: 0, mender: 0, reboot: 0, gap: 0.60, tip: '先拆旗手，再吃那 4 秒：一只只砍是最亏的打法' },
-    { minion: 7, warrior: 3, ranker: 10, bearer: 2, archer: 2, bowman: 2, leaper: 2, wraith: 1, shielder: 1, brood: 0, mender: 1, reboot: 0, gap: 0.58, tip: '戴尖帽的小巫在给旗手回血：它会把散掉的队伍重新扶起来' },
-    { minion: 7, warrior: 4, ranker: 10, bearer: 2, archer: 2, bowman: 2, leaper: 2, wraith: 2, shielder: 1, brood: 1, mender: 1, reboot: 0, gap: 0.56, tip: '柜子一直满的话，先停手：清掉散架那 4 秒里的，比一直砍划算' },
-    { minion: 7, warrior: 4, ranker: 12, bearer: 3, archer: 3, bowman: 2, leaper: 2, wraith: 2, shielder: 2, brood: 1, mender: 1, reboot: 0, gap: 0.54, tip: '三支队伍：场地会被三条线同时切开' },
-    { minion: 8, warrior: 4, ranker: 12, bearer: 3, archer: 3, bowman: 2, leaper: 3, wraith: 2, shielder: 2, brood: 1, mender: 1, reboot: 1, gap: 0.52, tip: '重启体也来了：躺下的时候守着它' },
+    // ---- 第一幕（R1~R4）：寄存层 · 认识柜子 ----
+    { minion: 4, warrior: 1, archer: 0, bowman: 0, leaper: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, reboot: 0, charger: 0, gap: 0.90, tip: '骨塔第七十层：场边那间木柜是寄存柜 —— 每死一只怪，木牌都会被它收进去' },
+    { minion: 5, warrior: 2, archer: 1, bowman: 0, leaper: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, reboot: 0, charger: 0, gap: 0.84, tip: '柜面有 8 个格子，右下角写着已经收了几块' },
+    { minion: 5, warrior: 2, archer: 2, bowman: 1, leaper: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, reboot: 0, charger: 0, gap: 0.80, tip: '走到柜子旁边，屏幕底下会冒出「取牌」按钮' },
+    { minion: 6, warrior: 3, archer: 2, bowman: 1, leaper: 1, wraith: 0, shielder: 0, brood: 0, mender: 0, reboot: 0, charger: 0, gap: 0.76, tip: '按下取牌会给你一串四位数字：用面板上的键盘敲进去，敲完自动判定' },
+    // ---- 第二幕（R5~R8）：清柜 ----
+    { minion: 6, warrior: 3, archer: 2, bowman: 2, leaper: 1, wraith: 0, shielder: 0, brood: 0, mender: 0, reboot: 0, charger: 0, gap: 0.72, tip: '输对了柜里的牌子全被取走 —— 趁场上没几只的时候按' },
+    { minion: 6, warrior: 3, archer: 3, bowman: 2, leaper: 2, wraith: 0, shielder: 1, brood: 0, mender: 0, reboot: 0, charger: 0, gap: 0.70, tip: '面板不暂停游戏：按键盘的时候怪还在往你身上走' },
+    { minion: 7, warrior: 3, archer: 3, bowman: 2, leaper: 2, wraith: 1, shielder: 1, brood: 0, mender: 0, reboot: 0, charger: 0, gap: 0.66, tip: '输错或超时只是白跑一趟，牌子还在柜里，3 秒后能再按' },
+    { minion: 7, warrior: 4, archer: 3, bowman: 2, leaper: 2, wraith: 1, shielder: 2, brood: 0, mender: 1, reboot: 0, charger: 0, gap: 0.62, tip: '攒满 8 块会**当场封柜** —— 到那一刻就再也清不掉了' },
+    // ---- 第三幕（R9~R13）：看守 ----
+    { minion: 7, warrior: 4, archer: 3, bowman: 3, leaper: 2, wraith: 1, shielder: 2, brood: 1, mender: 1, reboot: 0, charger: 0, gap: 0.60, tip: '封柜 5 秒后柜门打开：寄存处看守会自己走出来' },
+    { minion: 8, warrior: 4, archer: 3, bowman: 3, leaper: 3, wraith: 2, shielder: 2, brood: 1, mender: 1, reboot: 1, charger: 0, gap: 0.58, tip: '看守有三套攻击：贴脸横扫、中距砸地、拉远了投木牌' },
+    { minion: 8, warrior: 5, archer: 4, bowman: 3, leaper: 3, wraith: 2, shielder: 2, brood: 1, mender: 1, reboot: 1, charger: 0, gap: 0.56, tip: '地上亮起金圈就往外走：那是落锤的位置，站里面必挨' },
+    { minion: 8, warrior: 5, archer: 4, bowman: 3, leaper: 3, wraith: 2, shielder: 2, brood: 1, mender: 1, reboot: 1, charger: 1, gap: 0.54, tip: '它半血之后会暴怒：移速和出手频率一起涨，别在原地跟它换血' },
+    { minion: 8, warrior: 5, archer: 4, bowman: 4, leaper: 3, wraith: 2, shielder: 3, brood: 1, mender: 1, reboot: 1, charger: 1, gap: 0.52, tip: '别等它出现：这一关的正解是满 8 块之前清一次' },
     // ---- 第四幕（R14~R17）：两个机制一起压 ----
-    { minion: 8, warrior: 4, ranker: 12, bearer: 3, archer: 3, bowman: 3, leaper: 3, wraith: 2, shielder: 2, brood: 2, mender: 1, reboot: 1, gap: 0.50, tip: '队伍、柜子、奶妈一起来 —— 先保走位，再谈清场' },
-    { minion: 8, warrior: 5, ranker: 12, bearer: 3, archer: 3, bowman: 3, leaper: 3, wraith: 3, shielder: 2, brood: 2, mender: 1, reboot: 2, gap: 0.48, tip: '柜子溢出来的时候会放电：看到地上那圈橙光就往外跑' },
-    { minion: 8, warrior: 5, ranker: 12, bearer: 3, archer: 4, bowman: 3, leaper: 4, wraith: 3, shielder: 3, brood: 2, mender: 2, reboot: 2, gap: 0.46, tip: '第 16 回合：这一层的队伍从来就没散过' },
-    { minion: 9, warrior: 5, ranker: 12, bearer: 3, archer: 4, bowman: 3, leaper: 4, wraith: 3, shielder: 3, brood: 2, mender: 2, reboot: 2, gap: 0.44, tip: '第 17 回合：每一条线后面都还有一条' },
-    // ---- 第五幕（R18~R20）：寄存层 · 毕业考 ----
-    { minion: 9, warrior: 5, ranker: 12, bearer: 3, archer: 4, bowman: 4, leaper: 4, wraith: 4, shielder: 3, brood: 2, mender: 2, reboot: 2, gap: 0.42, tip: '还剩三回合：别把血花在队伍侧面' },
-    { minion: 9, warrior: 6, ranker: 12, bearer: 3, archer: 4, bowman: 4, leaper: 4, wraith: 4, shielder: 3, brood: 2, mender: 2, reboot: 3, gap: 0.40, tip: '倒数第二波：旗手、走位、柜子，三件事一起看' },
-    { minion: 10, warrior: 6, ranker: 12, bearer: 3, archer: 4, bowman: 4, leaper: 5, wraith: 4, shielder: 4, brood: 2, mender: 2, reboot: 3, gap: 0.38, tip: '最后一波：把这一层的牌子全收走' },
+    { minion: 9, warrior: 5, archer: 4, bowman: 4, leaper: 3, wraith: 3, shielder: 3, brood: 2, mender: 1, reboot: 1, charger: 1, gap: 0.50, tip: '雾鬼也来了：一种是隐着身的，一种是明着走过来的' },
+    { minion: 9, warrior: 6, archer: 4, bowman: 4, leaper: 4, wraith: 3, shielder: 3, brood: 2, mender: 2, reboot: 1, charger: 1, gap: 0.48, tip: '投牌是从柜子那个方向飞过来的：别背对着柜子打' },
+    { minion: 9, warrior: 6, archer: 5, bowman: 4, leaper: 4, wraith: 3, shielder: 3, brood: 2, mender: 2, reboot: 2, charger: 1, gap: 0.46, tip: '第 16 回合：这一层的牌子从来收不完' },
+    { minion: 10, warrior: 6, archer: 5, bowman: 4, leaper: 4, wraith: 3, shielder: 4, brood: 2, mender: 2, reboot: 2, charger: 2, gap: 0.44, tip: '第 17 回合：每一波都要绕到柜边一次，取牌就是「顺路」' },
+    // ---- 第五幕（R18~R20）：毕业考 ----
+    { minion: 10, warrior: 6, archer: 5, bowman: 5, leaper: 4, wraith: 4, shielder: 4, brood: 2, mender: 2, reboot: 2, charger: 2, gap: 0.42, tip: '还剩三回合：血别花在看守身上' },
+    { minion: 10, warrior: 7, archer: 5, bowman: 5, leaper: 5, wraith: 4, shielder: 4, brood: 3, mender: 2, reboot: 3, charger: 2, gap: 0.40, tip: '倒数第二波：先看一眼柜里有几块，再决定要不要输出' },
+    { minion: 11, warrior: 7, archer: 6, bowman: 5, leaper: 5, wraith: 4, shielder: 5, brood: 3, mender: 2, reboot: 3, charger: 2, gap: 0.38, tip: '最后一波：把这一层的牌子全收走' },
   ],
 };
 
@@ -739,6 +733,11 @@ export function levelTypes(level = LEVEL_1) {
     const used = (level.rounds || []).some((r) => (r[type] || 0) > 0);
     if (used) out.push(type);
   }
+  // 第 83 块：不参与波次的「召唤物」也要预载 —— 第八关的寄存处看守只在柜子满了
+  // 才出场，回合表里永远 0 只。不进这个清单，它第一次被召唤时才开始下载模型
+  // （约 480KB），玩家会看到一只**空白**站在柜门口等两秒。
+  const summon = level.deposit && level.deposit.summon;
+  if (summon && !out.includes(summon)) out.push(summon);
   return out;
 }
 

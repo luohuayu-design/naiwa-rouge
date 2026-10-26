@@ -13,13 +13,13 @@
 // （击杀 / 弹事件卡 / 选升级卡）。
 // ============================================================
 
-import { ENEMY_TYPES } from './enemy.js?v=93';
-import { SWORD_KINDS } from './swordKinds.js?v=93';
-import { RELIC_DEFS } from './relics.js?v=93';
-import { UPGRADES } from './upgrade.js?v=93';
-import { ALL_EVENTS } from './events.js?v=93';
-import { RARITIES } from './rarity.js?v=93';
-import { codexAll, codexCount } from './profile.js?v=93';
+import { ENEMY_TYPES } from './enemy.js?v=94';
+import { SWORD_KINDS } from './swordKinds.js?v=94';
+import { RELIC_DEFS } from './relics.js?v=94';
+import { UPGRADES } from './upgrade.js?v=94';
+import { ALL_EVENTS } from './events.js?v=94';
+import { RARITIES } from './rarity.js?v=94';
+import { codexAll, codexCount } from './profile.js?v=94';
 
 export const CODEX_TABS = [
   { id: 'enemies', name: '怪物' },
@@ -41,11 +41,11 @@ const statLine = (pairs) =>
 // 怪物数值行。没有 damage 的（孢冠菌王）显式写「不还手」，
 // 不然玩家会以为是数值漏填。
 function enemySub(cfg) {
-  // 无名者 / 旗手（第 81 块）：它们的 speed 是**队伍平移速度**，不是追人速度。
-  // 直接写「速度 1.05」会让玩家以为它追得慢、可以慢慢跑 —— 它们根本不追。
-  if (cfg.squad) {
-    const line = statLine([['生命', cfg.hp], ['伤害', cfg.damage], ['队列移速', cfg.speed]]);
-    return cfg.squad.leader ? `${line} · 散架 4 秒` : `${line} · 不追人`;
+  // 寄存处看守（第 83 块）：它只在柜子满了才出场，所以数值行要带上「三套攻击」
+  // 和「半血暴怒」—— 玩家在图鉴里得先知道这东西不是拿来硬顶的。
+  if (cfg.warden) {
+    return statLine([['生命', cfg.hp], ['伤害', cfg.damage], ['速度', cfg.speed]])
+      + ' · 满柜召唤 · 半血暴怒';
   }
   // 称量官（第 82 块）：它自己的数值不重要，重要的是「它叠的那一层」。
   // 写穿上称间隔和三层加成 —— 玩家得先知道「为什么突然都变快了」。
@@ -61,13 +61,16 @@ function enemySub(cfg) {
 
 // 怪物一句话说明：按「它给你什么压力」分类，第二关三个巫师各有专属文案
 function enemyDesc(cfg) {
-  // 无名者 / 旗手（第 81 块）：这一关的机制和前七关完全不是一回事，
-  // 不写清「不追人」「旗手死了会散架」「柜子会把人放回来」，玩家只会觉得莫名掉血。
-  if (cfg.squad && cfg.squad.leader) {
-    return '节奏压力：举着木牌杆的那一只，走在队伍正中。砍死它，整队立刻散架 4 秒 —— 原地不动，而且这 4 秒里受双倍伤害。先拆旗手、再吃这 4 秒，比一只只砍划算得多。它比无名者厚一倍多，还被队形护在中间：要够到它，就得顶着两侧的人冲进队里';
-  }
-  if (cfg.squad) {
-    return `区域压力：全场唯一不追你的敌人 —— 它们排成一横排、共享一个朝向、匀速往前走，撞到墙才转向（中途会停 1.1 秒）。撞上掉 ${Number.isFinite(cfg.damage) ? cfg.damage : 1} 点血，并把你沿队伍侧面挤开，不是顶着走。躲法不是跑，是站到侧面：你不挡路，它们就一直往前走。耐久很低，麻烦的是数量和队形`;
+  // 寄存处看守（第 83 块）：第八关唯一由玩法召唤出来的怪。
+  // 文案要把「怎么来的」「三套攻击怎么躲」「半血会变凶」说全 —— 玩家第一眼
+  // 看到它从柜子里走出来时，是没有时间读说明的（世界不暂停）。
+  if (cfg.warden) {
+    const w = cfg.warden;
+    return `爆发压力：寄存柜攒满 8 块牌子就会把它放出来 —— 它不是刷出来的，是你没清柜的代价。`
+      + `三套攻击各占一个距离带：贴脸（${w.sweepR} 格内）横扫，前摇半秒、脚下一圈橙光；`
+      + `中距在你脚下钉三个金圈，${w.slamDelay} 秒后落锤；拉远到 9 格外它就抡木牌砸过来（有实体飞行物）。`
+      + `血量掉到 ${Math.round(w.rageAt * 100)}% 会暴怒：移速 ×${w.rageSpeed}、出手间隔 ×${w.rageGap}，自发光转暗金。`
+      + `所以「贴脸站着换血」和「拉远了跑」都不安全 —— 它逼你不停在两种距离之间切换`;
   }
   // 并联体（第 75 块，第 80 块把机制写全）：这是唯一一个「危险不在它身上、
   // 在它们之间」的怪，不说清 n 只连几条、多久咬一次、缝在哪，玩家只会觉得莫名掉血。
