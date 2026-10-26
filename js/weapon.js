@@ -34,12 +34,12 @@
 //       五种元素共用同一模型，克隆后改材质 color/emissive 染色区分；
 //       图标用 assets/weapons/icon-*.svg。加载失败时用双盒拼占位剑。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=95';
-import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=95';
-import { withV } from './assetUrl.js?v=95';   // 第 80 块：glb 带版本号，SW 才走缓存优先
-import { SWORD_KINDS, KIND_ORDER } from './swordKinds.js?v=95';
-import { rollSwordDamage } from './weaponStats.js?v=95';
-import audio from './audio.js?v=95';
+import * as THREE from '../lib/three.module.js?v=96';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=96';
+import { withV } from './assetUrl.js?v=96';   // 第 80 块：glb 带版本号，SW 才走缓存优先
+import { SWORD_KINDS, KIND_ORDER } from './swordKinds.js?v=96';
+import { rollSwordDamage } from './weaponStats.js?v=96';
+import audio from './audio.js?v=96';
 
 // 轨道半径（世界单位）：贴着主角攻击范围环内侧转，视觉上「护体剑气」
 const ORBIT_R = 1.7;
@@ -80,6 +80,10 @@ export function createWeaponSystem({ scene, stats, wstats, fx, enemies }) {
   let fireCd = 0;              // 万剑齐发冷却剩余秒数（第 56 块）
   let cdMul = 1;              // 局外商店「技能CD缩短」倍率（第 58 块，默认 1）
   let orbitAngle = Math.random() * Math.PI * 2;
+  // 第 85 块（用户）：「被木鱼灵的泡命中时，环剑停转」。
+  // 只冻**角度**，不冻别的 —— 剑停在原地依然会碰伤怪物（它还是利器，只是不转了），
+  // 恢复补剑的计时、飞剑、雷链全都照常跑。这样「停转」是纯削弱，不是「环剑消失」。
+  let orbitHold = 0;           // >0 = 环剑停转剩余秒数
   let t = 0;                   // 总时间（浮动动画用）
 
   const orbiting = [];         // 环上的剑：{ kind, holder, spawnT }
@@ -463,7 +467,12 @@ export function createWeaponSystem({ scene, stats, wstats, fx, enemies }) {
     }
 
     // 2) 环上的剑：绕主角旋转 + 轻微上下浮动 + 碰怪即消耗
-    orbitAngle += Math.PI * 2 * Math.max(0.05, wstats.get('swordOrbit')) * dt;
+    //    第 85 块：被泡命中后会有一段 orbitHold —— 那段时间角度冻结（剑停在原处）。
+    if (orbitHold > 0) {
+      orbitHold = Math.max(0, orbitHold - dt);
+    } else {
+      orbitAngle += Math.PI * 2 * Math.max(0.05, wstats.get('swordOrbit')) * dt;
+    }
     for (let i = orbiting.length - 1; i >= 0; i--) {
       const s = orbiting[i];
       const a = orbitAngle + (i * Math.PI * 2) / Math.max(1, orbiting.length);
@@ -512,6 +521,15 @@ export function createWeaponSystem({ scene, stats, wstats, fx, enemies }) {
     }
   }
 
+  // ---------------- 环剑停转（第 85 块） ----------------
+  // 木鱼灵的追踪泡命中时调这个。取 max 而不是相加：连着挨两颗泡不该叠成 2.4 秒，
+  // 那会把玩家锁在原地等死；只要「这段时间里一直有泡打中你」就不会恢复旋转，也够了。
+  function holdOrbit(sec) {
+    const s = Math.max(0, Number(sec) || 0);
+    orbitHold = Math.max(orbitHold, s);
+    return orbitHold;
+  }
+
   // ---------------- 显示开关（结算后隐藏） ----------------
   function setVisible(v) {
     for (const s of orbiting) s.holder.visible = v;
@@ -532,6 +550,7 @@ export function createWeaponSystem({ scene, stats, wstats, fx, enemies }) {
     owned = [];
     regenT = 0;
     fireCd = 0;
+    orbitHold = 0;
     granted = false;
   }
 
@@ -559,6 +578,9 @@ export function createWeaponSystem({ scene, stats, wstats, fx, enemies }) {
 
   return {
     preload, grant, fire, update, reset, restore, setVisible, addSword, kindCounts, applyKind,
+    // 第 85 块：木鱼灵的泡命中 → 环剑停转（停的是角度，剑还在原处照常砍）
+    holdOrbit,
+    get orbitHold() { return orbitHold; },
     // 第 63 块：擦名者可以摘走一把、杀死后还回来
     takeSword, returnSword,
     wstats,                     // 武器属性表（测试/调试用）

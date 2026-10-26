@@ -13,13 +13,13 @@
 // （击杀 / 弹事件卡 / 选升级卡）。
 // ============================================================
 
-import { ENEMY_TYPES } from './enemy.js?v=95';
-import { SWORD_KINDS } from './swordKinds.js?v=95';
-import { RELIC_DEFS } from './relics.js?v=95';
-import { UPGRADES } from './upgrade.js?v=95';
-import { ALL_EVENTS } from './events.js?v=95';
-import { RARITIES } from './rarity.js?v=95';
-import { codexAll, codexCount } from './profile.js?v=95';
+import { ENEMY_TYPES } from './enemy.js?v=96';
+import { SWORD_KINDS } from './swordKinds.js?v=96';
+import { RELIC_DEFS } from './relics.js?v=96';
+import { UPGRADES } from './upgrade.js?v=96';
+import { ALL_EVENTS } from './events.js?v=96';
+import { RARITIES } from './rarity.js?v=96';
+import { codexAll, codexCount } from './profile.js?v=96';
 
 export const CODEX_TABS = [
   { id: 'enemies', name: '怪物' },
@@ -92,9 +92,10 @@ function enemyDesc(cfg) {
   if (cfg.selfDestruct) return '追到脚边就自爆 —— 别让它贴太近';
   if (cfg.contactRange != null) return '近战型，脚下的圈就是它的攻击范围';
   // 木鱼灵（第 82 块重写）：原来是照抄咒面图腾的 hex 圈（连数值都一样），
-  // 现在吐的是**会追人的实体泡** —— 要说清「能打爆」「绕圈能甩掉」「命中是定住，
-  // 不是减速」这三件事，不然玩家会拿躲紫阵的办法去躲泡（错了：躲不掉，得处理）。
-  if (cfg.bubble) return `纠缠压力：吐一颗青泡慢慢追你（比你还慢，但会拐弯跟着你），追上是 1 点伤害并把你定住 ${cfg.bubble.root} 秒 —— 那几秒一步都走不了，比咒面图腾的减速狠得多。泡有 ${cfg.bubble.hp} 点血，砍两下就炸，也可以靠横向绕圈把它甩掉（它拐弯很笨）。所以它不是「躲一片地」，而是「处理一个追着你的东西」`;
+  // 现在吐的是**会追人的实体泡** —— 要说清「能打爆」「绕圈能甩掉」「命中是定住 +
+  // 环剑停转，不是减速」这几件事，不然玩家会拿躲紫阵的办法去躲泡（错了：躲不掉，得处理）。
+  // 第 85 块：泡更大、一次两颗、吐得更勤，命中还会把环剑冻住 —— 文案跟着改。
+  if (cfg.bubble) return `纠缠压力：一次吐 ${cfg.bubble.count || 1} 颗青泡慢慢追你（比你还慢，但会拐弯跟着你），追上是 ${cfg.bubble.damage ?? 1} 点伤害并把你定住 ${cfg.bubble.root} 秒 —— 那几秒一步都走不了，环上的剑也跟着停转，比咒面图腾的减速狠得多。泡有 ${cfg.bubble.hp} 点血，砍两下就炸，也可以靠横向绕圈把它甩掉（它拐弯很笨）。所以它不是「躲一片地」，而是「处理一个追着你的东西」`;
   if (cfg.spell && cfg.spell.kind === 'hex') return '时间压力：紫阵钉在脚下，落地掉血并减速 —— 看圈就走';
   if (cfg.spell && cfg.spell.kind === 'burn') return '空间压力：地上留一片灼地烧几秒 —— 好位置会被一点点烧掉';
   if (cfg.aura) return '目标选择压力：霜牢环钉在你脚下跟着你走，环里的怪加攻速、减伤还泛青光 —— 它还会放石刺、召卫队，优先点掉它';

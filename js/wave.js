@@ -498,8 +498,8 @@ export const LEVEL_7 = {
     { minion: 5, warrior: 2, wellfrog: 2, archer: 1, bowman: 1, woodfish: 0, leaper: 1, wraith: 1, shielder: 0, brood: 0, mender: 0, reboot: 0, gap: 0.70, tip: '两只井蛙会轮流拉你：别被拽到怪堆里' },
     { minion: 6, warrior: 2, wellfrog: 2, archer: 2, bowman: 1, woodfish: 0, leaper: 1, wraith: 1, shielder: 1, brood: 0, mender: 0, reboot: 0, gap: 0.66, tip: '盾兵也来了：等它放盾再打' },
     // ---- 第三幕（R8~R11）：木鱼灵登场 ----
-    { minion: 6, warrior: 3, wellfrog: 2, archer: 2, bowman: 1, woodfish: 1, leaper: 1, wraith: 2, shielder: 1, brood: 0, mender: 0, reboot: 0, gap: 0.62, tip: '那只青色木鱼灵在吐泡：泡会拐着弯追你，砍两下就炸' },
-    { minion: 7, warrior: 3, wellfrog: 2, archer: 2, bowman: 2, woodfish: 1, leaper: 2, wraith: 2, shielder: 1, brood: 1, mender: 0, reboot: 0, gap: 0.60, tip: '被泡追上会被定住一秒 —— 走不动的那一下最危险，优先点掉木鱼灵' },
+    { minion: 6, warrior: 3, wellfrog: 2, archer: 2, bowman: 1, woodfish: 1, leaper: 1, wraith: 2, shielder: 1, brood: 0, mender: 0, reboot: 0, gap: 0.62, tip: '那只青色木鱼灵在吐泡：一次两颗、泡比以前大，会拐着弯追你，砍两下就炸' },
+    { minion: 7, warrior: 3, wellfrog: 2, archer: 2, bowman: 2, woodfish: 1, leaper: 2, wraith: 2, shielder: 1, brood: 1, mender: 0, reboot: 0, gap: 0.60, tip: '被泡追上会被定住一秒、环上的剑也会停转 —— 那一下最危险，优先点掉木鱼灵' },
     { minion: 7, warrior: 4, wellfrog: 3, archer: 3, bowman: 2, woodfish: 1, leaper: 2, wraith: 2, shielder: 2, brood: 1, mender: 1, reboot: 0, gap: 0.58, tip: '它敲的木鱼会震你 —— 井底的法器之一，之后能在商店买到' },
     { minion: 7, warrior: 4, wellfrog: 3, archer: 3, bowman: 2, woodfish: 2, leaper: 2, wraith: 3, shielder: 2, brood: 1, mender: 1, reboot: 1, gap: 0.56, tip: '重启体也钻进井里了：躺下时守着它' },
     // ---- 第四幕（R12~R15）：混编加压 ----

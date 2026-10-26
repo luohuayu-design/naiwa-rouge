@@ -25,12 +25,12 @@
 // 第四关三只（wraith/leaper/mender，第 35 块，第 52 块换模型），
 // 各自在下面 ENEMY_TYPES 里有详细注释。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=95';
-import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=95';
-import { clone as cloneSkinned } from '../lib/jsm/utils/SkeletonUtils.js?v=95';
-import { distance2D } from './stats.js?v=95';
-import { createRangeRing } from './rangeRing.js?v=95';
-import { withV } from './assetUrl.js?v=95';
+import * as THREE from '../lib/three.module.js?v=96';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=96';
+import { clone as cloneSkinned } from '../lib/jsm/utils/SkeletonUtils.js?v=96';
+import { distance2D } from './stats.js?v=96';
+import { createRangeRing } from './rangeRing.js?v=96';
+import { withV } from './assetUrl.js?v=96';
 
 // KayKit 模型正面朝 +Z；如果哪天换模型发现怪倒着走，把这里改成 Math.PI
 export const ENEMY_MODEL_YAW = 0;
@@ -928,7 +928,7 @@ export const ENEMY_TYPES = {
     attackRange: 8.0,      // 够得到就吐（泡自己会接着追，所以这个距离不是安全线）
     keepDistance: 5.0,
     damage: 1,
-    attackInterval: 3.4,
+    attackInterval: 2.6,   // 第 85 块：3.4 → 2.6（用户「吐气泡的频率上调」）
     windup: 0.7,           // 吸气 —— 看到它鼓起来就是吐泡的前摇
     attackDuration: 1.2,
     bubble: {
@@ -936,12 +936,14 @@ export const ENEMY_TYPES = {
       speed: 2.6,          // 飞行速度：比主角（4.4）慢得多，横向拉开就甩得掉
       turn: 1.2,           // 每秒最多转 1.2 弧度 —— 拐弯很笨，绕圈能把它遛晕
       life: 6.0,           // 最长存活（追不到就自己散）
-      r: 0.42,             // 命中判定半径
+      r: 0.62,             // 第 85 块：0.42 → 0.62（用户「体积扩大」，看着是一颗真的泡）
       root: 1.2,           // 命中把你定住多久（秒）
+      orbitStop: 1.2,      // 第 85 块：命中同时让**环剑停转**这么久（用户要求）
       damage: 1,
       color: 0x57e6d0,     // 青色，和它的自发光同色
       y: 1.00,             // 悬浮高度（正好在奶蛙胸口高度）
-      count: 1,            // 一次吐几颗
+      count: 2,            // 第 85 块：一次吐两颗（左右扇形夹过来）
+      max: 8,              // 同场同时存在的泡上限 —— 多只木鱼灵也不会糊一屏
     },
     spawnTime: 1.0,
     deathTime: 1.6,
@@ -2662,7 +2664,9 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
 
   function bubbleAssets() {
     if (bubbleGeo) return;
-    bubbleGeo = new THREE.SphereGeometry(1, 14, 10);
+    // 第 85 块：泡从 0.42 放大到 0.62 后，14×10 的球面看得出棱角 —— 提到 20×14
+    // （每颗 560 面，同屏最多 8 颗，代价可以忽略）
+    bubbleGeo = new THREE.SphereGeometry(1, 20, 14);
     bubbleMatBase = new THREE.MeshBasicMaterial({
       color: 0x57e6d0, transparent: true, opacity: 0.34,
       depthWrite: false, side: THREE.DoubleSide,
@@ -2674,16 +2678,23 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
   // 所以它一吐出来方向就是歪的 —— 你一直动它就一直在后面追）
   function spawnBubble(e, ctx, idx = 0) {
     const cfg = e.cfg.bubble;
+    // 第 85 块：一次吐两颗 + 吐得更勤，场上可能堆起来 —— 给个硬上限，
+    // 只挡「再多一颗」，不改已经飞着的那些（不然会出现凭空消失的泡）。
+    if (bubbles.length >= (cfg.max ?? 10)) return;
     bubbleAssets();
     const dx = ctx.playerPos.x - e.pos.x;
     const dz = ctx.playerPos.z - e.pos.z;
     const base = Math.atan2(dx, dz);
-    // 一次吐好几颗时扇形分开（现在只吐一颗，留着以后调）
-    const spread = cfg.count > 1 ? (idx - (cfg.count - 1) / 2) * 0.34 : 0;
+    // 一次吐好几颗时扇形分开（第 85 块：0.34 → 0.55）
+    const spread = cfg.count > 1 ? (idx - (cfg.count - 1) / 2) * 0.55 : 0;
     const a = base + spread;
     const sp = cfg.speed;
-    const x = e.pos.x + Math.sin(a) * (e.cfg.radius + 0.25);
-    const z = e.pos.z + Math.cos(a) * (e.cfg.radius + 0.25);
+    // 第 85 块：光靠角度错开，在「刚出嘴」这点距离（≈0.85 格）上最多只分开 0.2 格 ——
+    // 两颗大泡会整个叠在一起（同色 additive 只会更亮，数不出是两颗）。
+    // 所以出生点本身也沿**垂直于朝向**的方向错开，一边一颗（球心距 ≈ 两半径之和，刚好相切）。
+    const side = cfg.count > 1 ? (idx - (cfg.count - 1) / 2) * (e.cfg.radius + (cfg.r ?? 0.42)) : 0;
+    const x = e.pos.x + Math.sin(a) * (e.cfg.radius + 0.25) + Math.cos(a) * side;
+    const z = e.pos.z + Math.cos(a) * (e.cfg.radius + 0.25) - Math.sin(a) * side;
     const y = cfg.y ?? 1.0;
     const mat = bubbleMatBase.clone();
     mat.color.setHex(cfg.color ?? 0x57e6d0);
@@ -2701,6 +2712,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
       r: cfg.r ?? 0.42,
       dmg: cfg.damage ?? 1,
       root: cfg.root ?? 1.2,
+      orbitStop: cfg.orbitStop ?? 1.2,
       life: cfg.life ?? 6,
       t: 0, phase: Math.random() * 6.28, flash: 0,
     });
@@ -2778,21 +2790,37 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
       b.x += b.vx * dt;
       b.z += b.vz * dt;
 
+      // 第 85 块：一次吐两颗 + 泡变大，两颗泡很容易叠成一坨（同色 additive 叠起来
+      // 只会更亮，看不出「有两颗」）—— 给一点横向软分离，让它们各自绕出小弧。
+      for (let j = 0; j < bubbles.length; j++) {
+        const o = bubbles[j];
+        if (o === b) continue;
+        const sx = b.x - o.x, sz = b.z - o.z;
+        const sd = Math.hypot(sx, sz);
+        const minD = b.r + o.r;
+        if (sd < 0.001 || sd >= minD) continue;
+        const push = Math.min(minD - sd, minD * 0.5) * dt * 3.0;
+        b.x += (sx / sd) * push;
+        b.z += (sz / sd) * push;
+      }
+
       // ---- 视觉：椭球呼吸 + 上下浮动 + 挨打闪一下；血少了壳就变薄（看得出快碎了）----
       const wob = 1 + Math.sin(b.t * 6.5 + b.phase) * 0.08;
       b.mesh.position.set(b.x, b.y + Math.sin(b.t * 3.1 + b.phase) * 0.07, b.z);
       b.mesh.scale.set(b.r * wob, b.r / wob, b.r * wob);
       const frac = Math.max(0, b.hp / b.maxHp);
-      b.mat.opacity = 0.18 + 0.20 * frac + b.flash * 0.55;
+      // 第 85 块：泡从 0.42 放到 0.62，同样的不透明度会糊住半个屏幕 —— 压薄一点
+      b.mat.opacity = 0.14 + 0.15 * frac + b.flash * 0.5;
 
-      // ---- 命中：一格血 + 定住（无敌帧里擦过去的就不该被定住）----
+      // ---- 命中：一格血 + 定住 + **环剑停转**（无敌帧里擦过去的都不算）----
       if (d <= b.r + ctx.playerRadius) {
         const inv = ctx.isInvincible ? ctx.isInvincible() : false;
         ctx.hurtPlayer(b.dmg, null);
         if (!inv && ctx.rootPlayer) ctx.rootPlayer(b.root);
+        if (!inv && ctx.stopOrbit) ctx.stopOrbit(b.orbitStop);
         if (fx) {
           fx.burst({ x: b.x, z: b.z }, {
-            color: 0x9ff5ea, count: 16, speed: 3.0, life: 0.45, size: 0.13, y: b.y, up: 1.6,
+            color: 0x9ff5ea, count: 20, speed: 3.0, life: 0.45, size: 0.16, y: b.y, up: 1.6,
           });
         }
         removeBubble(i);
@@ -5051,6 +5079,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
       x: +b.x.toFixed(2), z: +b.z.toFixed(2),
       hp: +b.hp.toFixed(2), maxHp: b.maxHp,
       life: +b.life.toFixed(2), root: b.root,
+      r: b.r, orbitStop: b.orbitStop,     // 第 85 块：体积 / 停环剑时长
     })),
     hitBubbles,
     arrowCount: () => arrows.length,    // 正在下落/插在地上的箭

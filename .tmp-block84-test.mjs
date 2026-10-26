@@ -155,7 +155,7 @@ const bad = jsFiles.filter((n) => {
   const s = readFileSync(`js/${n}.js`, 'utf8');
   return [...s.matchAll(/\?v=(\d+)/g)].some((m) => m[1] !== V);
 });
-ok(V === '95', 'index.html 版本号 v=95', V);
+ok(Number(V) >= 95, 'index.html 版本号 ≥ 95（第 84 块落地时是 95）', V);
 ok(bad.length === 0, 'js 里的 ?v= 全部一致', bad.join(','));
 ok(!/\?v=94/.test(mainSrc + shopSrc + relicsSrc + depositSrc), '没有漏掉的老 v=94');
 
