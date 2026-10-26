@@ -12,7 +12,7 @@
 //   text(pos, str, opts)  伤害飘字
 //   update(dt)            每帧推进
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=97';
+import * as THREE from '../lib/three.module.js?v=98';
 
 export function createFx(scene) {
   const live = [];

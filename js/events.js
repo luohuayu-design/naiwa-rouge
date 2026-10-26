@@ -49,18 +49,18 @@
 // ctx: { round, hasWeapon, gold, rep, hp, maxHp, luck }
 //   luck 用来写 cond（幸运够高才遇得到的吉兆事件，第 11 块）。
 // ============================================================
-import { STAT_DEFS } from './stats.js?v=97';
-import { WEAPON_STAT_DEFS } from './weaponStats.js?v=97';
+import { STAT_DEFS } from './stats.js?v=98';
+import { WEAPON_STAT_DEFS } from './weaponStats.js?v=98';
 // 第 31 块：事件扩容（40 条随机事件 + 3 条连锁后续）单独放一个文件，
 // 不然这个文件会涨到 5000 行。抽取规则、effectLines 等工具函数仍在本文件。
-import { EXTRA_EVENTS, EXTRA_CHAIN_EVENTS } from './eventsExtra.js?v=97';
+import { EXTRA_EVENTS, EXTRA_CHAIN_EVENTS } from './eventsExtra.js?v=98';
 // 第 62 块：民心专属事件（良性 / 恶性两池）。它们不进随机池（全标 chainOnly），
 // 只由 main.js 的「民心档位变化队列」点名播放；这里并进 ALL_EVENTS 是为了
 // getEventById 能找到它们（以及图鉴能翻到）。
-import { REP_EVENTS } from './repEvents.js?v=97';
+import { REP_EVENTS } from './repEvents.js?v=98';
 // 第 64 块：主线番外（10 条）。全部带 cond，读 ctx.story —— 只有走过对应那一夜的
 // 人才会抽到，所以不会稀释新玩家的池子；并进 RANDOM_EVENTS 参与随机。
-import { SIDE_EVENTS } from './eventsSide.js?v=97';
+import { SIDE_EVENTS } from './eventsSide.js?v=98';
 
 export const REP_MIN = 0;
 // 第 61 块（用户报「民心到 100 之后不会继续提升」）：上限 100 → 120。
@@ -324,7 +324,7 @@ const CORE_EVENTS = [
         say: '磨坊主翻遍袋子，发现一枚都没少。他硬塞给你一小袋面粉，说夜里垫肚子。',
       },
       {
-        label: '挂在路口等失主', hint: '民心 +3 · 下回合生命 +1',
+        label: '挂在路口等失主', hint: '民心 +3 · 生命上限 +1',
         effects: { rep: 3, hp: 1 },
         say: '你把钱袋挂在高处。第二天路过时，袋子里多了两个烤土豆。',
       },
@@ -383,7 +383,7 @@ const CORE_EVENTS = [
         say: '石头撬开时你手心磨破了。苇跑过来抱住羊，抬头看你，什么也没说。',
       },
       {
-        label: '宰了带走', hint: '生命 +2 · 民心 -7',
+        label: '宰了带走', hint: '生命上限 +2 · 民心 -7',
         effects: { hp: 2, rep: -7 },
         say: '很安静，比你想的安静。红绳你解下来，塞进了口袋。',
       },
@@ -457,7 +457,7 @@ const CORE_EVENTS = [
         say: '路看得清清楚楚，你几乎是小跑着穿过整片草坡。',
       },
       {
-        label: '躺在草里看一会儿', hint: '下回合生命 +1.5 · 民心 +2',
+        label: '躺在草里看一会儿', hint: '生命上限 +1.5 · 民心 +2',
         effects: { hp: 1.5, rep: 2 },
         say: '草有点湿，月亮很静。你已经很久没有这样躺过了。',
       },
@@ -540,7 +540,7 @@ const CORE_EVENTS = [
     cond: (ctx) => (ctx.rep ?? 50) >= 70,
     choices: [
       {
-        label: '收下', hint: '金币 +6 · 下回合生命 +1',
+        label: '收下', hint: '金币 +6 · 生命上限 +1',
         effects: { gold: 6, hp: 1 },
         say: '篮子上还留着体温。你把它拎进屋，门帘晃了很久才停。',
       },
@@ -1359,7 +1359,7 @@ const CORE_EVENTS = [
         say: '「六枚金币，」她说，「我替你挑一样留下：钱、命、还是名声。」\n三枚石子在她手边排成一条线。',
         replies: [
           {
-            label: '「留命。」', hint: '金币 -6 · 生命回满',
+            label: '「留命。」', hint: '金币 -6 · 生命上限 +2 · 生命回满',
             cost: { gold: 6 },
             effects: { healFull: true },
             say: '「留命。」',
@@ -1451,7 +1451,7 @@ const CORE_EVENTS = [
         say: '「谁在那儿？」她没有回头，「你的脚步很沉。是守夜的那个吧。」',
         replies: [
           {
-            label: '坐下听她唱完', hint: '民心 +5 · 生命 +1',
+            label: '坐下听她唱完', hint: '民心 +5 · 生命上限 +1',
             effects: { rep: 5, hp: 1 },
             say: '（你在她旁边坐下，没说话。）',
             close: '她重新唱起来。唱完，她说：「这首歌是我娘教的。她说唱给走夜路的人听，他们就不怕了。」',
@@ -1495,7 +1495,7 @@ const CORE_EVENTS = [
     story: '天上掉下来三颗流星，一颗接一颗，拖着很短的白尾巴。\n村里的老人说，一颗流星许一个愿，但一晚上只能许一个。',
     choices: [
       {
-        label: '愿这一夜别再死人', hint: '生命回满',
+        label: '愿这一夜别再死人', hint: '生命上限 +2 · 生命回满',
         effects: { healFull: true },
         say: '你把手按在胸口。伤口处暖暖的，像有人在里面点了一盏灯。',
       },
@@ -1591,7 +1591,7 @@ const CORE_EVENTS = [
         say: '灯笼的纸一捏就破。你只留下了里面的铜盘，卖给了收破烂的。',
       },
       {
-        label: '把火拨旺，挂回去', hint: '民心 +4 · 生命 +1',
+        label: '把火拨旺，挂回去', hint: '民心 +4 · 生命上限 +1',
         effects: { rep: 4, hp: 1 },
         say: '火苗窜起来，照亮了竹竿下面一小片草。你在那儿坐了一会儿，身上暖和过来。',
       },
@@ -1602,17 +1602,17 @@ const CORE_EVENTS = [
     story: '坡下有一小片水，几十只青蛙在叫，叫得整片草原都在响。\n它们看见你，停了一瞬，然后又叫起来。',
     choices: [
       {
-        label: '蹲下来跟着叫', hint: '生命 +2 · 民心 -2',
+        label: '蹲下来跟着叫', hint: '生命上限 +2 · 民心 -2',
         effects: { hp: 2, rep: -2 },
         say: '你叫得很难听。青蛙们停了一下，然后集体叫得更大声，像在笑你。你笑着站起来，觉得胸口松了。',
       },
       {
-        label: '用泥水洗伤口', hint: '生命 +1 · 下回合防御 +8',
+        label: '用泥水洗伤口', hint: '生命上限 +1 · 下回合防御 +8',
         effects: { hp: 1, mods: [{ stat: 'armor', flat: 8 }] },
         say: '泥水凉得刺骨。伤口洗过之后，反而不那么疼了。',
       },
       {
-        label: '抓几只，烤了吃', hint: '生命 +2 · 民心 -3',
+        label: '抓几只，烤了吃', hint: '生命上限 +2 · 民心 -3',
         effects: { hp: 2, rep: -3 },
         say: '你抓了六只。烤的时候，水洼那边安静得像什么都没发生过。',
       },
@@ -1751,7 +1751,7 @@ const CORE_EVENTS = [
         say: '你把酒灌进皮囊。封口的时候，坛子里响了一声，像是有人在里面翻了个身。',
       },
       {
-        label: '把土填回去', hint: '民心 +3 · 生命 +1',
+        label: '把土填回去', hint: '民心 +3 · 生命上限 +1',
         effects: { rep: 3, hp: 1 },
         say: '你一捧一捧把土按回去，最后用手掌拍平。做完这些，肩膀松了下来。',
       },
@@ -1769,7 +1769,7 @@ const CORE_EVENTS = [
         say: '他割开你的手腕，接了满满两罐。奇怪的是不怎么疼，只是冷。',
       },
       {
-        label: '反过来问他买一罐', hint: '金币 -9 · 生命 +3（回满不超过上限）',
+        label: '反过来问他买一罐', hint: '金币 -9 · 生命上限 +3（回满不超过上限）',
         cost: { gold: 9 },
         effects: { hp: 3 },
         say: '「自己的血，喝回去？」他笑了，还是把罐子递给你。温的。',
@@ -1802,7 +1802,7 @@ const CORE_EVENTS = [
         say: '你抄得很慢。抄到最后一个点，笔尖自己停了。',
       },
       {
-        label: '把纸揉起来扔掉', hint: '民心 +2 · 生命 +1',
+        label: '把纸揉起来扔掉', hint: '民心 +2 · 生命上限 +1',
         effects: { rep: 2, hp: 1 },
         say: '纸团落进草里，没有声音。你忽然觉得轻了一点。',
       },
@@ -1854,7 +1854,7 @@ const CORE_EVENTS = [
         chain: { in: 4, id: 'dogReturns' },
       },
       {
-        label: '蹲下来看看它的腿', hint: '生命 +1 · 民心 +3',
+        label: '蹲下来看看它的腿', hint: '生命上限 +1 · 民心 +3',
         effects: { hp: 1, rep: 3 },
         say: '断口上缠着布条，打的是人结。有人替它包过，然后走掉了。',
       },
@@ -1909,7 +1909,7 @@ const CORE_EVENTS = [
         say: '绳断的时候钟歪了一下，又稳住。没有响。你第一次觉得安静是件好事。',
       },
       {
-        label: '在钟声里站着听一会儿', hint: '生命 +2 · 下回合攻速 -8%',
+        label: '在钟声里站着听一会儿', hint: '生命上限 +2 · 下回合攻速 -8%',
         effects: { hp: 2, mods: [{ stat: 'attackSpeed', pct: -0.08 }] },
         say: '它自己响了。很轻，一声。像谁在很远的地方替你数了个数。',
       },
@@ -1974,7 +1974,7 @@ const CORE_EVENTS = [
     story: '土墙挡得住风，也挡得住眼睛。你可以靠着它睡一会儿，或者就这么睁着眼把这夜熬过去。\n墙的另一边，草被压出过一层伏倒的痕 —— 有东西在那儿趴过。',
     choices: [
       {
-        label: '睡一觉', hint: '生命 +2 · 下回合怪物数量 +15%',
+        label: '睡一觉', hint: '生命上限 +2 · 下回合怪物数量 +15%',
         effects: { hp: 2, level: { countScale: 1.15 } },
         say: '你睡了没一会儿。醒来时天没亮，但身上暖了——草里那层痕，比原来离墙更近了一点。',
       },
@@ -2013,7 +2013,7 @@ const CHAIN_EVENTS = [
         say: '你把袋子推回去。它歪着头看了很久，最后叼起来，走三步，回头，再走三步。',
       },
       {
-        label: '摸摸它的头', hint: '生命 +2 · 民心 +4',
+        label: '摸摸它的头', hint: '生命上限 +2 · 民心 +4',
         effects: { hp: 2, rep: 4 },
         say: '毛很硬，下面是骨头。它把下巴搁在你手心，很轻地喘着气。',
       },
@@ -2464,7 +2464,10 @@ export function effectLines(effects = {}) {
       lines.push(`${name} ${v >= 0 ? '+' : ''}${text}（永久）`);
     }
   }
-  if (effects.healFull) lines.push('生命回满');
+  // 第 87 块：正向回血统一成「生命上限 +N 且补 N」，文案跟着说清，
+  // 否则玩家会以为还是即时补血、满血时选它等于没选。
+  // 「生命回满」没有点数，统一抬 2 点上限再补满（与 main.js 的 HEALFULL_UP 联动）。
+  if (effects.healFull) lines.push('生命上限 +2 · 生命回满');
   if (effects.discount) {
     lines.push(effects.discount > 0
       ? `下次商店 ${Math.round((1 - effects.discount) * 10)} 折`
@@ -2474,7 +2477,7 @@ export function effectLines(effects = {}) {
   if (effects.rep < 0) lines.push(`民心 ${effects.rep}`);
   if (effects.gold > 0) lines.push(`金币 +${effects.gold}`);
   if (effects.gold < 0) lines.push(`金币 ${effects.gold}`);
-  if (effects.hp > 0) lines.push(`生命 +${effects.hp.toFixed(1)}`);
+  if (effects.hp > 0) lines.push(`生命上限 +${effects.hp.toFixed(1)}（补满）`);
   if (effects.hp < 0) lines.push(`生命 ${effects.hp.toFixed(1)}`);
   if (effects.drain > 0) lines.push(`每秒生命 -${effects.drain.toFixed(1)}（下回合）`);
   if (effects.level?.countScale != null) lines.push(`下回合怪物数量 ×${effects.level.countScale}`);

@@ -7,7 +7,7 @@
 //      不会出现三张都是废牌（比如暴击率 0 时抽到暴伤）的尴尬。
 //   2. 数值都按「一次选择 ≈ 一次可感知的提升」定：
 //      攻击力 +1（前期最直观）、攻速 +18%、范围 +0.40、
-//      生命 +2、防御 +0.3、回复 +0.2/秒；越界的数值由 stats 的统一公式兜住。
+//      生命 +2、防御 +0.3、回复 +0.05/秒；越界的数值由 stats 的统一公式兜住。
 //      ⚠️ 第 73 块起这些只是「小档」：每条属性另有中档（≈1.8 倍）与大档
 //      （≈3.2 倍），详见文件里 FAMILIES / TIERS 那一段。
 //   3. 同一项可以重复抽到、重复叠加（src 里带序号，便于测试与回滚）。
@@ -34,9 +34,9 @@
 //   标了 scope:'weapon' 的项改的是武器表（剑系 / 元素系），其余改主角表。
 //   两块表都要传进来，没传 wstats 时武器项会退化到主角表（只为兼容老调用）。
 // ============================================================
-import { STAT_DEFS } from './stats.js?v=97';
-import { WEAPON_STAT_DEFS } from './weaponStats.js?v=97';
-import { RARITIES, rarityWeight, oddsOf } from './rarity.js?v=97';
+import { STAT_DEFS } from './stats.js?v=98';
+import { WEAPON_STAT_DEFS } from './weaponStats.js?v=98';
+import { RARITIES, rarityWeight, oddsOf } from './rarity.js?v=98';
 
 // 一张卡改的是哪块表
 function tableFor(scope, stats, wstats) {
@@ -221,14 +221,18 @@ export const FAMILIES = [
     desc: () => '每次受击实际伤害 = 攻击 − 防御，可以一直叠（单次受击最少仍掉 1 点）',
   },
   {
+    // 第 87 块（用户定案）：数值整体砍到原来的 1/4 —— 0.2/0.36/0.65 → 0.05/0.09/0.16。
+    // 原来的量级下，选两三张再生就能「站着不动把血回满」，续航类选项直接盖过一切防守。
     id: 'regen', tag: 'def', glyph: '✚', name: '再生', w0: 0.60, gw: +0.010,
-    stat: 'hpRegen', mode: 'flat', vals: [0.2, 0.36, 0.65],
+    stat: 'hpRegen', mode: 'flat', vals: [0.05, 0.09, 0.16],
     title: (v) => `生命回复 +${trim(v)}/秒`,
-    desc: () => '边跑边回血；靠它硬抗不现实，但能省下不少药',
+    desc: () => '边跑边回血；现在只是「少掉一点」，别指望靠它硬抗',
   },
   {
+    // 第 87 块（用户定案）：数值整体砍到原来的 1/3 —— 0.10/0.18/0.32 → 0.03/0.06/0.11。
+    // 吸血是乘在伤害上的，攻速一高就指数往上翻，原来 32% 的大档等于「每一下都回满」。
     id: 'vamp', tag: 'def', glyph: '❦', name: '吸血', w0: 0.50, gw: +0.120, rq: RQ_FINE,
-    stat: 'lifesteal', mode: 'flat', vals: [0.10, 0.18, 0.32],
+    stat: 'lifesteal', mode: 'flat', vals: [0.03, 0.06, 0.11],
     title: (v) => `近战吸血 +${pctTxt(v)}`,
     desc: () => '造成伤害的这个比例转成生命，伤害越高回得越多',
   },
@@ -282,13 +286,15 @@ const UNIQUE = [
   },
   {
     // 第 11 块：生存系的传说卡 —— 把「活下来」这件事直接抬一个档
+    // 第 87 块：附赠的 `hpRegen` 跟着全局口径从 0.3 砍到 0.08（其它来源都砍了 1/4，
+    // 唯独传说卡不动的话，它就成了「唯一值得拿的续航」）。
     id: 'undying', tag: 'def', glyph: '♾', name: '不灭',
     rarity: 4,
     w0: 0.50, gw: +0.030,
-    title: '生命上限 +3 · 生命回复 +0.3/秒',
+    title: '生命上限 +3 · 生命回复 +0.08/秒',
     desc: '传说：上限抬满并立刻补 3 点，同时开始自己回血',
     stat: 'maxHp', flat: 3, heal: 3,
-    extras: [{ stat: 'hpRegen', flat: 0.3 }],
+    extras: [{ stat: 'hpRegen', flat: 0.08 }],
   },
   {
     id: 'luckStar', tag: 'atk', glyph: '🌟', name: '福星',

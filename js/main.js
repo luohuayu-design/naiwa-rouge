@@ -5,40 +5,40 @@
 // 目标是把三件事调顺：摇杆输入 → 角色速度/朝向 → 相机跟随。
 // 后续叠战斗时，只需要在 tick() 里加敌人更新与自动攻击，不用动输入层。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=97';
-import { buildNightScene } from './scene.js?v=97';
-import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=97';
+import * as THREE from '../lib/three.module.js?v=98';
+import { buildNightScene } from './scene.js?v=98';
+import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=98';
 // 第 80 块：给 glb 拼上版本号 → SW 缓存优先（详见 assetUrl.js）
-import { withV } from './assetUrl.js?v=97';
-import { createInput } from './input.js?v=97';
-import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=97';
-import { createStatView } from './statView.js?v=97';
-import { createWeaponStats } from './weaponStats.js?v=97';
-import { createFx } from './fx.js?v=97';
-import { createEnemySystem, ENEMY_TYPES } from './enemy.js?v=97';
+import { withV } from './assetUrl.js?v=98';
+import { createInput } from './input.js?v=98';
+import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=98';
+import { createStatView } from './statView.js?v=98';
+import { createWeaponStats } from './weaponStats.js?v=98';
+import { createFx } from './fx.js?v=98';
+import { createEnemySystem, ENEMY_TYPES } from './enemy.js?v=98';
 import {
   createLevel, LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVEL_5, LEVEL_6, LEVEL_7, LEVEL_8, LEVEL_9, LEVELS_BY_ID, DIFFS, setDifficulty, getDifficulty, roundScale, levelStats, levelTypes,
-} from './wave.js?v=97';
-import { createRangeRing } from './rangeRing.js?v=97';
-import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=97';
-import { createWeaponSystem } from './weapon.js?v=97';
-import { createArrowRainSystem } from './arrowRain.js?v=97';
-import { SWORD_KINDS } from './swordKinds.js?v=97';
-import { createGoldSystem } from './gold.js?v=97';
-import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW, SHOP_PINNED } from './shop.js?v=97';
-import { createTurretSystem, TURRET } from './turret.js?v=97';
-import { createRelicSystem, RELIC_DEFS } from './relics.js?v=97';
-import { createHazards } from './hazards.js?v=97';
-import { createDeposit, tagChance } from './deposit.js?v=97';   // 第 81 块：寄存柜；第 84 块：掉牌概率
-import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=97';
-import audio from './audio.js?v=97';
-import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=97';
+} from './wave.js?v=98';
+import { createRangeRing } from './rangeRing.js?v=98';
+import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=98';
+import { createWeaponSystem } from './weapon.js?v=98';
+import { createArrowRainSystem } from './arrowRain.js?v=98';
+import { SWORD_KINDS } from './swordKinds.js?v=98';
+import { createGoldSystem } from './gold.js?v=98';
+import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW, SHOP_PINNED } from './shop.js?v=98';
+import { createTurretSystem, TURRET } from './turret.js?v=98';
+import { createRelicSystem, RELIC_DEFS } from './relics.js?v=98';
+import { createHazards } from './hazards.js?v=98';
+import { createDeposit, tagChance } from './deposit.js?v=98';   // 第 81 块：寄存柜；第 84 块：掉牌概率
+import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=98';
+import audio from './audio.js?v=98';
+import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=98';
 // 第 62 块：回血技能（第四关通关后永久解锁，回 5 点 / CD 25 秒）
-import { createHealSkill, HEAL_AMOUNT, HEAL_CD } from './healSkill.js?v=97';
+import { createHealSkill, HEAL_AMOUNT, HEAL_CD } from './healSkill.js?v=98';
 // 第 62 块：民心专属事件（升档走良性池、掉档走恶性池）
-import { repPoolForTier, REP_GOOD, REP_BAD } from './repEvents.js?v=97';
+import { repPoolForTier, REP_GOOD, REP_BAD } from './repEvents.js?v=98';
 // 第 62 块：攻略面板（战败提示上的「查看攻略」，手风琴三组）
-import { renderGuide, GUIDE_SECTIONS } from './guide.js?v=97';
+import { renderGuide, GUIDE_SECTIONS } from './guide.js?v=98';
 import {
   settings as readSettings, setSetting, save as saveProfile, profile,
   bumpStat, setStatMax, codexAdd, codexCount, countCard, unlockAch, hasAch, addBones, bones, resetAll,
@@ -51,53 +51,53 @@ import {
   healUnlocked, markHealUnlocked,
   rainObtained, markRainObtained,          // 第 65 块：技能的「有没有」只跟解锁有关
   hintSeen, markHintSeen,                  // 第 65 块：一次性提示卡
-} from './profile.js?v=97';
+} from './profile.js?v=98';
 // 第 44 块：礼包兑换（码表只有哈希，明细在 gift.js 顶部注释）
-import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=97';
+import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=98';
 // 第 46 块：音效包（抽象奶蛙音效包 —— 4 段奶蛙叫声，通关第一关解锁）
-import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=97';
-import * as runSave from './runSave.js?v=97';
+import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=98';
+import * as runSave from './runSave.js?v=98';
 // 第 78 块：存档导出 / 导入。数据逻辑全在这个模块里（不碰 DOM），这里只接按钮
-import * as saveIO from './saveIO.js?v=97';
+import * as saveIO from './saveIO.js?v=98';
 import {
   CAMPFIRE, CAMP_STEP, campBuy, campOwned, campLevel,
   campCost, campApply, bonesFor, diffBoneMul, levelBoneMul, coinBones, BONE,
-} from './campfire.js?v=97';
+} from './campfire.js?v=98';
 // 第 23 块：永夜火种（通关白给的 3 次永久三选一）
 import {
   BOONS, BOON_BY_ID, BOON_PICKS, boonOwned, boonStacks, boonPending, boonTotalStacks,
   grantBoons, rollBoons, takeBoon, applyBoons, boonStackText,
-} from './boons.js?v=97';
+} from './boons.js?v=98';
 // 第 21 块：夜行诅咒（自选 debuff 换骨币倍率）
-import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=97';
+import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=98';
 // 第 22 块：种子与每日挑战
 import {
   DAILY_RULES, dayKey, dayText, dailySeed, seedCode, pickDailyCurses,
   seedFromText, pickSeedRules, loadSeedRecords, saveSeedRecord, pruneSeeds,
   dailyRecord, saveDailyRecord, pruneDaily, makeRng,
-} from './seed.js?v=97';
-import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=97';
+} from './seed.js?v=98';
+import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=98';
 // 第 58 块：局外商店 · 宝箱（花骨币买，开箱随机给永久属性 / 永久法器 / 技能CD缩短）
 import {
   BOXES, BOX_BY_ID, buyBox, rollBox, metaApplyStats, applyMeta,
   // 第 74 块：盲盒按购买次数加价（三种各自独立计数）
   boxCost, boxPriceOf, boxBought, BOX_PRICE_STEP,
-} from './metaShop.js?v=97';
+} from './metaShop.js?v=98';
 // 第 59 块：每日签到（以周为单位，周一 00:00 重置）
 import {
   WEEK_TIERS, SIGN_BONES, weekCells, signSummary, signToday, signedToday,
-} from './signin.js?v=97';
-import { achById, ACHS } from './achievements.js?v=97';
+} from './signin.js?v=98';
+import { achById, ACHS } from './achievements.js?v=98';
 import {
   EVENTS, ALL_EVENTS, getEventById, pickEvent, effectLines,
   choiceHint, canAfford, costShort, REP_MIN, REP_MAX, REP_START,
   isTalk, eventChoices, resolveRoll, mergeEffects,
-} from './events.js?v=97';
+} from './events.js?v=98';
 // 第 32 块：主线《笑不出来的那一夜》（18 夜，一夜一关，前 3 夜已有关卡）
 import {
   STORY_ARC, STORY_CHAPTERS, STORY_ENDINGS, MARK_INFO,
   storyChapterAt, storyChapterById, storyEndingKey,
-} from './story.js?v=97';
+} from './story.js?v=98';
 
 // 标记模块已经跑起来了：index.html 的兜底自检靠它判断
 // 「模块根本没执行」还是「执行了但加载慢」。
@@ -3539,6 +3539,10 @@ async function boot() {
   let eventNextCb = null;      // 事件关掉后继续（→ 三选一 → 商店）
   let roundBuffSrc = null;     // 当前生效的回合加成 src（event:<回合>）
   let roundDrain = 0;          // 当前回合每秒流失的生命
+  // 第 87 块：事件「回血」改成「上限 +N 且补 N」用的序号与常量。
+  // 「生命回满」没有具体点数，统一抬 HEALFULL_UP 点上限再补满。
+  let hpGainSeq = 0;
+  const HEALFULL_UP = 2;
   let currentEventRound = 0;   // 刚结束的回合号（效果作用于 +1）
   const seenEvents = [];       // 最近出过的事件（3 回合内不重复）
   const laterQueue = [];       // 待兑现：{ due, kind:'event'|'effects', id? / effects? }
@@ -3577,9 +3581,31 @@ async function boot() {
     }
     if (effects.rep) addRep(effects.rep);
     if (effects.gold) addCoins(effects.gold);
-    if (effects.hp > 0) stats.heal(effects.hp);
+    // 第 87 块（用户定案）：「回复血量」的选项全部统一成**提高生命上限的同时补生命**。
+    // 以前这里是纯 `stats.heal(N)` —— 满血时选它等于白选，而这 130 多个选项里有
+    // 一大半是「拿别的代价换 1~2 点血」，血一满就完全没有价值。
+    // 上限用**永久** src（hpgain:*）：`effects.hp` 天生是「结算瞬间」的一次性效果，
+    // 若挂在 `event:<round>` 上，回合结束会把上限收回去、血被 clamp 掉 —— 等于白补。
+    // src 带随机后缀：读档后序号会从头来，撞名虽然不会被误删（这类 mod 从不撤销），
+    // 但调试时想单独撤一条就分不清了。
+    if (effects.hp > 0) {
+      stats.addMod({
+        stat: 'maxHp', flat: effects.hp,
+        src: `hpgain:${++hpGainSeq}:${Math.random().toString(36).slice(2, 6)}`,
+      });
+      stats.syncHp(effects.hp);
+      renderHud();
+    }
     if (effects.hp < 0) stats.hp.cur = Math.max(0.5, stats.hp.cur + effects.hp);   // 咬一口但不会一口咬死
-    if (effects.healFull) { stats.heal(1e9); renderHud(); }
+    if (effects.healFull) {
+      // 「回满」没有具体数值，统一按 HEALFULL_UP 抬一点上限，再补满
+      stats.addMod({
+        stat: 'maxHp', flat: HEALFULL_UP,
+        src: `hpgain:${++hpGainSeq}:${Math.random().toString(36).slice(2, 6)}`,
+      });
+      stats.heal(1e9);
+      renderHud();
+    }
     // 一次性商店折扣（第 11 块）：取更强的那一个，进店结账后清零
     if (effects.discount > 0) {
       nextShopDiscount = Math.max(nextShopDiscount, Math.min(0.5, effects.discount));
@@ -4184,7 +4210,11 @@ async function boot() {
       showToast(`${def.name} ${lv} 级`, def.desc[lv - 1] + (lv < def.maxLevel ? ' · 再买可升级' : ' · 已满级'));
     }
     renderHud();
-    shopSoldOut.add(item.id);   // 买断：这件货本次进店售罄（renderShop 会挂上售罄态）
+    // 第 87 块（用户定案）：**药水不售罄** —— 同一家店里可以连着买、
+    // 把血灌满再走。属性 / 剑 / 炮台 / 法器仍然买断一件（那类东西叠加起来会失控）。
+    if (item.type !== 'heal' && item.type !== 'healFull') {
+      shopSoldOut.add(item.id);   // 买断：这件货本次进店售罄（renderShop 会挂上售罄态）
+    }
     renderShop();   // 刷新金币与按钮可用态（面板保持打开，可以连买别的）
   }
 
@@ -6633,6 +6663,14 @@ async function boot() {
       // 第 86 块：下一次 beginGame 开哪一关（等价于在主菜单点选关卡）。
       // 测试「上一局存档退出后开另一关」必须能换关，否则只能在同一关里验。
       setPendingLevel: (id) => { pendingLevelId = LEVELS_BY_ID[id] ? id : 1; return pendingLevelId; },
+      // 第 87 块：直接结算一条事件效果 —— 测试「回血改成上限 +N 且补 N」时，
+      // 不能靠随机事件刷出来（概率不可控）。返回结算前后的血 / 上限。
+      evt: (fx, round) => {
+        const snap = () => ({ max: +stats.get('maxHp').toFixed(2), cur: +stats.hp.cur.toFixed(2) });
+        const before = snap();
+        applyEffects(fx || {}, round != null ? round : (level.roundNo + 1));
+        return { before, after: snap() };
+      },
       // 第 72 块：按关预载。loaded() = 内存里已有哪些怪的模型；
       // ensureLevelAssets(id) = 把这一关缺的补上（返回 true = 补完/本来就不缺）
       loadedTypes: () => enemies.loaded(),

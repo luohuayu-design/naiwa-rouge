@@ -88,8 +88,8 @@ const TITLE_CASES = [
   ['swordFang', '剑暴击伤害 +80%'], ['swordSpin', '剑转速 +50%'],
   ['venom', '毒伤 +0.12/秒'], ['chill', '冰冻 +0.6 秒'],
   ['volt', '闪电伤害 +20%'], ['spring', '血剑回血 +10%'],
-  ['hide', '生命上限 +2'], ['shell', '防御 +0.3'], ['regen', '生命回复 +0.2/秒'],
-  ['vamp', '近战吸血 +10%'], ['step', '移动速度 +10%'], ['cross', '移速 +8% · 攻速 +8%'],
+  ['hide', '生命上限 +2'], ['shell', '防御 +0.3'], ['regen', '生命回复 +0.05/秒'],
+  ['vamp', '近战吸血 +3%'], ['step', '移动速度 +10%'], ['cross', '移速 +8% · 攻速 +8%'],
 ];
 for (const [id, title] of TITLE_CASES) {
   const u = UPGRADES.find((x) => x.id === id);

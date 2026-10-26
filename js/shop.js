@@ -26,23 +26,26 @@
 // 第 11 块：每件货都带 rarity（0 普通 ~ 4 传说），店里按品质加权抽取 ——
 // 幸运越高，摆出来的货越往金/红那一头走（见 rarity.js）。
 // ============================================================
-import { rarityWeight } from './rarity.js?v=97';
-import { TURRET } from './turret.js?v=97';
-import { RELIC_DEFS } from './relics.js?v=97';
+import { rarityWeight } from './rarity.js?v=98';
+import { TURRET } from './turret.js?v=98';
+import { RELIC_DEFS } from './relics.js?v=98';
 
 export const SHOP_ITEMS = [
   // ---------------- 生命药水（第 13 块起：买进背包，作战中随时用） ----------------
+  // 第 87 块（用户定案）：药水**不售罄**（同店可反复买），价格下调 ——
+  // 8 → 5 / 18 → 12。它现在是「钱够就能把血灌满」的续命位，
+  // 和属性、剑、法器那种「一件就买断」的货分开算。
   {
-    id: 'potion', type: 'heal', amount: 3, price: 8,
+    id: 'potion', type: 'heal', amount: 3, price: 5,
     rarity: 0,
     glyph: '⚗', name: '生命药水',
-    desc: '回复 3.0 生命（不超上限）。买进背包，作战中随时打开喝。',
+    desc: '回复 3.0 生命（不超上限）。买进背包，作战中随时打开喝；同一家店可以反复买。',
   },
   {
-    id: 'bigPotion', type: 'healFull', price: 18,
+    id: 'bigPotion', type: 'healFull', price: 12,
     rarity: 1,
     glyph: '🧪', name: '大生命药水',
-    desc: '喝下直接回满。买进背包，关键时刻续命。',
+    desc: '喝下直接回满。买进背包，关键时刻续命；同一家店可以反复买。',
   },
   // ---------------- 属性加成（永久） ----------------
   {

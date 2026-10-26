@@ -53,7 +53,7 @@ export const REP_GOOD = [
     choices: [
       {
         label: '当面吃掉',
-        hint: '最大生命 +1（本局永久）· 民心 +2',
+        hint: '最大生命上限 +1（本局永久）· 民心 +2',
         effects: { rep: 2, permanent: [{ stat: 'maxHp', flat: 1 }] },
         say: '饼确实硬，你嚼了很久。老婆子一直用眼角看你，看到你吃完才把炉盖合上，说了句「明天早点来」。',
       },
@@ -101,7 +101,7 @@ export const REP_GOOD = [
     choices: [
       {
         label: '收下，说下回带酒来',
-        hint: '最大生命 +1 · 防御 +0.5（本局永久）',
+        hint: '最大生命上限 +1 · 防御 +0.5（本局永久）',
         effects: { permanent: [{ stat: 'maxHp', flat: 1 }, { stat: 'armor', flat: 0.5 }] },
         say: '昆笑了一下，说这条街上的酒都被他喝遍了，就等你那壶。护手的箍是热的，走在夜风里，那点热能顶到手腕上。',
       },
