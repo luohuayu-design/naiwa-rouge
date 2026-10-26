@@ -34,9 +34,9 @@
 //   标了 scope:'weapon' 的项改的是武器表（剑系 / 元素系），其余改主角表。
 //   两块表都要传进来，没传 wstats 时武器项会退化到主角表（只为兼容老调用）。
 // ============================================================
-import { STAT_DEFS } from './stats.js?v=99';
-import { WEAPON_STAT_DEFS } from './weaponStats.js?v=99';
-import { RARITIES, rarityWeight, oddsOf } from './rarity.js?v=99';
+import { STAT_DEFS } from './stats.js?v=100';
+import { WEAPON_STAT_DEFS } from './weaponStats.js?v=100';
+import { RARITIES, rarityWeight, oddsOf } from './rarity.js?v=100';
 
 // 一张卡改的是哪块表
 function tableFor(scope, stats, wstats) {
@@ -112,15 +112,16 @@ export const FAMILIES = [
     desc: () => '脚下的圈更大，能先手拍到还没贴脸的怪',
   },
   {
+    // 第 89 块：玩家「适当削弱暴击率的提升幅度」→ 三档各削约 1/3（15/27/48 → 10/18/32）。
     id: 'eye', tag: 'atk', glyph: '✦', name: '锐目', w0: 0.70, gw: +0.090,
-    stat: 'critRate', mode: 'flat', vals: [0.15, 0.27, 0.48],
+    stat: 'critRate', mode: 'flat', vals: [0.10, 0.18, 0.32],
     title: (v) => `暴击率 +${pctTxt(v)}`,
     desc: () => '近战命中时按这个概率打出暴击；暴击有多疼看「致命」那条线',
   },
   {
     id: 'fang', tag: 'atk', glyph: '✧', name: '致命', w0: 0.50, gw: +0.180, rq: RQ_FINE,
     stat: 'critDamage', mode: 'pct', vals: [0.50, 0.90, 1.60],
-    extras: [{ stat: 'critRate', mode: 'flat', vals: [0.06, 0.10, 0.18] }],
+    extras: [{ stat: 'critRate', mode: 'flat', vals: [0.04, 0.07, 0.12] }],
     title: (v, e) => `暴击伤害 +${pctTxt(v)} · 暴击率 +${pctTxt(e[0])}`,
     desc: () => '暴击更疼；自带一点暴击率，单独拿到也有收益',
   },
@@ -152,7 +153,7 @@ export const FAMILIES = [
   {
     id: 'swordCrit', tag: 'atk', glyph: '✦', name: '剑锋', w0: 0.90, gw: +0.070,
     needsWeapon: true, scope: 'weapon',
-    stat: 'swordCrit', mode: 'flat', vals: [0.16, 0.28, 0.50],
+    stat: 'swordCrit', mode: 'flat', vals: [0.11, 0.19, 0.34],
     title: (v) => `剑暴击率 +${pctTxt(v)}`,
     desc: () => '环剑自己的暴击概率（基础 10%），不吃主角暴击率',
   },
@@ -303,11 +304,12 @@ const UNIQUE = [
     id: 'luckStar', tag: 'atk', glyph: '🌟', name: '福星',
     rarity: 4,
     w0: 0.40, gw: +0.020,
-    title: '幸运 +2 · 暴击 +5% · 金币掉落率 +10%',
+    title: '幸运 +2 · 暴击 +3% · 金币掉落率 +10%',
     desc: '整晚只该见一两张的传说卡：运气、暴击、财运一次给齐',
     stat: 'luck', flat: 2,
     extras: [
-      { stat: 'critRate', flat: 0.05 },
+      // 第 89 块：暴击率整体削 1/3，福星这条从 +5% 降到 +3%
+      { stat: 'critRate', flat: 0.03 },
       { stat: 'goldRate', flat: 0.10 },
     ],
   },

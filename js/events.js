@@ -49,18 +49,18 @@
 // ctx: { round, hasWeapon, gold, rep, hp, maxHp, luck }
 //   luck 用来写 cond（幸运够高才遇得到的吉兆事件，第 11 块）。
 // ============================================================
-import { STAT_DEFS } from './stats.js?v=99';
-import { WEAPON_STAT_DEFS } from './weaponStats.js?v=99';
+import { STAT_DEFS } from './stats.js?v=100';
+import { WEAPON_STAT_DEFS } from './weaponStats.js?v=100';
 // 第 31 块：事件扩容（40 条随机事件 + 3 条连锁后续）单独放一个文件，
 // 不然这个文件会涨到 5000 行。抽取规则、effectLines 等工具函数仍在本文件。
-import { EXTRA_EVENTS, EXTRA_CHAIN_EVENTS } from './eventsExtra.js?v=99';
+import { EXTRA_EVENTS, EXTRA_CHAIN_EVENTS } from './eventsExtra.js?v=100';
 // 第 62 块：民心专属事件（良性 / 恶性两池）。它们不进随机池（全标 chainOnly），
 // 只由 main.js 的「民心档位变化队列」点名播放；这里并进 ALL_EVENTS 是为了
 // getEventById 能找到它们（以及图鉴能翻到）。
-import { REP_EVENTS } from './repEvents.js?v=99';
+import { REP_EVENTS } from './repEvents.js?v=100';
 // 第 64 块：主线番外（10 条）。全部带 cond，读 ctx.story —— 只有走过对应那一夜的
 // 人才会抽到，所以不会稀释新玩家的池子；并进 RANDOM_EVENTS 参与随机。
-import { SIDE_EVENTS } from './eventsSide.js?v=99';
+import { SIDE_EVENTS } from './eventsSide.js?v=100';
 
 export const REP_MIN = 0;
 // 第 61 块（用户报「民心到 100 之后不会继续提升」）：上限 100 → 120。
@@ -2209,7 +2209,9 @@ const TEMP_SCALE = {
   attack:      { k: 3.0, cap: 3.0 },   // 永久卡 +1，临时给 1.5~3 才值得赌一回合
   attackRange: { k: 2.5, cap: 0.6 },
   attackSpeed: { k: 3.0, cap: 0.50 },  // 永久卡 18% / 34% / 60%
-  critRate:    { k: 3.0, cap: 0.40 },  // 永久卡 15% / 27% / 48%
+  // 第 89 块：暴击率整体削 1/3，临时卡也跟着降（k 3.0 → 2.0）：
+  //   暴击 +8% → 实际 +16%（原来是 +24%），永久卡 10% / 18% / 32%
+  critRate:    { k: 2.0, cap: 0.40 },
   critDamage:  { k: 2.0, cap: 1.0 },
   lifesteal:   { k: 3.0, cap: 0.25 },
   armor:       { k: 1.5, cap: 6 },

@@ -26,9 +26,9 @@
 // 第 11 块：每件货都带 rarity（0 普通 ~ 4 传说），店里按品质加权抽取 ——
 // 幸运越高，摆出来的货越往金/红那一头走（见 rarity.js）。
 // ============================================================
-import { rarityWeight } from './rarity.js?v=99';
-import { TURRET } from './turret.js?v=99';
-import { RELIC_DEFS } from './relics.js?v=99';
+import { rarityWeight } from './rarity.js?v=100';
+import { TURRET } from './turret.js?v=100';
+import { RELIC_DEFS } from './relics.js?v=100';
 
 export const SHOP_ITEMS = [
   // ---------------- 生命药水（第 13 块起：买进背包，作战中随时用） ----------------
@@ -82,10 +82,11 @@ export const SHOP_ITEMS = [
     desc: '剑伤害 +15%（永久）。只加环剑，不加主角普攻。',
   },
   {
-    id: 'grindstone', type: 'stat', scope: 'weapon', stat: 'swordCrit', flat: 0.05, price: 22,
+    // 第 89 块：暴击率整体削 1/3 → +5% 降 +3%，价格同步 22 → 18（和剑油同价）
+    id: 'grindstone', type: 'stat', scope: 'weapon', stat: 'swordCrit', flat: 0.03, price: 18,
     rarity: 2,
     needWeapon: true, glyph: '🔪', name: '磨剑石',
-    desc: '剑暴击率 +5%（永久）。环剑自己的暴击，与主角暴击无关。',
+    desc: '剑暴击率 +3%（永久）。环剑自己的暴击，与主角暴击无关。',
   },
   // ---------------- 武器（元素剑，永久 +1 把） ----------------
   {

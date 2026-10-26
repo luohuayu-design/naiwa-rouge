@@ -65,7 +65,8 @@ const card = (id) => UP.find((u) => u.id === id);
 
 const swordCards = [
   ['swordEdge', 'swordDamage', 'pct', 0.60, 0.30],
-  ['swordCrit', 'swordCrit', 'flat', 0.16, 0.08],
+  // 第 89 块：暴击率整体削 1/3，剑锋 → 11%（旧 16%）
+  ['swordCrit', 'swordCrit', 'flat', 0.11, 0.08],
   ['swordFang', 'swordCritMul', 'pct', 0.80, 0.40],
   ['swordSpin', 'swordOrbit', 'pct', 0.50, 0.25],
   ['swordForge', 'swordRefill', 'flat', -2.0, -1.0],
@@ -83,15 +84,16 @@ for (const [id, stat, mode, now, before] of swordCards) {
 // 翻倍幅度统一（除了剑匣是「秒数」、−1 → −2）
 // 八张翻倍卡里，淬毒是 0.05 → 0.12（2.4 倍）—— 毒伤基数太小，正好 ×2 只会变成
 // 0.10，还是感觉不到；其余七张严格 ×2；剑匣是时长（−1 → −2 秒）单独算。
-ok(swordCards.filter(([id]) => id !== 'swordForge').every(([id, , mode, now, before]) => {
+// 第 89 块起剑锋不再参与「翻倍」判定（它被 73 块拆档、89 块削 1/3）
+ok(swordCards.filter(([id]) => id !== 'swordForge' && id !== 'swordCrit').every(([id, , mode, now, before]) => {
   const c = card(id);
   const r = Math.abs(c[mode] / before);
   return r >= 1.9 && r <= 2.5;
-}), '八张数值卡至少翻 1.9 倍（淬毒 2.4 倍，其余 ×2）');
+}), '七张数值卡至少翻 1.9 倍（淬毒 2.4 倍，其余 ×2；剑锋另行调档）');
 
 // 标题里的数字必须和实际数值对得上（防「文案说 +60% 但 pct 还是 0.3」）
 const titleCases = [
-  ['swordEdge', '剑伤害 +60%'], ['swordCrit', '剑暴击率 +16%'], ['swordFang', '剑暴击伤害 +80%'],
+  ['swordEdge', '剑伤害 +60%'], ['swordCrit', '剑暴击率 +11%'], ['swordFang', '剑暴击伤害 +80%'],
   ['swordSpin', '剑转速 +50%'], ['venom', '毒伤 +0.12/秒'], ['chill', '冰冻 +0.6 秒'],
   ['volt', '闪电伤害 +20%'], ['spring', '血剑回血 +10%'],
 ];
