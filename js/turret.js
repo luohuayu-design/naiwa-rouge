@@ -13,11 +13,11 @@
 // 做弩臂 + 上膛的箭 + 骨头点缀（均 CC0），加载失败时退回程序化炮台（外观稍简，
 // 逻辑完全一致）。深夜里靠自发光宝珠看清楚。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=110';
-import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=110';
-import { withV } from './assetUrl.js?v=110';   // 第 80 块：glb 带版本号，SW 才走缓存优先
-import { distance2D } from './stats.js?v=110';
-import audio from './audio.js?v=110';
+import * as THREE from '../lib/three.module.js?v=111';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=111';
+import { withV } from './assetUrl.js?v=111';   // 第 80 块：glb 带版本号，SW 才走缓存优先
+import { distance2D } from './stats.js?v=111';
+import audio from './audio.js?v=111';
 
 // ---------------- 可调参数（平衡都在这里） ----------------
 export const TURRET = {
@@ -164,7 +164,7 @@ export function createTurretSystem({ scene, fx, enemies }) {
   // 射一发：目标 = 炮台射程内最近的活怪；弹道 = 出手瞬间目标的位置（直线）
   function fire(t, ctx) {
     const foes = enemies.list.filter((e) =>
-      e.state !== 'dead' && e.state !== 'spawn' && !e.ghostHidden   // 雾鬼隐身：炮台当它不存在（第 35 块）
+      enemies.hittable(e) && !e.ghostHidden   // 雾鬼隐身：炮台当它不存在（第 35 块）；躺尸重启体不打（第 97 块）
       && distance2D(t, e.pos) <= TURRET.RANGE
     );
     if (!foes.length) return;

@@ -13,9 +13,9 @@
 // 数值：伤害吃武器属性表 wstats（swordDamage / 暴击），× ARROW_DMG_MUL ——
 //   商店的剑油 / 磨剑石同样强化箭雨，升级卡不白买。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=110';
-import { mitigate } from './stats.js?v=110';
-import audio from './audio.js?v=110';
+import * as THREE from '../lib/three.module.js?v=111';
+import { mitigate } from './stats.js?v=111';
+import audio from './audio.js?v=111';
 
 const AIM_TIME = 0.85;      // 警告圈亮起到第一支箭落地（给怪走位、给玩家预判）
 const SPREAD_TIME = 1.0;    // 全部箭落完的时间窗（每支箭在这个窗内错开）
@@ -72,8 +72,8 @@ export function createArrowRainSystem({ scene, fx, enemies, wstats }) {
     if (!unlocked) { lastFail = 'lock'; return false; }
     if (cd > 0) { lastFail = 'cd'; return false; }
 
-    // 找最近的活怪（不含正在生成 / 已死 / 隐身的雾鬼 —— 别对着空气放箭）
-    const list = enemies.list.filter((e) => e.state !== 'dead' && e.state !== 'spawn' && !e.ghostHidden);
+    // 找最近的活怪（不含正在生成 / 已死 / 躺尸重启中 / 隐身的雾鬼 —— 别对着空气放箭）
+    const list = enemies.list.filter((e) => enemies.hittable(e) && !e.ghostHidden);
     const p = playerPos || { x: 0, z: 0 };
     let best = null, bestD = SEARCH_R * SEARCH_R;
     for (const e of list) {
@@ -117,7 +117,7 @@ export function createArrowRainSystem({ scene, fx, enemies, wstats }) {
     const raw = dmgBase * (crit ? wstats.get('swordCritMul') : 1);
     let hitAny = false;
     for (const e of enemies.list) {
-      if (e.state === 'dead' || e.state === 'spawn' || e.ghostHidden) continue;
+      if (!enemies.hittable(e) || e.ghostHidden) continue;
       const dx = e.pos.x - (s.x + a.dx), dz = e.pos.z - (s.z + a.dz);
       const r = ARROW_HIT_R + e.cfg.radius;
       if (dx * dx + dz * dz <= r * r) {
@@ -237,7 +237,7 @@ export function createArrowRainSystem({ scene, fx, enemies, wstats }) {
     // 教程「补靶子」和玩家提示要问这个）
     hasTarget(p) {
       const q = p || { x: 0, z: 0 };
-      return enemies.list.some((e) => e.state !== 'dead' && e.state !== 'spawn' && !e.ghostHidden
+      return enemies.list.some((e) => enemies.hittable(e) && !e.ghostHidden
         && ((e.pos.x - q.x) ** 2 + (e.pos.z - q.z) ** 2) < SEARCH_R * SEARCH_R);
     },
   };

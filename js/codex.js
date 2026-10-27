@@ -13,13 +13,13 @@
 // （击杀 / 弹事件卡 / 选升级卡）。
 // ============================================================
 
-import { ENEMY_TYPES } from './enemy.js?v=110';
-import { SWORD_KINDS } from './swordKinds.js?v=110';
-import { RELIC_DEFS } from './relics.js?v=110';
-import { UPGRADES } from './upgrade.js?v=110';
-import { ALL_EVENTS } from './events.js?v=110';
-import { RARITIES } from './rarity.js?v=110';
-import { codexAll, codexCount } from './profile.js?v=110';
+import { ENEMY_TYPES } from './enemy.js?v=111';
+import { SWORD_KINDS } from './swordKinds.js?v=111';
+import { RELIC_DEFS } from './relics.js?v=111';
+import { UPGRADES } from './upgrade.js?v=111';
+import { ALL_EVENTS } from './events.js?v=111';
+import { RARITIES } from './rarity.js?v=111';
+import { codexAll, codexCount } from './profile.js?v=111';
 
 export const CODEX_TABS = [
   { id: 'enemies', name: '怪物' },
@@ -46,6 +46,12 @@ function enemySub(cfg) {
   if (cfg.warden) {
     return statLine([['生命', cfg.hp], ['伤害', cfg.damage], ['速度', cfg.speed]])
       + ' · 满柜召唤 · 五套攻击 · 半血暴怒';
+  }
+  // 盖章人（第 97 块）：数值行要把「多久盖一次」写出来 ——
+  // 它的生命/伤害都不吓人，吓人的是频率。
+  if (cfg.seal) {
+    return statLine([['生命', cfg.hp], ['伤害', cfg.damage], ['速度', cfg.speed]])
+      + ` · 每 ${cfg.attackInterval} 秒盖一次印 · 封印 ${cfg.seal.time} 秒`;
   }
   // 称量官（第 82 块）：它自己的数值不重要，重要的是「它叠的那一层」。
   // 写穿上称间隔和三层加成 —— 玩家得先知道「为什么突然都变快了」。
@@ -80,6 +86,17 @@ function enemyDesc(cfg) {
   // 并联体（第 75 块，第 80 块把机制写全）：这是唯一一个「危险不在它身上、
   // 在它们之间」的怪，不说清 n 只连几条、多久咬一次、缝在哪，玩家只会觉得莫名掉血。
   if (cfg.arc) return '区域压力：两只以上就成网 —— 场上每两只之间都拖着一条悬空电弧（2 只 1 条、3 只 3 条、4 只 6 条，不用成对出现），多远的都连。碰到电弧掉 1 点血，同一下之间隔 0.7 秒，站在交叉口不会瞬间连扣。电弧无视无敌时段（受击那一下的无敌挡不住它），所以别贴着线硬冲。它们之间会互相推开、两两保持 8 格以上 —— 中间那几段缝就是你唯一的活路；它很耐打，别想一刀断网，拆掉一只它牵的线整片跟着断';
+  // 盖章人（第 97 块）：它和第六关的紫阵最容易混（都是"地上画一块"），
+  // 所以文案必须把两者的区别说穿：紫阵是铺着等你踩，方印是追着你此刻的位置盖。
+  if (cfg.seal) {
+    const se = cfg.seal;
+    return `走位压力：它只干一件事 —— 在你此刻站的脚下盖一枚红方印，${cfg.windup} 秒后落。`
+      + `落印时人还在框里，就掉 ${cfg.damage} 点血并被「封印」${se.time} 秒：移速只剩 ${Math.round(se.slow * 100)}%，`
+      + `想跑也跑不快。它自己很脆（${cfg.hp} 血，两下就没），但每 ${cfg.attackInterval} 秒就盖一枚 —— `
+      + `站着输出会被连着盖，边打边挪它才盖不中。`
+      + `和紫阵的区别：紫阵铺在地上等你踩，可以绕；方印钉的是你此刻的位置，绕不开，只能一直动。`
+      + `所以第九关真正的节奏是「别在称量官面前站桩」—— 你一停手，印就落下来`;
+  }
   // 称量官（第 82 块）：第九关唯一的正解是「先拆它」，文案必须把这句话说穿 ——
   // 它自己几乎不打人，玩家第一反应一定是「先打围上来的」，那就正好踩进机制里。
   if (cfg.weigh) {

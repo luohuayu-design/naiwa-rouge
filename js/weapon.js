@@ -34,12 +34,12 @@
 //       五种元素共用同一模型，克隆后改材质 color/emissive 染色区分；
 //       图标用 assets/weapons/icon-*.svg。加载失败时用双盒拼占位剑。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=110';
-import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=110';
-import { withV } from './assetUrl.js?v=110';   // 第 80 块：glb 带版本号，SW 才走缓存优先
-import { SWORD_KINDS, KIND_ORDER } from './swordKinds.js?v=110';
-import { rollSwordDamage } from './weaponStats.js?v=110';
-import audio from './audio.js?v=110';
+import * as THREE from '../lib/three.module.js?v=111';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=111';
+import { withV } from './assetUrl.js?v=111';   // 第 80 块：glb 带版本号，SW 才走缓存优先
+import { SWORD_KINDS, KIND_ORDER } from './swordKinds.js?v=111';
+import { rollSwordDamage } from './weaponStats.js?v=111';
+import audio from './audio.js?v=111';
 
 // 轨道半径（世界单位）：贴着主角攻击范围环内侧转，视觉上「护体剑气」
 const ORBIT_R = 1.7;
@@ -285,7 +285,9 @@ export function createWeaponSystem({ scene, stats, wstats, fx, enemies }) {
 
   function aliveEnemies() {
     // 雾鬼隐身时不进候选名单（第 35 块）—— 环剑不会对着空气空转
-    return enemies.list.filter((e) => e.state !== 'dead' && e.state !== 'spawn' && !e.ghostHidden);
+    // 第 97 块：判据收到 enemies.hittable()。原来只排 dead / spawn，漏了重启体躺尸的
+    // 'down' 态 —— 那 4 秒里它打不动，但环剑照样会为它再转一圈，白耗一节电量。
+    return enemies.list.filter((e) => enemies.hittable(e) && !e.ghostHidden);
   }
 
   // 元素附加效果（第 64 块用户定案：五种元素剑全部群体化）
@@ -306,7 +308,9 @@ export function createWeaponSystem({ scene, stats, wstats, fx, enemies }) {
   function aroundPoint(at, radius) {
     const r2 = radius * radius;
     return enemies.list.filter((o) => {
-      if (o.state === 'dead' || o.state === 'spawn' || o.ghostHidden) return false;
+      // 第 97 块：躺尸重启体（state==='down'）不再算作可打目标 ——
+      // 以前环剑会为它白转一圈、连元素特效都放出来
+      if (!enemies.hittable(o) || o.ghostHidden) return false;
       const dx = o.pos.x - at.x, dz = o.pos.z - at.z;
       return dx * dx + dz * dz <= r2;
     });

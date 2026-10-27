@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#080f14">
 <link rel="icon" href="data:,">
 <title>蛙步 · 夜行</title>
-<link rel="stylesheet" href="style.css?v=110">
+<link rel="stylesheet" href="style.css?v=111">
 </head>
 <body>
 
@@ -717,18 +717,25 @@
       <button class="lv-back" id="setBack" type="button">‹ 返回</button>
     </div>
     <div class="set-list" id="setList"></div>
-    <!-- 存档备份（第 78 块，用户第 11 条）：清缓存 / 换设备时把进度带走。
-         文件与文本码两条路都留着 —— 手机上文件下载常被内置浏览器拦，文本码那条才是退路。 -->
+    <!-- 存档备份（第 78 块，用户第 11 条；第 97 块补三件事）：
+         ① 「分享文件」走系统分享面板 —— 手机上不用下载目录也能把档存到「文件」或发给微信；
+         ② 存档码改成压缩 + 分段，手机上复制不会被字符数卡住；
+         ③ 「本机自动备份」—— 每回合自动留档，留最近 3 份，防手滑重置。 -->
     <div class="set-io">
       <div class="set-io-hd">存档备份</div>
       <div class="set-io-btns">
         <button class="set-io-btn" id="ioExportFile" type="button">导出文件</button>
-        <button class="set-io-btn" id="ioExportCode" type="button">复制存档码</button>
+        <button class="set-io-btn" id="ioShareFile" type="button">分享文件</button>
+        <button class="set-io-btn" id="ioExportCode" type="button">存档码（分段）</button>
         <button class="set-io-btn" id="ioImportFile" type="button">导入文件</button>
         <button class="set-io-btn" id="ioImportCode" type="button">粘贴存档码</button>
       </div>
       <input id="ioFileInput" type="file" accept=".json,application/json" hidden>
-      <div class="set-io-tip">换手机、清缓存前先导出一份。导入只覆盖进度，音量 / 摇杆这些设置保留本机的。</div>
+      <div class="set-io-auto">
+        <span id="ioAutoInfo">本机自动备份：暂无</span>
+        <button class="set-io-btn mini" id="ioAutoRestore" type="button" disabled>恢复</button>
+      </div>
+      <div class="set-io-tip">换手机、清缓存前先导出一份。手机上「分享文件」会弹系统分享面板（能直接存到「文件」或发微信），装不了文件的浏览器就用「存档码」一段段复制。导入只覆盖进度，音量 / 摇杆这些设置保留本机的。</div>
     </div>
     <div class="set-foot">
       <button class="set-reset" id="setReset" type="button">重置全部进度</button>
@@ -764,17 +771,33 @@
   </div>
 </div>
 
-<!-- 粘贴存档码（第 78 块）：手机上文件下载常被内置浏览器拦，这条是不依赖下载的退路 -->
+<!-- 粘贴存档码（第 78 块；第 97 块支持分段累计）：手机上文件下载常被内置浏览器拦，
+     这条是不依赖下载的退路。长度不够一次粘完时，可以一段段来 —— 每点一次
+     「继续」就把框里的内容接到缓冲区后面，凑齐了会自动认出来。 -->
 <div id="saveCodeAsk" class="modal" aria-hidden="true">
   <div class="md-card">
     <div class="md-title">粘贴存档码</div>
-    <div class="md-sub">把之前「复制存档码」得到的那一整段文本粘进来，空格和换行都不用管。</div>
+    <div class="md-sub" id="saveCodeSub">把存档码粘进来 —— 一整段也行，一段段来也行。空格和换行都不用管。</div>
     <textarea class="md-input md-area" id="saveCodeInput" rows="4" spellcheck="false"
-      autocomplete="off" placeholder="NWSAVE1:…" aria-label="存档码"></textarea>
+      autocomplete="off" placeholder="NWSZ1:…" aria-label="存档码"></textarea>
     <div class="md-err" id="saveCodeErr" aria-hidden="true">这段码不对</div>
     <div class="md-btns">
       <button class="md-btn" id="saveCodeNo" type="button">取消</button>
       <button class="md-btn primary" id="saveCodeYes" type="button">下一步</button>
+    </div>
+  </div>
+</div>
+
+<!-- 存档码（第 97 块）：压缩后仍然可能几百上千字，所以切成每段 700 字，
+     每段一个「复制」，手机上一次只复制一段就不会被截断。 -->
+<div id="codeBox" class="modal" aria-hidden="true">
+  <div class="md-card wide">
+    <div class="md-title">存档码</div>
+    <div class="md-sub" id="codeBoxSub">…</div>
+    <div class="code-list" id="codeList"></div>
+    <div class="md-btns">
+      <button class="md-btn" id="codeBoxAll" type="button">复制全部</button>
+      <button class="md-btn primary" id="codeBoxClose" type="button">关闭</button>
     </div>
   </div>
 </div>
@@ -987,7 +1010,7 @@
 <!-- 不用 importmap：老手机浏览器（iOS 16.4 以下、旧版微信/安卓 WebView）
      不支持 import maps，会让整个模块解析失败、加载页永远停在 0%。
      项目内所有 import 都写成相对路径，直接靠原生 ES Module 解析。 -->
-<script type="module" src="js/main.js?v=110"></script>
+<script type="module" src="js/main.js?v=111"></script>
 
 <!-- 兜底自检（第 79 块重写）：把「慢」和「真的失败」分开，别再把慢当错。
      - 脚本 404 / 解析失败 → 红字 + 重试按钮（这才是真失败）

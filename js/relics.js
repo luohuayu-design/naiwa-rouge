@@ -16,12 +16,12 @@
 // 与环剑（自动索敌、消耗制）和炮台（固定点位）互补；价格定在
 // 商店里「买得起但要攒一攒」的档，让 9/12/15/18 回合的商店有取舍。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=110';
-import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=110';
-import { withV } from './assetUrl.js?v=110';   // 第 80 块：glb 带版本号，SW 才走缓存优先
-import { distance2D } from './stats.js?v=110';
-import { TAG_BASE, TAG_SEAL } from './deposit.js?v=110';   // 第 84 块：掉牌概率的真相源
-import audio from './audio.js?v=110';
+import * as THREE from '../lib/three.module.js?v=111';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=111';
+import { withV } from './assetUrl.js?v=111';   // 第 80 块：glb 带版本号，SW 才走缓存优先
+import { distance2D } from './stats.js?v=111';
+import { TAG_BASE, TAG_SEAL } from './deposit.js?v=111';   // 第 84 块：掉牌概率的真相源
+import audio from './audio.js?v=111';
 
 // 百分比文案（概率表里存的是 0.5 这种小数）
 const pct = (v) => `${Math.round(v * 100)}%`;
@@ -363,7 +363,7 @@ export function createRelicSystem({ scene, fx, enemies, onLanternReveal }) {
     const radius = def.radius[lv - 1];
     const dmg = def.damage[lv - 1];
     const foes = enemies.list.filter((e) =>
-      e.state !== 'dead' && e.state !== 'spawn'
+      enemies.hittable(e)     // 第 97 块：躺尸重启体不浪费地刺
       && distance2D(at, e.pos) <= radius
     );
     for (const e of foes) {

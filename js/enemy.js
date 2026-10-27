@@ -25,12 +25,12 @@
 // 第四关三只（wraith/leaper/mender，第 35 块，第 52 块换模型），
 // 各自在下面 ENEMY_TYPES 里有详细注释。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=110';
-import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=110';
-import { clone as cloneSkinned } from '../lib/jsm/utils/SkeletonUtils.js?v=110';
-import { distance2D } from './stats.js?v=110';
-import { createRangeRing } from './rangeRing.js?v=110';
-import { withV } from './assetUrl.js?v=110';
+import * as THREE from '../lib/three.module.js?v=111';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=111';
+import { clone as cloneSkinned } from '../lib/jsm/utils/SkeletonUtils.js?v=111';
+import { distance2D } from './stats.js?v=111';
+import { createRangeRing } from './rangeRing.js?v=111';
+import { withV } from './assetUrl.js?v=111';
 
 // KayKit 模型正面朝 +Z；如果哪天换模型发现怪倒着走，把这里改成 Math.PI
 export const ENEMY_MODEL_YAW = 0;
@@ -96,6 +96,14 @@ const CLIP_FAMILIES = {
   // cast 借 Jump：它「起手」= 抬脚预备，砸下来那一下正好接 Attack。
   brute: {
     idle: 'Idle', walk: 'Walk', run: 'Run', attack: 'Attack', cast: 'Jump',
+    death: 'Death', hit: 'HitRecieve', spawn: 'Idle',
+  },
+  // 第 97 块：Quaternius 的「国王」骨架（24 段，CharacterArmature 那批前缀）。
+  // 它没有 Punch / Weapon 这些通用名，得单开一族：
+  //   attack 借 Sword_Slash（挥袖那一下正好当近身拍打）
+  //   cast   借 Interact（抬手翻看手里的东西 —— 称量官「翻开簿子」就是它）
+  royal: {
+    idle: 'Idle', walk: 'Walk', run: 'Run', attack: 'Sword_Slash', cast: 'Interact',
     death: 'Death', hit: 'HitRecieve', spawn: 'Idle',
   },
 };
@@ -1083,12 +1091,15 @@ export const ENEMY_TYPES = {
   // 正好就是「记账的」。它这身鎏金和第五关那身紫黑一眼能分开。
   weigher: {
     name: '称量官',
-    file: 'assets/monsters/hooded-scribe.glb',
-    sourceHeight: 2.652,   // 和擦名者同一只模型（实测值一致）
-    footY: 0.0,            // 同一只模型，落地面一样
+    // 第 97 块（用户）：**换掉模型** —— 原来复用第五关擦名者的兜帽书记官，
+    // 一眼就是同一只怪染了个色。现在换成 Quaternius 的「国王」（CC0）：
+    // 戴冠、披袍、瘦高的审判者，站在台阶尽头给名字上秤。
+    file: 'assets/monsters/ledger-king.glb',
+    sourceHeight: 1.887,   // 实测（Idle 渲染身高，.tmp-97-calib.js）
+    footY: 0.0,            // 实测落地面就在原点
     height: 2.15,          // 比擦名者（1.95）高一头：它站在正厅的台阶上，该有个仰望的姿势
-    radius: 0.60,
-    hp: 16,                // 全场 buff 的发动机必须耐打：一刀就能切断等于没有机制
+    radius: 0.55,
+    hp: 12,                // 第 97 块（用户）：16 → 12。它每 9 秒叠一层全场记名，太肉等于机制被拖成磨血
     armor: 0,
     speed: 1.25,           // 比擦名者慢一点点（它也躲，但躲不利索 —— 毕竟抱着一本簿子）
     attackRange: 10.0,     // 够得到就念（它没有近距离的概念，离多远都一样念）
@@ -1108,17 +1119,75 @@ export const ENEMY_TYPES = {
         armor: 0.05,       // 每层：减伤 +5%（乘法叠加，见 takeDamage）
       },
     },
-    tag: 'ledger',         // 抱着的台账（程序化贴图，零资产）
+    tag: 'ledger',         // 手里的台账（程序化贴图，零资产）
     spawnTime: 1.0,
     deathTime: 1.9,        // 倒得慢一点：这一下值得多看一眼
     selfDestruct: false,
-    color: 0xffd86b,       // 鎏金
-    tint: 0xd8c48a,        // 整体压一层旧金（紫黑兜帽 → 暗金长袍）
+    color: 0xffd86b,       // 鎏金（血条 / 死亡碎屑 / 金环都用它）
+    tint: 0xd9c9a0,        // 整体压一层旧金：国王本来的深蓝袍 → 登记庭的制服
     glow: { color: 0x8a6a1e, intensity: 0.85 },
-    animFamily: 'humanoid',
-    clipOverrides: { cast: 'Spellcast_Long', death: 'Death_A', hit: 'Hit_A' },
+    animFamily: 'royal',
     anim: {
       walk: 'walk', idle: 'idle', cast: 'cast',
+      death: 'death', spawn: 'spawn',
+    },
+  },
+
+  // ============================================================
+  // 第九关 · 骨塔登记庭（第 97 块）—— 盖章人
+  // ============================================================
+  // 【为什么加它】用户：「第九关目前太单调了」。这一关原只有称量官一个机制怪，
+  // 其余全是别关的熟脸，而且所有威胁的答案都是同一句「走过去砍了它」。
+  // 盖章人是这一关第一个**不靠伤害、靠限制你走位**的怪。
+  //
+  // 【机制·一句话】它是登记庭里负责「核销」的小吏：抬印 → 在你**当时的脚下**
+  // 盖下一枚方印（1.15 秒预警，方框从大收到小）→ 落印时你还站在框里，
+  // 就被「封步」3 秒：移速砍一半，人像被钉在案上。
+  // 它自己不疼（伤害只有 0.9），可它每 3 秒就来一次 —— 站着输出就会一直被盖。
+  //
+  // 【和紫阵（第六关咒面图腾）的区别】紫阵是**铺在地上等你踩**，
+  // 盖章人是**追着你此刻站的地方盖**：落点跟着你走，方框、红印、更短的引信，
+  // 逼你一直保持「移动中输出」；紫阵可以绕开，它绕不开 —— 只能走。
+  //
+  // 【怎么破】它血只有 2.6：顺手拍两下就没了。它真正的作用是让你
+  // **没法站在称量官面前安心打那 2.2 秒** —— 你只要停手，印就落下来。
+  // 于是这一关的节奏变成「边跑边打」，而不是「站桩输出」。
+  //
+  // 模型：Quaternius 的哥布林（CC0，poly.pizza，7 段 EnemyArmature 动画，
+  // 和寄存处看守同一套骨架 → 直接吃 brute 动画族）。绿皮小吏混在骷髅堆里
+  // 一眼就能认出来，手里那枚程序化的印章（tag: 'stamp'）是它的身份。
+  stamper: {
+    name: '盖章人',
+    file: 'assets/monsters/stamp-goblin.glb',
+    sourceHeight: 2.953,   // 实测（Idle 渲染身高，.tmp-97-calib.js）
+    footY: 0.0,
+    height: 1.62,          // 矮：一眼能看出它和骷髅不是一类东西
+    radius: 0.55,
+    hp: 2.6,               // 脆：两下就没。它的价值是干扰，不是耗你的输出
+    armor: 0,
+    speed: 1.62,           // 快：追得上你，也躲得开近战
+    attackRange: 6.6,
+    keepDistance: 4.4,     // 贴太近就退 —— 它要的是「看得见你站哪」
+    damage: 0.9,           // 落印命中的伤害（真正疼的是封步）
+    attackInterval: 3.4,
+    windup: 1.15,          // 抬印 → 落印：1.15 秒够你走三步
+    attackDuration: 1.65,  // 必须 > windup
+    // 落印（方框）参数：见 spawnSeal
+    seal: {
+      radius: 1.55,        // 方框半宽（判定用「切比雪夫距离」，所以这是个方）
+      color: 0xd8553f,
+      slow: 0.5,           // 封步：移速砍半
+      time: 3.0,           // 封步持续
+    },
+    tag: 'stamp',          // 手里的印章（程序化，零资产）
+    spawnTime: 0.9,
+    deathTime: 1.3,
+    selfDestruct: false,
+    color: 0xd8553f,       // 印泥红（血条 / 碎屑）
+    glow: { color: 0x6a221a, intensity: 0.55 },
+    animFamily: 'brute',
+    anim: {
+      walk: 'walk', idle: 'idle', cast: 'attack',
       death: 'death', spawn: 'spawn',
     },
   },
@@ -1508,29 +1577,58 @@ function attachTag(model, kind, s, cfg) {
     // 位置按 hooded-scribe 的身形量的（height 1.95）：胸口在 1.1 上下，
     // 再往左偏一点能被兜帽和袖子衬出来 —— 放在正中间会被长袍整件糊住。
     const cover = makeLedgerTexture();
+    // 第 97 块换模型后又收了一档：国王比兜帽书记官瘦一圈（宽 0.63 对 1.86），
+    // 原来那块 0.52 宽的簿子会挂到身体外面去，像举着一块牌子。
     const book = new THREE.Mesh(
-      new THREE.BoxGeometry(0.52, 0.64, 0.10),
+      new THREE.BoxGeometry(0.44, 0.56, 0.09),
       cover
         ? new THREE.MeshBasicMaterial({ map: cover, toneMapped: false })
         : new THREE.MeshBasicMaterial({ color: 0x6b4a2e, toneMapped: false }),
     );
     // 高度 1.06 → 0.94：1.06 正好压在兜帽檐上、把半张脸挡住，看着像「举着一块牌子」；
     // 0.94 落在胸口，兜帽的阴影衬着它，才像抱在怀里。
-    book.position.set(-0.28, 0.94, 0.44);
+    book.position.set(-0.24, 0.96, 0.40);
     book.rotation.set(-0.18, 0.26, 0.10);
     book.frustumCulled = false;
     holder.add(book);
     // 金色的捆绳（两道横线）：一眼分清「这不是那块木牌」
-    for (const dy of [-0.16, 0.16]) {
+    for (const dy of [-0.14, 0.14]) {
       const band = new THREE.Mesh(
-        new THREE.BoxGeometry(0.545, 0.05, 0.108),
+        new THREE.BoxGeometry(0.462, 0.045, 0.098),
         new THREE.MeshBasicMaterial({ color: 0xe2bc66, toneMapped: false }),
       );
-      band.position.set(-0.28, 0.94 + dy, 0.44);
+      band.position.set(-0.24, 0.96 + dy, 0.40);
       band.rotation.copy(book.rotation);
       band.frustumCulled = false;
       holder.add(band);
     }
+  }
+  if (kind === 'stamp') {
+    // 盖章人手里的印章（第 97 块）：印面朝下的一块红方头 + 一截木柄。
+    // 它得在**任何**配色下都读得出来是「章」——所以用 Basic 材质（不受 tint/glow 影响），
+    // 印面用最饱和的印泥红，柄压深棕，远看就是一块红疙瘩举在手里。
+    const head = new THREE.Mesh(
+      new THREE.BoxGeometry(0.26, 0.17, 0.26),
+      new THREE.MeshBasicMaterial({ color: 0xc0392b, toneMapped: false }),
+    );
+    head.position.set(0.44, 0.72, 0.30);
+    head.frustumCulled = false;
+    holder.add(head);
+    const handle = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.045, 0.052, 0.30, 8),
+      new THREE.MeshBasicMaterial({ color: 0x5a3a24, toneMapped: false }),
+    );
+    handle.position.set(0.44, 0.95, 0.30);
+    handle.frustumCulled = false;
+    holder.add(handle);
+    // 印面底下那道浅红，像刚蘸过印泥
+    const pad = new THREE.Mesh(
+      new THREE.BoxGeometry(0.28, 0.012, 0.28),
+      new THREE.MeshBasicMaterial({ color: 0xff6a4a, toneMapped: false }),
+    );
+    pad.position.set(0.44, 0.632, 0.30);
+    pad.frustumCulled = false;
+    holder.add(pad);
   }
   // 打个标记：spawn 里那几个「遍历所有 mesh 改材质」的段落要跳过木牌
   // （tint / glow / ghost 都会把它的颜色冲掉）。
@@ -2089,14 +2187,22 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
   }
 
   // ---------------- 受伤 / 死亡 ----------------
+  // 第 97 块：**现在打得到吗**（真 bug 修复）。
+  // 重启体躺尸那 4 秒是 `state === 'down'`：`takeDamage` 里早就 return false 了，
+  // 可**选目标**的地方只排除了 dead / spawn —— 于是主角会为一块废铁抬手转身、
+  // 环剑会为它再转一圈、炮台会为它射一发、箭雨会为它落一片，全是白给。
+  // 现在把判据收成一个函数，凡是「挑目标 / 圈范围」的地方都走它。
+  // 雾鬼隐身不在这里判：有些地方（地刺、火地）故意要能碰到隐身目标，
+  // 由调用方各自加 `!e.ghostHidden`。
+  function hittable(e) {
+    return !!e && e.state !== 'dead' && e.state !== 'spawn' && e.state !== 'down';
+  }
+
   // opts:
   //   dot   中毒跳伤 —— 不闪白、绿色小字（每 0.5 秒一次，别和普攻特效混在一起）
   //   quiet 只扣血不播命中碎屑（连锁闪电等批量伤害用）
   function takeDamage(e, amount, crit = false, opts = {}) {
-    if (e.state === 'dead' || e.state === 'spawn') return false;
-    // 重启体躺尸重启中（第 63 块）：这 4 秒里它是块铁，打不动 ——
-    // 你要做的是**守着**它，等它站起来那一下再补刀。
-    if (e.state === 'down') return false;
+    if (!hittable(e)) return false;
     // 雾鬼隐身（第 35 块）：无形之物不受击 —— 近战、剑、炮台、法器全部打空。
     // 想打它只有两条路：等它显形，或者贴脸逼它显形。
     if (e.ghostHidden) return false;
@@ -2890,6 +2996,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
   const zones = [];      // 正在倒计时的地面圈（弓手红圈 / 咒面图腾紫阵 / 火焚灼地）
   const arrows = [];     // 正在下落的箭（纯视觉；伤害在落地那一刻结算）
   let zoneGeo = null, zoneRimGeo = null, zoneTickGeo = null;
+  let zoneSquareGeo = null, zoneSquareRingGeo = null;   // 第 97 块：方印
   let arrowGeo = null, arrowMat = null;
 
   // 三种圈用三套配色：红=箭、紫=咒、橙=火。玩家看颜色就知道该防什么。
@@ -2897,6 +3004,8 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     arrow: { disc: 0xff3a28, rim: 0xff5c46, tick: 0xffb0a0 },
     hex:   { disc: 0x5a2bb8, rim: 0xa96bff, tick: 0xd9c4ff },
     burn:  { disc: 0xc23a12, rim: 0xff8a3c, tick: 0xffd08a },
+    // 第 97 块：盖章人的方印 —— 印泥红 + 干掉的暗红边框
+    seal:  { disc: 0x8a1f18, rim: 0xd8553f, tick: 0xffc2a8 },
   };
   const zoneMatSets = {};
   function zoneMatsFor(key) {
@@ -2924,6 +3033,17 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     zoneGeo = new THREE.CircleGeometry(1, 48).rotateX(-Math.PI / 2);
     zoneRimGeo = new THREE.RingGeometry(0.93, 1, 56).rotateX(-Math.PI / 2);
     zoneTickGeo = new THREE.RingGeometry(0.9, 1, 48).rotateX(-Math.PI / 2);
+    // 第 97 块：方印的两块几何 —— 实心方 + 方框。
+    // 用 Shape + Path 挖空做边框（RingGeometry 只有圆的），旋转到 XZ 平面。
+    zoneSquareGeo = new THREE.PlaneGeometry(2, 2).rotateX(-Math.PI / 2);
+    {
+      const outer = new THREE.Shape();
+      outer.moveTo(-1, -1); outer.lineTo(1, -1); outer.lineTo(1, 1); outer.lineTo(-1, 1); outer.closePath();
+      const hole = new THREE.Path();
+      hole.moveTo(-0.9, -0.9); hole.lineTo(-0.9, 0.9); hole.lineTo(0.9, 0.9); hole.lineTo(0.9, -0.9); hole.closePath();
+      outer.holes.push(hole);
+      zoneSquareRingGeo = new THREE.ShapeGeometry(outer).rotateX(-Math.PI / 2);
+    }
     // 箭：一根细杆 + 箭头，躺着朝下，落地时插在地上
     arrowGeo = new THREE.CylinderGeometry(0.022, 0.022, 0.62, 5);
     arrowGeo.translate(0, -0.31, 0);           // 原点在箭尾，往下长
@@ -2940,15 +3060,19 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     const x = ctx.playerPos.x;
     const z = ctx.playerPos.z;
 
-    const disc = new THREE.Mesh(zoneGeo, mats.disc);
+    // 第 97 块：extra.square —— 方印走方形几何，其它一律还是圆
+    const gDisc = extra.square ? zoneSquareGeo : zoneGeo;
+    const gRim = extra.square ? zoneSquareRingGeo : zoneRimGeo;
+    const gTick = extra.square ? zoneSquareRingGeo : zoneTickGeo;
+    const disc = new THREE.Mesh(gDisc, mats.disc);
     disc.position.set(x, 0.052, z);
     disc.scale.setScalar(r);
     disc.frustumCulled = false;
-    const rim = new THREE.Mesh(zoneRimGeo, mats.rim);
+    const rim = new THREE.Mesh(gRim, mats.rim);
     rim.position.set(x, 0.058, z);
     rim.scale.setScalar(r);
     rim.frustumCulled = false;
-    const tick = new THREE.Mesh(zoneTickGeo, mats.tick);
+    const tick = new THREE.Mesh(gTick, mats.tick);
     tick.position.set(x, 0.064, z);
     tick.scale.setScalar(r);
     tick.frustumCulled = false;
@@ -2976,6 +3100,19 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
       arrows: cfg.arrows ?? 7,
       fall: cfg.fall ?? 0.3,
       y0: cfg.y ?? 6.2,
+    });
+  }
+
+  // 盖章人（第 97 块）：在你**此刻脚下**盖一枚方印。
+  // ⚠️ 和巫师那套「读完条才钉圈」不一样：这里**起手就钉**，圈的引信本来就是
+  // cfg.windup —— 于是从抬印到落印只有 1.15 秒，看得见、也来得及走开，
+  // 但站着打输出就一定会被盖。判定用「切比雪夫距离」，所以它是个方框不是圆。
+  function spawnSeal(e, ctx) {
+    const se = e.cfg.seal;
+    makeZone('seal', e, ctx, se.radius, {
+      square: true,
+      color: se.color,
+      seal: se,
     });
   }
 
@@ -3063,7 +3200,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     const amt = sp.heal * ((e.summonScale && e.summonScale.dmg) ?? 1);
     let n = 0;
     for (const o of list) {
-      if (o.state === 'dead' || o.state === 'spawn') continue;
+      if (!hittable(o)) continue;   // 第 97 块：不给躺尸的重启体白奶（它站起来只会回到 55%）
       if (o.hp >= o.maxHp) continue;
       if (Math.hypot(o.pos.x - e.pos.x, o.pos.z - e.pos.z) > sp.radius) continue;
       o.hp = Math.min(o.maxHp, o.hp + amt);
@@ -3254,6 +3391,28 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
 
       if (v.kind === 'arrow') {
         dropArrows(v);
+        continue;
+      }
+
+      // 方印（第 97 块）：判定是**方框**（切比雪夫距离），不是你站在圆心附近。
+      // 命中 → 伤害 + 封步（移速砍半，走 cursePlayer 那套，和紫阵共用一个减速槽，
+      // 但红印落在脚下、还会弹一个「封印」字样，和老远飘过来的紫圈一眼分得开）。
+      if (v.kind === 'seal') {
+        const qx = ctx.playerPos.x - v.x, qz = ctx.playerPos.z - v.z;
+        const sq = Math.max(Math.abs(qx), Math.abs(qz));
+        if (sq <= v.r) {
+          ctx.hurtPlayer(v.dmg, null);
+          if (ctx.cursePlayer) ctx.cursePlayer({ factor: v.seal.slow, duration: v.seal.time });
+          if (fx) {
+            fx.ring({ x: v.x, z: v.z }, { from: 0.2, to: v.r * 1.15, color: 0xd8553f, life: 0.34, opacity: 0.85, y: 0.07 });
+            fx.burst({ x: v.x, z: v.z }, { color: 0xff6a4a, count: 18, speed: 3.4, life: 0.55, size: 0.13, y: 0.28, up: 1.5, gravity: 4 });
+            fx.text({ x: v.x, z: v.z }, '封印', { color: '#ff8a6a', y: 1.5, size: 0.62 });
+          }
+          // 音效不用在这儿放：cursePlayer 第一次上减速时自己会播（main.js）
+        } else if (fx) {
+          // 走开了也给个「印盖空」的反馈，玩家才知道这一步躲对了
+          fx.ring({ x: v.x, z: v.z }, { from: 0.2, to: v.r, color: 0xa8503e, life: 0.26, opacity: 0.35, y: 0.06 });
+        }
         continue;
       }
 
@@ -3622,6 +3781,9 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
 
     // ---- 第八关 · 寄存处看守：三套距离带攻击（第 83 块）----
     if (e.cfg.warden) { handleWarden(e, dt, ctx, dx, dz, dist); return; }
+
+    // ---- 第九关 · 盖章人：抬印 / 落印（第 97 块）----
+    if (e.cfg.seal) { handleStamper(e, dt, ctx, dx, dz, dist); return; }
 
     // ---- 第九关 · 称量官：给全场记账（第 82 块）----
     // 它没有 spell / projectile / volley，占不到「施法者」那条骨架，所以自己开一条。
@@ -4443,6 +4605,61 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
   // 称量官的行为：和巫师同一套「躲远 + 站定 + 读条」骨架，
   // 但读条结束不是掷法术，而是 performWeigh（给全场叠一层）。
   // 它没有 spell / projectile / volley，所以要自己占一条分支。
+  // ============================================================
+  // 第九关 · 盖章人（第 97 块）
+  // ============================================================
+  // 三档站位，和看守那套「距离带」同构，但只有一招：
+  //   贴太近（< keepDistance 4.4）→ 后退。它要的是「看得见你站在哪」，
+  //                                 被贴脸就没有落点可言了。
+  //   射程内（≤ 6.6）           → 抬印，**起手就把方印钉在你脚下**，1.15 秒后落。
+  //   太远                      → 走过去。
+  // 它没有前摇读条的第二段判定（不像巫师那样"读完条才钉圈"）：起手即钉，
+  // 所以从看见红方块到落印只有 1.15 秒 —— 够走开，不够打完一套站桩。
+  function handleStamper(e, dt, ctx, dx, dz, dist) {
+    if (e.state === 'attack') {
+      if (e.t >= e.cfg.attackDuration) {
+        e.state = 'chase';
+        e.t = 0;
+        e.attackCd = cdOf(e, e.cfg.attackInterval, 1.0, true);
+        e.currentAnim = e.cfg.anim.walk;
+        e.play(e.cfg.anim.walk, { fade: 0.16 });
+      }
+      return;
+    }
+
+    if (dist < e.cfg.keepDistance) {
+      moveToward(e, -dx, -dz, dist, dt, ctx);
+      if (e.currentAnim !== e.cfg.anim.walk) {
+        e.currentAnim = e.cfg.anim.walk;
+        e.play(e.cfg.anim.walk, { fade: 0.2 });
+      }
+      return;
+    }
+    if (dist > e.cfg.attackRange) {
+      moveToward(e, dx, dz, dist, dt, ctx);
+      if (e.currentAnim !== e.cfg.anim.walk) {
+        e.currentAnim = e.cfg.anim.walk;
+        e.play(e.cfg.anim.walk, { fade: 0.2 });
+      }
+      return;
+    }
+
+    e.attackCd -= dt;
+    if (e.attackCd <= 0) {
+      e.state = 'attack';
+      e.t = 0;
+      e.hitDone = true;          // 方印在起手这一帧就钉下去了，不再走「读完条再钉」
+      e.currentAnim = e.cfg.anim.cast;
+      e.play(e.cfg.anim.cast, { once: true, fade: 0.1, duration: e.cfg.attackDuration });
+      spawnSeal(e, ctx);
+      return;
+    }
+    if (e.currentAnim !== e.cfg.anim.idle) {
+      e.currentAnim = e.cfg.anim.idle;
+      e.play(e.cfg.anim.idle, { fade: 0.2 });
+    }
+  }
+
   function handleWeigher(e, dt, ctx, dx, dz, dist) {
     const cfg = e.cfg.weigh;
     // 第 91 块：它的上称节奏只吃**一半**的攻速成长（开方）。
@@ -5084,7 +5301,8 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
   function collectAuras(ctx) {
     const sources = [];
     for (const e of list) {
-      if (e.cfg.aura && e.state !== 'dead' && e.state !== 'spawn') sources.push(e);
+      // 第 97 块：躺尸的重启体（'down'）不该继续给周围发光环 —— 它这会儿连被打都免疫
+      if (e.cfg.aura && hittable(e)) sources.push(e);
     }
     for (const e of list) {
       // 巫师不吃霜牢环（包括环源自己）
@@ -5190,7 +5408,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
   function chainTargets(e, count, maxDist = 4.5) {
     const out = [];
     for (const o of list) {
-      if (o === e || o.state === 'dead' || o.state === 'spawn' || o.ghostHidden) continue;
+      if (o === e || !hittable(o) || o.ghostHidden) continue;
       const d = Math.hypot(o.pos.x - e.pos.x, o.pos.z - e.pos.z);
       if (d <= maxDist) out.push({ e: o, d });
     }
@@ -5308,6 +5526,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     setArenaRadius: (r) => { arenaR = r; return arenaR; },   // 换关时同步可走半径（第 33 块）
     list,
     aliveCount,
+    hittable,          // 第 97 块：选目标 / 圈范围统一判据（排除 dead / spawn / down）
     takeDamage,
     applyDot, applySlow, applyFreeze, chainTargets,
     shotCount: () => shots.length,
@@ -5331,7 +5550,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
       kind: v.kind, phase: v.phase, x: +v.x.toFixed(2), z: +v.z.toFixed(2), r: v.r,
       t: +v.t.toFixed(2), dmg: v.dmg,
     })),
-    auraCount: () => list.filter((e) => e.cfg.aura && e.state !== 'dead' && e.state !== 'spawn').length,
+    auraCount: () => list.filter((e) => e.cfg.aura && hittable(e)).length,
     buffedCount: () => list.filter((e) => e.auraHaste > 0).length,
     // 第三关的观测口（第 29 块）
     shieldedCount: () => list.filter((e) => e.shieldUp && e.state !== 'dead').length,

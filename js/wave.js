@@ -400,7 +400,7 @@ export const LEVEL_6 = {
   spawnJitter: 0.5,
   minPlayerDistance: 8.0,
   minSpawnGap: 2.4,
-  gapScale: 1.35,
+  gapScale: 1.12,
   gap: 2.6,
   upgradeAfter: [1, 2, 3, 4, 5, 8, 10, 12, 15, 17, 19, 20],
   shopAfter: [3, 6, 9, 12, 15, 18],
@@ -420,30 +420,30 @@ export const LEVEL_6 = {
   rounds: [
     // ---- 第一幕（R1~R4）：机房 · 风扇还在转 ----
     { minion: 3, warrior: 0, reboot: 0, arc: 0, leaper: 0, archer: 0, bowman: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, gap: 0.90, tip: '骨塔地下机房：地上有几块格栅在漏电 —— 防御挡不住，别站上去' },
-    { minion: 4, warrior: 1, reboot: 0, arc: 0, leaper: 0, archer: 0, bowman: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, gap: 0.80, tip: '通电前会闪一下橙光 —— 看到就往外走' },
-    { minion: 4, warrior: 1, reboot: 0, arc: 0, leaper: 0, archer: 1, bowman: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, gap: 0.80, tip: '弧线走位：绕开格栅，别直着冲' },
+    { minion: 3, warrior: 1, reboot: 0, arc: 0, leaper: 0, archer: 0, bowman: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, gap: 0.80, tip: '通电前会闪一下橙光 —— 看到就往外走' },
+    { minion: 3, warrior: 1, reboot: 0, arc: 0, leaper: 0, archer: 1, bowman: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, gap: 0.80, tip: '弧线走位：绕开格栅，别直着冲' },
     // ---- 第二幕（R5~R8）：重启体登场 ----
-    { minion: 5, warrior: 1, reboot: 1, arc: 0, leaper: 0, archer: 1, bowman: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, gap: 0.75, tip: '那个铁块打死了会重新站起来：躺下的时候守着它' },
-    { minion: 5, warrior: 2, reboot: 1, arc: 0, leaper: 0, archer: 1, bowman: 1, wraith: 0, shielder: 0, brood: 0, mender: 0, gap: 0.72, tip: '重启只需要 4 秒：走了就白打一次' },
-    { minion: 5, warrior: 2, reboot: 1, arc: 2, leaper: 1, archer: 1, bowman: 1, wraith: 1, shielder: 0, brood: 0, mender: 0, gap: 0.70, tip: '雾鬼也钻到机房里来了：隐着身照样咬人' },
-    { minion: 6, warrior: 2, reboot: 2, arc: 2, leaper: 1, archer: 2, bowman: 1, wraith: 1, shielder: 0, brood: 0, mender: 0, gap: 0.66, tip: '并联体浮起来了：两只之间就拉着一条电弧，碰到掉血 —— 不用等它们成对，两只起就连' },
-    { minion: 6, warrior: 3, reboot: 2, arc: 2, leaper: 1, archer: 2, bowman: 1, wraith: 1, shielder: 1, brood: 0, mender: 0, gap: 0.62, tip: '场上并联体越少，能站的缝就越多 —— 它们互相还会推开，缝隙是它们自己让出来的' },
+    { minion: 4, warrior: 1, reboot: 1, arc: 0, leaper: 0, archer: 1, bowman: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, gap: 0.75, tip: '那个铁块打死了会重新站起来：躺下的时候守着它' },
+    { minion: 4, warrior: 2, reboot: 1, arc: 0, leaper: 0, archer: 1, bowman: 1, wraith: 0, shielder: 0, brood: 0, mender: 0, gap: 0.72, tip: '重启只需要 4 秒：走了就白打一次' },
+    { minion: 4, warrior: 2, reboot: 1, arc: 2, leaper: 1, archer: 1, bowman: 1, wraith: 1, shielder: 0, brood: 0, mender: 0, gap: 0.70, tip: '雾鬼也钻到机房里来了：隐着身照样咬人' },
+    { minion: 4, warrior: 2, reboot: 2, arc: 2, leaper: 1, archer: 2, bowman: 1, wraith: 1, shielder: 0, brood: 0, mender: 0, gap: 0.66, tip: '并联体浮起来了：两只之间就拉着一条电弧，碰到掉血 —— 不用等它们成对，两只起就连' },
+    { minion: 4, warrior: 3, reboot: 2, arc: 2, leaper: 1, archer: 2, bowman: 1, wraith: 1, shielder: 1, brood: 0, mender: 0, gap: 0.62, tip: '场上并联体越少，能站的缝就越多 —— 它们互相还会推开，缝隙是它们自己让出来的' },
     // ---- 第三幕（R9~R13）：混编加压 ----
     // 第 80 块：这一回合给 3 只（奇数），让「两只以上就成网、不必成对」真的看得见。
-    { minion: 6, warrior: 3, reboot: 2, arc: 3, leaper: 2, archer: 2, bowman: 1, wraith: 2, shielder: 1, brood: 0, mender: 1, gap: 0.60, tip: '戴尖帽的小巫在给怪回血：别让它奶到重启体' },
-    { minion: 7, warrior: 3, reboot: 2, arc: 4, leaper: 2, archer: 2, bowman: 2, wraith: 2, shielder: 1, brood: 1, mender: 1, gap: 0.58, tip: '四只并联体 = 六条电弧：这张网会把你逼到格栅边上' },
-    { minion: 7, warrior: 4, reboot: 2, arc: 4, leaper: 2, archer: 3, bowman: 2, wraith: 2, shielder: 2, brood: 1, mender: 1, gap: 0.56, tip: '地板、怪、奶妈三件事一起来 —— 先保走位' },
-    { minion: 7, warrior: 4, reboot: 3, arc: 4, leaper: 2, archer: 3, bowman: 2, wraith: 3, shielder: 2, brood: 1, mender: 1, gap: 0.54, tip: '三个重启体：这一波的「清场」要清三遍' },
-    { minion: 8, warrior: 4, reboot: 3, arc: 4, leaper: 3, archer: 3, bowman: 2, wraith: 3, shielder: 2, brood: 1, mender: 1, gap: 0.52, tip: '漏电地板上的怪不掉血 —— 别指望电帮你' },
+    { minion: 4, warrior: 3, reboot: 2, arc: 3, leaper: 2, archer: 2, bowman: 1, wraith: 2, shielder: 1, brood: 0, mender: 1, gap: 0.60, tip: '戴尖帽的小巫在给怪回血：别让它奶到重启体' },
+    { minion: 5, warrior: 3, reboot: 2, arc: 4, leaper: 2, archer: 2, bowman: 2, wraith: 2, shielder: 1, brood: 1, mender: 1, gap: 0.58, tip: '四只并联体 = 六条电弧：这张网会把你逼到格栅边上' },
+    { minion: 5, warrior: 3, reboot: 2, arc: 4, leaper: 2, archer: 3, bowman: 2, wraith: 2, shielder: 2, brood: 1, mender: 1, gap: 0.56, tip: '地板、怪、奶妈三件事一起来 —— 先保走位' },
+    { minion: 5, warrior: 3, reboot: 3, arc: 4, leaper: 2, archer: 3, bowman: 2, wraith: 3, shielder: 2, brood: 1, mender: 1, gap: 0.54, tip: '三个重启体：这一波的「清场」要清三遍' },
+    { minion: 6, warrior: 3, reboot: 3, arc: 4, leaper: 3, archer: 3, bowman: 2, wraith: 3, shielder: 2, brood: 1, mender: 1, gap: 0.52, tip: '漏电地板上的怪不掉血 —— 别指望电帮你' },
     // ---- 第四幕（R14~R17）：机房的夜班 ----
-    { minion: 8, warrior: 4, reboot: 3, arc: 4, leaper: 3, archer: 3, bowman: 2, wraith: 3, shielder: 2, brood: 2, mender: 1, gap: 0.50, tip: '两颗孢生菇：十二只小兵上限，先拆一颗' },
-    { minion: 8, warrior: 5, reboot: 3, arc: 4, leaper: 3, archer: 3, bowman: 3, wraith: 3, shielder: 2, brood: 2, mender: 1, gap: 0.48, tip: '风扇声越来越近 —— 它们比刚才更快了' },
-    { minion: 8, warrior: 5, reboot: 4, arc: 4, leaper: 3, archer: 4, bowman: 3, wraith: 4, shielder: 3, brood: 2, mender: 1, gap: 0.46, tip: '四个重启体：留一条能绕回格栅外的路' },
-    { minion: 9, warrior: 5, reboot: 4, arc: 4, leaper: 4, archer: 4, bowman: 3, wraith: 4, shielder: 3, brood: 2, mender: 2, gap: 0.44, tip: '第 17 回合：ERROR 日志刷得停不下来' },
+    { minion: 6, warrior: 3, reboot: 3, arc: 4, leaper: 3, archer: 3, bowman: 2, wraith: 3, shielder: 2, brood: 2, mender: 1, gap: 0.50, tip: '两颗孢生菇：十二只小兵上限，先拆一颗' },
+    { minion: 6, warrior: 4, reboot: 3, arc: 4, leaper: 3, archer: 3, bowman: 3, wraith: 3, shielder: 2, brood: 2, mender: 1, gap: 0.48, tip: '风扇声越来越近 —— 它们比刚才更快了' },
+    { minion: 6, warrior: 4, reboot: 4, arc: 4, leaper: 3, archer: 4, bowman: 3, wraith: 4, shielder: 3, brood: 2, mender: 1, gap: 0.46, tip: '四个重启体：留一条能绕回格栅外的路' },
+    { minion: 6, warrior: 4, reboot: 4, arc: 4, leaper: 4, archer: 4, bowman: 3, wraith: 4, shielder: 3, brood: 2, mender: 2, gap: 0.44, tip: '第 17 回合：ERROR 日志刷得停不下来' },
     // ---- 第五幕（R18~R20）：骨塔机房 · 毕业考 ----
-    { minion: 9, warrior: 5, reboot: 4, arc: 4, leaper: 4, archer: 4, bowman: 3, wraith: 4, shielder: 3, brood: 2, mender: 2, gap: 0.42, tip: '还差三回合：别把血花在电上' },
-    { minion: 9, warrior: 6, reboot: 4, arc: 4, leaper: 4, archer: 4, bowman: 4, wraith: 4, shielder: 3, brood: 2, mender: 2, gap: 0.40, tip: '倒数第二波：补刀、补刀、补刀' },
-    { minion: 10, warrior: 6, reboot: 5, arc: 4, leaper: 4, archer: 4, bowman: 4, wraith: 5, shielder: 4, brood: 2, mender: 2, gap: 0.38, tip: '最后一波：把机房里的东西全拆了' },
+    { minion: 6, warrior: 4, reboot: 4, arc: 4, leaper: 4, archer: 4, bowman: 3, wraith: 4, shielder: 3, brood: 2, mender: 2, gap: 0.42, tip: '还差三回合：别把血花在电上' },
+    { minion: 6, warrior: 5, reboot: 4, arc: 4, leaper: 4, archer: 4, bowman: 4, wraith: 4, shielder: 3, brood: 2, mender: 2, gap: 0.40, tip: '倒数第二波：补刀、补刀、补刀' },
+    { minion: 7, warrior: 5, reboot: 5, arc: 4, leaper: 4, archer: 4, bowman: 4, wraith: 5, shielder: 4, brood: 2, mender: 2, gap: 0.38, tip: '最后一波：把机房里的东西全拆了' },
   ],
 };
 
@@ -483,7 +483,7 @@ export const LEVEL_7 = {
   spawnJitter: 0.5,
   minPlayerDistance: 6.5,  // 井小，出生点离人也更近一点
   minSpawnGap: 2.0,
-  gapScale: 1.35,          // 生成放缓，窄井里别让怪叠成一坨
+  gapScale: 1.12,          // 生成放缓，窄井里别让怪叠成一坨
   gap: 2.6,
   upgradeAfter: [1, 2, 3, 4, 5, 8, 10, 12, 15, 17, 19, 20],
   shopAfter: [3, 6, 9, 12, 15, 18],
@@ -499,29 +499,29 @@ export const LEVEL_7 = {
   rounds: [
     // ---- 第一幕（R1~R3）：井底 · 水还在滴 ----
     { minion: 3, warrior: 0, wellfrog: 0, archer: 0, bowman: 0, woodfish: 0, leaper: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, reboot: 0, gap: 0.90, tip: '骨塔井底：头顶有水滴下来 —— 无视防御，看到青环就挪开' },
-    { minion: 4, warrior: 1, wellfrog: 0, archer: 0, bowman: 0, woodfish: 0, leaper: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, reboot: 0, gap: 0.80, tip: '窄井里转身不方便，别贴着边走' },
-    { minion: 4, warrior: 1, wellfrog: 0, archer: 1, bowman: 0, woodfish: 0, leaper: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, reboot: 0, gap: 0.80, tip: '还是横着走躲骨刀' },
+    { minion: 3, warrior: 1, wellfrog: 0, archer: 0, bowman: 0, woodfish: 0, leaper: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, reboot: 0, gap: 0.80, tip: '窄井里转身不方便，别贴着边走' },
+    { minion: 3, warrior: 1, wellfrog: 0, archer: 1, bowman: 0, woodfish: 0, leaper: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, reboot: 0, gap: 0.80, tip: '还是横着走躲骨刀' },
     // ---- 第二幕（R4~R7）：井蛙登场 ----
-    { minion: 5, warrior: 1, wellfrog: 1, archer: 1, bowman: 0, woodfish: 0, leaper: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, reboot: 0, gap: 0.75, tip: '那只绿蛙会吐舌头拉你 —— 舌头有独立血量，砍断它才能脱身' },
-    { minion: 5, warrior: 2, wellfrog: 1, archer: 1, bowman: 1, woodfish: 0, leaper: 0, wraith: 1, shielder: 0, brood: 0, mender: 0, reboot: 0, gap: 0.72, tip: '舌头伸出来时打它本体不掉血：先把舌头砍断' },
-    { minion: 5, warrior: 2, wellfrog: 2, archer: 1, bowman: 1, woodfish: 0, leaper: 1, wraith: 1, shielder: 0, brood: 0, mender: 0, reboot: 0, gap: 0.70, tip: '两只井蛙会轮流拉你：别被拽到怪堆里' },
-    { minion: 6, warrior: 2, wellfrog: 2, archer: 2, bowman: 1, woodfish: 0, leaper: 1, wraith: 1, shielder: 1, brood: 0, mender: 0, reboot: 0, gap: 0.66, tip: '盾兵也来了：等它放盾再打' },
+    { minion: 4, warrior: 1, wellfrog: 1, archer: 1, bowman: 0, woodfish: 0, leaper: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, reboot: 0, gap: 0.75, tip: '那只绿蛙会吐舌头拉你 —— 舌头有独立血量，砍断它才能脱身' },
+    { minion: 4, warrior: 2, wellfrog: 1, archer: 1, bowman: 1, woodfish: 0, leaper: 0, wraith: 1, shielder: 0, brood: 0, mender: 0, reboot: 0, gap: 0.72, tip: '舌头伸出来时打它本体不掉血：先把舌头砍断' },
+    { minion: 4, warrior: 2, wellfrog: 2, archer: 1, bowman: 1, woodfish: 0, leaper: 1, wraith: 1, shielder: 0, brood: 0, mender: 0, reboot: 0, gap: 0.70, tip: '两只井蛙会轮流拉你：别被拽到怪堆里' },
+    { minion: 4, warrior: 2, wellfrog: 2, archer: 2, bowman: 1, woodfish: 0, leaper: 1, wraith: 1, shielder: 1, brood: 0, mender: 0, reboot: 0, gap: 0.66, tip: '盾兵也来了：等它放盾再打' },
     // ---- 第三幕（R8~R11）：木鱼灵登场 ----
-    { minion: 6, warrior: 3, wellfrog: 2, archer: 2, bowman: 1, woodfish: 1, leaper: 1, wraith: 2, shielder: 1, brood: 0, mender: 0, reboot: 0, gap: 0.62, tip: '那只青色木鱼灵在吐泡：一次两颗、泡比以前大，会拐着弯追你，砍两下就炸' },
-    { minion: 7, warrior: 3, wellfrog: 2, archer: 2, bowman: 2, woodfish: 1, leaper: 2, wraith: 2, shielder: 1, brood: 1, mender: 0, reboot: 0, gap: 0.60, tip: '被泡追上会被定住一秒、环上的剑也会停转 —— 那一下最危险，优先点掉木鱼灵' },
-    { minion: 7, warrior: 4, wellfrog: 3, archer: 3, bowman: 2, woodfish: 1, leaper: 2, wraith: 2, shielder: 2, brood: 1, mender: 1, reboot: 0, gap: 0.58, tip: '它敲的木鱼会震你 —— 井底的法器之一，之后能在商店买到' },
-    { minion: 7, warrior: 4, wellfrog: 3, archer: 3, bowman: 2, woodfish: 2, leaper: 2, wraith: 3, shielder: 2, brood: 1, mender: 1, reboot: 1, gap: 0.56, tip: '重启体也钻进井里了：躺下时守着它' },
+    { minion: 4, warrior: 3, wellfrog: 2, archer: 2, bowman: 1, woodfish: 1, leaper: 1, wraith: 2, shielder: 1, brood: 0, mender: 0, reboot: 0, gap: 0.62, tip: '那只青色木鱼灵在吐泡：一次两颗、泡比以前大，会拐着弯追你，砍两下就炸' },
+    { minion: 5, warrior: 3, wellfrog: 2, archer: 2, bowman: 2, woodfish: 1, leaper: 2, wraith: 2, shielder: 1, brood: 1, mender: 0, reboot: 0, gap: 0.60, tip: '被泡追上会被定住一秒、环上的剑也会停转 —— 那一下最危险，优先点掉木鱼灵' },
+    { minion: 5, warrior: 3, wellfrog: 3, archer: 3, bowman: 2, woodfish: 1, leaper: 2, wraith: 2, shielder: 2, brood: 1, mender: 1, reboot: 0, gap: 0.58, tip: '它敲的木鱼会震你 —— 井底的法器之一，之后能在商店买到' },
+    { minion: 5, warrior: 3, wellfrog: 3, archer: 3, bowman: 2, woodfish: 2, leaper: 2, wraith: 3, shielder: 2, brood: 1, mender: 1, reboot: 1, gap: 0.56, tip: '重启体也钻进井里了：躺下时守着它' },
     // ---- 第四幕（R12~R15）：混编加压 ----
-    { minion: 7, warrior: 4, wellfrog: 3, archer: 3, bowman: 2, woodfish: 2, leaper: 3, wraith: 3, shielder: 2, brood: 1, mender: 1, reboot: 1, gap: 0.54, tip: '井蛙、木鱼、滴水和怪一起上 —— 先保走位' },
-    { minion: 8, warrior: 4, wellfrog: 4, archer: 3, bowman: 3, woodfish: 2, leaper: 3, wraith: 3, shielder: 2, brood: 2, mender: 1, reboot: 1, gap: 0.52, tip: '两只木鱼灵的泡会一起追：先把近的那颗砍了' },
-    { minion: 8, warrior: 5, wellfrog: 4, archer: 4, bowman: 3, woodfish: 2, leaper: 3, wraith: 4, shielder: 3, brood: 2, mender: 1, reboot: 2, gap: 0.50, tip: '井蛙四只：舌头拉扯里别被拽出安全区' },
-    { minion: 8, warrior: 5, wellfrog: 4, archer: 4, bowman: 3, woodfish: 3, leaper: 4, wraith: 4, shielder: 3, brood: 2, mender: 2, reboot: 2, gap: 0.48, tip: '第 15 回合：井底的水滴得最密' },
+    { minion: 5, warrior: 3, wellfrog: 3, archer: 3, bowman: 2, woodfish: 2, leaper: 3, wraith: 3, shielder: 2, brood: 1, mender: 1, reboot: 1, gap: 0.54, tip: '井蛙、木鱼、滴水和怪一起上 —— 先保走位' },
+    { minion: 6, warrior: 3, wellfrog: 4, archer: 3, bowman: 3, woodfish: 2, leaper: 3, wraith: 3, shielder: 2, brood: 2, mender: 1, reboot: 1, gap: 0.52, tip: '两只木鱼灵的泡会一起追：先把近的那颗砍了' },
+    { minion: 6, warrior: 4, wellfrog: 4, archer: 4, bowman: 3, woodfish: 2, leaper: 3, wraith: 4, shielder: 3, brood: 2, mender: 1, reboot: 2, gap: 0.50, tip: '井蛙四只：舌头拉扯里别被拽出安全区' },
+    { minion: 6, warrior: 4, wellfrog: 4, archer: 4, bowman: 3, woodfish: 3, leaper: 4, wraith: 4, shielder: 3, brood: 2, mender: 2, reboot: 2, gap: 0.48, tip: '第 15 回合：井底的水滴得最密' },
     // ---- 第五幕（R16~R20）：井底长夜 · 毕业考 ----
-    { minion: 8, warrior: 5, wellfrog: 5, archer: 4, bowman: 3, woodfish: 3, leaper: 4, wraith: 4, shielder: 3, brood: 2, mender: 2, reboot: 2, gap: 0.46, tip: '第 16 回合：井底长夜，全来了' },
-    { minion: 8, warrior: 5, wellfrog: 5, archer: 4, bowman: 4, woodfish: 3, leaper: 4, wraith: 4, shielder: 3, brood: 2, mender: 2, reboot: 3, gap: 0.44, tip: '木鱼法器该上了：挨打/击杀震一圈，把井蛙震退' },
-    { minion: 9, warrior: 6, wellfrog: 5, archer: 5, bowman: 4, woodfish: 4, leaper: 5, wraith: 5, shielder: 3, brood: 2, mender: 2, reboot: 3, gap: 0.42, tip: '还剩三回合：舌头拉人和滴水一起躲' },
-    { minion: 9, warrior: 6, wellfrog: 6, archer: 5, bowman: 4, woodfish: 4, leaper: 5, wraith: 5, shielder: 4, brood: 2, mender: 2, reboot: 4, gap: 0.40, tip: '倒数第二波：砍断舌头、躲开青圈' },
-    { minion: 9, warrior: 6, wellfrog: 6, archer: 5, bowman: 4, woodfish: 4, leaper: 5, wraith: 5, shielder: 4, brood: 2, mender: 2, reboot: 4, gap: 0.38, tip: '最后一波：把井底的东西全拍碎，爬出去' },
+    { minion: 6, warrior: 4, wellfrog: 5, archer: 4, bowman: 3, woodfish: 3, leaper: 4, wraith: 4, shielder: 3, brood: 2, mender: 2, reboot: 2, gap: 0.46, tip: '第 16 回合：井底长夜，全来了' },
+    { minion: 6, warrior: 4, wellfrog: 5, archer: 4, bowman: 4, woodfish: 3, leaper: 4, wraith: 4, shielder: 3, brood: 2, mender: 2, reboot: 3, gap: 0.44, tip: '木鱼法器该上了：挨打/击杀震一圈，把井蛙震退' },
+    { minion: 6, warrior: 5, wellfrog: 5, archer: 5, bowman: 4, woodfish: 4, leaper: 5, wraith: 5, shielder: 3, brood: 2, mender: 2, reboot: 3, gap: 0.42, tip: '还剩三回合：舌头拉人和滴水一起躲' },
+    { minion: 6, warrior: 5, wellfrog: 6, archer: 5, bowman: 4, woodfish: 4, leaper: 5, wraith: 5, shielder: 4, brood: 2, mender: 2, reboot: 4, gap: 0.40, tip: '倒数第二波：砍断舌头、躲开青圈' },
+    { minion: 6, warrior: 5, wellfrog: 6, archer: 5, bowman: 4, woodfish: 4, leaper: 5, wraith: 5, shielder: 4, brood: 2, mender: 2, reboot: 4, gap: 0.38, tip: '最后一波：把井底的东西全拍碎，爬出去' },
   ],
 };
 
@@ -564,7 +564,7 @@ export const LEVEL_8 = {
   spawnJitter: 0.5,
   minPlayerDistance: 8.0,
   minSpawnGap: 2.4,
-  gapScale: 1.35,
+  gapScale: 1.12,
   gap: 2.6,
   upgradeAfter: [1, 2, 3, 4, 5, 8, 10, 12, 15, 17, 19, 20],
   shopAfter: [3, 6, 9, 12, 15, 18],
@@ -577,30 +577,30 @@ export const LEVEL_8 = {
   deposit: { x: 0, z: -19.2, r: 1.5, summon: 'warden' },
   rounds: [
     // ---- 第一幕（R1~R4）：寄存层 · 认识柜子 ----
-    { minion: 4, warrior: 1, archer: 0, bowman: 0, leaper: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, reboot: 0, charger: 0, gap: 0.90, tip: '骨塔第七十层：场边那间木柜是寄存柜 —— 每死一只怪，木牌都会被它收进去' },
-    { minion: 5, warrior: 2, archer: 1, bowman: 0, leaper: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, reboot: 0, charger: 0, gap: 0.84, tip: '柜面有 8 个格子，右下角写着已经收了几块' },
-    { minion: 5, warrior: 2, archer: 2, bowman: 1, leaper: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, reboot: 0, charger: 0, gap: 0.80, tip: '走到柜子旁边，屏幕底下会冒出「取牌」按钮' },
-    { minion: 6, warrior: 3, archer: 2, bowman: 1, leaper: 1, wraith: 0, shielder: 0, brood: 0, mender: 0, reboot: 0, charger: 0, gap: 0.76, tip: '按下取牌会给你一串四位数字：用面板上的键盘敲进去，敲完自动判定' },
+    { minion: 3, warrior: 1, archer: 0, bowman: 0, leaper: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, reboot: 0, charger: 0, gap: 0.90, tip: '骨塔第七十层：场边那间木柜是寄存柜 —— 每死一只怪，木牌都会被它收进去' },
+    { minion: 4, warrior: 2, archer: 1, bowman: 0, leaper: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, reboot: 0, charger: 0, gap: 0.84, tip: '柜面有 8 个格子，右下角写着已经收了几块' },
+    { minion: 4, warrior: 2, archer: 2, bowman: 1, leaper: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, reboot: 0, charger: 0, gap: 0.80, tip: '走到柜子旁边，屏幕底下会冒出「取牌」按钮' },
+    { minion: 4, warrior: 3, archer: 2, bowman: 1, leaper: 1, wraith: 0, shielder: 0, brood: 0, mender: 0, reboot: 0, charger: 0, gap: 0.76, tip: '按下取牌会给你一串四位数字：用面板上的键盘敲进去，敲完自动判定' },
     // ---- 第二幕（R5~R8）：清柜 ----
-    { minion: 6, warrior: 3, archer: 2, bowman: 2, leaper: 1, wraith: 0, shielder: 0, brood: 0, mender: 0, reboot: 0, charger: 0, gap: 0.72, tip: '输对了柜里的牌子全被取走 —— 趁场上没几只的时候按' },
-    { minion: 6, warrior: 3, archer: 3, bowman: 2, leaper: 2, wraith: 0, shielder: 1, brood: 0, mender: 0, reboot: 0, charger: 0, gap: 0.70, tip: '面板不暂停游戏：按键盘的时候怪还在往你身上走' },
-    { minion: 7, warrior: 3, archer: 3, bowman: 2, leaper: 2, wraith: 1, shielder: 1, brood: 0, mender: 0, reboot: 0, charger: 0, gap: 0.66, tip: '输错或超时只是白跑一趟，牌子还在柜里，3 秒后能再按' },
-    { minion: 7, warrior: 4, archer: 3, bowman: 2, leaper: 2, wraith: 1, shielder: 2, brood: 0, mender: 1, reboot: 0, charger: 0, gap: 0.62, tip: '攒满 8 块会**当场封柜** —— 到那一刻就再也清不掉了' },
+    { minion: 4, warrior: 3, archer: 2, bowman: 2, leaper: 1, wraith: 0, shielder: 0, brood: 0, mender: 0, reboot: 0, charger: 0, gap: 0.72, tip: '输对了柜里的牌子全被取走 —— 趁场上没几只的时候按' },
+    { minion: 4, warrior: 3, archer: 3, bowman: 2, leaper: 2, wraith: 0, shielder: 1, brood: 0, mender: 0, reboot: 0, charger: 0, gap: 0.70, tip: '面板不暂停游戏：按键盘的时候怪还在往你身上走' },
+    { minion: 5, warrior: 3, archer: 3, bowman: 2, leaper: 2, wraith: 1, shielder: 1, brood: 0, mender: 0, reboot: 0, charger: 0, gap: 0.66, tip: '输错或超时只是白跑一趟，牌子还在柜里，3 秒后能再按' },
+    { minion: 5, warrior: 3, archer: 3, bowman: 2, leaper: 2, wraith: 1, shielder: 2, brood: 0, mender: 1, reboot: 0, charger: 0, gap: 0.62, tip: '攒满 8 块会**当场封柜** —— 到那一刻就再也清不掉了' },
     // ---- 第三幕（R9~R13）：看守 ----
-    { minion: 7, warrior: 4, archer: 3, bowman: 3, leaper: 2, wraith: 1, shielder: 2, brood: 1, mender: 1, reboot: 0, charger: 0, gap: 0.60, tip: '封柜 5 秒后柜门打开：寄存处看守会自己走出来' },
-    { minion: 8, warrior: 4, archer: 3, bowman: 3, leaper: 3, wraith: 2, shielder: 2, brood: 1, mender: 1, reboot: 1, charger: 0, gap: 0.58, tip: '看守有五套攻击：贴脸横扫、中距砸地、正面扇形牌雨、远处拐弯投牌，还会砸柜放小怪' },
-    { minion: 8, warrior: 5, archer: 4, bowman: 3, leaper: 3, wraith: 2, shielder: 2, brood: 1, mender: 1, reboot: 1, charger: 0, gap: 0.56, tip: '地上亮起金圈就往外走：那是落锤的位置，站里面必挨' },
-    { minion: 8, warrior: 5, archer: 4, bowman: 3, leaper: 3, wraith: 2, shielder: 2, brood: 1, mender: 1, reboot: 1, charger: 1, gap: 0.54, tip: '它半血之后会暴怒：移速和出手频率一起涨，别在原地跟它换血' },
-    { minion: 8, warrior: 5, archer: 4, bowman: 4, leaper: 3, wraith: 2, shielder: 3, brood: 1, mender: 1, reboot: 1, charger: 1, gap: 0.52, tip: '别等它出现：这一关的正解是满 8 块之前清一次' },
+    { minion: 5, warrior: 3, archer: 3, bowman: 3, leaper: 2, wraith: 1, shielder: 2, brood: 1, mender: 1, reboot: 0, charger: 0, gap: 0.60, tip: '封柜 5 秒后柜门打开：寄存处看守会自己走出来' },
+    { minion: 6, warrior: 3, archer: 3, bowman: 3, leaper: 3, wraith: 2, shielder: 2, brood: 1, mender: 1, reboot: 1, charger: 0, gap: 0.58, tip: '看守有五套攻击：贴脸横扫、中距砸地、正面扇形牌雨、远处拐弯投牌，还会砸柜放小怪' },
+    { minion: 6, warrior: 4, archer: 4, bowman: 3, leaper: 3, wraith: 2, shielder: 2, brood: 1, mender: 1, reboot: 1, charger: 0, gap: 0.56, tip: '地上亮起金圈就往外走：那是落锤的位置，站里面必挨' },
+    { minion: 6, warrior: 4, archer: 4, bowman: 3, leaper: 3, wraith: 2, shielder: 2, brood: 1, mender: 1, reboot: 1, charger: 1, gap: 0.54, tip: '它半血之后会暴怒：移速和出手频率一起涨，别在原地跟它换血' },
+    { minion: 6, warrior: 4, archer: 4, bowman: 4, leaper: 3, wraith: 2, shielder: 3, brood: 1, mender: 1, reboot: 1, charger: 1, gap: 0.52, tip: '别等它出现：这一关的正解是满 8 块之前清一次' },
     // ---- 第四幕（R14~R17）：两个机制一起压 ----
-    { minion: 9, warrior: 5, archer: 4, bowman: 4, leaper: 3, wraith: 3, shielder: 3, brood: 2, mender: 1, reboot: 1, charger: 1, gap: 0.50, tip: '雾鬼也来了：一种是隐着身的，一种是明着走过来的' },
-    { minion: 9, warrior: 6, archer: 4, bowman: 4, leaper: 4, wraith: 3, shielder: 3, brood: 2, mender: 2, reboot: 1, charger: 1, gap: 0.48, tip: '投牌是从柜子那个方向飞过来的：别背对着柜子打' },
-    { minion: 9, warrior: 6, archer: 5, bowman: 4, leaper: 4, wraith: 3, shielder: 3, brood: 2, mender: 2, reboot: 2, charger: 1, gap: 0.46, tip: '第 16 回合：这一层的牌子从来收不完' },
-    { minion: 10, warrior: 6, archer: 5, bowman: 4, leaper: 4, wraith: 3, shielder: 4, brood: 2, mender: 2, reboot: 2, charger: 2, gap: 0.44, tip: '第 17 回合：每一波都要绕到柜边一次，取牌就是「顺路」' },
+    { minion: 6, warrior: 4, archer: 4, bowman: 4, leaper: 3, wraith: 3, shielder: 3, brood: 2, mender: 1, reboot: 1, charger: 1, gap: 0.50, tip: '雾鬼也来了：一种是隐着身的，一种是明着走过来的' },
+    { minion: 6, warrior: 5, archer: 4, bowman: 4, leaper: 4, wraith: 3, shielder: 3, brood: 2, mender: 2, reboot: 1, charger: 1, gap: 0.48, tip: '投牌是从柜子那个方向飞过来的：别背对着柜子打' },
+    { minion: 6, warrior: 5, archer: 5, bowman: 4, leaper: 4, wraith: 3, shielder: 3, brood: 2, mender: 2, reboot: 2, charger: 1, gap: 0.46, tip: '第 16 回合：这一层的牌子从来收不完' },
+    { minion: 7, warrior: 5, archer: 5, bowman: 4, leaper: 4, wraith: 3, shielder: 4, brood: 2, mender: 2, reboot: 2, charger: 2, gap: 0.44, tip: '第 17 回合：每一波都要绕到柜边一次，取牌就是「顺路」' },
     // ---- 第五幕（R18~R20）：毕业考 ----
-    { minion: 10, warrior: 6, archer: 5, bowman: 5, leaper: 4, wraith: 4, shielder: 4, brood: 2, mender: 2, reboot: 2, charger: 2, gap: 0.42, tip: '还剩三回合：血别花在看守身上' },
-    { minion: 10, warrior: 7, archer: 5, bowman: 5, leaper: 5, wraith: 4, shielder: 4, brood: 3, mender: 2, reboot: 3, charger: 2, gap: 0.40, tip: '倒数第二波：先看一眼柜里有几块，再决定要不要输出' },
-    { minion: 11, warrior: 7, archer: 6, bowman: 5, leaper: 5, wraith: 4, shielder: 5, brood: 3, mender: 2, reboot: 3, charger: 2, gap: 0.38, tip: '最后一波：把这一层的牌子全收走' },
+    { minion: 7, warrior: 5, archer: 5, bowman: 5, leaper: 4, wraith: 4, shielder: 4, brood: 2, mender: 2, reboot: 2, charger: 2, gap: 0.42, tip: '还剩三回合：血别花在看守身上' },
+    { minion: 7, warrior: 6, archer: 5, bowman: 5, leaper: 5, wraith: 4, shielder: 4, brood: 3, mender: 2, reboot: 3, charger: 2, gap: 0.40, tip: '倒数第二波：先看一眼柜里有几块，再决定要不要输出' },
+    { minion: 8, warrior: 6, archer: 6, bowman: 5, leaper: 5, wraith: 4, shielder: 5, brood: 3, mender: 2, reboot: 3, charger: 2, gap: 0.38, tip: '最后一波：把这一层的牌子全收走' },
   ],
 };
 
@@ -632,7 +632,7 @@ export const LEVEL_9 = {
   theme: 'registry',         // 第 82 块：鎏金 + 墨（scene.js 的 THEMES）
   arena: 17,
   order: [
-    ['minion', 1], ['warrior', 1.6], ['weigher', 1.8],
+    ['minion', 1], ['warrior', 1.6], ['weigher', 1.8], ['stamper', 2.05],
     ['archer', 2.0], ['bowman', 2.2], ['leaper', 2.2],
     ['wraith', 2.4], ['shielder', 2.4], ['brood', 2.6],
     ['mender', 2.6], ['reboot', 2.8], ['hexer', 3.0],
@@ -641,7 +641,7 @@ export const LEVEL_9 = {
   spawnJitter: 0.5,
   minPlayerDistance: 7.6,
   minSpawnGap: 2.4,
-  gapScale: 1.35,
+  gapScale: 1.12,
   gap: 2.6,
   upgradeAfter: [1, 2, 3, 4, 5, 8, 10, 12, 15, 17, 19, 20],
   shopAfter: [3, 6, 9, 12, 15, 18],
@@ -649,30 +649,30 @@ export const LEVEL_9 = {
   scale: { hp: 0.34, damage: 0.20, speed: 0.045, haste: 0.0110, curve: 0.28, hpMul: 1.28, dmgMul: 1.55 },
   rounds: [
     // ---- 第一幕（R1~R4）：上称 ----
-    { minion: 4, warrior: 1, weigher: 0, archer: 0, bowman: 0, leaper: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, reboot: 0, hexer: 0, gap: 0.88, tip: '第九十九层：门认字，簿子认名字 —— 那道金边就是那扇门' },
-    { minion: 4, warrior: 2, weigher: 1, archer: 0, bowman: 0, leaper: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, reboot: 0, hexer: 0, gap: 0.80, tip: '抱着台账的那只是称量官：它把簿子翻开，全场一起变凶' },
-    { minion: 5, warrior: 2, weigher: 1, archer: 1, bowman: 0, leaper: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, reboot: 0, hexer: 0, gap: 0.78, tip: '它翻开簿子那 1.6 秒是唯一的窗口 —— 冲进去把它砍了' },
-    { minion: 5, warrior: 2, weigher: 1, archer: 1, bowman: 1, leaper: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, reboot: 0, hexer: 0, gap: 0.74, tip: '脚下的金环就是层数：环越大，它在簿子上记的名越多' },
+    { minion: 3, warrior: 1, weigher: 0, archer: 0, bowman: 0, leaper: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, reboot: 0, stamper: 0, hexer: 0, gap: 0.88, tip: '第九十九层：门认字，簿子认名字 —— 那道金边就是那扇门' },
+    { minion: 3, warrior: 2, weigher: 1, archer: 0, bowman: 0, leaper: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, reboot: 0, stamper: 0, hexer: 0, gap: 0.80, tip: '抱着台账的那只是称量官：它把簿子翻开，全场一起变凶' },
+    { minion: 4, warrior: 2, weigher: 1, archer: 1, bowman: 0, leaper: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, reboot: 0, stamper: 0, hexer: 0, gap: 0.78, tip: '它翻开簿子那 1.6 秒是唯一的窗口 —— 冲进去把它砍了' },
+    { minion: 4, warrior: 2, weigher: 1, archer: 1, bowman: 1, leaper: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, reboot: 0, stamper: 1, hexer: 0, gap: 0.74, tip: '新面孔·盖章人：它在你脚下盖红方印，落下来就被封印 —— 别站着不动' },
     // ---- 第二幕（R5~R8）：它会躲，而且越来越难够到 ----
-    { minion: 6, warrior: 3, weigher: 1, archer: 1, bowman: 1, leaper: 1, wraith: 0, shielder: 0, brood: 0, mender: 0, reboot: 0, hexer: 0, gap: 0.72, tip: '被记名的怪更快、更疼、也更耐打 —— 别按老节奏打' },
-    { minion: 6, warrior: 3, weigher: 1, archer: 2, bowman: 1, leaper: 1, wraith: 1, shielder: 0, brood: 0, mender: 0, reboot: 0, hexer: 0, gap: 0.70, tip: '它一躲就是七格开外：用位移一次拉到位，别追着它跑' },
-    { minion: 7, warrior: 3, weigher: 1, archer: 2, bowman: 2, leaper: 2, wraith: 1, shielder: 1, brood: 0, mender: 0, reboot: 0, hexer: 0, gap: 0.66, tip: '尖帽小巫会给它回血：被奶回来的称量官等于从头念一遍' },
-    { minion: 7, warrior: 4, weigher: 1, archer: 2, bowman: 2, leaper: 2, wraith: 1, shielder: 1, brood: 1, mender: 1, reboot: 0, hexer: 0, gap: 0.64, tip: '第二只称量官要来了：两只叠得比一只快一倍' },
+    { minion: 4, warrior: 3, weigher: 1, archer: 1, bowman: 1, leaper: 1, wraith: 0, shielder: 0, brood: 0, mender: 0, reboot: 0, stamper: 1, hexer: 0, gap: 0.72, tip: '被记名的怪更快、更疼、也更耐打 —— 别按老节奏打' },
+    { minion: 4, warrior: 3, weigher: 1, archer: 2, bowman: 1, leaper: 1, wraith: 1, shielder: 0, brood: 0, mender: 0, reboot: 0, stamper: 1, hexer: 0, gap: 0.70, tip: '它一躲就是七格开外：用位移一次拉到位，别追着它跑' },
+    { minion: 5, warrior: 3, weigher: 1, archer: 2, bowman: 2, leaper: 2, wraith: 1, shielder: 1, brood: 0, mender: 0, reboot: 0, stamper: 1, hexer: 0, gap: 0.66, tip: '尖帽小巫会给它回血：被奶回来的称量官等于从头念一遍' },
+    { minion: 5, warrior: 3, weigher: 1, archer: 2, bowman: 2, leaper: 2, wraith: 1, shielder: 1, brood: 1, mender: 1, reboot: 0, stamper: 1, hexer: 0, gap: 0.64, tip: '第二只称量官要来了：两只叠得比一只快一倍' },
     // ---- 第三幕（R9~R13）：两只轮流念 ----
-    { minion: 7, warrior: 4, weigher: 2, archer: 2, bowman: 2, leaper: 2, wraith: 2, shielder: 1, brood: 1, mender: 1, reboot: 0, hexer: 0, gap: 0.60, tip: '两只轮流上称：拆掉一只，另一只还在念 —— 但也只剩它了' },
-    { minion: 8, warrior: 4, weigher: 2, archer: 3, bowman: 2, leaper: 2, wraith: 2, shielder: 1, brood: 1, mender: 1, reboot: 1, hexer: 0, gap: 0.58, tip: '五层封顶：到那一层场上每一只都比第七关的还凶' },
-    { minion: 8, warrior: 5, weigher: 2, archer: 3, bowman: 3, leaper: 3, wraith: 2, shielder: 2, brood: 1, mender: 1, reboot: 1, hexer: 1, gap: 0.56, tip: '紫阵也回来了：被减速的时候最容易吃满一次上称' },
-    { minion: 8, warrior: 5, weigher: 2, archer: 3, bowman: 3, leaper: 3, wraith: 3, shielder: 2, brood: 2, mender: 1, reboot: 1, hexer: 1, gap: 0.54, tip: '先杀谁的答案只有一种：永远是抱着簿子的那只' },
-    { minion: 9, warrior: 5, weigher: 2, archer: 3, bowman: 3, leaper: 3, wraith: 3, shielder: 2, brood: 2, mender: 2, reboot: 1, hexer: 1, gap: 0.52, tip: '第 13 回合：这一层从来就不缺追赶的人，只缺一个名字' },
+    { minion: 5, warrior: 3, weigher: 2, archer: 2, bowman: 2, leaper: 2, wraith: 2, shielder: 1, brood: 1, mender: 1, reboot: 0, stamper: 1, hexer: 0, gap: 0.60, tip: '两只轮流上称：拆掉一只，另一只还在念 —— 但也只剩它了' },
+    { minion: 6, warrior: 3, weigher: 2, archer: 3, bowman: 2, leaper: 2, wraith: 2, shielder: 1, brood: 1, mender: 1, reboot: 1, stamper: 1, hexer: 0, gap: 0.58, tip: '五层封顶：到那一层场上每一只都比第七关的还凶' },
+    { minion: 6, warrior: 4, weigher: 2, archer: 3, bowman: 3, leaper: 3, wraith: 2, shielder: 2, brood: 1, mender: 1, reboot: 1, stamper: 1, hexer: 1, gap: 0.56, tip: '紫阵也回来了：被减速的时候最容易吃满一次上称' },
+    { minion: 6, warrior: 4, weigher: 2, archer: 3, bowman: 3, leaper: 3, wraith: 3, shielder: 2, brood: 2, mender: 1, reboot: 1, stamper: 2, hexer: 1, gap: 0.54, tip: '第二只盖章人也来了：被封印的那两秒最容易吃满一次上称' },
+    { minion: 6, warrior: 4, weigher: 2, archer: 3, bowman: 3, leaper: 3, wraith: 3, shielder: 2, brood: 2, mender: 2, reboot: 1, stamper: 2, hexer: 1, gap: 0.52, tip: '第 13 回合：这一层从来就不缺追赶的人，只缺一个名字' },
     // ---- 第四幕（R14~R17）：封顶压力下打 ----
-    { minion: 9, warrior: 6, weigher: 2, archer: 4, bowman: 3, leaper: 4, wraith: 3, shielder: 2, brood: 2, mender: 2, reboot: 2, hexer: 1, gap: 0.50, tip: '它一倒，所有金环一起碎 —— 看到那一碎就可以松一口气了' },
-    { minion: 9, warrior: 6, weigher: 2, archer: 4, bowman: 4, leaper: 4, wraith: 3, shielder: 3, brood: 2, mender: 2, reboot: 2, hexer: 1, gap: 0.48, tip: '第五层的小兵跑得比你还快：别让它把整片场拉开' },
-    { minion: 10, warrior: 6, weigher: 2, archer: 4, bowman: 4, leaper: 4, wraith: 4, shielder: 3, brood: 2, mender: 2, reboot: 2, hexer: 2, gap: 0.46, tip: '两只紫阵叠着放：站在两个紫阵的缝里也别忘了盯着称量官' },
-    { minion: 10, warrior: 7, weigher: 2, archer: 4, bowman: 4, leaper: 4, wraith: 4, shielder: 3, brood: 2, mender: 2, reboot: 2, hexer: 2, gap: 0.44, tip: '第 17 回合：簿子已经翻到最后几页了' },
+    { minion: 6, warrior: 5, weigher: 2, archer: 4, bowman: 3, leaper: 4, wraith: 3, shielder: 2, brood: 2, mender: 2, reboot: 2, stamper: 2, hexer: 1, gap: 0.50, tip: '它一倒，所有金环一起碎 —— 看到那一碎就可以松一口气了' },
+    { minion: 6, warrior: 5, weigher: 2, archer: 4, bowman: 4, leaper: 4, wraith: 3, shielder: 3, brood: 2, mender: 2, reboot: 2, stamper: 2, hexer: 1, gap: 0.48, tip: '第五层的小兵跑得比你还快：别让它把整片场拉开' },
+    { minion: 7, warrior: 5, weigher: 2, archer: 4, bowman: 4, leaper: 4, wraith: 4, shielder: 3, brood: 2, mender: 2, reboot: 2, stamper: 2, hexer: 2, gap: 0.46, tip: '两只紫阵叠着放：站在两个紫阵的缝里也别忘了盯着称量官' },
+    { minion: 7, warrior: 6, weigher: 2, archer: 4, bowman: 4, leaper: 4, wraith: 4, shielder: 3, brood: 2, mender: 2, reboot: 2, stamper: 2, hexer: 2, gap: 0.44, tip: '第 17 回合：簿子已经翻到最后几页了' },
     // ---- 第五幕（R18~R20）：门前 ----
-    { minion: 10, warrior: 7, weigher: 3, archer: 5, bowman: 4, leaper: 4, wraith: 4, shielder: 3, brood: 2, mender: 2, reboot: 2, hexer: 2, gap: 0.42, tip: '三只一起上称：这一波先认清楚哪三只抱着簿子' },
-    { minion: 11, warrior: 7, weigher: 3, archer: 5, bowman: 5, leaper: 5, wraith: 4, shielder: 3, brood: 2, mender: 2, reboot: 3, hexer: 2, gap: 0.40, tip: '倒数第二波：把三个记账的都拆了，剩下的就是一群普通骷髅' },
-    { minion: 12, warrior: 8, weigher: 3, archer: 5, bowman: 5, leaper: 5, wraith: 5, shielder: 4, brood: 2, mender: 2, reboot: 3, hexer: 2, gap: 0.38, tip: '最后一波：把自己认的那个名字，写上那本簿子' },
+    { minion: 7, warrior: 6, weigher: 3, archer: 5, bowman: 4, leaper: 4, wraith: 4, shielder: 3, brood: 2, mender: 2, reboot: 2, stamper: 2, hexer: 2, gap: 0.42, tip: '三只一起上称：这一波先认清楚哪三只抱着簿子' },
+    { minion: 8, warrior: 6, weigher: 3, archer: 5, bowman: 5, leaper: 5, wraith: 4, shielder: 3, brood: 2, mender: 2, reboot: 3, stamper: 2, hexer: 2, gap: 0.40, tip: '倒数第二波：把三个记账的都拆了，剩下的就是一群普通骷髅' },
+    { minion: 8, warrior: 7, weigher: 3, archer: 5, bowman: 5, leaper: 5, wraith: 5, shielder: 4, brood: 2, mender: 2, reboot: 3, stamper: 2, hexer: 2, gap: 0.38, tip: '最后一波：把自己认的那个名字，写上那本簿子' },
   ],
 };
 
@@ -836,6 +836,19 @@ export function createLevel(level, { enemies, fx, getPlayerPos, onRound, onRound
   let spawned = 0;
   let roundMod = {};        // 本回合修正（事件写入：countScale / speedScale）
 
+  // ---- 第 97 块（用户第 3 条）：场上太空就提前放后面的怪 ----
+  // 以前一回合的出场表是**绝对时间表**：怪与怪的间隔写死在表里，谁都被钉在
+  // 自己的那一秒出场。清得快（一波刚落地就被拍碎）的时候，玩家只能干等 ——
+  // 一局时间就这么被"空场"吃掉了。
+  // 现在：活怪低于 LOW_POP 只的时候，把**下一只待出场**的怪直接拉到"现在"。
+  // 两个限制，免得变成一瞬间把整波倒出来：
+  //   · 每次只拉一只（拉完立刻出场，剩下的排队等下一次判定）
+  //   · 两次之间至少隔 CATCH_STEP 秒
+  // 只改那一只的 delay（不动 t），所以后面那些怪的**原定节奏不变**。
+  const LOW_POP = 5;
+  const CATCH_STEP = 0.22;
+  let catchT = 0;
+
   // nearR：第 75 块 —— 擦名者用更近的出生半径传进来（其它怪不传，行为不变）。
   // 传了就同时收紧「不能刷在主角脸上」的下限，否则近半径会被规则 2 全部否掉。
   function pickSpawn(nearR) {
@@ -902,6 +915,7 @@ export function createLevel(level, { enemies, fx, getPlayerPos, onRound, onRound
     t = 0;
     spawnIdx = 0;
     gapT = 0;
+    catchT = 0;             // 第 97 块：空场催怪的节流计时也归零
     spawns = null;          // 与 nextRound 一致：延迟到 update 展开
     onRound?.(roundNo, level.rounds.length, cfg.tip);
   }
@@ -919,6 +933,7 @@ export function createLevel(level, { enemies, fx, getPlayerPos, onRound, onRound
     t = 0;
     spawnIdx = 0;
     gapT = 0;
+    catchT = 0;             // 第 97 块
     // 第 7 块：事件改到「回合结束」触发，写的是**下一回合**的修正，
     // 所以这里不能再无条件清空 —— 只有第 1 回合（还没有任何事件）才从空开始。
     if (roundIndex === 0) roundMod = {};
@@ -958,6 +973,18 @@ export function createLevel(level, { enemies, fx, getPlayerPos, onRound, onRound
         if (e) spawned++;
       }
 
+      // 第 97 块：空场催下一只（见上面 LOW_POP 的说明）
+      if (spawnIdx < spawns.length && enemies.aliveCount() < LOW_POP) {
+        catchT += dt;
+        if (catchT >= CATCH_STEP) {
+          catchT = 0;
+          const nx = spawns[spawnIdx];
+          if (nx && nx.delay > t) nx.delay = t;    // 下一帧的 while 就会把它放出来
+        }
+      } else {
+        catchT = 0;
+      }
+
       // 必须全部清掉才算这回合结束（含刚钻出来、还没死的）
       if (spawnIdx >= spawns.length && enemies.aliveCount() === 0) {
         phase = 'gap';
@@ -976,7 +1003,7 @@ export function createLevel(level, { enemies, fx, getPlayerPos, onRound, onRound
   function reset() {
     roundIndex = -1;
     phase = 'idle';
-    t = 0; spawnIdx = 0; gapT = 0; spawned = 0;
+    t = 0; spawnIdx = 0; gapT = 0; spawned = 0; catchT = 0;
     spawns = null;
     roundMod = {};
     recentSpawns.length = 0;
@@ -993,6 +1020,9 @@ export function createLevel(level, { enemies, fx, getPlayerPos, onRound, onRound
     get roundNo() { return roundIndex + 1; },
     get phase() { return phase; },
     get spawned() { return spawned; },
+    // 第 97 块：本回合还有几只没出场（空场催怪的观测口，测试也用它）
+    get pending() { return spawns ? Math.max(0, spawns.length - spawnIdx) : 0; },
+    get lowPop() { return LOW_POP; },
     get roundMod() { return roundMod; },
     totals: levelStats(level),
     shouldUpgrade(roundNo) { return level.upgradeAfter.includes(roundNo); },

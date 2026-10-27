@@ -125,7 +125,13 @@ const back2 = io.parseText(folded);
 ok(back2.ok, '带换行和空格的码照样能解（微信折行场景）', back2.err);
 
 // 前缀大小写不敏感（base64 正文本身大小写敏感，只有前缀能乱写）
-ok(io.parseText('nwsave1:' + code.slice(SAVE_MAGIC.length)).ok, '前缀写成小写也认');
+ok(io.parseText('nwsz1:' + code.slice(SAVE_MAGIC.length)).ok, '前缀写成小写也认');
+// 第 97 块：老明文前缀 NWSAVE1: 仍要能读（老用户手里的码不能作废）
+const legacy = 'NWSAVE1:' + Buffer.from(io.payloadJson(snap), 'utf8').toString('base64');
+const legacyBack = io.parseText(legacy);
+ok(legacyBack.ok, '老前缀 NWSAVE1: 的码还能解（向后兼容）', legacyBack.err);
+eq(JSON.stringify(legacyBack.payload && legacyBack.payload.data), JSON.stringify(snap.data),
+  '老前缀解出来的数据同样逐字节一致');
 
 const cut = io.parseText(code.slice(0, Math.floor(code.length * 0.6)));
 ok(!cut.ok, '截断一半的码会被拦下（不会写坏档）', cut.ok ? '竟然成功' : '');
