@@ -101,8 +101,8 @@ async function httpJson(url, method = 'GET') {
 
     console.log('\n[1] 启动与主菜单入口');
     await waitFor('!!window.__game', 90000, '__game 就绪（SwiftShader 较慢）');
-    // 第 57 块：码表扩到 40 个（第一批 20 + 推荐礼包 10×100 + 宣传礼包 10×300）
-    ok('码表里共 40 个礼包', await ev('window.__game.gift.count') === 40);
+    // 第 101 块：码表 51 个（第一批 20 + 宣传有礼 20 + 夜行礼包 10 + 建群大典 1）
+    ok('码表里共 51 个礼包', await ev('window.__game.gift.count') === 51);
     ok('主菜单有「礼包兑换」按钮', await ev("!!document.getElementById('btnGift')"));
     ok('按钮文案是礼包兑换', await ev("document.getElementById('btnGift').textContent.trim()") === '礼包兑换');
     const baseBones = await ev('window.__game.gift.bones()');

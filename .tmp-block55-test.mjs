@@ -64,7 +64,7 @@ for (const c of uniq.values()) {
 }
 ok(hashOk === 40, `40 个码的哈希在 gift.js 里都查得到（${hashOk}/40）`);
 ok(tierOk === 40, `档位全对：NA-* = 300 骨币、NB-* = 100 骨币（${tierOk}/40）`);
-ok(giftTable.size === 50, `gift.js 码表 50 条（第 94 块新增夜行礼包 10 个，实际 ${giftTable.size}）`);
+ok(giftTable.size === 51, `gift.js 码表 51 条（第 94 块夜行礼包 10 + 第 101 块建群大典 1，实际 ${giftTable.size}）`);
 
 // 第 94 块：夜行礼包 FXYXGG01 ~ FXYXGG10，每个 3000 骨币
 {

@@ -374,7 +374,7 @@ sec('5. 十个夜行礼包码（FXYXGG01 ~ FXYXGG10，各 3000 骨币）');
   }
   const n3000 = (src.match(/, 3000, '夜行礼包'/g) || []).length;
   ok(n3000 === 10, '正好 10 条 3000 骨币的夜行礼包', String(n3000));
-  ok(GIFT_COUNT === 50, '码表总数 50（老码 40 条 + 第 94 块新增 10 条）', String(GIFT_COUNT));
+  ok(GIFT_COUNT === 51, '码表总数 51（老码 40 条 + 第 94 块新增 10 条 + 第 101 块建群大典 1 条）', String(GIFT_COUNT));
   // 十个码的哈希互不重复（不然只算一个）
   const hs = want.map((c) => codeHash(normalizeCode(c)));
   ok(new Set(hs).size === 10, '十个码的哈希互不重复', String(new Set(hs).size));
