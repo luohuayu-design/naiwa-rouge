@@ -197,15 +197,16 @@ for (const [f, re] of [
 }
 
 // ============================================================
-sec('⑦ 存档码压缩 + 分段');
+sec('⑦ 存档码压缩（分段列表已在第 99 块删掉）');
 // ============================================================
 ok(/const MAGIC = 'NWSZ1:';/.test(ioSrc), '新前缀 NWSZ1:（压缩）');
 ok(/const MAGIC_RAW = 'NWSAVE1:';/.test(ioSrc), '老前缀 NWSAVE1: 仍保留（老用户的码不作废）');
 ok(/function lzCompress/.test(ioSrc) && /function lzDecompress/.test(ioSrc), '自带 LZ77（零依赖）');
 ok(/const LZ_WIN = 16383/.test(ioSrc), '窗口 16383（实测性价比最好的那组）');
 ok(/function bytesToB64u/.test(ioSrc) && /function b64uToBytes/.test(ioSrc), 'base64url 编解码（没有 + / = 才不会在粘贴时被吃掉）');
-ok(/export const CODE_CHUNK = 700;/.test(ioSrc), '分段长度 700（微信输入框单行友好）');
-ok(/export function chunkCode/.test(ioSrc), 'chunkCode 存在');
+// 第 99 块：分段列表整个删掉了（几十段，还被压在设置底下）。这里反过来钉住「别再长回来」。
+ok(!/CODE_CHUNK|chunkCode|codeStats/.test(ioSrc), 'saveIO 不再有分段相关导出');
+ok(!/code-seg/.test(read('./style.css')), '分段样式已删干净');
 ok(/NWSZ1:/.test(htmlSrc) && !/NWSAVE1:/.test(htmlSrc.replace(/id="saveCodeSub"[\s\S]{0,200}?/, '')),
   'index.html 的提示文案用的是新前缀');
 
@@ -227,12 +228,12 @@ ok(/navigator\.canShare/.test(mainSrc) && /navigator\.share/.test(mainSrc), '走
 ok(/AbortError/.test(mainSrc), '用户取消分享不算失败（不能弹报错）');
 ok(/function exportFile/.test(mainSrc), '导出动作抽成了函数（分享 / 下载 / 复制共用）');
 
-sec('⑦-d 分段粘贴');
+sec('⑦-d 粘贴容错（分段累积保留：手机输入框仍可能截断一次粘贴）');
 ok(/let codeStaged = ''/.test(mainSrc), '有分段累积缓冲');
 ok(/codeStaged \+ raw/.test(mainSrc), '新粘的一段接在已有内容后面');
-ok(/#codeBox/.test(htmlSrc) && /#codeList/.test(htmlSrc) || /id="codeList"/.test(htmlSrc), '有分段码弹窗');
-ok(/id="codeBoxAll"/.test(htmlSrc), '有「复制全部」');
-ok(/\.code-seg/.test(read('./style.css')), '分段样式存在');
+ok(!/id="codeBox"/.test(htmlSrc) && !/codeBoxAll/.test(htmlSrc), '分段弹窗已从 index.html 删掉');
+ok(/ioExportCode[\s\S]{0,900}?copyText\(code\)/.test(mainSrc), '「复制存档码」一键复制整串（不弹窗、不分段）');
+ok(/openSaveCodeAsk\(\);\s*\/\/ 它会把框先清空/.test(mainSrc), '剪贴板被拦时把码填进粘贴框兜底');
 
 // ============================================================
 sec('⑧ 文案');

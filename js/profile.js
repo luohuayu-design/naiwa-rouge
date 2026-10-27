@@ -40,6 +40,9 @@ export const DEFAULT_SETTINGS = {
 
 const DEFAULT_PROFILE = {
   v: 1,
+  // 第 99 块：界面设定的「迁移世代」。老档里存着的某些默认值（比如 speedFov:false）
+  // 要一次性改成新默认，改完把 uiRev 提到当前世代，以后不再覆盖玩家自己的选择。
+  uiRev: 0,
   settings: { ...DEFAULT_SETTINGS },
   // lanternReveal（第 63 块）：路口灯累计照出多少只隐身雾鬼（成就「灯下没有影子」）
   stats: { runs: 0, wins: 0, kills: 0, seconds: 0, coins: 0, dmgTaken: 0, cards: {}, lanternReveal: 0 },
@@ -143,11 +146,30 @@ function fill(target, def) {
   return target;
 }
 
+// ---------------- 界面设定的迁移（第 99 块） ----------------
+// 用户反馈「速度感默认打开更好一些」，但老档里这个键**已经存着 false** ——
+// 只改 DEFAULT_SETTINGS 是没用的（fill 只在键缺失时才用默认值）。
+// 所以按「世代」做一次性迁移：uiRev 小于当前世代就强改一次，改完提世代号。
+// 之后的世代再加迁移就往后追加 `if (p.uiRev < 2) {...}`，老迁移不用动。
+const UI_REV = 1;
+
+function migrateUi(p) {
+  let changed = false;
+  if ((Number(p.uiRev) || 0) < 1) {
+    p.settings.speedFov = true;   // 第 36 块刚加这个功能时默认是关的，老档就一直是关的
+    p.uiRev = 1;
+    changed = true;
+  }
+  if (UI_REV > (Number(p.uiRev) || 0)) p.uiRev = UI_REV;
+  return changed;
+}
+
 export function profile() {
   if (cache) return cache;
   let raw = null;
   try { raw = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (_) { raw = null; }
   cache = raw && typeof raw === 'object' ? fill(raw, DEFAULT_PROFILE) : clone(DEFAULT_PROFILE);
+  if (migrateUi(cache)) save();   // 迁移要当场落盘，否则下次进来又是一份老档
   return cache;
 }
 
@@ -163,6 +185,7 @@ export function reloadFromStorage() {
   let raw = null;
   try { raw = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (_) { raw = null; }
   cache = raw && typeof raw === 'object' ? fill(raw, clone(DEFAULT_PROFILE)) : clone(DEFAULT_PROFILE);
+  if (migrateUi(cache)) save();   // 迁移过就落盘（沙盒期 save 被抑制，不影响回滚语义）
   return cache;
 }
 

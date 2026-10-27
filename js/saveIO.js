@@ -239,25 +239,6 @@ export function payloadCode(payload) {
 // 第 97 块：把长码切成人能一段段复制的片段。
 // 手机上「全选整段」经常被输入框 / 剪贴板截断，切成 700 字符一段后
 // 每段单独复制都不会出问题；导入时按顺序粘进去，会自己拼回来。
-export const CODE_CHUNK = 700;
-export function chunkCode(code, size = CODE_CHUNK) {
-  const out = [];
-  for (let i = 0; i < code.length; i += size) out.push(code.slice(i, i + size));
-  return out;
-}
-
-// 压缩率（只给提示文案用，测试也拿它断言）
-export function codeStats(payload) {
-  const json = JSON.stringify(payload);
-  const code = payloadCode(payload);
-  return {
-    json: json.length,
-    code: code.length,
-    chunks: chunkCode(code).length,
-    ratio: json.length ? +(code.length / json.length).toFixed(3) : 0,
-  };
-}
-
 export function fileName(now = new Date()) {
   const p = (n) => String(n).padStart(2, '0');
   return '蛙步夜行-存档-' + now.getFullYear() + p(now.getMonth() + 1) + p(now.getDate())

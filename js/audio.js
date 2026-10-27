@@ -22,7 +22,7 @@
 //   所以 buffer 缓存按**实际文件**存（'s:音效名' / 'v:文件名'），换包只换取哪份。
 // ============================================================
 
-import { VOICE_BASE, VOICE_GAIN, FROG_SFX } from './voicepack.js?v=112';
+import { VOICE_BASE, VOICE_GAIN, FROG_SFX } from './voicepack.js?v=113';
 
 const BGM_BASE = 'assets/audio/bgm/';
 const SFX_BASE = 'assets/audio/sfx/';
