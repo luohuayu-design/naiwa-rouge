@@ -87,7 +87,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     ok('写了礼包兑换码奖励', /礼包兑换码/.test(body));
     ok('写了 QQ 3829845261', /3829845261/.test(body) && /落花雨/.test(body));
     ok('写了本站网址', /luohuayu-design\.github\.io\/naiwa-rouge/.test(body));
-    ok('两个复制按钮就位', (await ev("document.querySelectorAll('#noticeOv .notice-copy').length")) === 2);
+    ok('三个复制按钮就位（本人 QQ / QQ 群 / 网址）', (await ev("document.querySelectorAll('#noticeOv .notice-copy').length")) === 3);
 
     console.log('\n[3] 一键复制（线上 https 走 clipboard）');
     await ev("document.querySelectorAll('#noticeOv .notice-copy')[0].click()");
@@ -96,7 +96,13 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
       String(await ev("navigator.clipboard.readText().catch(() => '')")));
     ok('按钮亮成「已复制」', /已复制/.test(await ev("document.querySelectorAll('#noticeOv .notice-copy')[0].textContent")));
     await sleep(1700);
+    // 第 102 块：QQ 群号
     await ev("document.querySelectorAll('#noticeOv .notice-copy')[1].click()");
+    await sleep(400);
+    ok('剪贴板拿到 QQ 群号', (await ev("navigator.clipboard.readText().catch(() => '')")) === '1132440548',
+      String(await ev("navigator.clipboard.readText().catch(() => '')")));
+    await sleep(1700);
+    await ev("document.querySelectorAll('#noticeOv .notice-copy')[2].click()");
     await sleep(400);
     ok('剪贴板拿到网址', (await ev("navigator.clipboard.readText().catch(() => '')")) === 'https://luohuayu-design.github.io/naiwa-rouge/',
       String(await ev("navigator.clipboard.readText().catch(() => '')")));

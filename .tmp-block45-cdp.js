@@ -107,10 +107,14 @@ async function httpJson(url, method = 'GET') {
     ok('有本站网址', /luohuayu-design\.github\.io\/naiwa-rouge/.test(body));
     ok('有「今日内不再弹出」勾选框', await ev("!!document.getElementById('noticeHideToday')"));
     ok('勾选框文案对得上', /今日内不再弹出/.test(await ev("document.querySelector('.notice-chk').textContent")));
-    ok('两条复制按钮', (await ev("document.querySelectorAll('#noticeOv .notice-copy').length")) === 2);
+    ok('三条复制按钮（本人 QQ / QQ 群 / 本站网址）', (await ev("document.querySelectorAll('#noticeOv .notice-copy').length")) === 3);
     ok('QQ 复制按钮 data-copy 正确', (await ev("document.querySelectorAll('#noticeOv .notice-copy')[0].dataset.copy")) === '3829845261');
+    // 第 102 块：加了 QQ 群号（按 data-copy 找，不依赖下标顺序）
+    ok('写了 QQ 群号 1132440548', /1132440548/.test(body));
+    ok('QQ 群复制按钮 data-copy 正确',
+      (await ev("document.querySelector('#noticeOv .notice-copy[data-copy=\"1132440548\"]')?.dataset.copy")) === '1132440548');
     ok('网址复制按钮 data-copy 正确',
-      (await ev("document.querySelectorAll('#noticeOv .notice-copy')[1].dataset.copy")) === 'https://luohuayu-design.github.io/naiwa-rouge/');
+      (await ev("document.querySelector('#noticeOv .notice-copy[data-copy^=\"https://luohuayu\"]')?.dataset.copy")) === 'https://luohuayu-design.github.io/naiwa-rouge/');
     ok('正文可选中（手机上能长按复制）',
       (await ev("getComputedStyle(document.querySelector('.notice-bd')).userSelect")) !== 'none');
 

@@ -56,7 +56,7 @@ ok(/联系本人/.test(htmlSrc), '写明「联系本人领取」');
 ok(/3829845261/.test(htmlSrc) && /luohuayu-design\.github\.io\/naiwa-rouge/.test(htmlSrc), '带 QQ 和本站网址（可一键复制）');
 
 // A3 逻辑（main.js）
-ok(/const PROMO_VER = '1';/.test(mainSrc), '有独立版本号 PROMO_VER（换活动 +1 全员重看）');
+ok(/const PROMO_VER = '2';/.test(mainSrc), '有独立版本号 PROMO_VER（第 102 块加群号后到 2，换活动再 +1 全员重看）');
 ok(/const PROMO_KEY = 'naiwa_rouge_promo_v1';/.test(mainSrc), '有独立 localStorage 键（与公告分开各记各的）');
 ok(/const PROMO_ART_MS = 1500;/.test(mainSrc), '艺术字特效时长 1500ms');
 ok(/function showPromo\(force, art\)/.test(mainSrc), 'showPromo(force, art)：force=主菜单强制回看，art=播艺术字');
