@@ -170,8 +170,12 @@ const allJs = ['main.js', 'stats.js', 'enemy.js', 'profile.js', 'statView.js', '
 let stale = 0;
 for (const f of allJs) {
   const src = read('./js/' + f);
-  stale += (src.match(/\?v=(?!\d+)/g) || []).length;
-  stale += (src.match(/\?v=(\d+)/g) || []).filter((x) => x.slice(3) !== v).length;
+  // ⚠️ 只查 **import / export ... from '...'** 里的那处 ?v=N。
+  //    以前写的是裸的 /\?v=(?!\d+)/，结果第 100 块的版本自检里有个正则字面量
+  //    `main\.js\?v=(\d+)`（`?v=` 后面跟的是 `(`）也被算成「漏写版本号」——
+  //    这条断言的用意是「import 别忘 bump」，不该连源码里的正则一起判。
+  stale += (src.match(/from\s+'[^']*\?v=(?!\d)'/g) || []).length;
+  stale += (src.match(/from\s+'[^']*\?v=\d+'/g) || []).filter((x) => x.slice(x.lastIndexOf('?v=') + 3, -1) !== String(v)).length;
 }
 ok(stale === 0, `抽查 ${allJs.length} 个模块，没有残留旧版本号`);
 

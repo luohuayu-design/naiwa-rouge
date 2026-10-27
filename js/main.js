@@ -5,40 +5,40 @@
 // 目标是把三件事调顺：摇杆输入 → 角色速度/朝向 → 相机跟随。
 // 后续叠战斗时，只需要在 tick() 里加敌人更新与自动攻击，不用动输入层。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=113';
-import { buildNightScene } from './scene.js?v=113';
-import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=113';
+import * as THREE from '../lib/three.module.js?v=114';
+import { buildNightScene } from './scene.js?v=114';
+import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=114';
 // 第 80 块：给 glb 拼上版本号 → SW 缓存优先（详见 assetUrl.js）
-import { withV } from './assetUrl.js?v=113';
-import { createInput } from './input.js?v=113';
-import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=113';
-import { createStatView } from './statView.js?v=113';
-import { createWeaponStats } from './weaponStats.js?v=113';
-import { createFx } from './fx.js?v=113';
-import { createEnemySystem, ENEMY_TYPES } from './enemy.js?v=113';
+import { withV } from './assetUrl.js?v=114';
+import { createInput } from './input.js?v=114';
+import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=114';
+import { createStatView } from './statView.js?v=114';
+import { createWeaponStats } from './weaponStats.js?v=114';
+import { createFx } from './fx.js?v=114';
+import { createEnemySystem, ENEMY_TYPES } from './enemy.js?v=114';
 import {
   createLevel, LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVEL_5, LEVEL_6, LEVEL_7, LEVEL_8, LEVEL_9, LEVELS_BY_ID, DIFFS, setDifficulty, getDifficulty, roundScale, levelStats, levelTypes,
-} from './wave.js?v=113';
-import { createRangeRing } from './rangeRing.js?v=113';
-import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=113';
-import { createWeaponSystem } from './weapon.js?v=113';
-import { createArrowRainSystem } from './arrowRain.js?v=113';
-import { SWORD_KINDS } from './swordKinds.js?v=113';
-import { createGoldSystem } from './gold.js?v=113';
-import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW, SHOP_PINNED } from './shop.js?v=113';
-import { createTurretSystem, TURRET } from './turret.js?v=113';
-import { createRelicSystem, RELIC_DEFS } from './relics.js?v=113';
-import { createHazards } from './hazards.js?v=113';
-import { createDeposit, tagChance } from './deposit.js?v=113';   // 第 81 块：寄存柜；第 84 块：掉牌概率
-import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=113';
-import audio from './audio.js?v=113';
-import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=113';
+} from './wave.js?v=114';
+import { createRangeRing } from './rangeRing.js?v=114';
+import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=114';
+import { createWeaponSystem } from './weapon.js?v=114';
+import { createArrowRainSystem } from './arrowRain.js?v=114';
+import { SWORD_KINDS } from './swordKinds.js?v=114';
+import { createGoldSystem } from './gold.js?v=114';
+import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW, SHOP_PINNED } from './shop.js?v=114';
+import { createTurretSystem, TURRET } from './turret.js?v=114';
+import { createRelicSystem, RELIC_DEFS } from './relics.js?v=114';
+import { createHazards } from './hazards.js?v=114';
+import { createDeposit, tagChance } from './deposit.js?v=114';   // 第 81 块：寄存柜；第 84 块：掉牌概率
+import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=114';
+import audio from './audio.js?v=114';
+import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=114';
 // 第 62 块：回血技能（第四关通关后永久解锁，回 5 点 / CD 25 秒）
-import { createHealSkill, HEAL_AMOUNT, HEAL_CD } from './healSkill.js?v=113';
+import { createHealSkill, HEAL_AMOUNT, HEAL_CD } from './healSkill.js?v=114';
 // 第 62 块：民心专属事件（升档走良性池、掉档走恶性池）
-import { repPoolForTier, REP_GOOD, REP_BAD } from './repEvents.js?v=113';
+import { repPoolForTier, REP_GOOD, REP_BAD } from './repEvents.js?v=114';
 // 第 62 块：攻略面板（战败提示上的「查看攻略」，手风琴三组）
-import { renderGuide, GUIDE_SECTIONS } from './guide.js?v=113';
+import { renderGuide, GUIDE_SECTIONS } from './guide.js?v=114';
 import {
   settings as readSettings, setSetting, save as saveProfile, profile,
   bumpStat, setStatMax, codexAdd, codexCount, countCard, unlockAch, hasAch, addBones, bones, resetAll,
@@ -53,32 +53,32 @@ import {
   hintSeen, markHintSeen,                  // 第 65 块：一次性提示卡
   markLevelClear, levelCleared, clearCount, // 第 94 块：通关过哪些关（成就用）
   getStatAdmin, setStatAdmin, resetStatAdmin, // 第 95 / 98 块：管理员模式二（手改最终值 → 存追加项，基础值不动）
-} from './profile.js?v=113';
+} from './profile.js?v=114';
 // 第 44 块：礼包兑换（码表只有哈希，明细在 gift.js 顶部注释）
-import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=113';
+import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=114';
 // 第 46 块：音效包（抽象奶蛙音效包 —— 4 段奶蛙叫声，通关第一关解锁）
-import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=113';
-import * as runSave from './runSave.js?v=113';
+import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=114';
+import * as runSave from './runSave.js?v=114';
 // 第 78 块：存档导出 / 导入。数据逻辑全在这个模块里（不碰 DOM），这里只接按钮
-import * as saveIO from './saveIO.js?v=113';
+import * as saveIO from './saveIO.js?v=114';
 import {
   CAMPFIRE, CAMP_STEP, campBuy, campOwned, campLevel,
   campCost, campApply, bonesFor, diffBoneMul, levelBoneMul, coinBones, BONE,
-} from './campfire.js?v=113';
+} from './campfire.js?v=114';
 // 第 23 块：永夜火种（通关白给的 3 次永久三选一）
 import {
   BOONS, BOON_BY_ID, BOON_PICKS, boonOwned, boonStacks, boonPending, boonTotalStacks,
   grantBoons, rollBoons, takeBoon, applyBoons, boonStackText,
-} from './boons.js?v=113';
+} from './boons.js?v=114';
 // 第 21 块：夜行诅咒（自选 debuff 换骨币倍率）
-import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=113';
+import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=114';
 // 第 22 块：种子与每日挑战
 import {
   DAILY_RULES, dayKey, dayText, dailySeed, seedCode, pickDailyCurses,
   seedFromText, pickSeedRules, loadSeedRecords, saveSeedRecord, pruneSeeds,
   dailyRecord, saveDailyRecord, pruneDaily, makeRng,
-} from './seed.js?v=113';
-import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=113';
+} from './seed.js?v=114';
+import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=114';
 // 第 58 块：局外商店 · 宝箱（花骨币买，开箱随机给永久属性 / 永久法器 / 技能CD缩短）
 import {
   BOXES, BOX_BY_ID, buyBox, rollBox, metaApplyStats, applyMeta,
@@ -86,35 +86,35 @@ import {
   boxCost, boxPriceOf, boxBought, BOX_PRICE_STEP,
   // 第 94 块：奖池一览（手风琴里那些条目与概率，纯计算）
   boxPoolEntries,
-} from './metaShop.js?v=113';
+} from './metaShop.js?v=114';
 // 第 59 块：每日签到（以周为单位，周一 00:00 重置）
 import {
   WEEK_TIERS, SIGN_BONES, weekCells, signSummary, signToday, signedToday,
-} from './signin.js?v=113';
+} from './signin.js?v=114';
 // 第 94 块：成就（八类 × 三档骨币奖励）
 // 第 94-2 块：骨币改成**手动领取**（achPending / achClaim），老用户补发走 achMigrate
 import {
   ACHS, ACH_CATS, ACH_TIERS, ACH_COUNT, achById, achsByCat, achTier,
   achPending, achPendingBones, achClaim, achClaimAll, achClaimed, achMigrate,
-} from './achievements.js?v=113';
+} from './achievements.js?v=114';
 // 第 94 块：通用手风琴（盲盒奖池与成就面板共用，不复制第三份引擎）
-import { renderAccordion } from './accordion.js?v=113';
+import { renderAccordion } from './accordion.js?v=114';
 // 第 94 块：每日任务（简单 3 + 中等 1 + 困难 1，每天 0 点刷新）
 import {
   DQ_TIERS, DQ_BONES, dqTasks, dqPump, dqSave, dqClaim, dqClaimAll,
   dqPending, dqGained, dqMsLeft, dayKeyOf, dqTier, dqTaskName,
   dqState, dqForceReroll, dqReset,   // 调试口：跨天重掷 / 整条重置
-} from './dailyQuest.js?v=113';
+} from './dailyQuest.js?v=114';
 import {
   EVENTS, ALL_EVENTS, getEventById, pickEvent, effectLines,
   choiceHint, canAfford, costShort, REP_MIN, REP_MAX, REP_START,
   isTalk, eventChoices, resolveRoll, mergeEffects,
-} from './events.js?v=113';
+} from './events.js?v=114';
 // 第 32 块：主线《笑不出来的那一夜》（18 夜，一夜一关，前 3 夜已有关卡）
 import {
   STORY_ARC, STORY_CHAPTERS, STORY_ENDINGS, MARK_INFO,
   storyChapterAt, storyChapterById, storyEndingKey,
-} from './story.js?v=113';
+} from './story.js?v=114';
 
 // 标记模块已经跑起来了：index.html 的兜底自检靠它判断
 // 「模块根本没执行」还是「执行了但加载慢」。
@@ -7026,6 +7026,9 @@ async function boot() {
     if (!Number.isFinite(v)) { renderStatRows(); return; }
     const nat = s.natural(key);      // 不含手改项的自然最终值
     setStatAdmin(key, v - nat);
+    // 第 100 块：本局那个 stats 实例也要立刻跟上 —— 以前只写了档案，
+    // 面板（临时 createStats）显示对了，可局内读的还是旧值，得等下一局 / 刷新才生效。
+    stats.applyAdmin(getStatAdmin());   // 内部自带 clampHp，血量不会超过新上限
     renderStatRows();
   }
 
@@ -7118,6 +7121,7 @@ async function boot() {
   });
   if (stAdminReset) stAdminReset.addEventListener('click', () => {
     resetStatAdmin();
+    stats.applyAdmin(getStatAdmin());   // 第 100 块：恢复默认也要立刻同步本局，别留着旧的追加项
     statAdmin2 = true;   // 打开好让用户看到已清空、可继续改
     renderStatAdminBar();
     renderStatRows();
@@ -9138,6 +9142,59 @@ async function boot() {
       hintEl.classList.add('off');
     }
   }
+
+  // ---------------- 版本自检（第 100 块） ----------------
+  // 用户连着两次反馈「改属性之后基础值还是变了」。实测新版面板是对的 —— 真正要命的是
+  // **浏览器 / CDN 缓存**：GitHub Pages 的 index.html 带十分钟缓存，用户刷新后拿到的
+  // 还是老 HTML，于是加载的还是老 `?v=N` 的 js，看到的还是第 97 块那套「反解基础值」。
+  // 光改代码救不了这种情况，得让页面自己发现「远端有更新的版本」并且把自己换掉。
+  const BUILD = (() => {
+    for (const s of [...document.querySelectorAll('script[src]')]) {
+      const m = (s.getAttribute('src') || '').match(/[?&]v=(\d+)/);
+      if (m) return Number(m[1]);
+    }
+    return 0;
+  })();
+  // 设置页底部标出版本号：用户看一眼就知道自己跑的是不是最新那份（排障也靠它）
+  const setFootEl = document.querySelector('#setScr .lv-foot');
+  if (setFootEl && BUILD) setFootEl.textContent = `设置立刻生效，存在本机浏览器里 · v${BUILD}`;
+
+  function checkUpdate() {
+    if (!/^https?:$/.test(location.protocol) || !BUILD) return;
+    if (gameState !== 'title') return;          // 局内不打扰，下次进来再说
+    // 正在设置 / 属性页里操作（尤其正在填属性）时不刷 —— 刷掉等于把人家填到一半的东西吞了
+    for (const id of ['setScr', 'statScr', 'ldScr', 'campScr']) {
+      const el = document.getElementById(id);
+      if (el && el.classList.contains('on')) return;
+    }
+    fetch(`index.html?_=${Date.now()}`, { cache: 'no-store' })
+      .then((r) => (r.ok ? r.text() : ''))
+      .then((html) => {
+        const m = html && html.match(/main\.js\?v=(\d+)/);
+        if (!m || Number(m[1]) <= BUILD) return;
+        if (gameState !== 'title') return;      // 等这几百毫秒里开打了就别刷
+        for (const id of ['setScr', 'statScr', 'campScr']) {
+          const el = document.getElementById(id);
+          if (el && el.classList.contains('on')) return;
+        }
+        const u = new URL(location.href);
+        u.searchParams.set('_v', String(m[1]));  // 换个查询串 → 这次不再吃 HTML 缓存
+        location.replace(u.toString());
+      })
+      .catch(() => { /* 离线 / 被拦：静默，下次进来自会再查 */ });
+  }
+  setTimeout(checkUpdate, 2500);
+  setTimeout(checkUpdate, 9000);   // 补一次：头一次可能正赶上网络抖动
+  // 手机上还有更常见的一种「一直是旧版」：标签页切到后台再切回来，**页面根本没重载**，
+  // 于是一直跑着几天前那份代码。切回前台也查一次（同一分钟内不重复查，省流量）。
+  let lastVisCheck = 0;
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) return;
+    const now = Date.now();
+    if (now - lastVisCheck < 60000) return;
+    lastVisCheck = now;
+    setTimeout(checkUpdate, 600);
+  });
 
   // 加载完成 → 淡出遮罩 → 标题页同步淡入（或调试模式直接开打）
   // 第 57 块：标题页在整个加载段都藏着（HTML 里 display:none + .off）——
