@@ -90,7 +90,21 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     // 让「公告 → 签到 → 宣传有礼」那条链不来打扰（本套自己驱动签到）
     await ev('window.__game.promo.clear(); window.__game.notice.seenReset && window.__game.notice.seenReset(); 1');
     await waitFor("document.getElementById('titleScr') && !document.getElementById('titleScr').classList.contains('off')", 15000, '标题页淡入');
-    await ev('window.__game.notice.close && 1');
+    // ⚠️ 公告浮层在 z 轴最上面：只做 DOM 断言无所谓，但**截图会被它整张盖住**。
+    // 而且「公告 → 签到 → 宣传有礼」是一条 350ms 一环的定时器链，公告本身还是
+    // **延时自动弹**的 —— 不等它真弹出来就 hide()，等于什么都没做，随后照样盖上来
+    //（第一版就是这么翻的：`__game.notice.close` 钩子名写错 + 关早了，四张截图全被公告挡）。
+    // 正确姿势：等它自己出现 → 按链的顺序一站一站关 → 每一站都等够 350ms。
+    try { await waitFor('__game.notice.open()', 8000, '公告自动弹出'); } catch (_) { /* 这个存档已经看过就不弹 */ }
+    await ev('if (__game.notice.open()) __game.notice.hide(); 1');
+    await sleep(600);
+    await ev('if (__game.sign.open()) __game.sign.hide(); 1');
+    await sleep(600);
+    await ev('if (__game.promo.open()) __game.promo.hide(); 1');
+    await sleep(300);
+    const clean = await ev('JSON.stringify({ n: __game.notice.open(), s: __game.sign.open(), p: __game.promo.open() })');
+    ok(JSON.parse(clean).n === false && JSON.parse(clean).s === false && JSON.parse(clean).p === false,
+      '三个浮层都收干净了（截图才不会被盖住）', clean);
 
     // ============================================================
     console.log('\n[A] 面板结构（三档 + 火种档）');
@@ -190,6 +204,10 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
       ok(cards === 3, '摆出三张永久卡', String(cards));
       const hd = await ev("document.getElementById('upTitle').textContent");
       ok(/永夜火种/.test(hd), '标题写着永夜火种', hd);
+      // 第一次开火种面板会叠一张「这张火种会跟着你一辈子」的确认卡，外加一条
+      // 「成就解锁 · 满勤」的 toast（签满 7 天必然触发）—— 截图前都等它们退场
+      await ev("(() => { const b = document.getElementById('caOk'); if (b) b.click(); return 1; })()");
+      await sleep(1800);
       await shot('boon-from-signin-105.png');
       // 选一张：pending 归零、层数 +1
       const before = await ev('__game.boons.totalStacks()');
@@ -274,6 +292,9 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
       const pcts = await ev(`JSON.stringify([...document.querySelectorAll('#boxPoolRoot .ac-sec[data-sec="box-gold"] .ac-pl-p')].map(e => parseFloat(e.textContent)))`);
       const sum = JSON.parse(pcts).reduce((a, b) => a + b, 0);
       ok(Math.abs(sum - 100) < 0.6, '金匣奖池合计仍是 100%', sum.toFixed(2) + '%');
+      // 截图：滚到金匣那一组，等选完火种留下的 toast 散掉
+      await ev(`document.querySelector('#boxPoolRoot .ac-sec[data-sec="box-gold"]').scrollIntoView({ block: 'start' }), 1`);
+      await sleep(1200);
       await shot('box-pool-105.png');
       await ev('__game.camp.hide ? __game.camp.hide() : 1');
     }
