@@ -13,6 +13,7 @@ import {
 } from './js/metaShop.js';
 import {
   ACHS, ACH_CATS, ACH_TIERS, ACH_COUNT, achById, achsByCat, achTier,
+  achPending, achPendingBones, achClaim, achClaimAll, achClaimed, achMigrate,
 } from './js/achievements.js';
 import {
   DQ_TIERS, DQ_BONES, DQ_PINNED, DQ_POOL, dqTasks, dqPump, dqClaim, dqClaimAll,
@@ -33,6 +34,11 @@ const metaSrc = readFileSync('js/metaShop.js', 'utf8');
 const idxSrc = readFileSync('index.html', 'utf8');
 const achSrc = readFileSync('js/achievements.js', 'utf8');
 const dqSrc = readFileSync('js/dailyQuest.js', 'utf8');
+
+// ⚠️ profile 必须**带同一个 ?v= 导入**：achievements.js 里是 './profile.js?v=N'，
+//    Node 会把带查询串和不带查询串当成两个不同模块（两份独立的 cache），
+//    不带的话这里 unlockAch 解锁的成就、achPending 一个都看不到。
+const { unlockAch, hasAch, bones, addBones, profile } = await import('./js/profile.js?v=' + (idxSrc.match(/\?v=(\d+)/) || [, '0'])[1]);
 
 // ============================================================ 1. 盲盒降价
 sec('1. 盲盒涨价曲线 5% → 3%（首价 +3%/次）');
@@ -159,6 +165,63 @@ for (const c of ACH_CATS) {
   ok(existsSync(c.icon), `类别图标存在：${c.icon}`);
 }
 ok(existsSync('assets/icons/bone.svg'), '骨币图标存在');
+
+// ============================================================ 3c/3d. 成就领奖
+sec('3c. 成就骨币改成手动领（第 94-2 块：解锁 ≠ 发钱）');
+{
+  const p = profile();
+  p.ach = {}; p.achGot = {}; p.bones = 0;
+  ok(achPending().length === 0, '什么都没解锁时没有待领');
+  ok(achClaim('first_blood').reason === 'locked', '没解锁的领不了');
+  ok(achClaim('zzz_no_such').reason === 'nope', '不存在的成就 id 领不了');
+
+  unlockAch('first_blood');                 // tier 0 = 30
+  ok(hasAch('first_blood'), '解锁记下来了');
+  ok(achPending().length === 1, '解锁后出现在待领里（tab 红点读这个）', String(achPending().length));
+  ok(achPendingBones() === 30, '待领合计 30 骨币', String(achPendingBones()));
+  ok(bones() === 0, '★ 解锁那一刻**不发**骨币（改成手动领了）', String(bones()));
+
+  const r = achClaim('first_blood');
+  ok(r.ok && r.bones === 30, '点「领取」拿到 30', JSON.stringify(r));
+  ok(bones() === 30, '骨币真的到账了', String(bones()));
+  ok(achClaimed('first_blood'), '标记为已领');
+  ok(achClaim('first_blood').reason === 'got', '同一条不能领第二次（防刷）');
+  ok(achPending().length === 0, '领完就不在待领里了（红点灭）', String(achPending().length));
+
+  // 一键领取：三档各来一条
+  unlockAch('kills_100');      // 30
+  unlockAch('kills_500');      // 60
+  unlockAch('kills_1500');     // 120
+  ok(achPending().length === 3, '三条待领', String(achPending().length));
+  ok(achPendingBones() === 210, '待领合计 30+60+120 = 210', String(achPendingBones()));
+  const all = achClaimAll();
+  ok(all.length === 3, '一键领走三条', String(all.length));
+  ok(bones() === 30 + 210, '骨币合计正确', String(bones()));
+  ok(achPending().length === 0, '领干净了');
+  ok(achClaimAll().length === 0, '再点一键领取是空操作');
+}
+
+sec('3d. 老用户补发（v=105 之前成就不发骨币）');
+{
+  // 模拟老存档：ach 里一堆解锁记录，achGot 是空的（老存档根本没有这个键）
+  const p = profile();
+  p.ach = {}; p.achGot = {}; p.achMigrated = 0; p.bones = 0;
+  unlockAch('first_blood');
+  unlockAch('kills_500');
+  ok(achPending().length === 2, '老存档「解锁过 + achGot 空」= 两条待补（补发不用搬数据）',
+    String(achPending().length));
+  ok(achPendingBones() === 90, '补发面额 30 + 60', String(achPendingBones()));
+
+  const n1 = achMigrate();
+  ok(n1 === 2, '第一次跑 achMigrate 报出 2 条待补', String(n1));
+  ok(achMigrate() === 0, '第二次跑返回 0（闸门只开一次，不会每次进标题页都弹提示）');
+  ok(achPending().length === 2, '★ 闸门本身不消费待领 —— 补发也要玩家自己点');
+  ok(bones() === 0, '补发不是自动打款，还是要点');
+
+  achClaimAll();
+  ok(bones() === 90, '老用户一键补发到手 90 骨币', String(bones()));
+  ok(achPending().length === 0, '补完就没有待领了');
+}
 
 // ============================================================ 4. 每日任务
 sec('4. 每日任务');
@@ -342,7 +405,9 @@ sec('7. 主页三面板结构');
 {
   for (const id of ['ttPaneMain', 'ttPaneQuest', 'ttPaneAch', 'ttTabMain', 'ttTabQuest', 'ttTabAch',
     'tabDotQuest', 'tabAchN', 'qpList', 'qpBones', 'qpDate', 'qpLeft', 'qpFoot', 'qpAll',
-    'acRoot', 'acProg', 'acFill', 'acBones', 'boxPoolRoot']) {
+    'acRoot', 'acProg', 'acFill', 'acBones', 'boxPoolRoot',
+    // 第 94-2 块：成就改成手动领 —— 红点 / 一键领取 / 说明行
+    'tabDotAch', 'acSub2', 'acAll', 'acFoot']) {
     ok(idxSrc.includes(`id="${id}"`), `index.html 里有 #${id}`);
   }
   ok(/class="tt-pane on" id="ttPaneMain"/.test(idxSrc), '默认落在主页面那一格');
@@ -359,9 +424,36 @@ sec('7. 主页三面板结构');
   ok(/max-height/.test(bd) && !/grid-template-rows/.test(bd + bdOpen), '.ac-bd 里没有 grid-template-rows');
   ok(/\.ac-pl\.pos/.test(css) && /\.ac-pl\.neg/.test(css) && /\.ac-pl\.rare/.test(css),
     '奖池条目三种类型三种颜色');
+  // 领过骨币的才压暗（原来是「解锁就压暗」，手动领之后这条不对了）
+  ok(/\.ac-it\.got\{[^}]*opacity/.test(css), '领过骨币的成就条目会压暗（.ac-it.got）');
+  ok(/\.ac-it-btn/.test(css), '成就条目上的领取按钮有样式');
 }
 
-// ---------------------------------------------------------------- 汇总
+// ============================================================ 7b. 手动领取的接线
+sec('7b. 成就手动领取（第 94-2 块：解锁 ≠ 发钱）');
+{
+  const mn = readFileSync('js/main.js', 'utf8');
+  // tryAch 的函数体里**不能**再出现 addBones —— 解锁那一刻只该记解锁
+  const i = mn.indexOf('function tryAch(id) {');
+  ok(i > 0, 'main.js 里能定位到 tryAch');
+  const body = i > 0 ? mn.slice(i, mn.indexOf('\n  }', i)) : '';
+  ok(body.includes('unlockAch(id)'), 'tryAch 里写解锁');
+  ok(!/addBones/.test(body), '★ tryAch 里没有 addBones（骨币改成手动领了）',
+    (body.match(/addBones[^\n]*/) || [''])[0]);
+  ok(/回标题页领/.test(body), 'toast 提示玩家回标题页领，而不是说「+N 骨币」');
+
+  // 三个接线点
+  ok(/achPending\(\)/.test(mn) && /tabDotAch/.test(mn), 'tab 红点读 achPending()');
+  ok(/achClaim\(id\)/.test(mn) && /achClaimAll\(\)/.test(mn), '单条领取与一键领取都接上了');
+  ok(/runAchMigrate\(\)/.test(mn), '回标题页跑一次老用户补发闸门');
+  ok(/achMigrate/.test(mn) && /老用户补发/.test(mn), '补发这件事在代码里有名字（不是隐式行为）');
+
+  // profile 里两张表分开存
+  const pf = readFileSync('js/profile.js', 'utf8');
+  ok(/achGot: \{\}/.test(pf), 'profile 有 achGot（领过骨币的记录）');
+  ok(/achMigrated/.test(pf), 'profile 有 achMigrated 闸门字段');
+  ok(/export function markAchGot/.test(pf), 'profile 导出 markAchGot');
+}
 console.log(`\n${'='.repeat(52)}`);
 console.log(`  通过 ${pass} / 失败 ${fail}`);
 if (fails.length) {

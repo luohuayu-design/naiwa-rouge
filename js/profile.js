@@ -45,6 +45,11 @@ const DEFAULT_PROFILE = {
   stats: { runs: 0, wins: 0, kills: 0, seconds: 0, coins: 0, dmgTaken: 0, cards: {}, lanternReveal: 0 },
   codex: { enemies: {}, cards: {}, swords: {}, relics: {}, events: {} },
   ach: {},
+  // 第 94-2 块：已经**领过骨币**的成就 { id: 时间戳 }。
+  // 解锁（ach）与领奖（achGot）分开存 —— 成就的骨币改成手动领取后，
+  // 「解锁了但还没领」就是 ach 里有、achGot 里没有，红点看这个差集。
+  achGot: {},
+  achMigrated: 0,    // 老用户补发的闸门（只跑一次，见 achievements.js 的 achMigrate）
   bones: 0,
   camp: {},          // 篝火：各簇等级（第 19 块；第 23 块起 0~3）
   boons: {},         // 永夜火种：各卡层数（第 23 块）
@@ -307,6 +312,30 @@ export function unlockAch(id) {
   const p = profile();
   if (p.ach[id]) return false;
   p.ach[id] = Date.now();
+  save();
+  return true;
+}
+
+// ---------------- 成就领奖（第 94-2 块） ----------------
+// 骨币改成手动领之后，「解锁」和「领奖」是两件事：
+//   ach[id]    有 = 解锁了（永久）
+//   achGot[id] 有 = 骨币已经领走了（永久）
+// 差集就是「待领」。老存档里 achGot 是个空对象 —— 那就是老用户补发的全部内容。
+export function achGotMap() {
+  const p = profile();
+  if (!p.achGot || typeof p.achGot !== 'object') p.achGot = {};
+  return p.achGot;
+}
+
+export function achGot(id) {
+  return !!achGotMap()[id];
+}
+
+// 返回 true 表示「这次真的领到了」（重复领返回 false）
+export function markAchGot(id) {
+  const m = achGotMap();
+  if (m[id]) return false;
+  m[id] = Date.now();
   save();
   return true;
 }

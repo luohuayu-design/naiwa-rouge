@@ -5,40 +5,40 @@
 // 目标是把三件事调顺：摇杆输入 → 角色速度/朝向 → 相机跟随。
 // 后续叠战斗时，只需要在 tick() 里加敌人更新与自动攻击，不用动输入层。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=105';
-import { buildNightScene } from './scene.js?v=105';
-import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=105';
+import * as THREE from '../lib/three.module.js?v=106';
+import { buildNightScene } from './scene.js?v=106';
+import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=106';
 // 第 80 块：给 glb 拼上版本号 → SW 缓存优先（详见 assetUrl.js）
-import { withV } from './assetUrl.js?v=105';
-import { createInput } from './input.js?v=105';
-import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=105';
-import { createStatView } from './statView.js?v=105';
-import { createWeaponStats } from './weaponStats.js?v=105';
-import { createFx } from './fx.js?v=105';
-import { createEnemySystem, ENEMY_TYPES } from './enemy.js?v=105';
+import { withV } from './assetUrl.js?v=106';
+import { createInput } from './input.js?v=106';
+import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=106';
+import { createStatView } from './statView.js?v=106';
+import { createWeaponStats } from './weaponStats.js?v=106';
+import { createFx } from './fx.js?v=106';
+import { createEnemySystem, ENEMY_TYPES } from './enemy.js?v=106';
 import {
   createLevel, LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVEL_5, LEVEL_6, LEVEL_7, LEVEL_8, LEVEL_9, LEVELS_BY_ID, DIFFS, setDifficulty, getDifficulty, roundScale, levelStats, levelTypes,
-} from './wave.js?v=105';
-import { createRangeRing } from './rangeRing.js?v=105';
-import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=105';
-import { createWeaponSystem } from './weapon.js?v=105';
-import { createArrowRainSystem } from './arrowRain.js?v=105';
-import { SWORD_KINDS } from './swordKinds.js?v=105';
-import { createGoldSystem } from './gold.js?v=105';
-import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW, SHOP_PINNED } from './shop.js?v=105';
-import { createTurretSystem, TURRET } from './turret.js?v=105';
-import { createRelicSystem, RELIC_DEFS } from './relics.js?v=105';
-import { createHazards } from './hazards.js?v=105';
-import { createDeposit, tagChance } from './deposit.js?v=105';   // 第 81 块：寄存柜；第 84 块：掉牌概率
-import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=105';
-import audio from './audio.js?v=105';
-import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=105';
+} from './wave.js?v=106';
+import { createRangeRing } from './rangeRing.js?v=106';
+import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=106';
+import { createWeaponSystem } from './weapon.js?v=106';
+import { createArrowRainSystem } from './arrowRain.js?v=106';
+import { SWORD_KINDS } from './swordKinds.js?v=106';
+import { createGoldSystem } from './gold.js?v=106';
+import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW, SHOP_PINNED } from './shop.js?v=106';
+import { createTurretSystem, TURRET } from './turret.js?v=106';
+import { createRelicSystem, RELIC_DEFS } from './relics.js?v=106';
+import { createHazards } from './hazards.js?v=106';
+import { createDeposit, tagChance } from './deposit.js?v=106';   // 第 81 块：寄存柜；第 84 块：掉牌概率
+import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=106';
+import audio from './audio.js?v=106';
+import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=106';
 // 第 62 块：回血技能（第四关通关后永久解锁，回 5 点 / CD 25 秒）
-import { createHealSkill, HEAL_AMOUNT, HEAL_CD } from './healSkill.js?v=105';
+import { createHealSkill, HEAL_AMOUNT, HEAL_CD } from './healSkill.js?v=106';
 // 第 62 块：民心专属事件（升档走良性池、掉档走恶性池）
-import { repPoolForTier, REP_GOOD, REP_BAD } from './repEvents.js?v=105';
+import { repPoolForTier, REP_GOOD, REP_BAD } from './repEvents.js?v=106';
 // 第 62 块：攻略面板（战败提示上的「查看攻略」，手风琴三组）
-import { renderGuide, GUIDE_SECTIONS } from './guide.js?v=105';
+import { renderGuide, GUIDE_SECTIONS } from './guide.js?v=106';
 import {
   settings as readSettings, setSetting, save as saveProfile, profile,
   bumpStat, setStatMax, codexAdd, codexCount, countCard, unlockAch, hasAch, addBones, bones, resetAll,
@@ -52,32 +52,32 @@ import {
   rainObtained, markRainObtained,          // 第 65 块：技能的「有没有」只跟解锁有关
   hintSeen, markHintSeen,                  // 第 65 块：一次性提示卡
   markLevelClear, levelCleared, clearCount, // 第 94 块：通关过哪些关（成就用）
-} from './profile.js?v=105';
+} from './profile.js?v=106';
 // 第 44 块：礼包兑换（码表只有哈希，明细在 gift.js 顶部注释）
-import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=105';
+import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=106';
 // 第 46 块：音效包（抽象奶蛙音效包 —— 4 段奶蛙叫声，通关第一关解锁）
-import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=105';
-import * as runSave from './runSave.js?v=105';
+import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=106';
+import * as runSave from './runSave.js?v=106';
 // 第 78 块：存档导出 / 导入。数据逻辑全在这个模块里（不碰 DOM），这里只接按钮
-import * as saveIO from './saveIO.js?v=105';
+import * as saveIO from './saveIO.js?v=106';
 import {
   CAMPFIRE, CAMP_STEP, campBuy, campOwned, campLevel,
   campCost, campApply, bonesFor, diffBoneMul, levelBoneMul, coinBones, BONE,
-} from './campfire.js?v=105';
+} from './campfire.js?v=106';
 // 第 23 块：永夜火种（通关白给的 3 次永久三选一）
 import {
   BOONS, BOON_BY_ID, BOON_PICKS, boonOwned, boonStacks, boonPending, boonTotalStacks,
   grantBoons, rollBoons, takeBoon, applyBoons, boonStackText,
-} from './boons.js?v=105';
+} from './boons.js?v=106';
 // 第 21 块：夜行诅咒（自选 debuff 换骨币倍率）
-import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=105';
+import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=106';
 // 第 22 块：种子与每日挑战
 import {
   DAILY_RULES, dayKey, dayText, dailySeed, seedCode, pickDailyCurses,
   seedFromText, pickSeedRules, loadSeedRecords, saveSeedRecord, pruneSeeds,
   dailyRecord, saveDailyRecord, pruneDaily, makeRng,
-} from './seed.js?v=105';
-import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=105';
+} from './seed.js?v=106';
+import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=106';
 // 第 58 块：局外商店 · 宝箱（花骨币买，开箱随机给永久属性 / 永久法器 / 技能CD缩短）
 import {
   BOXES, BOX_BY_ID, buyBox, rollBox, metaApplyStats, applyMeta,
@@ -85,33 +85,35 @@ import {
   boxCost, boxPriceOf, boxBought, BOX_PRICE_STEP,
   // 第 94 块：奖池一览（手风琴里那些条目与概率，纯计算）
   boxPoolEntries,
-} from './metaShop.js?v=105';
+} from './metaShop.js?v=106';
 // 第 59 块：每日签到（以周为单位，周一 00:00 重置）
 import {
   WEEK_TIERS, SIGN_BONES, weekCells, signSummary, signToday, signedToday,
-} from './signin.js?v=105';
+} from './signin.js?v=106';
 // 第 94 块：成就（八类 × 三档骨币奖励）
+// 第 94-2 块：骨币改成**手动领取**（achPending / achClaim），老用户补发走 achMigrate
 import {
   ACHS, ACH_CATS, ACH_TIERS, ACH_COUNT, achById, achsByCat, achTier,
-} from './achievements.js?v=105';
+  achPending, achPendingBones, achClaim, achClaimAll, achClaimed, achMigrate,
+} from './achievements.js?v=106';
 // 第 94 块：通用手风琴（盲盒奖池与成就面板共用，不复制第三份引擎）
-import { renderAccordion } from './accordion.js?v=105';
+import { renderAccordion } from './accordion.js?v=106';
 // 第 94 块：每日任务（简单 3 + 中等 1 + 困难 1，每天 0 点刷新）
 import {
   DQ_TIERS, DQ_BONES, dqTasks, dqPump, dqSave, dqClaim, dqClaimAll,
   dqPending, dqGained, dqMsLeft, dayKeyOf, dqTier, dqTaskName,
   dqState, dqForceReroll, dqReset,   // 调试口：跨天重掷 / 整条重置
-} from './dailyQuest.js?v=105';
+} from './dailyQuest.js?v=106';
 import {
   EVENTS, ALL_EVENTS, getEventById, pickEvent, effectLines,
   choiceHint, canAfford, costShort, REP_MIN, REP_MAX, REP_START,
   isTalk, eventChoices, resolveRoll, mergeEffects,
-} from './events.js?v=105';
+} from './events.js?v=106';
 // 第 32 块：主线《笑不出来的那一夜》（18 夜，一夜一关，前 3 夜已有关卡）
 import {
   STORY_ARC, STORY_CHAPTERS, STORY_ENDINGS, MARK_INFO,
   storyChapterAt, storyChapterById, storyEndingKey,
-} from './story.js?v=105';
+} from './story.js?v=106';
 
 // 标记模块已经跑起来了：index.html 的兜底自检靠它判断
 // 「模块根本没执行」还是「执行了但加载慢」。
@@ -2154,6 +2156,7 @@ async function boot() {
     // 顺手把两个 tab 上的徽章刷一遍 —— 成就和每日任务的进度是在局里涨的。
     setTitleTab('main');
     refreshTabBadges();
+    runAchMigrate();              // 第 94-2 块：老用户补发（只跑一次，有就提示一次）
     // 第 57 块：在主界面停留一会儿 → 默默建图鉴缓存（用户建议的「自动缓存」）
     scheduleCodexPrewarm();
     // 第 23 块：上次通关后直接关了网页，这 3 次永久选择还欠着 —— 回标题页补上
@@ -4777,23 +4780,23 @@ async function boot() {
   exitBtn.addEventListener('click', saveAndExit);
 
   // ---------------- 成就 / 图鉴 / 战绩（第 18 块，第 94 块重做） ----------------
-  // 解锁即**直接发骨币**并弹 toast；已解锁的重复调用是空操作。
+  // 解锁**只记解锁**，骨币要玩家自己去成就面板点「领取」（第 94-2 块）。
   //
   // 第 94 块之前成就纯装饰 —— 67 条成就解锁完玩家什么也拿不到，只有一句 toast。
   // 现在它是夜行骨币的第三条来源（前两条是每局结算与签到）：寻常 30 / 不易 60 /
   // 罕见 120，档位写在 achievements.js 的 ACH_TIERS 里，**这里不写死数字**。
   //
-  // ⚠️ 已解锁的旧成就是**不发**的：老存档里那 30 条一下子补发两千骨币，
-  //    会把盲盒那套靠成本兜底的平衡直接冲掉。玩家会看到「已解锁」，仅此而已。
+  // ⚠️ 第 94-2 块改成和每日任务同一个手感：**进度（解锁）自动记，骨币要点才到手**。
+  //    解锁那一刻不 addBones，只是让 achPending() 多一条 —— tab 红点、面板按钮、
+  //    一键领取全部读这一张差集表。老存档里解锁过的成就也在里面（老用户补发）。
   function tryAch(id) {
     if (!unlockAch(id)) return false;
     const a = achById(id);
     if (!a) return false;
     const gain = achTier(a.tier).bones;
-    addBones(gain);
-    showToast(`成就解锁 · ${a.name}`, `${a.desc} · +${gain} 骨币`);
+    showToast(`成就解锁 · ${a.name}`, `${a.desc} · 回标题页领 ${gain} 骨币`);
     audio.sfx('ach');       // 第 25 块：解锁铃（原来是蹭页签切换声）
-    refreshTabBadges();     // 第 94 块：tab 上的「n/67」当场跟着涨
+    refreshTabBadges();     // 第 94 块：tab 上的「n/67」+ 待领红点当场跟着变
     return true;
   }
 
@@ -4904,6 +4907,7 @@ async function boot() {
   const ttTabQuest = document.getElementById('ttTabQuest');
   const ttTabAch = document.getElementById('ttTabAch');
   const tabDotQuest = document.getElementById('tabDotQuest');
+  const tabDotAch = document.getElementById('tabDotAch');
   const tabAchN = document.getElementById('tabAchN');
   const qpList = document.getElementById('qpList');
   const qpBones = document.getElementById('qpBones');
@@ -4915,6 +4919,9 @@ async function boot() {
   const acProg = document.getElementById('acProg');
   const acFill = document.getElementById('acFill');
   const acBones = document.getElementById('acBones');
+  const acSub2 = document.getElementById('acSub2');
+  const acAllBtn = document.getElementById('acAll');
+  const acFoot = document.getElementById('acFoot');
   const boxPoolRoot = document.getElementById('boxPoolRoot');
 
   // 三个匣子各自的图标（game-icons，CC BY 3.0）
@@ -4977,14 +4984,29 @@ async function boot() {
   ttTabAch.addEventListener('click', () => setTitleTab('ach'));
 
   // ---------------- tab 上的红点与徽章 ----------------
-  // 这两处是玩家在主页面就能看到的全部信息：成就有几个 / 每日任务有没有得领。
-  // 每次回标题页、每次领奖、每次开箱都刷一遍。
+  // 三个都是玩家在主页面就能看到的信息：成就解锁了几个 / 成就有没有得领 /
+  // 每日任务有没有得领。每次回标题页、每次领奖、每次开箱都刷一遍。
   function refreshTabBadges() {
     const p = profile();
     const got = (p.ach && typeof p.ach === 'object' ? Object.keys(p.ach) : []).length;
     tabAchN.textContent = `${got}/${ACH_COUNT}`;
-    const pend = dqPending();
-    tabDotQuest.hidden = pend <= 0;
+    tabDotQuest.hidden = dqPending() <= 0;
+    // 第 94-2 块：成就也是手动领了 —— 有待领就亮红点（老用户补发就靠它提示）
+    const aPend = achPending().length;
+    if (tabDotAch) tabDotAch.hidden = aPend <= 0;
+  }
+
+  // 老用户补发：v=105 之前成就不给骨币，老存档里那批解锁记录一次都没发过。
+  // 升级后第一次进标题页提示一次，玩家点成就 tab 就能一键领走。
+  let achMigrateDone = false;
+  function runAchMigrate() {
+    if (achMigrateDone) return;
+    achMigrateDone = true;
+    const n = achMigrate();
+    refreshTabBadges();
+    if (n > 0) {
+      showToast('成就奖励待领', `${n} 条成就的骨币还没领（含老存档补发）· 去成就面板一键领取`);
+    }
   }
 
   // ============================================================
@@ -5132,14 +5154,31 @@ async function boot() {
     acFill.style.width = `${Math.round((gotAll / ACH_COUNT) * 100)}%`;
     acBones.textContent = adminOn ? '∞' : String(bones());
 
+    const pend = achPending();
+    const pendBones = achPendingBones();
+    if (acSub2) {
+      acSub2.textContent = pend.length > 0
+        ? `解锁后要自己点领取 · 寻常 30 / 不易 60 / 罕见 120 · 有 ${pend.length} 条待领（${pendBones} 骨币）`
+        : '解锁后要自己点领取 · 寻常 30 / 不易 60 / 罕见 120 · 都领干净了';
+    }
+    if (acAllBtn) {
+      acAllBtn.disabled = pend.length <= 0;
+      acAllBtn.textContent = pend.length > 0 ? `一键领取 · ${pend.length} 条（${pendBones} 骨币）` : '还没有能领的';
+    }
+    if (acFoot) {
+      acFoot.textContent = '解锁那一刻只点亮成就，骨币要去点「领取」；'
+        + '换版本前就解锁过的老成就这次一并补发（v=105 之前成就不发骨币）';
+    }
+
     const sections = ACH_CATS.map((cat) => {
       const list = achsByCat(cat.id);
       const got = list.filter((a) => ach[a.id]).length;
+      const catPend = list.filter((a) => ach[a.id] && !achClaimed(a.id)).length;
       return {
         id: cat.id,
         icon: cat.icon,
         title: cat.name,
-        count: `${got}/${list.length}`,
+        count: catPend > 0 ? `${got}/${list.length} · ${catPend} 待领` : `${got}/${list.length}`,
         sub: cat.lead,
         build: (body) => buildAchItems(body, list, ach),
       };
@@ -5149,6 +5188,7 @@ async function boot() {
     for (const b of acRoot.querySelectorAll('.ac-hd')) {
       b.addEventListener('click', () => { achOpenCat = b.parentElement.dataset.sec; });
     }
+    refreshTabBadges();     // 第 94-2 块：领完要让 tab 红点当场灭掉
   }
 
   // 成就条目（只有展开的那一组会走到这里 —— 八组 67 条不会一次性建出来）
@@ -5157,10 +5197,11 @@ async function boot() {
     wrap.className = 'ac-items';
     for (const a of list) {
       const on = !!ach[a.id];
+      const got = achClaimed(a.id);       // 骨币已经领走了
       const pg = achProgress(a);
       const ti = achTier(a.tier);
       const row = document.createElement('div');
-      row.className = `ac-it t${a.tier}` + (on ? ' on' : '');
+      row.className = `ac-it t${a.tier}` + (on ? ' on' : '') + (got ? ' got' : '');
       row.dataset.ach = a.id;
 
       const ic = document.createElement('span');
@@ -5203,14 +5244,58 @@ async function boot() {
       rt.appendChild(bn);
       const pr = document.createElement('div');
       pr.className = 'ac-it-p';
-      pr.textContent = on ? '已解锁' : (a.prog ? pg.text : '');
+      pr.textContent = got ? '已领' : (on ? '已解锁' : (a.prog ? pg.text : ''));
       rt.appendChild(pr);
+
+      // 第 94-2 块：解锁了就给「领取」按钮，领完变「已领」（disabled）。
+      // 没解锁的不给按钮 —— 灰着一条「去做/未解锁」只会让人以为能点。
+      if (on) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'qp-btn ac-it-btn' + (!got ? ' done-ok' : '');
+        btn.dataset.claim = a.id;
+        if (got) {
+          btn.textContent = '已领';
+          btn.disabled = true;
+        } else {
+          btn.textContent = `领 ${ti.bones}`;
+          btn.addEventListener('click', () => doClaimAch(a.id));
+        }
+        rt.appendChild(btn);
+      }
 
       row.append(ic, mid, rt);
       wrap.appendChild(row);
     }
     body.appendChild(wrap);
   }
+
+  // ---------------- 领奖 ----------------
+  // 领完要刷三处：面板自己（按钮变「已领」）、tab 红点、骨币数字
+  // （篝火 / 夜行商店头顶那两个徽章也吃 bones()，不刷会看着还是旧数）。
+  function doClaimAch(id) {
+    const r = achClaim(id);
+    if (!r.ok) { renderAchPane(); return; }
+    audio.sfx('card');
+    renderAchPane();
+    renderCampBadge();
+    renderMsBadge();
+    showToast('骨币到手', `${r.name} · +${r.bones} 骨币`);
+  }
+
+  function doClaimAllAch() {
+    const got = achClaimAll();
+    if (!got.length) { renderAchPane(); return; }
+    audio.sfx('card');
+    let sum = 0;
+    for (const g of got) sum += g.bones;
+    renderAchPane();
+    renderCampBadge();
+    renderMsBadge();
+    showToast('骨币到手', `${got.length} 条成就 · +${sum} 骨币`);
+  }
+
+  if (acAllBtn) acAllBtn.addEventListener('click', doClaimAllAch);
 
   // ============================================================
   // 盲盒奖池手风琴（夜行商店的「盲盒」那一区）
@@ -7422,6 +7507,13 @@ async function boot() {
         unlocked: () => Object.keys((profile().ach && typeof profile().ach === 'object') ? profile().ach : {}).length,
         total: () => ACH_COUNT,
         prog: (id) => achProgress(achById(id) || {}),
+        // 第 94-2 块：手动领取（解锁 ≠ 发钱）
+        pending: () => achPending().map((x) => x.id),
+        pendingBones: () => achPendingBones(),
+        claimed: (id) => achClaimed(id),
+        claim: (id) => achClaim(id),
+        claimAll: () => achClaimAll(),
+        migrate: () => achMigrate(),
       },
       // 第 94 块：每日任务（调试口）
       dq: {

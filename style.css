@@ -781,9 +781,13 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
 .ac-it-r{flex:0 0 auto;text-align:right;padding-top:1px}
 .ac-it-b{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:700;color:#ffd6a0}
 .ac-it-b i{width:11px;height:11px}
-.ac-it.on .ac-it-b{color:rgba(255,214,160,.4)}
+/* 第 94-2 块：领过骨币的才压暗（原来是「解锁就压暗」，骨币改成手动领后不对了） */
+.ac-it.got{opacity:.56}
+.ac-it.got .ac-it-b{color:rgba(255,214,160,.34)}
 .ac-it-p{margin-top:2px;font-size:9.5px;font-variant-numeric:tabular-nums;
   color:rgba(178,220,204,.42)}
+/* 成就的「领 30」按钮：挤在右栏骨币徽章下面，比每日任务那个再小一号 */
+.ac-it-btn{margin-top:4px;padding:5px 9px;font-size:10.5px}
 /* 奖池条目（正面绿 / 诅咒红 / 稀有金） */
 .ac-pool{display:flex;flex-direction:column;gap:4px;padding:0 9px 9px}
 .ac-pl{display:flex;align-items:center;gap:8px;padding:6px 9px;border-radius:9px;

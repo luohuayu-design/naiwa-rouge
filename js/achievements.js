@@ -20,6 +20,8 @@
 //    · tier 决定骨币，**别手写骨币数字**（改档位只改 ACH_TIERS 一处）。
 // ============================================================
 
+import { profile, hasAch, achGot, markAchGot, addBones, save } from './profile.js?v=106';
+
 // ---------------- 八类别 ----------------
 // icon 全部来自 game-icons.net（CC BY 3.0），和背包图标同源；
 // 下载下来后去掉了自带的那块黑色底板、并把 fill 改成 currentColor（用 CSS 着色）。
@@ -65,7 +67,9 @@ export const ACH_CAT_BY_ID = Object.fromEntries(ACH_CATS.map((c) => [c.id, c]));
 // 三档 30 / 60 / 120 —— 一条罕见成就约等于半个金匣。
 // 67 条的分布是 寻常 15 / 不易 37 / 罕见 15，**全清一共 4470 骨币 ≈ 16 个金匣**。
 // 这个量级是「有感觉但不至于把盲盒那套靠成本兜底的平衡冲掉」。
-// ⚠️ 这是**一次性**奖励：解锁那一刻发，已解锁的旧成就不补发（否则老档一夜暴富）。
+// ⚠️ 这是**一次性**奖励，每条只能领一次（achGot 里记着领过没有）。
+// 第 94-2 块之前是「解锁直接发」，现在改成**手动领取**（和每日任务同一个手感）：
+// 解锁 -> 面板上出现「领取」按钮 + tab 亮红点 -> 点了才加骨币。
 export const ACH_TIERS = [
   { id: 0, name: '寻常', bones: 30, cls: 't0' },
   { id: 1, name: '不易', bones: 60, cls: 't1' },
@@ -177,4 +181,67 @@ export function achById(id) { return byId.get(id); }
 // 按类别分组（面板渲染用），顺序照 ACH_CATS
 export function achsByCat(catId) {
   return ACHS.filter((a) => a.cat === catId);
+}
+
+// ============================================================
+// 领奖（第 94-2 块：解锁 -> 手动领骨币）
+// ============================================================
+// 和每日任务是同一套手感：进度（这里是解锁）自动记，骨币要点「领取」才到手。
+// 判据就是两张表的差集 —— ach 里有、achGot 里没有 = 待领。
+
+// 待领清单：[{ id, name, bones }]，按成就表顺序（面板上的顺序一致）
+export function achPending() {
+  const p = profile();
+  const ach = (p.ach && typeof p.ach === 'object') ? p.ach : {};
+  const out = [];
+  for (const a of ACHS) {
+    if (!ach[a.id]) continue;              // 没解锁
+    if (achGot(a.id)) continue;             // 领过了
+    out.push({ id: a.id, name: a.name, bones: achTier(a.tier).bones });
+  }
+  return out;
+}
+
+export function achPendingBones() {
+  return achPending().reduce((n, x) => n + x.bones, 0);
+}
+
+export function achClaimed(id) {
+  return achGot(id);
+}
+
+// 领一条；返回 { ok, bones, name }。没解锁 / 领过了都是 ok:false（UI 不该给按钮）
+export function achClaim(id) {
+  const a = achById(id);
+  if (!a) return { ok: false, reason: 'nope' };
+  if (!hasAch(id)) return { ok: false, reason: 'locked' };
+  if (!markAchGot(id)) return { ok: false, reason: 'got' };
+  const bones = achTier(a.tier).bones;
+  addBones(bones);
+  return { ok: true, bones, name: a.name };
+}
+
+// 一键全领；返回 [{ id, name, bones }]
+export function achClaimAll() {
+  const got = [];
+  for (const x of achPending()) {
+    const r = achClaim(x.id);
+    if (r.ok) got.push({ id: x.id, name: r.name, bones: r.bones });
+  }
+  return got;
+}
+
+// ---------------- 老用户补发（跑一次） ----------------
+// v=105 之前成就**根本不给骨币**，老存档里解锁的那几十条什么也没拿到。
+// 补发的实现不需要额外搬运数据：achGot 在老存档里是空对象，
+// 那些已解锁的成就自然就落在 achPending() 里，玩家点一下就到手。
+//
+// 这个闸门只做一件事：记住「这次升级已经处理过」，好在进标题页时提示一次。
+// 返回待领条数（0 = 没什么可补的）。
+export function achMigrate() {
+  const p = profile();
+  if (p.achMigrated) return 0;
+  p.achMigrated = 1;
+  save();
+  return achPending().length;
 }

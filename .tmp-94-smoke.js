@@ -144,7 +144,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     console.log('\n[1] 版本与启动');
     const idxSrc = await ev(`fetch('index.html').then(r => r.text())`);
     const ver = (idxSrc.match(/v=(\d+)/) || [])[1] || '';
-    ok(ver === '105', `index.html 版本 v=105（实读 ${ver}）`, ver);
+    ok(/^\d+$/.test(ver) && Number(ver) >= 105, `index.html 版本号是数字且 >= 105（实读 v=${ver}）`, ver);
     ok(jsErrors.length === 0, '加载阶段无 JS 异常', jsErrors.slice(0, 3).join(' | '));
     ok(await ev('!!document.getElementById("ttTabs")'), '底部三个 tab 在页面上');
 
@@ -364,7 +364,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     ok(a2.arrows >= 1, '展开的那一组箭头转了 90°');
     await shot(SHOT_ACH);
 
-    // 解锁一条 → 骨币到账 + tab 徽章跟着涨
+    // 解锁一条 → **只记解锁**，骨币要自己点领取（第 94-2 块）
     const b0 = await ev('__game.ui.bones()');
     const n0 = await ev("__game.ach.unlocked()");
     await ev(`__game.ach.try('first_blood')`);
@@ -372,7 +372,9 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     const b1 = await ev('__game.ui.bones()');
     const n1 = await ev("__game.ach.unlocked()");
     ok(n1 === n0 + 1, '成就解锁计数 +1', `${n0}->${n1}`);
-    ok(b1 === b0 + 30, `解锁「第一根骨头」发 30 骨币（${b0} → ${b1}）`, `${b0}->${b1}`);
+    ok(b1 === b0, `★ 解锁那一刻**不发**骨币（${b0} → ${b1}）`, `${b0}->${b1}`);
+    ok((await ev(`__game.ach.pending()`)).includes('first_blood'), '这条进了待领清单');
+    ok(await ev(`!document.getElementById('tabDotAch').hidden`), '成就 tab 亮红点（有待领）');
     ok(await ev(`document.getElementById('tabAchN').textContent`) === `${n1}/67`,
       'tab 上的徽章当场跟着涨', await ev(`document.getElementById('tabAchN').textContent`));
     await ev(`__game.tab('main'); __game.tab('ach')`);
@@ -388,10 +390,12 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
         label: (it.querySelector('.ac-it-p') || {}).textContent || '',
         barW: it.querySelector('.ac-it-bar i') ? it.querySelector('.ac-it-bar i').style.width : '',
         icOpacity: +getComputedStyle(it.querySelector('.ac-it-ic')).opacity,
+        btn: it.querySelector('.ac-it-btn') ? it.querySelector('.ac-it-btn').textContent : '',
       };
     })()`);
     ok(lit.found && lit.on, '重新进面板时这条显示为已解锁（.on）', JSON.stringify(lit));
     ok(lit.label === '已解锁', '右侧写着「已解锁」而不是进度数字', lit.label);
+    ok(lit.btn && /领 30/.test(lit.btn), `解锁未领的条目上有「领 30」按钮（${lit.btn}）`, lit.btn);
     ok(lit.barW === '100%', '进度条满格', lit.barW);
     ok(lit.icOpacity > 0.9, '图标不再是灰的（解锁后点亮）', String(lit.icOpacity));
     // 同一组里没解锁的那条该是灰的
@@ -400,6 +404,38 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
       return it ? +getComputedStyle(it.querySelector('.ac-it-ic')).opacity : -1;
     })()`);
     ok(dim >= 0 && dim < 0.6, '没解锁的条目图标是灰的（对比明显）', String(dim));
+
+    // 面板底部的「一键领取」：点了才真的到手
+    const acAllTxt = await ev(`document.getElementById('acAll').textContent`);
+    ok(/一键领取/.test(acAllTxt), `底部有一键领取按钮（${acAllTxt}）`, acAllTxt);
+    // 再解锁两条不同档位的，凑出三档面额
+    await ev(`__game.ach.try('kills_500'); __game.ach.try('kills_1500')`);
+    await sleep(300);
+    await ev(`__game.tab('main'); __game.tab('ach')`);
+    await sleep(400);
+    const sum0 = await ev(`__game.ach.pendingBones()`);
+    ok(sum0 === 30 + 60 + 120, `三档待领合计 ${sum0}（30+60+120）`, String(sum0));
+    const bb0 = await ev('__game.ui.bones()');
+    await ev(`document.getElementById('acAll').click()`);
+    await sleep(400);
+    const bb1 = await ev('__game.ui.bones()');
+    ok(bb1 === bb0 + 210, `一键领取到手 210 骨币（${bb0} → ${bb1}）`, `${bb0}->${bb1}`);
+    ok((await ev(`__game.ach.pending()`)).length === 0, '领完待领清空');
+    ok(await ev(`document.getElementById('tabDotAch').hidden`), '红点灭了');
+    ok(await ev(`document.getElementById('acAll').disabled`), '一键领取按钮变灰');
+    // 领过的那条：按钮变「已领」、条目压暗
+    const gotSt = await ev(`(() => {
+      const it = document.querySelector('#acRoot .ac-sec[data-sec="battle"] .ac-it[data-ach="first_blood"]');
+      if (!it) return { found: false };
+      const b = it.querySelector('.ac-it-btn');
+      return { found: true, got: it.classList.contains('got'), txt: b ? b.textContent : '', dis: b ? b.disabled : null,
+        label: (it.querySelector('.ac-it-p') || {}).textContent || '',
+        op: +getComputedStyle(it).opacity };
+    })()`);
+    ok(gotSt.found && gotSt.got, '领过的条目带 .got', JSON.stringify(gotSt));
+    ok(gotSt.txt === '已领' && gotSt.dis === true, '按钮变「已领」且不可点', JSON.stringify(gotSt));
+    ok(gotSt.label === '已领', '右侧文字从「已解锁」变成「已领」', gotSt.label);
+    ok(gotSt.op < 0.7, '领过的条目压暗（和待领的区分开）', String(gotSt.op));
 
     // ------------------------------------------------------------ 6
     console.log('\n[6] 盲盒奖池手风琴');
