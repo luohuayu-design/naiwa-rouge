@@ -2156,16 +2156,21 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
 .sign-day.today.signed{border-color:rgba(126,235,196,.8);background:rgba(126,235,196,.18)}
 .sign-day.future{opacity:.42}
 
-/* 两个里程碑条：3 天 100 / 6 天 200 */
-.sign-tiers{display:flex;gap:8px}
-.sign-tier{flex:1;padding:8px 10px;border-radius:11px;border:1px solid rgba(255,209,102,.2);
+/* 三档里程碑：3 天 100 / 5 天 150 / 7 天 一次永夜火种（第 105 块）
+   三格挤在 430px 面板里，字要收一点；第 7 天那档换成「火」色，和骨币两档区分开 */
+.sign-tiers{display:flex;gap:7px}
+.sign-tier{flex:1;min-width:0;padding:8px 8px;border-radius:11px;border:1px solid rgba(255,209,102,.2);
   background:rgba(46,34,12,.5);display:flex;flex-direction:column;gap:3px}
-.sign-tier .st-k{font-size:10px;letter-spacing:.08em;color:rgba(214,226,206,.7)}
-.sign-tier .st-v{font-size:12.5px;font-weight:800;color:#ffd9a0}
-.sign-tier .st-p{font-size:9.5px;letter-spacing:.04em;color:rgba(150,196,180,.6)}
+.sign-tier .st-k{font-size:10px;letter-spacing:.06em;color:rgba(214,226,206,.7);white-space:nowrap}
+.sign-tier .st-v{font-size:12px;font-weight:800;color:#ffd9a0;line-height:1.25}
+.sign-tier .st-p{font-size:9.5px;letter-spacing:.02em;color:rgba(150,196,180,.6);line-height:1.3}
 .sign-tier.done{border-color:rgba(126,235,196,.5);background:rgba(24,54,46,.55)}
 .sign-tier.done .st-v{color:#7ef0c6}
 .sign-tier.done .st-p{color:rgba(126,235,196,.72)}
+.sign-tier.boon{border-color:rgba(255,150,92,.3);background:rgba(52,24,12,.55)}
+.sign-tier.boon .st-v{color:#ffb27a}
+.sign-tier.boon.done{border-color:rgba(255,150,92,.58);background:rgba(56,30,16,.62)}
+.sign-tier.boon.done .st-v{color:#ffc79b}
 
 /* 刚才这一下拿了什么（签到后即时反馈） */
 .sign-gain{min-height:0;font-size:12px;font-weight:700;letter-spacing:.02em;color:#7ef0c6}

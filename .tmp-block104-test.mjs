@@ -167,7 +167,10 @@ sec('⑦ 云端短码存档：不做，也不许偷偷长回来');
 sec('⑧ 版本号：全站一致');
 // ============================================================
 {
-  ok(VER === '118', `index.html 是 v=118（实际 ${VER}）`);
+  // ⚠️ 别把版本号写死在这里：每发一次版就要回来改一行，第 105 块就被它拦过一次
+  // （`?v=118` 硬编码 → 全站 bump 到 119 后这条立刻假红）。
+  // 真正要钉的是「有版本号」+「全站一致」，具体数字由 index.html 说了算。
+  ok(/^\d+$/.test(VER) && Number(VER) > 0, `index.html 带版本号（v=${VER}）`);
   const bad = [];
   for (const f of readdirSync(new URL('./js/', import.meta.url)).filter((x) => x.endsWith('.js'))) {
     for (const m of read('./js/' + f).matchAll(/\?v=(\d+)/g)) if (m[1] !== VER) bad.push(f + ' → ' + m[1]);

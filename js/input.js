@@ -4,7 +4,7 @@
 // 输出约定与摇杆一致：x 向右为正，y 向下为正（屏幕坐标）。
 // 摇杆一旦被按住就优先于键盘，避免手指和键盘打架。
 // ============================================================
-import { createJoystick } from './joystick.js?v=118';
+import { createJoystick } from './joystick.js?v=119';
 
 const KEY_VEC = {
   w: [0, -1], arrowup: [0, -1],

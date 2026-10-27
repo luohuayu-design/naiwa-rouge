@@ -24,8 +24,8 @@
 import {
   profile, bones, addBones, metaShopState, metaAddMod, metaGrantRelic,
   metaGrantSkillCd, metaLog, metaBought, save,
-} from './profile.js?v=118';
-import { RELIC_DEFS } from './relics.js?v=118';
+} from './profile.js?v=119';
+import { RELIC_DEFS } from './relics.js?v=119';
 
 // ---------------- 三档宝箱 ----------------
 // tier 0/1/2 对应「最低可出现的池子档位」；mag 是木匣基准的强度倍率；
@@ -38,6 +38,20 @@ export const BOXES = [
 ];
 
 export const BOX_BY_ID = Object.fromEntries(BOXES.map((b) => [b.id, b]));
+
+// ---------------- 第 105 块：属性幅度统一系数 ----------------
+// 用户定案「属性加成统一稍微低一些」，**价格不动**。
+// 为什么这一块要削：签到从「固定 20」变成「随机 0~100」（均值 50），日收入翻了一倍多，
+// 盲盒等于白降了价；不减幅度的话局外成长会把九关的难度吃平。
+// 0.88 = 整体 −12%，wood/silver/gold 一起乘，所以「木匣给多少、金匣翻几倍」的相对关系不变。
+// ⚠️ UI 上的「强度 ×N」必须用 boxMag() 取，别直接读 box.mag —— 否则显示和实算对不上。
+export const BOX_ATTR_SCALE = 0.88;
+
+// 某个箱子的**实际**强度倍率（已含统一系数）
+export function boxMag(box) {
+  const b = typeof box === 'string' ? BOX_BY_ID[box] : box;
+  return b ? b.mag * BOX_ATTR_SCALE : 0;
+}
 
 // ---------------- 第 74 块：按购买次数线性涨价 ----------------
 // 和篝火一个思路（篝火是每级 +35%）但**缓得多**：盲盒有 35% / 18% / 7% 的诅咒率，
@@ -93,6 +107,14 @@ const POS = [
   { stat: 'lifesteal',   flat: 0.04, icon: '🩸', name: '嗜血', desc: '近战吸血',   minTier: 1, weight: 0.6 },
   { stat: 'multiHit',    flat: 1,    icon: '🎯', name: '连击', desc: '同时命中',   minTier: 1, weight: 0.45, int: true },
   { stat: 'critDamage',  pct: 0.10,  icon: '💥', name: '暴怒', desc: '暴击伤害',   minTier: 1, weight: 0.55 },
+  // 第 105 块（用户从四条候选里全选）：补 4 条以前池子里没有、但真能影响手感的属性。
+  // 幅度按升级卡的口径压到很小 —— 「长臂」一条 +0.40 格、「剑锋」+11%、转速 +50%，
+  // 局外盲盒每次只给这几十分之一（再乘 BOX_ATTR_SCALE），叠几十次才追得上一张卡。
+  // 银/金才有的是「要么吃元素剑、要么纯手感」的那两条，木匣不掺。
+  { stat: 'attackRange', flat: 0.10, icon: '📏', name: '远臂', desc: '攻击范围',   minTier: 0, weight: 0.80 },
+  { stat: 'swordCrit',   flat: 0.02, scope: 'weapon', icon: '✦', name: '锋线', desc: '剑暴击率', minTier: 0, weight: 0.80 },
+  { stat: 'swordOrbit',  pct: 0.06,  scope: 'weapon', icon: '🌀', name: '环绕', desc: '剑转速', minTier: 1, weight: 0.60 },
+  { stat: 'elementRadius', flat: 0.50, scope: 'weapon', icon: '📡', name: '扩散', desc: '元素波及', minTier: 1, weight: 0.50 },
 ];
 
 // 负面池（与正面一一对应，幅度一致；诅咒时强制给其中一条）
@@ -107,6 +129,11 @@ const NEG = [
   { stat: 'swordDamage', pct: 0.04, scope: 'weapon', icon: '🌫️', name: '剑锈', desc: '环剑伤害', minTier: 0, weight: 1.0 },
   { stat: 'attackSpeed', pct: 0.02,  icon: '🐌', name: '迟滞', desc: '攻击速度',   minTier: 0, weight: 0.9 },
   { stat: 'hpRegen',     flat: 0.08, icon: '🥀', name: '枯萎', desc: '生命回复',   minTier: 1, weight: 0.25 },
+  // 第 105 块：上面四条新正向的对应负面（幅度一致、方向相反，照旧靠诅咒率制造风险）
+  { stat: 'attackRange', flat: 0.10, icon: '🧤', name: '短臂', desc: '攻击范围',   minTier: 0, weight: 0.80 },
+  { stat: 'swordCrit',   flat: 0.02, scope: 'weapon', icon: '🪤', name: '钝锋', desc: '剑暴击率', minTier: 0, weight: 0.80 },
+  { stat: 'swordOrbit',  pct: 0.06,  scope: 'weapon', icon: '🕸️', name: '滞环', desc: '剑转速', minTier: 1, weight: 0.60 },
+  { stat: 'elementRadius', flat: 0.50, scope: 'weapon', icon: '🧿', name: '收束', desc: '元素波及', minTier: 1, weight: 0.50 },
 ];
 
 // 稀有项里可永久拥有的法器（不含任何一关才有的，全部 5 种都能常驻）
@@ -170,7 +197,7 @@ export function rollBox(boxId, rng = Math.random) {
   if (rng() < box.curse) {
     const pool = NEG.filter((e) => e.minTier <= box.tier);
     const e = pickWeighted(pool, rng);
-    const t = effectText(e, box.mag, false);
+    const t = effectText(e, boxMag(box), false);
     return { cursed: true, kind: 'stat', mod: { stat: t.stat, flat: t.flat, pct: t.pct, scope: t.scope }, icon: t.icon, name: t.name, effectText: t.effectText, stat: t.stat, scope: t.scope, flat: t.flat, pct: t.pct };
   }
 
@@ -190,7 +217,7 @@ export function rollBox(boxId, rng = Math.random) {
   // 3) 普通正面属性
   const pool = POS.filter((e) => e.minTier <= box.tier);
   const e = pickWeighted(pool, rng);
-  const t = effectText(e, box.mag, true);
+  const t = effectText(e, boxMag(box), true);
   return { cursed: false, kind: 'stat', mod: { stat: t.stat, flat: t.flat, pct: t.pct, scope: t.scope }, icon: t.icon, name: t.name, effectText: t.effectText, stat: t.stat, scope: t.scope, flat: t.flat, pct: t.pct };
 }
 
@@ -233,7 +260,7 @@ export function boxPoolEntries(boxId) {
     });
   }
   for (const e of pos) {
-    const s = scaleMod(e, box.mag);
+    const s = scaleMod(e, boxMag(box));
     rows.push({
       kind: 'pos', icon: e.icon, name: e.name,
       sub: `${e.desc} +${s.text}`,
@@ -241,7 +268,7 @@ export function boxPoolEntries(boxId) {
     });
   }
   for (const e of neg) {
-    const s = scaleMod(e, box.mag);
+    const s = scaleMod(e, boxMag(box));
     rows.push({
       kind: 'neg', icon: e.icon, name: e.name,
       sub: `${e.desc} −${s.text}`,

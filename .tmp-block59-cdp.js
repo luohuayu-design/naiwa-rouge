@@ -126,10 +126,17 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     ok(await ev("document.querySelectorAll('#signWeek .sign-day').length") === 7, 'DOM 里画了 7 格');
     ok(await ev("document.querySelectorAll('#signWeek .sign-day.today').length") === 1, '今天那格带 today 类');
     const tiers = await ev("document.querySelectorAll('#signTiers .sign-tier').length");
-    ok(tiers === 2, '两条里程碑条（3 天 / 6 天）', String(tiers));
+    ok(tiers === 3, '三条里程碑条（3 / 5 / 7 天 —— 第 105 块）', String(tiers));
     const tierTxt = await ev("document.getElementById('signTiers').textContent");
-    ok(/累计 3 天/.test(tierTxt) && /\+100 骨币/.test(tierTxt) && /累计 6 天/.test(tierTxt) && /\+200 骨币/.test(tierTxt),
-      '里程碑文案 3 天 100 / 6 天 200', tierTxt);
+    ok(/累计 3 天/.test(tierTxt) && /\+100 骨币/.test(tierTxt) && /累计 5 天/.test(tierTxt) && /\+150 骨币/.test(tierTxt),
+      '里程碑文案 3 天 100 / 5 天 150', tierTxt);
+    ok(/累计 7 天/.test(tierTxt) && /永夜火种 ×1/.test(tierTxt), '第 7 天那档写的是永夜火种 ×1', tierTxt);
+    ok(!/\+200 骨币/.test(tierTxt), '旧的「6 天 +200 骨币」已经不在面板上');
+    ok(await ev("document.querySelectorAll('#signTiers .sign-tier.boon').length") === 1, '火种那档单独一个样式类');
+    ok(/0~100/.test(await ev("document.getElementById('signSub').textContent")), '副标题写明每天随机 0~100',
+      await ev("document.getElementById('signSub').textContent"));
+    ok(/随机 0~100/.test(await ev("document.getElementById('signBtn').textContent")), '按钮文案写明随机区间',
+      await ev("document.getElementById('signBtn').textContent"));
     ok(/还差 3 天/.test(tierTxt), '未达标显示还差几天', tierTxt);
     await shot('sign_panel.png');
 
@@ -140,7 +147,10 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     await ev("document.getElementById('signBtn').click(), 1");
     await sleep(400);
     const b1 = await ev('JSON.parse(localStorage.getItem("naiwa_rouge_profile_v1")).bones');
-    ok(b1 === b0 + 20, '骨币 +20', `${b0} → ${b1}`);
+    // 第 105 块：每天随机 0~100，落账金额必须和面板上写的那一行对得上
+    const gainedRoll = Number((await ev("document.getElementById('signGain').textContent")).match(/(\d+) 骨币/)[1]);
+    ok(b1 === b0 + gainedRoll && gainedRoll >= 0 && gainedRoll <= 100,
+      '骨币按这次随机到的值落账（0~100）', `${b0} → ${b1}（随机 ${gainedRoll}）`);
     ok(await ev('__game.sign.signed()') === true, '今天记为已签');
     const s1 = JSON.parse(await ev('JSON.stringify(__game.sign.state())'));
     ok(s1.days === 1, '本周 1 天', String(s1.days));
@@ -148,7 +158,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     ok(await ev("document.getElementById('signBtn').disabled") === true, '签到按钮变灰');
     ok(/今天已签到/.test(await ev("document.getElementById('signBtn').textContent")), '按钮文案换成「今天已签到」');
     const gainTxt = await ev("document.getElementById('signGain').textContent");
-    ok(/今日签到：\+20 骨币/.test(gainTxt), '即时反馈写了拿到什么', gainTxt);
+    ok(/今日签到：(\+\d+ 骨币|0 骨币（这次空手）)/.test(gainTxt), '即时反馈写了拿到什么', gainTxt);
     const bBtn = JSON.parse(await ev('JSON.stringify(__game.sign.btn())'));
     ok(bBtn.dot === false && bBtn.done === true, '主菜单红点消失、按钮变绿', JSON.stringify(bBtn));
     // 第 60 块 hotfix：只翻 hidden 属性不算数，要确认元素真的不渲染

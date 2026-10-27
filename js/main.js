@@ -5,40 +5,40 @@
 // 目标是把三件事调顺：摇杆输入 → 角色速度/朝向 → 相机跟随。
 // 后续叠战斗时，只需要在 tick() 里加敌人更新与自动攻击，不用动输入层。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=118';
-import { buildNightScene } from './scene.js?v=118';
-import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=118';
+import * as THREE from '../lib/three.module.js?v=119';
+import { buildNightScene } from './scene.js?v=119';
+import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=119';
 // 第 80 块：给 glb 拼上版本号 → SW 缓存优先（详见 assetUrl.js）
-import { withV } from './assetUrl.js?v=118';
-import { createInput } from './input.js?v=118';
-import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=118';
-import { createStatView } from './statView.js?v=118';
-import { createWeaponStats } from './weaponStats.js?v=118';
-import { createFx } from './fx.js?v=118';
-import { createEnemySystem, ENEMY_TYPES } from './enemy.js?v=118';
+import { withV } from './assetUrl.js?v=119';
+import { createInput } from './input.js?v=119';
+import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=119';
+import { createStatView } from './statView.js?v=119';
+import { createWeaponStats } from './weaponStats.js?v=119';
+import { createFx } from './fx.js?v=119';
+import { createEnemySystem, ENEMY_TYPES } from './enemy.js?v=119';
 import {
   createLevel, LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVEL_5, LEVEL_6, LEVEL_7, LEVEL_8, LEVEL_9, LEVELS_BY_ID, DIFFS, setDifficulty, getDifficulty, roundScale, levelStats, levelTypes,
-} from './wave.js?v=118';
-import { createRangeRing } from './rangeRing.js?v=118';
-import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=118';
-import { createWeaponSystem } from './weapon.js?v=118';
-import { createArrowRainSystem } from './arrowRain.js?v=118';
-import { SWORD_KINDS } from './swordKinds.js?v=118';
-import { createGoldSystem } from './gold.js?v=118';
-import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW, SHOP_PINNED } from './shop.js?v=118';
-import { createTurretSystem, TURRET } from './turret.js?v=118';
-import { createRelicSystem, RELIC_DEFS } from './relics.js?v=118';
-import { createHazards } from './hazards.js?v=118';
-import { createDeposit, tagChance } from './deposit.js?v=118';   // 第 81 块：寄存柜；第 84 块：掉牌概率
-import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=118';
-import audio from './audio.js?v=118';
-import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=118';
+} from './wave.js?v=119';
+import { createRangeRing } from './rangeRing.js?v=119';
+import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=119';
+import { createWeaponSystem } from './weapon.js?v=119';
+import { createArrowRainSystem } from './arrowRain.js?v=119';
+import { SWORD_KINDS } from './swordKinds.js?v=119';
+import { createGoldSystem } from './gold.js?v=119';
+import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW, SHOP_PINNED } from './shop.js?v=119';
+import { createTurretSystem, TURRET } from './turret.js?v=119';
+import { createRelicSystem, RELIC_DEFS } from './relics.js?v=119';
+import { createHazards } from './hazards.js?v=119';
+import { createDeposit, tagChance } from './deposit.js?v=119';   // 第 81 块：寄存柜；第 84 块：掉牌概率
+import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=119';
+import audio from './audio.js?v=119';
+import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=119';
 // 第 62 块：回血技能（第四关通关后永久解锁，回 5 点 / CD 25 秒）
-import { createHealSkill, HEAL_AMOUNT, HEAL_CD } from './healSkill.js?v=118';
+import { createHealSkill, HEAL_AMOUNT, HEAL_CD } from './healSkill.js?v=119';
 // 第 62 块：民心专属事件（升档走良性池、掉档走恶性池）
-import { repPoolForTier, REP_GOOD, REP_BAD } from './repEvents.js?v=118';
+import { repPoolForTier, REP_GOOD, REP_BAD } from './repEvents.js?v=119';
 // 第 62 块：攻略面板（战败提示上的「查看攻略」，手风琴三组）
-import { renderGuide, GUIDE_SECTIONS } from './guide.js?v=118';
+import { renderGuide, GUIDE_SECTIONS } from './guide.js?v=119';
 import {
   settings as readSettings, setSetting, save as saveProfile, profile,
   bumpStat, setStatMax, codexAdd, codexCount, countCard, unlockAch, hasAch, addBones, bones, resetAll,
@@ -53,32 +53,32 @@ import {
   hintSeen, markHintSeen,                  // 第 65 块：一次性提示卡
   markLevelClear, levelCleared, clearCount, // 第 94 块：通关过哪些关（成就用）
   getStatAdmin, setStatAdmin, resetStatAdmin, // 第 95 / 98 块：管理员模式二（手改最终值 → 存追加项，基础值不动）
-} from './profile.js?v=118';
+} from './profile.js?v=119';
 // 第 44 块：礼包兑换（码表只有哈希，明细在 gift.js 顶部注释）
-import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=118';
+import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=119';
 // 第 46 块：音效包（抽象奶蛙音效包 —— 4 段奶蛙叫声，通关第一关解锁）
-import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=118';
-import * as runSave from './runSave.js?v=118';
+import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=119';
+import * as runSave from './runSave.js?v=119';
 // 第 78 块：存档导出 / 导入。数据逻辑全在这个模块里（不碰 DOM），这里只接按钮
-import * as saveIO from './saveIO.js?v=118';
+import * as saveIO from './saveIO.js?v=119';
 import {
   CAMPFIRE, CAMP_STEP, campBuy, campOwned, campLevel,
   campCost, campApply, bonesFor, diffBoneMul, levelBoneMul, coinBones, BONE,
-} from './campfire.js?v=118';
+} from './campfire.js?v=119';
 // 第 23 块：永夜火种（通关白给的 3 次永久三选一）
 import {
   BOONS, BOON_BY_ID, BOON_PICKS, boonOwned, boonStacks, boonPending, boonTotalStacks,
   grantBoons, rollBoons, takeBoon, applyBoons, boonStackText,
-} from './boons.js?v=118';
+} from './boons.js?v=119';
 // 第 21 块：夜行诅咒（自选 debuff 换骨币倍率）
-import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=118';
+import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=119';
 // 第 22 块：种子与每日挑战
 import {
   DAILY_RULES, dayKey, dayText, dailySeed, seedCode, pickDailyCurses,
   seedFromText, pickSeedRules, loadSeedRecords, saveSeedRecord, pruneSeeds,
   dailyRecord, saveDailyRecord, pruneDaily, makeRng,
-} from './seed.js?v=118';
-import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=118';
+} from './seed.js?v=119';
+import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=119';
 // 第 58 块：局外商店 · 宝箱（花骨币买，开箱随机给永久属性 / 永久法器 / 技能CD缩短）
 import {
   BOXES, BOX_BY_ID, buyBox, rollBox, metaApplyStats, applyMeta,
@@ -86,35 +86,38 @@ import {
   boxCost, boxPriceOf, boxBought, BOX_PRICE_STEP,
   // 第 94 块：奖池一览（手风琴里那些条目与概率，纯计算）
   boxPoolEntries,
-} from './metaShop.js?v=118';
+  // 第 105 块：属性幅度统一系数（UI 显示的「强度 ×」必须和实际算法同源）
+  boxMag,
+} from './metaShop.js?v=119';
 // 第 59 块：每日签到（以周为单位，周一 00:00 重置）
+// 第 105 块：固定 +20 改成每天随机 0~100；里程碑 3/5/7 天 → 100 / 150 骨币 + 一次永夜火种
 import {
-  WEEK_TIERS, SIGN_BONES, weekCells, signSummary, signToday, signedToday,
-} from './signin.js?v=118';
+  SIGN_BONES_MIN, SIGN_BONES_MAX, weekCells, signSummary, signToday, signedToday,
+} from './signin.js?v=119';
 // 第 94 块：成就（八类 × 三档骨币奖励）
 // 第 94-2 块：骨币改成**手动领取**（achPending / achClaim），老用户补发走 achMigrate
 import {
   ACHS, ACH_CATS, ACH_TIERS, ACH_COUNT, achById, achsByCat, achTier,
   achPending, achPendingBones, achClaim, achClaimAll, achClaimed, achMigrate,
-} from './achievements.js?v=118';
+} from './achievements.js?v=119';
 // 第 94 块：通用手风琴（盲盒奖池与成就面板共用，不复制第三份引擎）
-import { renderAccordion } from './accordion.js?v=118';
+import { renderAccordion } from './accordion.js?v=119';
 // 第 94 块：每日任务（简单 3 + 中等 1 + 困难 1，每天 0 点刷新）
 import {
   DQ_TIERS, DQ_BONES, dqTasks, dqPump, dqSave, dqClaim, dqClaimAll,
   dqPending, dqGained, dqMsLeft, dayKeyOf, dqTier, dqTaskName,
   dqState, dqForceReroll, dqReset,   // 调试口：跨天重掷 / 整条重置
-} from './dailyQuest.js?v=118';
+} from './dailyQuest.js?v=119';
 import {
   EVENTS, ALL_EVENTS, getEventById, pickEvent, effectLines,
   choiceHint, canAfford, costShort, REP_MIN, REP_MAX, REP_START,
   isTalk, eventChoices, resolveRoll, mergeEffects,
-} from './events.js?v=118';
+} from './events.js?v=119';
 // 第 32 块：主线《笑不出来的那一夜》（18 夜，一夜一关，前 3 夜已有关卡）
 import {
   STORY_ARC, STORY_CHAPTERS, STORY_ENDINGS, MARK_INFO,
   storyChapterAt, storyChapterById, storyEndingKey,
-} from './story.js?v=118';
+} from './story.js?v=119';
 
 // 标记模块已经跑起来了：index.html 的兜底自检靠它判断
 // 「模块根本没执行」还是「执行了但加载慢」。
@@ -5461,7 +5464,7 @@ async function boot() {
         icon: BOX_ICONS[box.id] || 'assets/icons/ach-meta.svg',
         title: `${box.name} · ${box.cost} 骨币`,
         count: `${e.rows.length} 条`,
-        sub: `诅咒率 ${Math.round(e.curse * 100)}%${box.special ? ' · 未中诅咒时再掷稀有' : ''} · 强度 ×${box.mag}`,
+        sub: `诅咒率 ${Math.round(e.curse * 100)}%${box.special ? ' · 未中诅咒时再掷稀有' : ''} · 强度 ×${boxMag(box).toFixed(1)}`,
         build: (body) => buildPoolRows(body, e.rows),
       };
     });
@@ -5881,9 +5884,11 @@ async function boot() {
   document.getElementById('promoX').addEventListener('click', closePromo);
   document.getElementById('btnPromo').addEventListener('click', () => showPromo(true, false));
 
-  // ---------------- 每日签到（第 59 块）----------------
-  // 用户定案：以周为大单位、日为小单位。周一 00:00 开新的一周（进度清零），
-  // 每天签到 +20 骨币，一周内累计 3 天 +100、6 天 +200（不要求连续）。
+  // ---------------- 每日签到（第 59 块 / 第 105 块改版）----------------
+  // 用户定案：以周为大单位、日为小单位。周一 00:00 开新的一周（进度清零）。
+  // 第 105 块：每天固定 +20 → **随机 0~100 骨币**；
+  //   周内累计 3 天 +100 骨币、5 天 +150 骨币、**7 天换一次永夜火种抽取**
+  //   （不是骨币 —— 就是首次通关后那三次三选一，走 grantBoons/Pending）。
   // 触发链路：公告关掉 → 今天没签就弹签到 → 关掉签到再弹宣传有礼（各每天一次）。
   // 主菜单「今日挑战」那一排有常驻入口，没签的那天按钮上有个红点。
   // 数据与日期计算全在 js/signin.js，这里只管画和发。
@@ -5897,10 +5902,12 @@ async function boot() {
   const btnSignSub = document.getElementById('btnSignSub');
   const signDot = document.getElementById('signDot');
   let signAuto = false;      // 这次是「公告后面自动接上来的」→ 关掉后接着宣传有礼
+  // 面板文案里的「0~100」只从常量来，别在两处各写一遍数字
+  const SIGN_RANGE = `${SIGN_BONES_MIN}~${SIGN_BONES_MAX}`;
 
   function renderSignin() {
     const s = signSummary();
-    signSubEl.textContent = `本周已签 ${s.days} / 7 天 · 每天 +${SIGN_BONES} 骨币 · 周一 00:00 重新开始`;
+    signSubEl.textContent = `本周已签 ${s.days} / 7 天 · 每天随机 ${SIGN_RANGE} 骨币 · 周一 00:00 重新开始`;
 
     // 七格：周一 → 周日，已签打勾，今天描金边
     signWeekEl.textContent = '';
@@ -5923,28 +5930,29 @@ async function boot() {
       signWeekEl.appendChild(cell);
     }
 
-    // 两个里程碑条
+    // 三档里程碑（3 / 5 / 7 天）。奖励可能是骨币，也可能是一次火种抽取 ——
+    // 文案按 t.boons 分支，别在 UI 里写死「+N 骨币」。
     signTiersEl.textContent = '';
-    for (const t of WEEK_TIERS) {
-      const done = t.days === 3 ? s.got3 : s.got6;
+    for (const t of s.tiers) {
       const left = Math.max(0, t.days - s.days);
       const el = document.createElement('div');
-      el.className = 'sign-tier' + (done ? ' done' : '');
+      el.className = 'sign-tier' + (t.done ? ' done' : '') + (t.boons ? ' boon' : '');
       const k = document.createElement('div');
       k.className = 'st-k';
       k.textContent = `累计 ${t.days} 天`;
       const v = document.createElement('div');
       v.className = 'st-v';
-      v.textContent = done ? `+${t.bones} 已领` : `+${t.bones} 骨币`;
+      if (t.boons) v.textContent = t.done ? `火种 ×${t.boons} 已领` : `永夜火种 ×${t.boons}`;
+      else v.textContent = t.done ? `+${t.bones} 已领` : `+${t.bones} 骨币`;
       const p = document.createElement('div');
       p.className = 'st-p';
-      p.textContent = done ? '本周这一档到手了' : (left > 0 ? `还差 ${left} 天` : '今天就能领');
+      p.textContent = t.done ? '本周这一档到手了' : (left > 0 ? `还差 ${left} 天` : '今天就能领');
       el.append(k, v, p);
       signTiersEl.appendChild(el);
     }
 
     signBtn.disabled = s.signedToday;
-    signBtn.textContent = s.signedToday ? '今天已签到 · 明天再来' : `签到 · +${SIGN_BONES} 骨币`;
+    signBtn.textContent = s.signedToday ? '今天已签到 · 明天再来' : `签到 · 随机 ${SIGN_RANGE} 骨币`;
   }
 
   // 主菜单入口的副标题与红点（和签到面板同一份状态）
@@ -5973,9 +5981,15 @@ async function boot() {
     const wasAuto = signAuto;
     signAuto = false;
     renderSignBtn();
+    // 第 105 块：签满 7 天换到的一次永夜火种抽取，关掉签到面板就地接上 ——
+    // 别让玩家签完还得先回一次标题页才轮到那三次三选一。
+    // （showTitle 里那条「待领就补弹」的路径照旧在，签完直接关网页也不会丢。）
+    if (boonPending() > 0 && titleIdle()) showBoons({ after: 'close' });
     if (wasAuto) {
       // 签到关掉 → 350ms 后轮到宣传有礼（它自己有「今日不再弹」挡着）
       setTimeout(() => {
+        // 火种三选一还开着就别往上面盖宣传卡
+        if (boonOpen) return;
         if (titleIdle() && !promoOv.classList.contains('on')) showPromo(false, true);
       }, 350);
     }
@@ -5987,16 +6001,28 @@ async function boot() {
     audio.sfx('ach');
     renderSignin();
     renderSignBtn();
-    // 逐条写拿到什么（签到 20 / 达标补 100、200）
+    // 逐条写拿到什么（今日随机 N 骨币 / 达标补 100、150 / 7 天换一次火种）
     signGainEl.textContent = '';
     let sum = 0;
+    const extra = [];
     for (const g of r.gained) {
       const line = document.createElement('div');
-      line.textContent = `${g.label}：+${g.bones} 骨币`;
+      if (g.kind === 'boon') {
+        line.textContent = `${g.label}：永夜火种 ×${g.boons}（关掉面板就能抽）`;
+        extra.push(`火种 ×${g.boons}`);
+      } else {
+        // 随机到 0 的那天别写「+0 骨币」，写成一句人话 —— 数值照样如实给
+        line.textContent = g.bones === 0
+          ? `${g.label}：0 骨币（这次空手）`
+          : `${g.label}：+${g.bones} 骨币`;
+        sum += g.bones;
+      }
       signGainEl.appendChild(line);
-      sum += g.bones;
     }
-    showToast('签到成功', `本周已签 ${r.days} 天 · 骨币 +${sum}`);
+    const tail = [`本周已签 ${r.days} 天`];
+    if (sum > 0) tail.push(`骨币 +${sum}`);
+    if (extra.length) tail.push(...extra);
+    showToast('签到成功', tail.join(' · '));
     renderCampBadge();
     renderMsBadge();
     // 第 94 块：成就「满勤」（七天全签）与「小康」（身上同时有 1000 骨币）
@@ -6489,7 +6515,7 @@ async function boot() {
       const cursePct = Math.round(box.curse * 100);
       let infoText = `${box.name}：诅咒率 ${cursePct}%`;
       if (box.special) infoText += ` · 有概率出永久法器 / 技能CD缩短`;
-      infoText += ` · 强度 ×${box.mag}`;
+      infoText += ` · 强度 ×${boxMag(box).toFixed(1)}`;
       // 买过就明说涨了多少 —— 玩家要能预判下一次多少钱
       if (nth > 0) infoText += ` · 已开 ${nth} 次，现价 ${price}（首价 ${box.cost}，下次 ${boxCost(box.id, nth + 1)}）`;
       info.textContent = infoText;
@@ -7994,6 +8020,9 @@ async function boot() {
         cells: () => weekCells(),
         signed: () => signedToday(),
         do: () => doSignin(),
+        // 第 105 块：7 天档换的是永夜火种，测试要能读「欠了几次三选一」与面板是否已接上
+        pendingBoons: () => boonPending(),
+        boonOpen: () => boonOpen,
         // dot 读的是**实际可见性**，不是 `hidden` 属性 —— 第 59 块就是这里只读属性，
         // 才让「签到后红点还在」（CSS 里 .tt-dot 的 display 压过 [hidden]）一直假绿。
         btn: () => {
