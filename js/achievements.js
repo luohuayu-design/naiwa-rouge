@@ -13,14 +13,25 @@
 // ③ **有进度条**：prog 字段声明「看哪个计数器、满多少」，面板里能看见
 //    「击倒 137 / 500」这种实数，而不是只有一个干巴巴的描述。
 //
+// ============ 第 106 块改了什么 ============
+// ① **删掉「一线生机」**（生命低于 2 时通关）：用户反馈太难实现 —— 结算时血量
+//    压到 2 还没倒，基本靠运气，玩家不会为了它刻意压血；
+// ② **67 → 106 条（净 +39）**：补了 40 条，八类分配见各段尾部的「第 106 块新增」注释。
+//    重点是把只有 3 条的「剧情 / 隐藏」撑起来，以及给战斗开三个新维度
+//    （暴击次数 / 累计伤害 / 环剑命中）—— 以前战斗类几乎只有「击倒 N 只」。
+// ③ **新统计口径**：crits / dmgDealt / swordHits / deaths / rounds / signDays /
+//    gifts / dailyRuns，全部落在 profile.stats 上（老存档自动从 0 起，不影响任何已有数据）。
+//
 // ⚠️ 新增成就的三条规矩：
 //    · 必须有埋点，没有埋点的成就永远不会亮（本文件不含任何运行时逻辑）；
 //    · prog 的 kind 只能填 'stat'（profile.stats 的键）/ 'enemy'（图鉴击倒数）/
-//      'events'（遇到过的奇遇种类数），main.js 只认这三种；
+//      'events'（遇到过的奇遇种类数）/ 'meta'（盲盒开箱数）/ 'enemies'（图鉴怪种数）/
+//      'story'（夜行记忆里读过几夜）/ 'camp'（九簇篝火等级之和）/
+//      'swords'（图鉴里的元素剑种类数），main.js 的 achProgress 只认这八种；
 //    · tier 决定骨币，**别手写骨币数字**（改档位只改 ACH_TIERS 一处）。
 // ============================================================
 
-import { profile, hasAch, achGot, markAchGot, addBones, save } from './profile.js?v=119';
+import { profile, hasAch, achGot, markAchGot, addBones, save } from './profile.js?v=120';
 
 // ---------------- 八类别 ----------------
 // icon 全部来自 game-icons.net（CC BY 3.0），和背包图标同源；
@@ -56,7 +67,7 @@ export const ACH_CATS = [
   },
   {
     id: 'secret', name: '隐藏', icon: 'assets/icons/ach-secret.svg',
-    lead: '不写在明面上的三个。慢慢逛，总会撞上。',
+    lead: '不写在明面上的五条。慢慢逛，总会撞上。',
   },
 ];
 
@@ -65,8 +76,9 @@ export const ACH_CAT_BY_ID = Object.fromEntries(ACH_CATS.map((c) => [c.id, c]));
 // ---------------- 三档奖励 ----------------
 // 第 94 块定案用**克制档**：骨币现状是木匣首价 30、金匣 280，篝火一级几十上百。
 // 三档 30 / 60 / 120 —— 一条罕见成就约等于半个金匣。
-// 67 条的分布是 寻常 15 / 不易 37 / 罕见 15，**全清一共 4470 骨币 ≈ 16 个金匣**。
-// 这个量级是「有感觉但不至于把盲盒那套靠成本兜底的平衡冲掉」。
+// 第 106 块后是 106 条，分布 **寻常 22 / 不易 55 / 罕见 29**，
+// **全清一共 7440 骨币 ≈ 26 个金匣**。这是把成就当成长期目标线的意思：
+// 106 条里有 29 条是「几百局才可能摸到」的，普通玩家实际到手远低于这个数。
 // ⚠️ 这是**一次性**奖励，每条只能领一次（achGot 里记着领过没有）。
 // 第 94-2 块之前是「解锁直接发」，现在改成**手动领取**（和每日任务同一个手感）：
 // 解锁 -> 面板上出现「领取」按钮 + tab 亮红点 -> 点了才加骨币。
@@ -102,14 +114,32 @@ export const ACHS = [
   { id: 'wraith_30', cat: 'battle', tier: 1, icon: '🌫️', name: '雾散了', desc: '累计击倒 30 只雾鬼', prog: { k: 'enemy', id: 'wraith', need: 30 } },
   { id: 'leaper_30', cat: 'battle', tier: 1, icon: '🐺', name: '别站在圈里', desc: '累计击倒 30 只雾猎狼', prog: { k: 'enemy', id: 'leaper', need: 30 } },
   { id: 'mender_10', cat: 'battle', tier: 1, icon: '🩹', name: '拆手术台', desc: '累计击倒 10 只缝补小巫', prog: { k: 'enemy', id: 'mender', need: 10 } },
+  // ---- 第 106 块新增：暴击 / 伤害 / 环剑 三个新维度 ----
+  { id: 'crit_100', cat: 'battle', tier: 0, icon: '🎯', name: '手熟了', desc: '累计打出 100 次暴击', prog: { k: 'stat', key: 'crits', need: 100 } },
+  { id: 'crit_1000', cat: 'battle', tier: 1, icon: '💢', name: '专挑骨头缝', desc: '累计打出 1000 次暴击', prog: { k: 'stat', key: 'crits', need: 1000 } },
+  { id: 'crit_run_50', cat: 'battle', tier: 1, icon: '🌩️', name: '一夜五十响', desc: '单局打出 50 次暴击' },
+  { id: 'dmg_10k', cat: 'battle', tier: 0, icon: '🪓', name: '开张', desc: '累计造成 1 万点伤害', prog: { k: 'stat', key: 'dmgDealt', need: 10000 } },
+  { id: 'dmg_100k', cat: 'battle', tier: 1, icon: '🪨', name: '拆塔的力气', desc: '累计造成 10 万点伤害', prog: { k: 'stat', key: 'dmgDealt', need: 100000 } },
+  { id: 'dmg_1m', cat: 'battle', tier: 2, icon: '🌋', name: '百万骨灰', desc: '累计造成 100 万点伤害', prog: { k: 'stat', key: 'dmgDealt', need: 1000000 } },
+  { id: 'sword_5000', cat: 'battle', tier: 1, icon: '🪃', name: '剑不停', desc: '环剑累计命中 5000 次', prog: { k: 'stat', key: 'swordHits', need: 5000 } },
+  { id: 'kills_3000', cat: 'battle', tier: 2, icon: '🧱', name: '白骨墙', desc: '累计击倒 3000 只骷髅', prog: { k: 'stat', key: 'kills', need: 3000 } },
 
   // ========== 生存 ==========
   { id: 'flawless_round', cat: 'survive', tier: 1, icon: '🛡️', name: '一根汗毛都没少', desc: '一整回合不掉一滴血' },
-  { id: 'low_hp_win', cat: 'survive', tier: 2, icon: '🕯️', name: '一线生机', desc: '生命低于 2 时通关' },
+  // ⚠️ 第 106 块：删掉了「一线生机（生命低于 2 时通关）」—— 用户反馈太苛刻。
+  //    结算时血量低到 2 还没倒，基本只能靠运气，玩家不会为了它刻意压血。
+  //    `tryAch('low_hp_win')` 的埋点已经一并从 main.js 移除。
   { id: 'hp_30', cat: 'survive', tier: 1, icon: '❤️', name: '血牛', desc: '单局生命上限堆到 30' },
   { id: 'armor_10', cat: 'survive', tier: 1, icon: '🥋', name: '铁王八', desc: '单局防御堆到 10（记得最多只减 70%）' },
   { id: 'potion_10', cat: 'survive', tier: 0, icon: '🧪', name: '药罐子', desc: '累计喝掉 10 瓶药水', prog: { k: 'stat', key: 'potions', need: 10 } },
   { id: 'aegis_10', cat: 'survive', tier: 0, icon: '🔔', name: '金身不坏', desc: '金钟罩累计挡下 10 次伤害', prog: { k: 'stat', key: 'blocks', need: 10 } },
+  // ---- 第 106 块新增 ----
+  { id: 'deaths_10', cat: 'survive', tier: 0, icon: '🪦', name: '再来一次', desc: '累计倒下 10 次（倒下也算数）', prog: { k: 'stat', key: 'deaths', need: 10 } },
+  { id: 'deaths_50', cat: 'survive', tier: 1, icon: '🕯️', name: '屡败屡战', desc: '累计倒下 50 次', prog: { k: 'stat', key: 'deaths', need: 50 } },
+  { id: 'no_potion_win', cat: 'survive', tier: 1, icon: '🧴', name: '一滴不喝', desc: '全程没喝药就通关' },
+  { id: 'flawless_win', cat: 'survive', tier: 2, icon: '🪞', name: '整夜无伤', desc: '一局从头到尾没掉过一滴血就通关' },
+  { id: 'hp_50', cat: 'survive', tier: 2, icon: '🫀', name: '血肉城墙', desc: '单局生命上限堆到 50' },
+  { id: 'armor_20', cat: 'survive', tier: 2, icon: '🪖', name: '刀枪不入', desc: '单局防御堆到 20（每下仍至少吃 30%）' },
 
   // ========== 构筑 ==========
   { id: 'first_sword', cat: 'build', tier: 0, icon: '🗡️', name: '环剑到手', desc: '拿到旋转的环剑' },
@@ -121,6 +151,13 @@ export const ACHS = [
   { id: 'turret_3', cat: 'build', tier: 1, icon: '🏹', name: '炮兵阵地', desc: '同时摆下 3 台弩炮台' },
   { id: 'shop_20', cat: 'build', tier: 0, icon: '🪙', name: '大主顾', desc: '累计在商店花掉 200 金币', prog: { k: 'stat', key: 'spent', need: 200 } },
   { id: 'gold_500', cat: 'build', tier: 1, icon: '💰', name: '富甲一方', desc: '单局攒到 500 金币' },
+  // ---- 第 106 块新增 ----
+  { id: 'cards_20', cat: 'build', tier: 1, icon: '🎴', name: '牌比命长', desc: '一局里拿到 20 张升级卡' },
+  { id: 'cards_30', cat: 'build', tier: 2, icon: '🎰', name: '什么都想要', desc: '一局里拿到 30 张升级卡' },
+  { id: 'sword_12', cat: 'build', tier: 2, icon: '🔱', name: '十二剑阵', desc: '环上同时挂着 12 把剑' },
+  { id: 'gold_1000', cat: 'build', tier: 1, icon: '🏦', name: '一夜暴富', desc: '单局攒到 1000 金币' },
+  { id: 'spent_1000', cat: 'build', tier: 1, icon: '🧾', name: '千金散尽', desc: '累计在商店花掉 1000 金币', prog: { k: 'stat', key: 'spent', need: 1000 } },
+  { id: 'potion_50', cat: 'build', tier: 1, icon: '⚗️', name: '炼丹师', desc: '累计喝掉 50 瓶药水', prog: { k: 'stat', key: 'potions', need: 50 } },
 
   // ========== 关卡 ==========
   { id: 'first_run', cat: 'level', tier: 0, icon: '🌙', name: '夜行开始', desc: '打完第一局（无论输赢）', prog: { k: 'stat', key: 'runs', need: 1 } },
@@ -142,6 +179,13 @@ export const ACHS = [
   { id: 'woodfish_10', cat: 'level', tier: 1, icon: '🐡', name: '泡都打爆了', desc: '累计击倒 10 只木鱼灵', prog: { k: 'enemy', id: 'woodfish', need: 10 } },
   { id: 'warden_5', cat: 'level', tier: 1, icon: '🚪', name: '柜子空着', desc: '累计击倒 5 只寄存处看守', prog: { k: 'enemy', id: 'warden', need: 5 } },
   { id: 'weigh_5', cat: 'level', tier: 1, icon: '📒', name: '撕掉五本账簿', desc: '累计击倒 5 只称量官', prog: { k: 'enemy', id: 'weigher', need: 5 } },
+  // ---- 第 106 块新增 ----
+  { id: 'round_5', cat: 'level', tier: 0, icon: '🌱', name: '第一步', desc: '单局打到第 5 回合' },
+  { id: 'rounds_500', cat: 'level', tier: 1, icon: '⏳', name: '五百个回合', desc: '累计打满 500 个回合', prog: { k: 'stat', key: 'rounds', need: 500 } },
+  { id: 'wins_30', cat: 'level', tier: 2, icon: '🎖️', name: '老手', desc: '累计通关 30 次', prog: { k: 'stat', key: 'wins', need: 30 } },
+  { id: 'wins_50', cat: 'level', tier: 2, icon: '🏅', name: '夜里的常驻', desc: '累计通关 50 次', prog: { k: 'stat', key: 'wins', need: 50 } },
+  { id: 'enemies_10', cat: 'level', tier: 0, icon: '👀', name: '见过十种', desc: '图鉴里记下 10 种怪', prog: { k: 'enemies', need: 10 } },
+  { id: 'enemies_15', cat: 'level', tier: 1, icon: '🧭', name: '荒草地博物', desc: '图鉴里记下 15 种怪', prog: { k: 'enemies', need: 15 } },
 
   // ========== 挑战 ==========
   { id: 'win_fast', cat: 'challenge', tier: 1, icon: '⚡', name: '快刀', desc: '10 分钟内通关' },
@@ -153,11 +197,22 @@ export const ACHS = [
   { id: 'daily_done', cat: 'challenge', tier: 0, icon: '📅', name: '今日份', desc: '打完一次今日挑战（倒下也算）' },
   { id: 'daily_win', cat: 'challenge', tier: 1, icon: '🥇', name: '今日最佳', desc: '通关一次今日挑战' },
   { id: 'lucky_10', cat: 'challenge', tier: 1, icon: '🍀', name: '福星高照', desc: '幸运达到 10' },
+  // ---- 第 106 块新增 ----
+  { id: 'win_15', cat: 'challenge', tier: 0, icon: '🐢', name: '不紧不慢', desc: '15 分钟内通关' },
+  { id: 'curse_7', cat: 'challenge', tier: 2, icon: '🧿', name: '七咒压顶', desc: '带着至少七条诅咒通关' },
+  { id: 'hard_win', cat: 'challenge', tier: 1, icon: '🔺', name: '挑硬的啃', desc: '在「噩梦」或「地狱」难度通关' },
+  { id: 'lucky_20', cat: 'challenge', tier: 2, icon: '🎲', name: '赌徒', desc: '幸运达到 20' },
+  { id: 'seed_win', cat: 'challenge', tier: 1, icon: '🔢', name: '自己找的路', desc: '通关一次种子挑战（自己输入的种子）' },
+  { id: 'daily_5', cat: 'challenge', tier: 1, icon: '🗓️', name: '今日五连', desc: '累计打完 5 次今日挑战', prog: { k: 'stat', key: 'dailyRuns', need: 5 } },
 
   // ========== 剧情 ==========
   { id: 'story_first', cat: 'story', tier: 0, icon: '📖', name: '第一夜', desc: '在关卡里撞见主线《笑不出来的那一夜》' },
   { id: 'story_all', cat: 'story', tier: 1, icon: '📚', name: '夜行人', desc: '在夜行记忆里读完十八夜' },
   { id: 'story_finish', cat: 'story', tier: 2, icon: '🔔', name: '齁', desc: '读到钟楼顶的结局' },
+  // ---- 第 106 块新增：十八夜不是一口气读完的，给中途一个落点 ----
+  // 进度走 prog.k='story'（读 profile.story.read 的条数），不用单独埋计数器
+  { id: 'story_6', cat: 'story', tier: 0, icon: '🪔', name: '第六夜', desc: '在夜行记忆里读到第六夜', prog: { k: 'story', need: 6 } },
+  { id: 'story_12', cat: 'story', tier: 1, icon: '🎭', name: '第十二夜', desc: '在夜行记忆里读到第十二夜', prog: { k: 'story', need: 12 } },
 
   // ========== 局外 ==========
   { id: 'box_10', cat: 'meta', tier: 0, icon: '📦', name: '开箱十连', desc: '累计开启 10 个盲盒', prog: { k: 'meta', key: 'opened', need: 10 } },
@@ -166,11 +221,22 @@ export const ACHS = [
   { id: 'bones_1000', cat: 'meta', tier: 1, icon: '💎', name: '小康', desc: '同时存下 1000 骨币' },
   { id: 'gift_first', cat: 'meta', tier: 0, icon: '🎟️', name: '第一个码', desc: '兑换过一次礼包码' },
   { id: 'sign_full', cat: 'meta', tier: 1, icon: '📆', name: '满勤', desc: '一整周七天全部签到' },
+  // ---- 第 106 块新增 ----
+  { id: 'box_200', cat: 'meta', tier: 2, icon: '🧰', name: '两百个匣子', desc: '累计开启 200 个盲盒', prog: { k: 'meta', key: 'opened', need: 200 } },
+  { id: 'camp_18', cat: 'meta', tier: 2, icon: '🌡️', name: '篝火烧旺', desc: '九簇篝火总等级达到 18', prog: { k: 'camp', need: 18 } },
+  { id: 'sign_30', cat: 'meta', tier: 1, icon: '✅', name: '签到手不停', desc: '累计签到 30 天', prog: { k: 'stat', key: 'signDays', need: 30 } },
+  { id: 'gift_5', cat: 'meta', tier: 1, icon: '🔖', name: '码农', desc: '累计兑换 5 个礼包码', prog: { k: 'stat', key: 'gifts', need: 5 } },
 
   // ========== 隐藏 ==========
-  { id: 'all_enemies', cat: 'secret', tier: 2, icon: '📕', name: '骨塔名录', desc: '图鉴集齐全部 20 种怪', prog: { k: 'enemies', need: 20 } },
+  // 第 106 块顺手修：原来是 20，可第 97 块加完盖章人已经是 21 只 ——
+  // need 写 20 的话进度条到 20/20 就满格（100%），实际还差一只没打。
+  // 解锁判定在 main.js 里读的是 ENEMY_TYPES 的真实数量，所以只是显示错，但会误导玩家。
+  { id: 'all_enemies', cat: 'secret', tier: 2, icon: '📕', name: '骨塔名录', desc: '图鉴集齐全部 21 种怪', prog: { k: 'enemies', need: 21 } },
   { id: 'event_50', cat: 'secret', tier: 1, icon: '👁️', name: '见多识广', desc: '遇到 50 种奇遇', prog: { k: 'events', need: 50 } },
   { id: 'event_100', cat: 'secret', tier: 2, icon: '🌌', name: '夜行百态', desc: '遇到 100 种奇遇', prog: { k: 'events', need: 100 } },
+  // ---- 第 106 块新增 ----
+  { id: 'event_all', cat: 'secret', tier: 2, icon: '🗺️', name: '荒草地全图', desc: '把全部 131 种奇遇都撞一遍', prog: { k: 'events', need: 131 } },
+  { id: 'all_swords', cat: 'secret', tier: 2, icon: '🪄', name: '六色剑谱', desc: '图鉴里集齐六种元素剑', prog: { k: 'swords', need: 6 } },
 ];
 
 export const ACH_COUNT = ACHS.length;

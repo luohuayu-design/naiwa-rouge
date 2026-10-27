@@ -335,7 +335,8 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     ok(!!a.openId, '进来默认展开一组', a.openId);
     ok(a.openItems > 0, `展开的那组真的建出了条目（${a.openItems} 条）`);
     ok(a.othersBuilt === 0, '没展开的七组还没建 DOM（懒构建生效，老手机不卡）', String(a.othersBuilt));
-    ok(/^\d+ \/ 67$/.test(a.prog), `头部进度 ${a.prog}`, a.prog);
+    // 第 106 块：67 → 106
+    ok(/^\d+ \/ 106$/.test(a.prog), `头部进度 ${a.prog}`, a.prog);
     ok(/^\d+%$/.test(a.fillW), '总进度条有宽度', a.fillW);
 
     // 展开另一组
@@ -357,10 +358,11 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     })()`);
     ok(a2.openN === 1, '手风琴语义：同时只开一组（开新的收旧的）', String(a2.openN));
     ok(a2.openId === 'secret', '开的是「隐藏」那组', a2.openId);
-    ok(a2.items === 3, `隐藏组 3 条（实得 ${a2.items}）`);
-    ok(a2.tiers.length === 3, '每条都有档位标签', a2.tiers.join(','));
+    // 第 106 块：隐藏组从 3 条变 5 条（多了「荒草地全图」「六色剑谱」两条收集型）
+    ok(a2.items === 5, `隐藏组 5 条（实得 ${a2.items}）`);
+    ok(a2.tiers.length === 5, '每条都有档位标签', a2.tiers.join(','));
     ok(a2.hasBone, '每条都画了骨币图标');
-    ok(a2.bars === 3, '隐藏组三条都有进度条（都是收集型）', String(a2.bars));
+    ok(a2.bars === 5, '隐藏组五条都有进度条（都是收集型）', String(a2.bars));
     ok(a2.arrows >= 1, '展开的那一组箭头转了 90°');
     await shot(SHOT_ACH);
 
@@ -375,7 +377,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     ok(b1 === b0, `★ 解锁那一刻**不发**骨币（${b0} → ${b1}）`, `${b0}->${b1}`);
     ok((await ev(`__game.ach.pending()`)).includes('first_blood'), '这条进了待领清单');
     ok(await ev(`!document.getElementById('tabDotAch').hidden`), '成就 tab 亮红点（有待领）');
-    ok(await ev(`document.getElementById('tabAchN').textContent`) === `${n1}/67`,
+    ok(await ev(`document.getElementById('tabAchN').textContent`) === `${n1}/106`,
       'tab 上的徽章当场跟着涨', await ev(`document.getElementById('tabAchN').textContent`));
     await ev(`__game.tab('main'); __game.tab('ach')`);
     await sleep(400);

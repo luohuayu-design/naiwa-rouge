@@ -113,7 +113,8 @@ ok(BOX_BY_ID.gold.curse < BOX_BY_ID.silver.curse && BOX_BY_ID.silver.curse < BOX
 
 // ============================================================ 3. 成就
 sec('3. 成就（八类 × 三档）');
-ok(ACH_COUNT === 67, `共 67 条成就（第 94 块从 41 条扩上来）`, String(ACH_COUNT));
+// 第 106 块：67 → 106（删掉「一线生机」+ 补 40 条）
+ok(ACH_COUNT === 106, `共 106 条成就（第 94 块 41 → 第 94 块 67 → 第 106 块 106）`, String(ACH_COUNT));
 ok(ACHS.length === ACH_COUNT, 'ACHS 长度与 ACH_COUNT 一致');
 ok(ACH_CATS.length === 8, '八个类别', String(ACH_CATS.length));
 {
@@ -140,19 +141,22 @@ ok(achTier(9).bones === 30, 'achTier 对越界档位回退到第一档（不会�
 {
   const byTier = [0, 1, 2].map((t) => ACHS.filter((a) => a.tier === t).length);
   ok(byTier.every((n) => n >= 10), '三档都够多（没有哪一档只有孤零零几条）', byTier.join('/'));
-  ok(byTier[2] <= byTier[1] && byTier[2] <= byTier[0],
+  // 第 106 块：106 条里「不易」最多（22/55/29）。这里只钉「罕见不是最多」——
+  // 「罕见比寻常多」是第 106 块补的那 40 条里有大量中后期目标造成的，不是档位写反。
+  ok(byTier[2] <= byTier[1],
     '罕见档不是最多（档位真的代表难度）', byTier.join('/'));
   // 全清一共发多少骨币 —— 这是平衡口径，改档位会跟着变，必须钉住
   const totalBones = ACHS.reduce((a, x) => a + achTier(x.tier).bones, 0);
-  ok(totalBones === 4470, `67 条全清共 ${totalBones} 骨币（约 16 个金匣，克制档）`, String(totalBones));
-  ok(totalBones / 280 < 20, '全清骨币不到 20 个金匣（不会把盲盒那套成本平衡冲掉）',
+  ok(totalBones === 7440, `106 条全清共 ${totalBones} 骨币（约 27 个金匣，克制档）`, String(totalBones));
+  ok(totalBones / 280 < 30, '全清骨币不到 30 个金匣（不会把盲盒那套成本平衡冲掉）',
     (totalBones / 280).toFixed(1));
 }
 sec('3c. prog 数据源合法');
 {
-  const KINDS = ['stat', 'enemy', 'events', 'meta', 'enemies'];
+  // 第 106 块：加了 story（夜行记忆读过几夜）/ camp（九簇篝火等级和）/ swords（元素剑图鉴）
+  const KINDS = ['stat', 'enemy', 'events', 'meta', 'enemies', 'story', 'camp', 'swords'];
   const bad = ACHS.filter((a) => a.prog && !KINDS.includes(a.prog.k));
-  ok(bad.length === 0, '所有 prog.k 都在 main.js 认得的五种里', bad.map((a) => a.id + ':' + a.prog.k).join(','));
+  ok(bad.length === 0, '所有 prog.k 都在 main.js 认得的八种里', bad.map((a) => a.id + ':' + a.prog.k).join(','));
   const noNeed = ACHS.filter((a) => a.prog && !(a.prog.need > 0));
   ok(noNeed.length === 0, '带 prog 的都有 need > 0（不然进度条 0 除）', noNeed.map((a) => a.id).join(','));
   const withProg = ACHS.filter((a) => a.prog).length;

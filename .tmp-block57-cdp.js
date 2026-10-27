@@ -198,9 +198,10 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     const cache0 = await ev('window.__game.codex.cache()');
     ok(cache0 && cache0.hot && /^enemies\|/.test(cache0.sig), '标题页停留后预热生效（怪物页签已缓存）', JSON.stringify(cache0));
     await ev('window.__game.codex.show()');
-    await waitFor("document.querySelectorAll('#cxList .cx-item').length >= 13", 10000, '怪物页签 13 条');
-    ok(true, '打开图鉴即有 13 条怪物（缓存命中，秒开）');
-    ok(await ev("document.querySelectorAll('#cxList img.cx-thumb').length") === 13, '13 张缩略图都在');
+    // 第 97 块起怪种 21（原来 13）—— 这个数跟着 ENEMY_TYPES 走
+    await waitFor("document.querySelectorAll('#cxList .cx-item').length >= 21", 10000, '怪物页签 21 条');
+    ok(true, '打开图鉴即有 21 条怪物（缓存命中，秒开）');
+    ok(await ev("document.querySelectorAll('#cxList img.cx-thumb').length") === 21, '21 张缩略图都在');
     // 切奇遇页签：112 条现场分块建（每帧 24 条）
     await ev("document.querySelector('#cxTabs button[data-tab=\"events\"]').click()");
     await waitFor("document.querySelectorAll('#cxList .cx-item').length >= 112", 15000, '奇遇页签 112 条分块建完');
@@ -210,14 +211,14 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     await shot('c_codex_events');
     // 切回怪物 → 缓存命中（同步就有）
     await ev("document.querySelector('#cxTabs button[data-tab=\"enemies\"]').click()");
-    ok(await ev("document.querySelectorAll('#cxList .cx-item').length") === 13, '切回怪物页签即时出（缓存命中）');
+    ok(await ev("document.querySelectorAll('#cxList .cx-item').length") === 21, '切回怪物页签即时出（缓存命中）');
     // 关掉再开：整窗克隆
     await ev("document.getElementById('cxBack').click()");
     await sleep(150);
     const tc = Date.now();
     await ev('window.__game.codex.show()');
     const n2 = await ev("document.querySelectorAll('#cxList .cx-item').length");
-    ok(n2 === 13 && Date.now() - tc < 800, `重开图鉴 ${Date.now() - tc}ms 内出全 13 条`, `n=${n2}`);
+    ok(n2 === 21 && Date.now() - tc < 800, `重开图鉴 ${Date.now() - tc}ms 内出全 21 条`, `n=${n2}`);
     await ev("document.getElementById('cxBack').click()");
     await sleep(150);
 

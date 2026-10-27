@@ -104,7 +104,9 @@ async function httpJson(url, method = 'GET') {
     // 第 101 块：码表 51 个（第一批 20 + 宣传有礼 20 + 夜行礼包 10 + 建群大典 1）
     ok('码表里共 51 个礼包', await ev('window.__game.gift.count') === 51);
     ok('主菜单有「礼包兑换」按钮', await ev("!!document.getElementById('btnGift')"));
-    ok('按钮文案是礼包兑换', await ev("document.getElementById('btnGift').textContent.trim()") === '礼包兑换');
+    // 第 106 块：礼包搬去「据点」页，按钮变成「图标 + 名字 + 副标题」三层的卡片 ——
+    // textContent 会把「礼包兑换输码换骨币」粘成一串，取名字要读 .bp-n。
+    ok('按钮文案是礼包兑换', await ev("document.getElementById('btnGift').querySelector('.bp-n').textContent.trim()") === '礼包兑换');
     const baseBones = await ev('window.__game.gift.bones()');
     ok('初始骨币读得到（数字）', typeof baseBones === 'number', String(baseBones));
 

@@ -635,16 +635,20 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
    三个按钮钉在标题页底部（主页面 / 每日任务 / 成就），切哪个上面就切到哪个面板。
    图标全是 game-icons 的单色 SVG（fill=currentColor），颜色随 .on 变。 */
 .tt-tabs{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);
-  display:flex;gap:6px;padding:5px;border-radius:999px;
+  display:flex;gap:5px;padding:5px;border-radius:999px;
   background:rgba(8,20,17,.86);border:1px solid rgba(126,235,196,.16);
-  box-shadow:0 8px 26px rgba(0,0,0,.42)}
-.tt-tab{position:relative;display:inline-flex;align-items:center;gap:6px;
-  padding:8px 15px;border-radius:999px;font:inherit;font-size:11.5px;font-weight:700;
-  letter-spacing:.08em;color:rgba(178,220,204,.6);cursor:pointer;
-  border:1px solid transparent;background:none;
+  box-shadow:0 8px 26px rgba(0,0,0,.42);
+  max-width:calc(100vw - 20px)}
+/* 第 106 块：tab 从 3 个变 4 个，必须整体收窄才装得下 —— 原来 8px 15px 的内边距
+   和 .08em 字距叠加起来四个 tab 要 418px，375 的屏直接溢出。
+   现在 8px 9px + .04em，四个加起来约 338px，320 的窄屏另有一条媒体查询兜底。 */
+.tt-tab{position:relative;display:inline-flex;align-items:center;gap:4px;
+  padding:8px 9px;border-radius:999px;font:inherit;font-size:10.5px;font-weight:700;
+  letter-spacing:.04em;color:rgba(178,220,204,.6);cursor:pointer;
+  border:1px solid transparent;background:none;white-space:nowrap;
   transition:color .18s ease,background .18s ease,border-color .18s ease;
   -webkit-tap-highlight-color:transparent}
-.tt-tab-ic{width:15px;height:15px;opacity:.8}
+.tt-tab-ic{width:13px;height:13px;opacity:.8}
 .tt-tab:hover{color:#bfe9d8;background:rgba(126,235,196,.08)}
 .tt-tab.on{color:#d6ffee;background:rgba(126,235,196,.14);
   border-color:rgba(126,235,196,.34)}
@@ -653,8 +657,57 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
 .tt-tab-dot{width:7px;height:7px;border-radius:50%;background:#ff7a7a;
   box-shadow:0 0 7px rgba(255,122,122,.9);flex:0 0 auto}
 /* 成就那个按钮直接写「24/67」，省得玩家还得点进去才知道进度 */
-.tt-tab-n{font-size:9.5px;font-weight:700;letter-spacing:0;padding:2px 6px;border-radius:999px;
+.tt-tab-n{font-size:9px;font-weight:700;letter-spacing:0;padding:2px 5px;border-radius:999px;
   color:#ffe9a8;background:rgba(255,209,102,.14);border:1px solid rgba(255,209,102,.22)}
+/* 320 级窄屏（iPhone SE 那一档）：四个 tab 再收一档，否则会顶到左右边缘 */
+@media (max-width:360px){
+  .tt-tab{padding:8px 6px;font-size:10px;gap:3px}
+  .tt-tab-ic{width:12px;height:12px}
+  .tt-tab-n{font-size:8.5px;padding:1px 4px}
+}
+
+/* ---------------- 第 106 块：主页属性横卡 ---------------- */
+/* 原来「属性」和「永夜火种」各占一格（tt-row-w2）。火种搬去据点后，
+   属性独占一行 —— 与其做成一格空荡荡的小按钮，不如把四项关键数值摆出来。 */
+.tt-statbar{display:flex;align-items:center;gap:9px;width:100%;max-width:340px;
+  padding:10px 13px;border-radius:13px;font:inherit;cursor:pointer;text-align:left;
+  color:#bfe9d8;border:1px solid rgba(126,235,196,.26);background:rgba(16,40,34,.5);
+  transition:border-color .18s ease,background .18s ease,transform .12s ease;
+  -webkit-tap-highlight-color:transparent}
+.tt-statbar:hover{border-color:rgba(126,235,196,.55);background:rgba(126,235,196,.1)}
+.tt-statbar:active{transform:scale(.985)}
+.ts-k{flex:0 0 auto;font-size:11px;font-weight:800;letter-spacing:.12em;color:#9fe3c4}
+.ts-v{flex:1;min-width:0;font-size:10.5px;letter-spacing:.02em;
+  color:rgba(178,220,204,.7);font-variant-numeric:tabular-nums;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ts-go{flex:0 0 auto;font-size:10px;color:rgba(126,235,196,.55)}
+
+/* ---------------- 第 106 块：据点面板 ---------------- */
+/* 八个入口分两组，2×2 网格。图标在左占两行（名字上、副标题下），
+   比「图标 + 一行字」多一行信息量，但高度只多 2px。 */
+.bp-grp{margin-top:4px}
+.bp-grp + .bp-grp{margin-top:15px}
+.bp-h{margin:0 0 7px 2px;font-size:10px;letter-spacing:.2em;color:rgba(178,220,204,.52)}
+.bp-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.bp-it{display:grid;grid-template-columns:18px 1fr;gap:2px 9px;align-items:center;
+  padding:11px 12px;border-radius:13px;font:inherit;text-align:left;cursor:pointer;
+  color:#d8fff0;border:1px solid rgba(126,235,196,.2);background:rgba(16,40,34,.5);
+  transition:border-color .18s ease,background .18s ease,transform .12s ease;
+  -webkit-tap-highlight-color:transparent}
+.bp-it:hover{border-color:rgba(126,235,196,.5);background:rgba(126,235,196,.1)}
+.bp-it:active{transform:scale(.98)}
+.bp-ic{grid-row:1 / span 2;width:18px;height:18px;color:#7ef0c4;
+  filter:drop-shadow(0 0 7px rgba(126,240,196,.32))}
+.bp-n{font-size:12.5px;font-weight:800;letter-spacing:.04em;line-height:1.2}
+.bp-s{font-size:9.5px;letter-spacing:.02em;line-height:1.2;color:rgba(178,220,204,.5)}
+/* 宣传有礼还是暖金色 —— 和主页面那版一个意思，只是在据点里换了个容器 */
+.bp-it.promo{border-color:rgba(255,209,102,.3);background:rgba(52,42,16,.42)}
+.bp-it.promo:hover{border-color:rgba(255,209,102,.62);background:rgba(70,56,20,.6)}
+.bp-it.promo .bp-ic{color:#ffd166;filter:drop-shadow(0 0 7px rgba(255,196,80,.42))}
+.bp-it.promo .bp-n{color:#ffe9a8}
+.bp-it.promo .bp-s{color:rgba(255,225,160,.55)}
+.bp-foot{margin-top:18px;font-size:9.5px;line-height:1.7;letter-spacing:.03em;
+  text-align:center;color:rgba(150,196,180,.42)}
 
 /* ---------------- 第 94 块：每日任务面板 ---------------- */
 /* 第 94 块：单色 SVG 图标一律走 mask。外链 <img> 里的 currentColor 吃不到外面的
@@ -662,7 +715,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
    background:currentColor + mask —— 颜色随文字色走（tab 的 .on、任务的三档、
    类别色、骨币金），图标文件本身只当形状用。 */
 .qp-head-ic,.ac-head-ic,.tt-tab-ic,.qp-bone i,.qp-left i,.qp-i-ic,.qp-i-b i,
-.ac-hd-ic,.ac-it-b i{
+.ac-hd-ic,.ac-it-b i,.bp-ic{
   display:inline-block;background:currentColor;flex:0 0 auto;
   -webkit-mask:var(--ic) center/contain no-repeat;mask:var(--ic) center/contain no-repeat;
 }
@@ -831,11 +884,8 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
 .tt-row-main .tt-resume{flex:1;max-width:150px;margin-top:0;padding:15px 0}
 .tt-row-chal{margin-top:0;gap:10px}
 .tt-row-chal .tt-daily{flex:1;max-width:160px;margin-top:0;padding:9px 0}
-/* 第 94 块：两格的一行（永夜火种 / 属性）与四格的一行（礼包 / 设置 / 公告 / 宣传）。
-   四格那行每格只有 ~130px，字距必须从 .18em 收窄，否则「宣传有礼」会换行撑歪。 */
-.tt-row-w2 .tt-menu-btn{max-width:190px}
-.tt-row-w4{gap:7px}
-.tt-row-w4 .tt-menu-btn{max-width:none;padding:11px 0;letter-spacing:.02em}
+/* 第 106 块：那两行（w2 = 永夜火种 / 属性，w4 = 礼包 / 设置 / 公告 / 宣传）
+   整行搬去「据点」页了，这两条样式没有元素再用 —— 删掉，别留下半套死 CSS。 */
 /* 续玩按钮：存档存在时出现，比开始游戏低调一档 */
 .tt-resume{margin-top:12px;padding:12px 30px;border-radius:999px;font:inherit;font-size:13px;
   font-weight:700;letter-spacing:.14em;color:#ffe9a8;cursor:pointer;
@@ -2071,10 +2121,8 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
   72%{transform:scale(.99)}
   100%{opacity:1;transform:scale(1)}
 }
-/* 主菜单宣传有礼入口：暖金色，和公告同排、同低调 */
-.tt-row .tt-promo-btn{color:#ffe9a8;border-color:rgba(255,209,102,.34);background:rgba(52,42,16,.4);
-  letter-spacing:.04em;font-size:12px}
-.tt-row .tt-promo-btn:hover{border-color:rgba(255,209,102,.68);background:rgba(70,56,20,.62)}
+/* 第 106 块：宣传有礼搬去「据点」页，暖金色样式改挂在 .bp-it.promo 上
+   （原来那条挂在「主菜单按钮行」上的暖金色样式，那一行按钮没了，样式跟着删） */
 
 /* ---------- 公告盒右下角被裁（第 57 块，用户报 bug + 截图实证） ----------
    用户截图：公告/面板浮层只盖到屏幕约八成，底部露黑、盒底边框和按钮被切。

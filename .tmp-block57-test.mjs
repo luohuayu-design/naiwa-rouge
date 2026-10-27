@@ -38,7 +38,8 @@ ok(/id="promoHideToday"/.test(htmlSrc), '有「今日内不再弹出」勾选框
 ok(/id="promoOk"/.test(htmlSrc), '有「我知道了」按钮 #promoOk');
 ok(/id="promoX"/.test(htmlSrc), '有 ✕ 关闭按钮 #promoX');
 ok(/id="btnPromo"/.test(htmlSrc), '主菜单有「🎁 宣传有礼」入口按钮');
-ok((htmlSrc.match(/tt-promo-btn/g) || []).length >= 1, '入口挂了专用样式类 tt-promo-btn');
+// 第 106 块：宣传搬去「据点」页，外观类从 tt-promo-btn 换成 .bp-it.promo
+ok(/class="bp-it promo" id="btnPromo"/.test(htmlSrc), '入口挂了专用样式类 bp-it promo');
 // 艺术字层里就是「宣传有礼」四个大字 + 副题
 const artHtml = (htmlSrc.match(/<div class="promo-art"[\s\S]*?<\/div>/) || [''])[0];
 ok(/<b>宣传有礼<\/b>/.test(artHtml), '艺术字层主字就是「宣传有礼」');
@@ -82,8 +83,9 @@ ok(/#promoOv\{[^}]*z-index:47/.test(cssSrc), '遮罩 z-index 47（压在公告 4
 ok(/@keyframes promoArtIn\{/.test(cssSrc), '艺术字入场关键帧 promoArtIn');
 ok(/#promoOv\.art \.promo-art\{[^}]*animation:promoArtIn/.test(cssSrc), '.art 期间才播特效');
 ok(/#promoOv\.art \.promo-hd,#promoOv\.art \.promo-bd[^}]*opacity:0/.test(cssSrc), '特效期间正文藏起来（散去才亮相）');
-ok(/background-clip:text;color:transparent/.test(cssSrc.replace(/\n/g, '')), '艺术字走渐变裁字（金色）');
-ok(/tt-promo-btn/.test(cssSrc), '主菜单入口有暖金色样式');
+// 第 106 块：宣传搬去「据点」页，暖金色样式跟着换到 .bp-it.promo
+ok(/\.bp-it\.promo\{/.test(cssSrc), '据点入口有暖金色样式');
+ok(!/tt-promo-btn/.test(cssSrc), '.tt-row .tt-promo-btn 那两条死样式已删（没有元素用它了）');
 
 // ============================================================
 // B. 新增 20 个兑换码（用户第 2 条）

@@ -5,40 +5,40 @@
 // 目标是把三件事调顺：摇杆输入 → 角色速度/朝向 → 相机跟随。
 // 后续叠战斗时，只需要在 tick() 里加敌人更新与自动攻击，不用动输入层。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=119';
-import { buildNightScene } from './scene.js?v=119';
-import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=119';
+import * as THREE from '../lib/three.module.js?v=120';
+import { buildNightScene } from './scene.js?v=120';
+import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=120';
 // 第 80 块：给 glb 拼上版本号 → SW 缓存优先（详见 assetUrl.js）
-import { withV } from './assetUrl.js?v=119';
-import { createInput } from './input.js?v=119';
-import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=119';
-import { createStatView } from './statView.js?v=119';
-import { createWeaponStats } from './weaponStats.js?v=119';
-import { createFx } from './fx.js?v=119';
-import { createEnemySystem, ENEMY_TYPES } from './enemy.js?v=119';
+import { withV } from './assetUrl.js?v=120';
+import { createInput } from './input.js?v=120';
+import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=120';
+import { createStatView } from './statView.js?v=120';
+import { createWeaponStats } from './weaponStats.js?v=120';
+import { createFx } from './fx.js?v=120';
+import { createEnemySystem, ENEMY_TYPES } from './enemy.js?v=120';
 import {
   createLevel, LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVEL_5, LEVEL_6, LEVEL_7, LEVEL_8, LEVEL_9, LEVELS_BY_ID, DIFFS, setDifficulty, getDifficulty, roundScale, levelStats, levelTypes,
-} from './wave.js?v=119';
-import { createRangeRing } from './rangeRing.js?v=119';
-import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=119';
-import { createWeaponSystem } from './weapon.js?v=119';
-import { createArrowRainSystem } from './arrowRain.js?v=119';
-import { SWORD_KINDS } from './swordKinds.js?v=119';
-import { createGoldSystem } from './gold.js?v=119';
-import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW, SHOP_PINNED } from './shop.js?v=119';
-import { createTurretSystem, TURRET } from './turret.js?v=119';
-import { createRelicSystem, RELIC_DEFS } from './relics.js?v=119';
-import { createHazards } from './hazards.js?v=119';
-import { createDeposit, tagChance } from './deposit.js?v=119';   // 第 81 块：寄存柜；第 84 块：掉牌概率
-import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=119';
-import audio from './audio.js?v=119';
-import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=119';
+} from './wave.js?v=120';
+import { createRangeRing } from './rangeRing.js?v=120';
+import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=120';
+import { createWeaponSystem } from './weapon.js?v=120';
+import { createArrowRainSystem } from './arrowRain.js?v=120';
+import { SWORD_KINDS } from './swordKinds.js?v=120';
+import { createGoldSystem } from './gold.js?v=120';
+import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW, SHOP_PINNED } from './shop.js?v=120';
+import { createTurretSystem, TURRET } from './turret.js?v=120';
+import { createRelicSystem, RELIC_DEFS } from './relics.js?v=120';
+import { createHazards } from './hazards.js?v=120';
+import { createDeposit, tagChance } from './deposit.js?v=120';   // 第 81 块：寄存柜；第 84 块：掉牌概率
+import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=120';
+import audio from './audio.js?v=120';
+import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=120';
 // 第 62 块：回血技能（第四关通关后永久解锁，回 5 点 / CD 25 秒）
-import { createHealSkill, HEAL_AMOUNT, HEAL_CD } from './healSkill.js?v=119';
+import { createHealSkill, HEAL_AMOUNT, HEAL_CD } from './healSkill.js?v=120';
 // 第 62 块：民心专属事件（升档走良性池、掉档走恶性池）
-import { repPoolForTier, REP_GOOD, REP_BAD } from './repEvents.js?v=119';
+import { repPoolForTier, REP_GOOD, REP_BAD } from './repEvents.js?v=120';
 // 第 62 块：攻略面板（战败提示上的「查看攻略」，手风琴三组）
-import { renderGuide, GUIDE_SECTIONS } from './guide.js?v=119';
+import { renderGuide, GUIDE_SECTIONS } from './guide.js?v=120';
 import {
   settings as readSettings, setSetting, save as saveProfile, profile,
   bumpStat, setStatMax, codexAdd, codexCount, countCard, unlockAch, hasAch, addBones, bones, resetAll,
@@ -53,32 +53,32 @@ import {
   hintSeen, markHintSeen,                  // 第 65 块：一次性提示卡
   markLevelClear, levelCleared, clearCount, // 第 94 块：通关过哪些关（成就用）
   getStatAdmin, setStatAdmin, resetStatAdmin, // 第 95 / 98 块：管理员模式二（手改最终值 → 存追加项，基础值不动）
-} from './profile.js?v=119';
+} from './profile.js?v=120';
 // 第 44 块：礼包兑换（码表只有哈希，明细在 gift.js 顶部注释）
-import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=119';
+import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=120';
 // 第 46 块：音效包（抽象奶蛙音效包 —— 4 段奶蛙叫声，通关第一关解锁）
-import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=119';
-import * as runSave from './runSave.js?v=119';
+import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=120';
+import * as runSave from './runSave.js?v=120';
 // 第 78 块：存档导出 / 导入。数据逻辑全在这个模块里（不碰 DOM），这里只接按钮
-import * as saveIO from './saveIO.js?v=119';
+import * as saveIO from './saveIO.js?v=120';
 import {
   CAMPFIRE, CAMP_STEP, campBuy, campOwned, campLevel,
   campCost, campApply, bonesFor, diffBoneMul, levelBoneMul, coinBones, BONE,
-} from './campfire.js?v=119';
+} from './campfire.js?v=120';
 // 第 23 块：永夜火种（通关白给的 3 次永久三选一）
 import {
   BOONS, BOON_BY_ID, BOON_PICKS, boonOwned, boonStacks, boonPending, boonTotalStacks,
   grantBoons, rollBoons, takeBoon, applyBoons, boonStackText,
-} from './boons.js?v=119';
+} from './boons.js?v=120';
 // 第 21 块：夜行诅咒（自选 debuff 换骨币倍率）
-import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=119';
+import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=120';
 // 第 22 块：种子与每日挑战
 import {
   DAILY_RULES, dayKey, dayText, dailySeed, seedCode, pickDailyCurses,
   seedFromText, pickSeedRules, loadSeedRecords, saveSeedRecord, pruneSeeds,
   dailyRecord, saveDailyRecord, pruneDaily, makeRng,
-} from './seed.js?v=119';
-import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=119';
+} from './seed.js?v=120';
+import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=120';
 // 第 58 块：局外商店 · 宝箱（花骨币买，开箱随机给永久属性 / 永久法器 / 技能CD缩短）
 import {
   BOXES, BOX_BY_ID, buyBox, rollBox, metaApplyStats, applyMeta,
@@ -88,36 +88,36 @@ import {
   boxPoolEntries,
   // 第 105 块：属性幅度统一系数（UI 显示的「强度 ×」必须和实际算法同源）
   boxMag,
-} from './metaShop.js?v=119';
+} from './metaShop.js?v=120';
 // 第 59 块：每日签到（以周为单位，周一 00:00 重置）
 // 第 105 块：固定 +20 改成每天随机 0~100；里程碑 3/5/7 天 → 100 / 150 骨币 + 一次永夜火种
 import {
   SIGN_BONES_MIN, SIGN_BONES_MAX, weekCells, signSummary, signToday, signedToday,
-} from './signin.js?v=119';
+} from './signin.js?v=120';
 // 第 94 块：成就（八类 × 三档骨币奖励）
 // 第 94-2 块：骨币改成**手动领取**（achPending / achClaim），老用户补发走 achMigrate
 import {
   ACHS, ACH_CATS, ACH_TIERS, ACH_COUNT, achById, achsByCat, achTier,
   achPending, achPendingBones, achClaim, achClaimAll, achClaimed, achMigrate,
-} from './achievements.js?v=119';
+} from './achievements.js?v=120';
 // 第 94 块：通用手风琴（盲盒奖池与成就面板共用，不复制第三份引擎）
-import { renderAccordion } from './accordion.js?v=119';
+import { renderAccordion } from './accordion.js?v=120';
 // 第 94 块：每日任务（简单 3 + 中等 1 + 困难 1，每天 0 点刷新）
 import {
   DQ_TIERS, DQ_BONES, dqTasks, dqPump, dqSave, dqClaim, dqClaimAll,
   dqPending, dqGained, dqMsLeft, dayKeyOf, dqTier, dqTaskName,
   dqState, dqForceReroll, dqReset,   // 调试口：跨天重掷 / 整条重置
-} from './dailyQuest.js?v=119';
+} from './dailyQuest.js?v=120';
 import {
   EVENTS, ALL_EVENTS, getEventById, pickEvent, effectLines,
   choiceHint, canAfford, costShort, REP_MIN, REP_MAX, REP_START,
   isTalk, eventChoices, resolveRoll, mergeEffects,
-} from './events.js?v=119';
+} from './events.js?v=120';
 // 第 32 块：主线《笑不出来的那一夜》（18 夜，一夜一关，前 3 夜已有关卡）
 import {
   STORY_ARC, STORY_CHAPTERS, STORY_ENDINGS, MARK_INFO,
   storyChapterAt, storyChapterById, storyEndingKey,
-} from './story.js?v=119';
+} from './story.js?v=120';
 
 // 标记模块已经跑起来了：index.html 的兜底自检靠它判断
 // 「模块根本没执行」还是「执行了但加载慢」。
@@ -1386,7 +1386,9 @@ async function boot() {
     if (def.healFull) stats.heal(1e9);
     else if (def.heal) stats.heal(def.heal);
     bumpStat('potions');              // 成就：累计喝药
+    runPotions += 1;                  // 第 106 块：本局喝药数（no_potion_win 要求全程 0）
     if (profile().stats.potions >= 10) tryAch('potion_10');
+    if (profile().stats.potions >= 50) tryAch('potion_50');
     dqToast(dqPump({ potions: 1 }));   // 第 94 块：每日任务「喝 2 瓶药水」
     audio.sfx('heal');
     renderHud();
@@ -1515,6 +1517,7 @@ async function boot() {
     // **只数真的掉了血的**：被金钟罩挡下、被无敌帧吃掉的那一下不算挨打 ——
     // 玩家体感上「这回合没被打到」就是没掉血。
     roundDmgTaken += 1;
+    runDmgTaken += 1;      // 第 106 块：整局挨打数（flawless_win 要求全程 0）
     // 棘甲法器（第 29 块）：挨打时对身边一圈怪反伤（被动解场，不需要操作）
     if (!noIframe && relics.thornsHit) relics.thornsHit(pos);
     // 木鱼法器（第 71 块）：挨打时震一圈，把身边怪击退 + 短暂定身（解围用）
@@ -1554,6 +1557,12 @@ async function boot() {
       enemies.takeDamage(e, roll.damage, roll.crit);
       meleeDmg = roll.damage;
       if (roll.crit) anyCrit = true;
+      // 第 106 块：暴击 / 累计伤害两条成就要的数量都在这里记账。
+      // 用 bumpStat 而不是等到结算 —— 结算只看得见「这一局」的合计，
+      // 而「累计暴击 1000 次」得跨局累加才准。
+      // 双拍同时打两只时逐只数（crit_run_50 看的是暴击次数，不是出手次数）。
+      if (roll.crit) { bumpStat('crits'); runCrits += 1; }
+      if (roll.damage > 0) bumpStat('dmgDealt', roll.damage);
       // 吸血：按实际造成的伤害回血（每一只分别结算，属性为 0 时不触发）
       if (lifesteal > 0 && roll.damage > 0) healed += roll.damage * lifesteal;
       // 第 82 块：挥到哪，就把那儿的木鱼灵泡砸一下（泡有血，两下就没）
@@ -2157,6 +2166,8 @@ async function boot() {
     renderMsBadge();              // 局外商店按钮上的骨币数（第 58 块）
     renderSignBtn();              // 每日签到入口的红点与本周进度（第 59 块）
     renderDailyBadge();           // 今日挑战按钮上的「今天最好」（第 22 块）
+    renderTitleStatBar();         // 第 106 块：主页那条属性横卡的四个数
+    renderBasePane();             // 第 106 块：据点里的骨币
     // 第 94 块：回标题页一律落在主页面那一格（用户在商店里切过去的不动），
     // 顺手把两个 tab 上的徽章刷一遍 —— 成就和每日任务的进度是在局里涨的。
     setTitleTab('main');
@@ -2206,6 +2217,10 @@ async function boot() {
     // 一局里几个回合），所以必须跟着一局走 —— 不清的话上一局攒的两个回合会带进新局。
     flawlessRounds = 0;
     roundDmgTaken = 0;
+    // 第 106 块：三条成就的单局口径，跟一局走
+    runCrits = 0;
+    runPotions = 0;
+    runDmgTaken = 0;
     shopSerial = 0;
     nextShopDiscount = 0;
     sealBlocked = 0;
@@ -4007,6 +4022,7 @@ async function boot() {
     const ev = resolveStoryChapter(ch);
     markStorySeen(ch.id);
     markStoryRead(ch.id);
+    checkStoryAchs();       // 第 106 块：读到第 6 / 12 夜
     tryAch('story_first');
     openEvent(ev, endedRound, next);
     showToast(`第 ${ch.no} 夜 · ${ch.title}`, STORY_ARC.title);
@@ -4956,10 +4972,15 @@ async function boot() {
   // 本局「几个回合没掉一滴血」（成就「一根汗毛都没少」与每日任务用），开局清零
   let flawlessRounds = 0;
   let roundDmgTaken = 0;
+  // 第 106 块：三条成就的单局口径（跟着一局走，见 resetRunState）
+  let runCrits = 0;        // 本局暴击次数（crit_run_50）
+  let runPotions = 0;      // 本局喝过几瓶药（no_potion_win：0 才算）
+  let runDmgTaken = 0;     // 本局挨过几下（flawless_win：0 才算）
 
   // ------------------------------------------------------------
   // 成就进度（面板上的进度条）
-  // 只认 achievements.js 里声明的四种 prog：stat / enemy / events / meta / enemies
+  // 认 achievements.js 里声明的八种 prog：stat / enemy / events / meta /
+  // enemies / story / camp / swords（第 106 块补齐后三种）
   // ------------------------------------------------------------
   function achProgress(a) {
     const p = a.prog;
@@ -4972,9 +4993,29 @@ async function boot() {
     else if (p.k === 'meta') cur = Number(metaShopState()[p.key]) || 0;
     else if (p.k === 'enemies') {
       cur = Object.keys(ENEMY_TYPES).filter((k) => !ENEMY_TYPES[k].planned && codexCount('enemies', k) > 0).length;
+    } else if (p.k === 'story') {
+      // 读的是「在主菜单夜行记忆里读过几夜」，不是局内撞见过几夜
+      const rd = (profile().story && profile().story.read) || {};
+      cur = Object.keys(rd).length;
+    } else if (p.k === 'camp') {
+      // 九簇篝火等级之和（第 106 块「篝火烧旺」）
+      const lv = profile().camp || {};
+      cur = Object.values(lv).reduce((n, v) => n + (Number(v) || 0), 0);
+    } else if (p.k === 'swords') {
+      // 图鉴里的元素剑收集数
+      cur = Object.keys(SWORD_KINDS).filter((k) => codexCount('swords', k) > 0).length;
     }
     const c = Math.min(cur, need);
     return { cur: c, need, ratio: need > 0 ? Math.min(1, c / need) : 0, text: `${c} / ${need}` };
+  }
+
+  // 第 106 块：剧情中途落点（读到第 6 / 12 夜）。
+  // ⚠️ 阅读发生在主菜单的「夜行记忆」里，走不到结算流程 —— 只能在这两处
+  // markStoryRead 之后即时判，挂到 checkCumulativeAchs 里永远不会亮。
+  function checkStoryAchs() {
+    const n = Object.keys((profile().story && profile().story.read) || {}).length;
+    if (n >= 6) tryAch('story_6');
+    if (n >= 12) tryAch('story_12');
   }
 
   // 跨局累计型成就统一在结算时对一次表；即时型（喝药/挡刀/杀怪）在各埋点单独查
@@ -4992,26 +5033,42 @@ async function boot() {
     if (isWin) {
       tryAch('first_win');
       tryAch('round_20');       // 第 94 块：原来这条没人发，通关本身就等于打满 20 回合
+      if (elapsed < 900) tryAch('win_15');     // 第 106 块：15 分钟档，垫在 10 分钟那两条前面
       if (elapsed < 600) tryAch('win_fast');
       if (elapsed < 300) tryAch('win_faster');
       if (!weapon.granted) tryAch('win_no_sword');
-      if (stats.hp.cur < 2) tryAch('low_hp_win');
+      // ⚠️ 第 106 块：`low_hp_win`（一线生机）已删除 —— 用户反馈生命低于 2 通关太靠运气。
       if (getDifficulty() === DIFFS.hell) tryAch('hell_win');
+      if (getDifficulty() !== DIFFS.normal) tryAch('hard_win');   // 噩梦 / 地狱都算
       if (pendingCurses.length >= 5) tryAch('curse_5');
+      if (pendingCurses.length >= 7) tryAch('curse_7');
+      if (customSeed) tryAch('seed_win');
+      // 两条「整局干净」型：本局一次药没喝 / 一次血没掉
+      if (runPotions === 0) tryAch('no_potion_win');
+      if (runDmgTaken === 0) tryAch('flawless_win');
     }
+    if (roundShown >= 5) tryAch('round_5');
     if (roundShown >= 10) tryAch('round_10');
     if (roundShown >= 15) tryAch('round_15');
     if (kills >= 100) tryAch('run_kills_100');
     if (kills >= 200) tryAch('run_kills_200');
     if (kills >= 300) tryAch('run_kills_300');
     if (upgradesTaken >= 10) tryAch('cards_10');
+    if (upgradesTaken >= 20) tryAch('cards_20');
+    if (upgradesTaken >= 30) tryAch('cards_30');
     if (runRarities.size >= 5) tryAch('cards_all_kinds');
+    if (runCrits >= 50) tryAch('crit_run_50');
     if (stats.get('luck') >= 10) tryAch('lucky_10');
+    if (stats.get('luck') >= 20) tryAch('lucky_20');
     if (stats.get('maxHp') >= 30) tryAch('hp_30');
+    if (stats.get('maxHp') >= 50) tryAch('hp_50');
     if (stats.get('armor') >= 10) tryAch('armor_10');
+    if (stats.get('armor') >= 20) tryAch('armor_20');
     if (coins >= 500) tryAch('gold_500');
+    if (coins >= 1000) tryAch('gold_1000');
     if (turrets.count() >= 3) tryAch('turret_3');
     if (weapon.orbitingCount >= 8) tryAch('sword_8');
+    if (weapon.orbitingCount >= 12) tryAch('sword_12');
     if (relics.levels().spikes > 0 && relics.levels().frost > 0 && turrets.count() >= 1) tryAch('all_relics');
     if (weaponHasAllElements()) tryAch('all_elements');
     // 关卡专属怪（击倒数是图鉴里那条，杀怪的钩子里已经 +1 过了）
@@ -5022,10 +5079,38 @@ async function boot() {
     if (codexCount('enemies', 'weigher') >= 5) tryAch('weigh_5');
     // 图鉴 / 奇遇收集
     const metEnemies = Object.keys(ENEMY_TYPES).filter((k) => !ENEMY_TYPES[k].planned && codexCount('enemies', k) > 0).length;
+    if (metEnemies >= 10) tryAch('enemies_10');
+    if (metEnemies >= 15) tryAch('enemies_15');
     if (metEnemies >= Object.keys(ENEMY_TYPES).filter((k) => !ENEMY_TYPES[k].planned).length) tryAch('all_enemies');
     const seenEv = ALL_EVENTS.filter((ev) => codexCount('events', ev.id) > 0).length;
     if (seenEv >= 50) tryAch('event_50');
     if (seenEv >= 100) tryAch('event_100');
+    if (seenEv >= ALL_EVENTS.length) tryAch('event_all');
+    // 元素剑图鉴集齐（第 106 块）
+    if (Object.keys(SWORD_KINDS).every((k) => codexCount('swords', k) > 0)) tryAch('all_swords');
+    // ---- 第 106 块：跨局累计型统一在这里对表 ----
+    // 这些计数都在各自的埋点里 +1，结算时只需要比一遍阈值。
+    if ((Number(st.crits) || 0) >= 100) tryAch('crit_100');
+    if ((Number(st.crits) || 0) >= 1000) tryAch('crit_1000');
+    if ((Number(st.dmgDealt) || 0) >= 10000) tryAch('dmg_10k');
+    if ((Number(st.dmgDealt) || 0) >= 100000) tryAch('dmg_100k');
+    if ((Number(st.dmgDealt) || 0) >= 1000000) tryAch('dmg_1m');
+    if ((Number(st.swordHits) || 0) >= 5000) tryAch('sword_5000');
+    if (st.kills >= 3000) tryAch('kills_3000');
+    if ((Number(st.deaths) || 0) >= 10) tryAch('deaths_10');
+    if ((Number(st.deaths) || 0) >= 50) tryAch('deaths_50');
+    if ((Number(st.rounds) || 0) >= 500) tryAch('rounds_500');
+    if (st.wins >= 30) tryAch('wins_30');
+    if (st.wins >= 50) tryAch('wins_50');
+    if ((Number(st.potions) || 0) >= 50) tryAch('potion_50');
+    if ((Number(st.spent) || 0) >= 1000) tryAch('spent_1000');
+    if ((Number(st.signDays) || 0) >= 30) tryAch('sign_30');
+    if ((Number(st.gifts) || 0) >= 5) tryAch('gift_5');
+    if ((Number(st.dailyRuns) || 0) >= 5) tryAch('daily_5');
+    // 剧情中途落点：读的是「夜行记忆里读过几夜」
+    const readN = Object.keys((profile().story && profile().story.read) || {}).length;
+    if (readN >= 6) tryAch('story_6');
+    if (readN >= 12) tryAch('story_12');
   }
 
   // 「六种剑都有一把」—— 看的是**总库存**（weapon.owned），不是环上现在挂着什么：
@@ -5054,9 +5139,11 @@ async function boot() {
   const ttPaneMain = document.getElementById('ttPaneMain');
   const ttPaneQuest = document.getElementById('ttPaneQuest');
   const ttPaneAch = document.getElementById('ttPaneAch');
+  const ttPaneBase = document.getElementById('ttPaneBase');   // 第 106 块：据点
   const ttTabMain = document.getElementById('ttTabMain');
   const ttTabQuest = document.getElementById('ttTabQuest');
   const ttTabAch = document.getElementById('ttTabAch');
+  const ttTabBase = document.getElementById('ttTabBase');
   const tabDotQuest = document.getElementById('tabDotQuest');
   const tabDotAch = document.getElementById('tabDotAch');
   const tabAchN = document.getElementById('tabAchN');
@@ -5082,7 +5169,7 @@ async function boot() {
     gold: 'assets/icons/box-gold.svg',
   };
 
-  // 当前在哪个面板（'main' / 'quest' / 'ach'）
+  // 当前在哪个面板（'main' / 'quest' / 'ach' / 'base'）
   let titleTab = 'main';
   // 成就面板里展开着哪一组（切回来时保持原来的位置）
   let achOpenCat = 'battle';
@@ -5110,6 +5197,9 @@ async function boot() {
   }
 
   // ---------------- 切面板 ----------------
+  // 第 106 块：四个面板（主页面 / 每日任务 / 成就 / 据点）。
+  // ⚠️ 这里是**手写四份**而不是循环 —— 面板多了以后如果改成循环，
+  //    老代码里 `which === 'ach'` 这类判断容易漏改，宁可多写三行。
   function setTitleTab(which) {
     if (titleTab === which) return;
     titleTab = which;
@@ -5117,22 +5207,28 @@ async function boot() {
     ttPaneMain.classList.toggle('on', which === 'main');
     ttPaneQuest.classList.toggle('on', which === 'quest');
     ttPaneAch.classList.toggle('on', which === 'ach');
+    ttPaneBase.classList.toggle('on', which === 'base');
     ttPaneMain.setAttribute('aria-hidden', which === 'main' ? 'false' : 'true');
     ttPaneQuest.setAttribute('aria-hidden', which === 'quest' ? 'false' : 'true');
     ttPaneAch.setAttribute('aria-hidden', which === 'ach' ? 'false' : 'true');
+    ttPaneBase.setAttribute('aria-hidden', which === 'base' ? 'false' : 'true');
     ttTabMain.classList.toggle('on', which === 'main');
     ttTabQuest.classList.toggle('on', which === 'quest');
     ttTabAch.classList.toggle('on', which === 'ach');
+    ttTabBase.classList.toggle('on', which === 'base');
     ttTabMain.setAttribute('aria-pressed', which === 'main' ? 'true' : 'false');
     ttTabQuest.setAttribute('aria-pressed', which === 'quest' ? 'true' : 'false');
     ttTabAch.setAttribute('aria-pressed', which === 'ach' ? 'true' : 'false');
+    ttTabBase.setAttribute('aria-pressed', which === 'base' ? 'true' : 'false');
     if (which === 'quest') { renderQuestPane(); startQuestTimer(); } else stopQuestTimer();
     if (which === 'ach') renderAchPane();
+    if (which === 'base') renderBasePane();
   }
 
   ttTabMain.addEventListener('click', () => setTitleTab('main'));
   ttTabQuest.addEventListener('click', () => setTitleTab('quest'));
   ttTabAch.addEventListener('click', () => setTitleTab('ach'));
+  ttTabBase.addEventListener('click', () => setTitleTab('base'));
 
   // ---------------- tab 上的红点与徽章 ----------------
   // 三个都是玩家在主页面就能看到的信息：成就解锁了几个 / 成就有没有得领 /
@@ -5158,6 +5254,34 @@ async function boot() {
     if (n > 0) {
       showToast('成就奖励待领', `${n} 条成就的骨币还没领（含老存档补发）· 去成就面板一键领取`);
     }
+  }
+
+  // ============================================================
+  // 面板四：据点（第 106 块）
+  // 八个入口都是**静态按钮**：DOM 常驻、监听在 7100 行那一片早就挂好了，
+  // 切过来只需要把骨币数刷一下，不值当整块重画（和每日任务那种每次都变的相反）。
+  // ============================================================
+  const bpBones = document.getElementById('bpBones');
+  function renderBasePane() {
+    if (bpBones) bpBones.textContent = adminOn ? '∞' : String(bones());
+  }
+
+  // 主页面那条属性横卡（第 106 块）：把「局外口径」的四项关键数值摆在面上。
+  // 口径必须和属性页 renderStatRows 完全一致 —— 篝火 / 火种 / 夜行商店的加成
+  // 全部算进去，否则玩家会看到「主页写 12、点进去写 14」。
+  const ttStatVals = document.getElementById('ttStatVals');
+  function renderTitleStatBar() {
+    if (!ttStatVals) return;
+    const s = createStats(STAT_DEFS, getStatAdmin());
+    const w = createWeaponStats();
+    campApply(s, w);
+    applyBoons(s, w);
+    metaApplyStats(s, w);
+    const pctTxt = (v) => `${(v * 100).toFixed(0)}%`;
+    ttStatVals.textContent = `生命 ${s.get('maxHp').toFixed(1)}`
+      + ` · 攻击 ${s.get('attack').toFixed(1)}`
+      + ` · 防御 ${s.get('armor').toFixed(1)}`
+      + ` · 暴击 ${pctTxt(s.get('critRate'))}`;
   }
 
   // ============================================================
@@ -5727,6 +5851,9 @@ async function boot() {
     giftCode.value = '';
     // 第 94 块：成就「第一个码」+ 「小康」（身上同时有 1000 骨币）
     tryAch('gift_first');
+    // 第 106 块：累计兑换 5 个码（统计口径是「成功兑换的次数」，重复码上面已经拦掉了）
+    bumpStat('gifts');
+    if (profile().stats.gifts >= 5) tryAch('gift_5');
     if (bones() >= 1000) tryAch('bones_1000');
     // 第 57 块：宣传礼包 / 推荐礼包直接报组名；第一批老码报「A 类 / B 类」
     const what = hit.name || `${hit.tier} 类礼包`;
@@ -6028,6 +6155,9 @@ async function boot() {
     // 第 94 块：成就「满勤」（七天全签）与「小康」（身上同时有 1000 骨币）
     if (r.days >= 7) tryAch('sign_full');
     if (bones() >= 1000) tryAch('bones_1000');
+    // 第 106 块：累计签到天数（跨周累加，一天只可能 +1 —— signToday 已经挡了重复签）
+    bumpStat('signDays');
+    if (profile().stats.signDays >= 30) tryAch('sign_30');
     return true;
   }
 
@@ -6279,6 +6409,7 @@ async function boot() {
     const ch = STORY_CHAPTERS[srIdx];
     const p = storyProgress();
     markStoryRead(ch.id);
+    checkStoryAchs();       // 第 106 块：读到第 6 / 12 夜
     srNo.textContent = `第 ${ch.no} 夜 · ${ch.place}`;
     srTitle.textContent = ch.title;
     srPos.textContent = `${ch.no} / ${STORY_CHAPTERS.length}`;
@@ -6366,6 +6497,11 @@ async function boot() {
   // 主菜单按钮上的骨币角标（每次回标题都会重刷）
   function renderShopBadge() {
     if (msBadge) msBadge.textContent = adminOn ? '∞' : String(bones());
+    // 第 106 块：据点面板里那枚骨币胶囊跟着同一个数据源刷。
+    // 这里懒查 DOM 而不是用外面那个 const bpBones —— 本函数可能在模块初始化
+    // 阶段就被调到，那时 bpBones 还在 TDZ 里，直接引用会抛 ReferenceError。
+    const bp = document.getElementById('bpBones');
+    if (bp) bp.textContent = adminOn ? '∞' : String(bones());
   }
   function renderCampBadge() { renderShopBadge(); }   // 老调用点留个同义名
 
@@ -6445,6 +6581,11 @@ async function boot() {
           renderCampBadge();
           // 第 94 块：成就「九簇篝火」（九簇全部点燃过）
           if (CAMPFIRE.every((c) => campLevel(c.id) > 0)) tryAch('camp_9');
+          // 第 106 块：九簇篝火总等级 18（每簇满级 3，等于六簇点满）。
+          // ⚠️ 别用外面闭包里那个 lvSum —— 它是上一次渲染时算的旧值，
+          //    刚买完那一下还没重算，判定会晚一级。
+          const sumNow = CAMPFIRE.reduce((n, c) => n + campLevel(c.id), 0);
+          if (sumNow >= 18) tryAch('camp_18');
         });
       }
       row.appendChild(btn);
@@ -6566,6 +6707,7 @@ async function boot() {
     // 第 94 块：成就「开箱十连 / 开箱狂魔」按开箱数即时对表（开完在揭示卡后面弹）
     if (metaShopState().opened >= 10) tryAch('box_10');
     if (metaShopState().opened >= 50) tryAch('box_50');
+    if (metaShopState().opened >= 200) tryAch('box_200');   // 第 106 块
     renderMetaShop();
     renderShopBadge();
     showBoxReveal(r.box, r.res);
@@ -7231,6 +7373,11 @@ async function boot() {
     bumpStat('runs');
     bumpStat('seconds', Math.round(elapsed));
     bumpStat('kills', kills);
+    // 第 106 块：倒下次 / 累计回合 / 今日挑战场次，三条新成就的口径。
+    // 回合数按「这一局打到第几回合」累加（中途倒下也算已经打完的那些）。
+    if (!isWin) bumpStat('deaths');
+    bumpStat('rounds', roundShown);
+    if (wasDaily) bumpStat('dailyRuns');
     setStatMax('bestRound', roundShown);
     setStatMax('bestRunKills', kills);
     if (isWin) bumpStat('wins');

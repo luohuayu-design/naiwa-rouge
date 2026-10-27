@@ -203,10 +203,19 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     }
     ok(await ev(`window.__game.state === 'playing'`), '进入战斗');
     await ev(`__game.camp.setBones(120), 1`);
-    // 公告如果又冒出来了，会盖住 failTip 的按钮，先确认它闭着
-    if (await ev(`__game.notice.open()`)) { await ev(`__game.notice.hide(), 1`); await sleep(250); }
-    if (await ev(`__game.promo && __game.promo.open()`)) { await ev(`__game.promo.hide(), 1`); await sleep(200); }
-    ok(!(await ev(`__game.notice.open()`)), '公告弹窗已收起（不挡后面的判定）');
+    // 公告 / 签到 / 宣传有礼是**一条 350ms 一环的定时器链**（公告 → 签到 → 宣传），
+    // 只关公告的话，250ms 后签到会自己弹上来，正好盖住 #ftGo ——
+    // 表现为「elementFromPoint 命中的是 #signBtn」。所以循环关到三个全关为止。
+    for (let i = 0; i < 6; i++) {
+      const any = await ev(`__game.notice.open() || __game.sign.open() || __game.promo.open()`);
+      if (!any) break;
+      await ev(`if (__game.notice.open()) __game.notice.hide();
+        if (__game.sign.open()) __game.sign.hide();
+        if (__game.promo.open()) __game.promo.hide(); 1`);
+      await sleep(420);   // 等下一环的定时器走完再判一次
+    }
+    ok(!(await ev(`__game.notice.open() || __game.sign.open() || __game.promo.open()`)),
+      '公告 / 签到 / 宣传三个浮层都收干净了（不挡后面的判定）');
 
     // 先确认通关不弹：这里直接打死自己（失败）
     await ev(`__game.hurt(999), 1`);
