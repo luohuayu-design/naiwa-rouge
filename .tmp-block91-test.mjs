@@ -150,8 +150,9 @@ ok(auraHand.length === 0,
 // 召唤物继承
 ok(/summonScale: \{ hp: opts\.hpScale \?\? 1, dmg: opts\.damageScale \?\? 1, haste \}/.test(ENEMY),
   '召唤物继承本回合攻速（不然后期召出来的卫队还是 R1 的节奏）');
-ok((ENEMY.match(/hasteScale: \(e\.summonScale && e\.summonScale\.haste\) \?\? 1,/g) || []).length === 2,
-  '两处召唤（孢生菇小兵 / 菌王卫队）都传了 hasteScale');
+// 第 96 块加了第三处：寄存处看守砸柜放出的小怪（smashCabinet）
+ok((ENEMY.match(/hasteScale: \(e\.summonScale && e\.summonScale\.haste\) \?\? 1,/g) || []).length === 3,
+  '三处召唤（孢生菇小兵 / 菌王卫队 / 看守砸柜）都传了 hasteScale');
 
 // 称量官特殊：上称只吃一半攻速
 ok(/const wgHaste = Math\.sqrt\(e\.haste \|\| 1\);/.test(ENEMY),

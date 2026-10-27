@@ -539,7 +539,7 @@ export const LEVEL_7 = {
 //
 //   任何一只怪死 → 木牌进柜（柜面 8 格可见）
 //   → 玩家可以走到柜边按「取牌」，敲对一串四位数字 → 柜里牌子全清
-//   → 攒满 8 块就**封柜**，5 秒后**寄存处看守**走出来（三套攻击 + 半血暴怒）
+//   → 攒满 8 块就**封柜**，5 秒后**寄存处看守**走出来（五套攻击 + 半血暴怒）
 //
 // 所以这一关真正的压力不是「场上有多少怪」，而是「你敢不敢停下来按键」：
 // 取牌面板不暂停游戏，12 秒里怪还在追你。
@@ -547,7 +547,7 @@ export const LEVEL_7 = {
 // 场地：arena 18 —— 比第七关的窄井（13）宽，因为要留出绕到柜边清牌的空间；
 //       比第六关机房（19）略小，位置上的容错更低（柜子那侧只有一条窄路）。
 // 数值：hp 0.34 / dmg 0.20，整体系数 hpMul 1.28 / dmgMul 1.55（七关是 1.20 / 1.45）。
-//       看守的数值单列在 enemy.js 的 warden（hp 20 / 三套攻击 / 半血 ×1.4），
+//       看守的数值单列在 enemy.js 的 warden（hp 20 / 五套攻击 / 半血 ×1.4），
 //       不吃这里的 hpMul 之外的额外加成 —— 一只就够硬了。
 // ============================================================
 export const LEVEL_8 = {
@@ -588,7 +588,7 @@ export const LEVEL_8 = {
     { minion: 7, warrior: 4, archer: 3, bowman: 2, leaper: 2, wraith: 1, shielder: 2, brood: 0, mender: 1, reboot: 0, charger: 0, gap: 0.62, tip: '攒满 8 块会**当场封柜** —— 到那一刻就再也清不掉了' },
     // ---- 第三幕（R9~R13）：看守 ----
     { minion: 7, warrior: 4, archer: 3, bowman: 3, leaper: 2, wraith: 1, shielder: 2, brood: 1, mender: 1, reboot: 0, charger: 0, gap: 0.60, tip: '封柜 5 秒后柜门打开：寄存处看守会自己走出来' },
-    { minion: 8, warrior: 4, archer: 3, bowman: 3, leaper: 3, wraith: 2, shielder: 2, brood: 1, mender: 1, reboot: 1, charger: 0, gap: 0.58, tip: '看守有三套攻击：贴脸横扫、中距砸地、拉远了投木牌' },
+    { minion: 8, warrior: 4, archer: 3, bowman: 3, leaper: 3, wraith: 2, shielder: 2, brood: 1, mender: 1, reboot: 1, charger: 0, gap: 0.58, tip: '看守有五套攻击：贴脸横扫、中距砸地、正面扇形牌雨、远处拐弯投牌，还会砸柜放小怪' },
     { minion: 8, warrior: 5, archer: 4, bowman: 3, leaper: 3, wraith: 2, shielder: 2, brood: 1, mender: 1, reboot: 1, charger: 0, gap: 0.56, tip: '地上亮起金圈就往外走：那是落锤的位置，站里面必挨' },
     { minion: 8, warrior: 5, archer: 4, bowman: 3, leaper: 3, wraith: 2, shielder: 2, brood: 1, mender: 1, reboot: 1, charger: 1, gap: 0.54, tip: '它半血之后会暴怒：移速和出手频率一起涨，别在原地跟它换血' },
     { minion: 8, warrior: 5, archer: 4, bowman: 4, leaper: 3, wraith: 2, shielder: 3, brood: 1, mender: 1, reboot: 1, charger: 1, gap: 0.52, tip: '别等它出现：这一关的正解是满 8 块之前清一次' },

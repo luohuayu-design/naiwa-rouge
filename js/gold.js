@@ -12,7 +12,7 @@
 // 视觉：一枚金色小圆片从怪死掉的位置弹起 → 自转 → 进圈被吸走 / 落地缩没；
 //       入账瞬间记入金币数（金币计数在 main.js，通过 onGold 回调）。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=109';
+import * as THREE from '../lib/three.module.js?v=110';
 
 const LIFE = 3.0;            // 圈外金币从掉落到计入数据的时长（第 12 块：0.5 → 3 秒）
 const POP_V = 2.6;           // 弹起的初速度

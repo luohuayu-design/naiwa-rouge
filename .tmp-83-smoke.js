@@ -176,23 +176,40 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     ok(ws1[0] && ws1[0].maxHp > 20, '看守吃回合倍率（血量 > 基础 20）', ws1[0] && String(ws1[0].maxHp));
     ok(await ev('__game.block63.deposit.count() === 0'), '召唤后柜子归零');
 
-    // ---------- 4. 三套攻击（按距离带） ----------
-    console.log('\n[4] 三套攻击');
-    // 把场上的看守拉住，玩家站到它身边 2 格 → 应该走横扫
-    await ev('(() => { const p = __game.pos(); __game.block63.enemies.place("warden", p.x + 2.0, p.z); __game.block63.enemies.set("warden", { speed: 0, wdGap: 0 }); return true; })()');
-    await sleep(2600);
-    const nearMoves = await ev('__game.block63.enemies.warden().map(w => w.move)');
-    ok(nearMoves.includes('sweep'), '贴脸 → 横扫', JSON.stringify(nearMoves));
-    // 拉到 6 格 → 砸地（会钉出 3 个金圈）
-    await ev('(() => { const p = __game.pos(); __game.block63.enemies.place("warden", p.x + 6.0, p.z); __game.block63.enemies.set("warden", { wdGap: 0, state: "chase" }); return true; })()');
-    await waitFor('__game.block63.enemies.strikes().length > 0', 6000, '等砸地钉圈');
+    // ---------- 4. 攻击按距离带分（第 96 块扩到五招） ----------
+    // ⚠️ 第 96 块起中距是「砸地 / 木牌雨」各一半，而且砸柜有独立冷却（一出场 6 秒
+    // 就可能砸），所以这一段必须：① 先把砸柜锁死 ② 中距要重试到抽中想测的那一招。
+    console.log('\n[4] 攻击按距离带分');
+    const RETRY = async (want, dist, tries = 30) => {
+      for (let i = 0; i < tries; i++) {
+        await ev(`(() => {
+          const p = __game.pos();
+          __game.block63.enemies.place('warden', p.x + ${dist}, p.z);
+          __game.block63.enemies.set('warden', { speed: 0, wdGap: 0, state: 'chase', t: 0, hitDone: false, wdMove: '', wdCabinetCd: 999 });
+          return true;
+        })()`);
+        await sleep(90);
+        const mv = await ev('(__game.block63.enemies.warden()[0] || {}).move');
+        if (mv === want) return true;
+      }
+      return false;
+    };
+    // 贴脸 2 格 → 横扫
+    ok(await RETRY('sweep', 2), '贴脸（2 格）→ 横扫');
+    // 中距 6 格 → 砸地（钉三个金圈）
+    ok(await RETRY('slam', 6), '中距（6 格）→ 能抽到砸地');
+    await waitFor('__game.block63.enemies.strikes().length >= 3', 6000, '等砸地钉圈');
     const strikes = await ev('__game.block63.enemies.strikes()');
     ok(strikes.length >= 3, '砸地一次钉三个圈', String(strikes.length));
+    await sleep(1600);
+    // 中距 6 格 → 木牌雨（第 96 块新招：扇形，一个落点而不是三个圈）
+    ok(await RETRY('fan', 6), '中距（6 格）→ 也能抽到木牌雨');
+    await waitFor('__game.block63.enemies.strikes().some((s) => s.fan)', 6000, '等扇面出现');
+    const fanSt = await ev('__game.block63.enemies.strikes().filter((s) => s.fan)[0]');
+    ok(fanSt && Math.abs(fanSt.half - Math.PI / 4) < 1e-3, `扇面半角 ${fanSt && fanSt.half} ≈ 45°`);
+    await sleep(1600);
     // 拉到 12 格 → 投牌
-    await ev('(() => { const p = __game.pos(); __game.block63.enemies.place("warden", p.x + 12.0, p.z); __game.block63.enemies.set("warden", { wdGap: 0, state: "chase" }); return true; })()');
-    await sleep(1400);
-    const farMoves = await ev('__game.block63.enemies.warden().map(w => w.move)');
-    ok(farMoves.includes('tag') || (await ev('__game.block63.enemies.tags()')) > 0, '远距 → 投木牌', JSON.stringify(farMoves));
+    ok(await RETRY('tag', 12), '远距（12 格）→ 投木牌');
 
     // ---------- 5. 半血狂暴只触发一次 ----------
     // 半血狂暴只触发一次

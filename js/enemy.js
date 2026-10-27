@@ -25,12 +25,12 @@
 // 第四关三只（wraith/leaper/mender，第 35 块，第 52 块换模型），
 // 各自在下面 ENEMY_TYPES 里有详细注释。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=109';
-import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=109';
-import { clone as cloneSkinned } from '../lib/jsm/utils/SkeletonUtils.js?v=109';
-import { distance2D } from './stats.js?v=109';
-import { createRangeRing } from './rangeRing.js?v=109';
-import { withV } from './assetUrl.js?v=109';
+import * as THREE from '../lib/three.module.js?v=110';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=110';
+import { clone as cloneSkinned } from '../lib/jsm/utils/SkeletonUtils.js?v=110';
+import { distance2D } from './stats.js?v=110';
+import { createRangeRing } from './rangeRing.js?v=110';
+import { withV } from './assetUrl.js?v=110';
 
 // KayKit 模型正面朝 +Z；如果哪天换模型发现怪倒着走，把这里改成 Math.PI
 export const ENEMY_MODEL_YAW = 0;
@@ -969,12 +969,14 @@ export const ENEMY_TYPES = {
   // 该做的正事是趁柜子没满去把牌子清掉（四位数字的小游戏），
   // 清不掉，就得跟它打。
   //
-  // 【三种攻击各占一个距离带】这是「多样」的落点 —— 不是三个换皮技能，
-  // 而是三套完全不同的躲法，逼你一直在两种距离之间切换：
+  // 【五招各占一个距离带 / 一层玩法】这是「多样」的落点 —— 不是五个换皮技能，
+  // 而是五套完全不同的躲法，逼你一直在两种距离之间切换：
   //   ① 横扫（≤3.4 格）  0.55 秒前摇 + 脚下一圈橙光 → 3.6 格内重伤 + 击飞
   //   ② 砸地（3.4~9 格） 在**你现在站的位置**钉三个金圈，1.35 秒后落锤 → 圈里重伤
-  //   ③ 投牌（>9 格）    抡起一摞木牌砸过来，落点炸开一圈
-  // 三个动作都由 handleWarden 自己调度，不走通用近战 AI。
+  //   ③ 投牌（>9 格）    抡起一块木牌砸过来；第 96 块起它会**拐一次弯**追你
+  //   ④ 木牌雨（中距）   第 96 块：正面张开 90° 扇面撒一排牌 —— 唯一有方向的招
+  //   ⑤ 砸柜（任意距离） 第 96 块：砸开身后的寄存柜，放出小怪
+  // 五招都由 handleWarden 自己调度，不走通用近战 AI。
   //
   // 【半血狂暴】hp ≤ 45% 时移速 ×1.4、出手间隔 ×0.72、身上转成暗金自发光 ——
   // 打它打到一半会发现「它变快了」，这一段是给玩家的第二次提醒：
@@ -992,14 +994,14 @@ export const ENEMY_TYPES = {
     radius: 0.80,          // 实测宽 1.90 / 厚 1.68 —— 台子宽，碰撞不能只给 0.7
     hp: 20,                // 第 8~15 回合 ×4~6 倍 ≈ 90~120：拆得掉，但绝对不是一只普通怪
     armor: 0.08,           // 骨甲：硬一点
-    speed: 1.02,           // 慢 —— 它的威胁来自三套攻击，不是脚步
+    speed: 1.02,           // 慢 —— 它的威胁来自五套攻击，不是脚步
     damage: 0.95,          // 基础伤害（各招在上面的倍率里放大）
     attackRange: 12.0,
     attackInterval: 2.4,   // 两次出手之间的间隔（狂暴后 ×0.72）
     windup: 0.55,          // 必须 < attackDuration
     attackDuration: 1.0,
     boss: true,
-    // 三招的手感参数全收在一处，改数值只改这里
+    // 五招的手感参数全收在一处，改数值只改这里
     warden: {
       sweepR: 3.6,         // 横扫半径
       sweepMul: 1.30,
@@ -1008,8 +1010,30 @@ export const ENEMY_TYPES = {
       slamDelay: 1.35,     // 预警到落锤的时间：够走开一步，不够走两步
       tagMul: 0.80,        // 投牌伤害
       tagSpeed: 7.5,       // 木牌飞行速度（格/秒）
+      // 第 96 块：投牌改成**会拐一次的追踪牌**。
+      // 只给一次转向预算（tagTurn 弧度）而不是「无限追踪」—— 拐完就拉直，
+      // 所以躲法从「横移一步」变成「横移 → 看它拐 → 再横移」。无限追踪会让
+      // 玩家只能靠无敌帧/硬吃完，那是猜谜不是走位。
+      tagHome: 3.2,        // 最大转向速率（弧度/秒）
+      tagTurn: 1.15,       // 总共能拐多少弧度（≈66°），拐完就直飞
+      tagLife: 2.8,        // 最久飞多久（防止绕圈到天荒地老）
+      tagFuse: 1.25,       // 离主角这么近就引爆
+      tagR: 1.9,           // 引爆半径
+      // 第 96 块新招①：扇形木牌雨 —— 唯一一招**有方向**的（前四招全是圆形，
+      // 躲法永远是「离中心远点」；扇形往后退没用，必须绕到侧面或背后）。
+      fanR: 8.6,           // 扇面半径
+      fanHalf: Math.PI / 4, // 扇面半角（45° → 正面张开 90°）
+      fanMul: 1.05,        // 伤害倍率（介于砸地 1.0 与横扫 1.3 之间）
+      fanWindup: 0.95,     // 前摇：看到扇面亮起来还来得及绕
+      fanTags: 7,          // 落几块牌（纯视觉，判定是整块扇面一次结算）
+      // 第 96 块新招②：砸开寄存柜放小怪 —— 独立冷却，不占常规出手
+      cabWindup: 1.20,
+      cabCount: 2,         // 一次放出几只
+      cabCap: 3,           // 它名下最多同时活几只（滚雪球护栏）
+      cabCd: 16.0,         // 用完再过这么久才可能再砸
+      cabFirst: 6.0,       // 出场后多久才允许第一次砸柜
       chaseKeep: 2.9,      // 追到这么近就停下准备出手
-      gap: 2.4,            // 出手间隔
+      gap: 2.0,            // 出手间隔（第 96 块：2.4 → 2.0，用户要「出手更密」）
       rageAt: 0.45,        // 血量低于这个比例进入狂暴
       rageSpeed: 1.40,
       rageGap: 0.72,
@@ -4497,14 +4521,31 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
   // 反过来，站着不动吃三招是一定会死的 —— 这正是「不让柜子满」的意义。
   //
   // 半血狂暴：移速 ×1.4、出手间隔 ×0.72、自发光转暗金，只触发一次。
-  const wardenStrikes = [];   // 落点预警：{ x, z, t, delay, dmg, r, mesh, owner }
-  const wardenTags = [];      // 飞行中的木牌：{ mesh, from, to, t, dur, dmg, owner }
+  const wardenStrikes = [];   // 落点预警：{ x, z, t, delay, dmg, r, mesh, owner, fan?, angle?, half? }
+  const wardenTags = [];      // 飞行中的木牌：{ mesh, x, z, vx, vz, t, dur, turnLeft, dmg, owner }
+
+  // 第 96 块：扇面几何缓存。
+  // 半径和半角都是 cfg 里的常量，所以整局只需要一份几何 —— 但**注意别 dispose**，
+  // 销毁时只释放材质。跟前面的圈不同（那个每次新建、随手 dispose 没问题）。
+  let fanGeoCache = null;
+  let fanGeoKey = '';
+  function fanGeo(r, half) {
+    const key = `${r.toFixed(2)}|${half.toFixed(3)}`;
+    if (fanGeoCache && fanGeoKey === key) return fanGeoCache;
+    if (fanGeoCache) fanGeoCache.dispose();
+    // CircleGeometry 的扇区在 XY 平面上以 +X 为中心张开，rotateX(-90°) 之后
+    // 就落在 XZ 平面、仍然以 +X 为中心 —— 于是只需要 mesh.rotation.y 转一次
+    // 就能指到任意方向（角度换算见 addWardenFan）。
+    fanGeoCache = new THREE.CircleGeometry(r, 40, -half, half * 2).rotateX(-Math.PI / 2);
+    fanGeoKey = key;
+    return fanGeoCache;
+  }
 
   function clearWardenFx() {
     for (const st of wardenStrikes) {
       if (st.mesh) {
         scene.remove(st.mesh);
-        st.mesh.geometry.dispose();
+        if (!st.fan) st.mesh.geometry.dispose();   // 扇面几何是共享的，不能在这儿拆
         st.mesh.material.dispose();
       }
     }
@@ -4532,6 +4573,25 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     wardenStrikes.push({ x, z, t: 0, delay, dmg, r, mesh, owner: owner || null });
   }
 
+  // 第 96 块：扇形木牌雨的预警。angle 用和 root.rotation.y 同一套约定
+  // （atan2(dx, dz)），所以判定和画面永远同源 —— 别再各写一遍。
+  function addWardenFan(x, z, angle, half, delay, dmg, r, color, owner) {
+    let mesh = null;
+    if (typeof document !== 'undefined') {
+      mesh = new THREE.Mesh(fanGeo(r, half), new THREE.MeshBasicMaterial({
+        color, transparent: true, opacity: 0.18, side: THREE.DoubleSide, depthWrite: false,
+      }));
+      mesh.position.set(x, 0.055, z);
+      // 扇面局部朝向是 +X；绕 Y 转 (angle - π/2) 正好转到世界方向 (sin angle, cos angle)
+      mesh.rotation.y = angle - Math.PI / 2;
+      scene.add(mesh);
+    }
+    wardenStrikes.push({
+      x, z, t: 0, delay, dmg, r, mesh, owner: owner || null,
+      fan: true, angle, half,
+    });
+  }
+
   function updateWardenStrikes(dt, ctx) {
     const pp = ctx.playerPos;
     for (let i = wardenStrikes.length - 1; i >= 0; i--) {
@@ -4545,12 +4605,23 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
       if (st.t < st.delay) continue;
       if (st.mesh) {
         scene.remove(st.mesh);
-        st.mesh.geometry.dispose();
+        if (!st.fan) st.mesh.geometry.dispose();   // 扇面几何是共享的
         st.mesh.material.dispose();
         st.mesh = null;
       }
       const d = Math.hypot(pp.x - st.x, pp.z - st.z);
-      if (d <= st.r) {
+      let hit;
+      if (st.fan) {
+        // 扇形：距离在半径内 **且** 方位角落在扇面里。
+        // 角度用和 root.rotation.y / addWardenFan 同一套 atan2(dx, dz) 约定。
+        let diff = Math.atan2(pp.x - st.x, pp.z - st.z) - st.angle;
+        while (diff > Math.PI) diff -= Math.PI * 2;
+        while (diff < -Math.PI) diff += Math.PI * 2;
+        hit = d <= st.r && Math.abs(diff) <= st.half;
+      } else {
+        hit = d <= st.r;
+      }
+      if (hit) {
         ctx.hurtPlayer(st.dmg, st.owner && st.owner.state !== 'dead' ? st.owner : null);
         if (ctx.pushPlayer) {
           const nx = d > 1e-4 ? (pp.x - st.x) / d : 1;
@@ -4559,25 +4630,42 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
         }
       }
       if (fx) {
-        fx.ring({ x: st.x, z: st.z }, {
-          from: st.r * 0.3, to: st.r, color: 0xffe0a0, life: 0.32, opacity: 0.85, y: 0.07,
-        });
-        fx.burst({ x: st.x, z: st.z }, {
-          color: 0xf0d8a8, count: 14, speed: 3.2, life: 0.45, size: 0.12, y: 0.2, up: 1.7,
-        });
+        if (st.fan) {
+          // 木牌雨：沿扇面撒几处落点，比一个整圈更像「一排牌子砸下来」
+          fx.ring({ x: st.x, z: st.z }, {
+            from: st.r * 0.25, to: st.r, color: 0xffe0a0, life: 0.3, opacity: 0.6, y: 0.07,
+          });
+          for (let n = 0; n < 5; n++) {
+            const a = st.angle + (Math.random() * 2 - 1) * st.half;
+            const rr = st.r * (0.28 + Math.random() * 0.62);
+            fx.burst({ x: st.x + Math.sin(a) * rr, z: st.z + Math.cos(a) * rr }, {
+              color: 0xf0d8a8, count: 9, speed: 2.6, life: 0.42, size: 0.11, y: 0.2, up: 1.5,
+            });
+          }
+        } else {
+          fx.ring({ x: st.x, z: st.z }, {
+            from: st.r * 0.3, to: st.r, color: 0xffe0a0, life: 0.32, opacity: 0.85, y: 0.07,
+          });
+          fx.burst({ x: st.x, z: st.z }, {
+            color: 0xf0d8a8, count: 14, speed: 3.2, life: 0.45, size: 0.12, y: 0.2, up: 1.7,
+          });
+        }
       }
       wardenStrikes.splice(i, 1);
     }
   }
 
-  // 投牌：一块实体木牌从它手边飞向「你按下出手那一刻站的位置」——
-  // 所以看到它抡起来就走开，牌子会砸在你刚才的脚印上。
+  // 投牌（第 96 块改版）：一块实体木牌从它手边抡出去，**会拐一次弯**再拉直。
+  // 动作分两段读：刚出手时朝你「此刻」的位置飞（能看见、能预判），
+  // 你一闪它就跟着拐一次（转向预算 tagTurn，拐完就锁死方向），所以躲法变成
+  // 「横移 → 看它拐 → 再横移」。无限追踪会让这招只能靠硬吃，那是猜谜不是走位。
   function throwWardenTag(e, ctx) {
     const cfg = e.cfg.warden;
     const pp = ctx.playerPos;
     const from = { x: e.pos.x, z: e.pos.z };
-    const to = { x: pp.x, z: pp.z };
-    const d = Math.hypot(to.x - from.x, to.z - from.z) || 1;
+    const d = Math.hypot(pp.x - from.x, pp.z - from.z) || 1;
+    // 初始朝向：直奔玩家当前所在
+    const ang = Math.atan2(pp.x - from.x, pp.z - from.z);
     let mesh = null;
     if (typeof document !== 'undefined') {
       const tex = makeTagTexture();
@@ -4589,8 +4677,18 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
       scene.add(mesh);
     }
     wardenTags.push({
-      mesh, from, to, t: 0,
-      dur: Math.max(0.35, d / Math.max(1, cfg.tagSpeed)),
+      mesh,
+      x: from.x, z: from.z,
+      vx: Math.sin(ang) * cfg.tagSpeed,
+      vz: Math.cos(ang) * cfg.tagSpeed,
+      ang,                            // 当前朝向（弧度，atan2(dx,dz) 约定）
+      turnLeft: cfg.tagTurn,          // 还能拐多少度（用完就直飞）
+      dur: Math.max(0.35, d / Math.max(1, cfg.tagSpeed)),   // 只用来算拱起的弧高
+      t: 0, life: 0,
+      // 参数在出手那一刻拷一份到牌上：守卫可能中途被打死，那时 owner.cfg 就
+      // 不该再被读了（牌已经飞出去了，它自己的物理不该跟着主人一起消失）
+      home: cfg.tagHome, speed: cfg.tagSpeed, maxLife: cfg.tagLife,
+      fuse: cfg.tagFuse, r: cfg.tagR,
       dmg: e.damage * cfg.tagMul,
       owner: e,
     });
@@ -4601,38 +4699,57 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     for (let i = wardenTags.length - 1; i >= 0; i--) {
       const tg = wardenTags[i];
       tg.t += dt;
-      const k = Math.min(1, tg.t / tg.dur);
+      tg.life += dt;
+
+      // ---- 追踪：朝玩家转，但受「转向速率」和「总转向预算」双重限制 ----
+      if (tg.turnLeft > 1e-4) {
+        let diff = Math.atan2(pp.x - tg.x, pp.z - tg.z) - tg.ang;
+        while (diff > Math.PI) diff -= Math.PI * 2;
+        while (diff < -Math.PI) diff += Math.PI * 2;
+        const maxTurn = Math.min(tg.home * dt, tg.turnLeft);
+        const step = Math.max(-maxTurn, Math.min(maxTurn, diff));
+        tg.ang += step;
+        tg.turnLeft -= Math.abs(step);
+      }
+      const sp = tg.speed;
+      tg.vx = Math.sin(tg.ang) * sp;
+      tg.vz = Math.cos(tg.ang) * sp;
+      tg.x += tg.vx * dt;
+      tg.z += tg.vz * dt;
+
       if (tg.mesh) {
-        // 抛物线：水平线性、竖直按 sin 拱起（看着像「抡过去」而不是「滑过去」）
-        tg.mesh.position.set(
-          tg.from.x + (tg.to.x - tg.from.x) * k,
-          1.35 + Math.sin(k * Math.PI) * 2.2,
-          tg.from.z + (tg.to.z - tg.from.z) * k
-        );
+        // 拱起：按「初始预判飞行时长」走一条抛物线，拐弯的时候高度不会突然跳
+        const k = Math.min(1, tg.t / tg.dur);
+        tg.mesh.position.set(tg.x, 1.35 + Math.sin(k * Math.PI) * 2.0, tg.z);
         tg.mesh.rotation.x += dt * 9;
         tg.mesh.rotation.z += dt * 5;
       }
-      if (k < 1) continue;
+
+      // ---- 落地条件：贴近主角引爆 / 飞太久 / 出界 ----
+      const pd = Math.hypot(pp.x - tg.x, pp.z - tg.z);
+      const lim = (ctx.arenaRadius || 20) + 2;
+      const out = Math.hypot(tg.x, tg.z) > lim;
+      if (pd > tg.fuse && tg.life < tg.maxLife && !out) continue;
+
       if (tg.mesh) {
         scene.remove(tg.mesh);
         tg.mesh.geometry.dispose();
         tg.mesh.material.dispose();
         tg.mesh = null;
       }
-      const d = Math.hypot(pp.x - tg.to.x, pp.z - tg.to.z);
-      if (d <= 2.2) {
+      if (pd <= tg.r && !out) {
         ctx.hurtPlayer(tg.dmg, tg.owner && tg.owner.state !== 'dead' ? tg.owner : null);
         if (ctx.pushPlayer) {
-          const nx = d > 1e-4 ? (pp.x - tg.to.x) / d : 1;
-          const nz = d > 1e-4 ? (pp.z - tg.to.z) / d : 0;
+          const nx = pd > 1e-4 ? (pp.x - tg.x) / pd : 1;
+          const nz = pd > 1e-4 ? (pp.z - tg.z) / pd : 0;
           ctx.pushPlayer(nx, nz, 0.8);
         }
       }
       if (fx) {
-        fx.ring({ x: tg.to.x, z: tg.to.z }, {
-          from: 0.4, to: 2.2, color: 0xe8c98a, life: 0.28, opacity: 0.8, y: 0.07,
+        fx.ring({ x: tg.x, z: tg.z }, {
+          from: 0.4, to: tg.r, color: 0xe8c98a, life: 0.28, opacity: 0.8, y: 0.07,
         });
-        fx.burst({ x: tg.to.x, z: tg.to.z }, {
+        fx.burst({ x: tg.x, z: tg.z }, {
           color: 0xd8b98a, count: 10, speed: 2.4, life: 0.4, size: 0.1, y: 0.3, up: 1.4,
         });
       }
@@ -4684,12 +4801,61 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
       return;
     }
 
+    // 第 96 块：扇形木牌雨的**判定与画面都在出手那一刻就铺好了**
+    // （见 handleWarden 里的 addWardenFan，delay = 前摇），这里什么都不用做。
+    if (move === 'fan') return;
+
+    // 第 96 块：砸开寄存柜 —— 这一招自己不打人，产出的是「场面」
+    if (move === 'cabinet') { smashCabinet(e, ctx); return; }
+
     throwWardenTag(e, ctx);
+  }
+
+  // ============================================================
+  // 第 96 块 · 砸开寄存柜（新招⑤）
+  // ============================================================
+  // 剧情上最贴的一招：柜子本来就是它的地盘。打不动你了就回身一锤，
+  // 把柜门砸开，放里头「没人来领的寄存物」出来帮你按手按脚。
+  //
+  // ⚠️ 三条护栏，缺一条就会滚雪球：
+  //   ① cabCap —— 它名下最多同时活 3 只（`summonedBy` 记账，和孢生菇同一套）；
+  //   ② cabCd  —— 砸完要有 16 秒冷却，不能连砸；
+  //   ③ 继承本回合倍率 —— 第 15 回合砸出来的小怪必须也是第 15 回合的强度，
+  //      否则后期砸出来的是一群纸片人，这一招等于白占一个出手位。
+  function smashCabinet(e, ctx) {
+    const cfg = e.cfg.warden;
+    // 柜子位置从 combatCtx 拿（第 81 块就为了「队伍绕开柜子」开过这个口子）。
+    // 拿不到（沙盒/非第八关）就退化成「在自己脚边砸」，不让招式直接失效。
+    const hub = ctx.depositHub || e.pos;
+    const cx = hub.x, cz = hub.z;
+
+    const alive = list.filter((m) => m.summonedBy === e && m.state !== 'dead').length;
+    const n = Math.min(cfg.cabCount, Math.max(0, cfg.cabCap - alive));
+    const kinds = ['warrior', 'archer'];
+    for (let i = 0; i < n; i++) {
+      // 从柜门口往外散开一格，别三只叠在同一个点上（会被并排推挤算法挤飞）
+      const a = -Math.PI / 2 + (i - (n - 1) / 2) * 0.9;
+      const rr = 1.1;
+      const m = spawn(kinds[i % kinds.length], {
+        x: cx + Math.cos(a) * rr,
+        z: cz + Math.sin(a) * rr,
+      }, {
+        hpScale: ((e.summonScale && e.summonScale.hp) ?? 1) * 0.8,
+        damageScale: (e.summonScale && e.summonScale.dmg) ?? 1,
+        hasteScale: (e.summonScale && e.summonScale.haste) ?? 1,
+      });
+      if (m) m.summonedBy = e;
+    }
+    if (fx) {
+      fx.ring({ x: cx, z: cz }, { from: 0.4, to: 3.2, color: 0xffd9a0, life: 0.5, opacity: 0.85, y: 0.08 });
+      fx.burst({ x: cx, z: cz }, { color: 0xd8b98a, count: 20, speed: 3.4, life: 0.55, size: 0.13, y: 0.4, up: 1.8 });
+      if (n === 0) fx.text({ x: cx, z: cz }, '空了', { color: '#c9b48a', size: 0.7, y: 2.2 });
+    }
   }
 
   function handleWarden(e, dt, ctx, dx, dz, dist) {
     const cfg = e.cfg.warden;
-    if (e.wdGap == null) e.wdGap = cfg.gap * 0.6;
+    if (e.wdGap == null) e.wdGap = cfg.gap * 0.6 / (e.haste || 1);
 
     // ---- 半血狂暴（只触发一次）----
     if (!e.raged && e.hp / e.maxHp <= cfg.rageAt) {
@@ -4709,7 +4875,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
 
     if (e.state === 'attack') {
       const move = e.wdMove || 'sweep';
-      if (!e.hitDone && e.t >= e.cfg.windup) {
+      if (!e.hitDone && e.t >= (e.wdWindup ?? e.cfg.windup)) {
         e.hitDone = true;
         performWardenMove(e, ctx, move);
       }
@@ -4717,7 +4883,11 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
         e.state = 'chase';
         e.t = 0;
         e.hitDone = false;
-        e.wdGap = Math.max(0.5, cfg.gap * (e.raged ? cfg.rageGap : 1));
+        // 第 96 块：原来这里是 `Math.max(0.5, cfg.gap * 狂暴倍率)` —— 完全没吃
+        // `e.haste`，而 main.js 召唤它时明明传了 `hasteScale`（注释写着「看守的
+        // 出手也要跟着回合变密」）。所以第 15 回合的看守和第 1 回合一样从容。
+        // 统一走 cdOf（第 91 块立的规矩），floor 1.1 秒：再密也要留出走位缝隙。
+        e.wdGap = cdOf(e, cfg.gap * (e.raged ? cfg.rageGap : 1), 1.1);
         e.currentAnim = e.cfg.anim.walk;
         e.play(e.cfg.anim.walk, { fade: 0.2 });
       }
@@ -4726,6 +4896,8 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
 
     // 走得慢，但冷却照常在走 —— 拉开距离反而更容易吃到「投牌」
     e.wdGap -= dt;
+    if (e.wdCabinetCd == null) e.wdCabinetCd = cfg.cabFirst;
+    e.wdCabinetCd -= dt;
     if (dist > cfg.chaseKeep) {
       moveToward(e, dx, dz, dist, dt, ctx);
       if (e.currentAnim !== e.cfg.anim.walk) {
@@ -4738,20 +4910,52 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     }
     if (e.wdGap > 0) return;
 
-    // 按距离带选招：贴脸横扫 / 中距砸地 / 远处投牌
-    const move = dist > 9.0 ? 'tag' : (dist > cfg.sweepR ? 'slam' : 'sweep');
+    // ---- 第 96 块：五招轮换 ----
+    // 距离带只决定「哪些招能选」，招本身在带内随机 —— 五招里三招有距离要求，
+    // 所以玩家换距离仍然在换招，但同一距离不再固定一招（原来中距永远是砸地，
+    // 站住不动就能背下来）。
+    // 砸柜优先级最高（它有自己的 16 秒冷却，不吃常规间隔），但贴脸时不砸：
+    // 那时先横扫把玩家推开来，砸柜才有产出场面的余地。
+    const pp = ctx.playerPos;
+    let move;
+    if (e.wdCabinetCd <= 0 && dist > cfg.sweepR + 0.6) {
+      move = 'cabinet';
+    } else if (dist > 9.0) {
+      move = 'tag';
+    } else if (dist > cfg.sweepR) {
+      // 中距：砸地（三圈、延迟落）和木牌雨（扇面、必须绕后）各一半
+      move = (dist <= cfg.fanR && Math.random() < 0.5) ? 'fan' : 'slam';
+    } else {
+      move = 'sweep';
+    }
+
     e.state = 'attack';
     e.t = 0;
     e.hitDone = false;
     e.wdMove = move;
-    e.wdDur = move === 'slam' ? 1.55 : (move === 'tag' ? 1.05 : 1.0);
+    e.wdWindup = move === 'fan' ? cfg.fanWindup
+      : (move === 'cabinet' ? cfg.cabWindup : e.cfg.windup);
+    e.wdDur = move === 'slam' ? 1.55
+      : (move === 'tag' ? 1.05
+        : (move === 'fan' ? 1.30
+          : (move === 'cabinet' ? 1.70 : 1.0)));
+    if (move === 'cabinet') e.wdCabinetCd = cfg.cabCd;
     e.currentAnim = e.cfg.anim.attack;
     e.play(e.cfg.anim.attack, { once: true, fade: 0.1, duration: e.wdDur });
+
+    // 扇形木牌雨：**画面和判定一起在出手这一帧铺好**（delay = 前摇），
+    // 方向锁定在出手那一刻 —— 这样「看到扇面亮起来还来得及绕到侧面」成立。
+    // 如果等前摇结束才铺，玩家就没有反应的余地了。
+    if (move === 'fan') {
+      const ang = Math.atan2(pp.x - e.pos.x, pp.z - e.pos.z);
+      addWardenFan(e.pos.x, e.pos.z, ang, cfg.fanHalf, e.wdWindup,
+        e.damage * cfg.fanMul, cfg.fanR, cfg.color, e);
+    }
     if (fx) {
       // 前摇提示：横扫/砸地都是脚下一圈暗金脉冲，投牌多一道抬手光
       fx.ring(e.pos, {
         from: 0.4, to: move === 'sweep' ? cfg.sweepR : 2.6,
-        color: cfg.color, life: e.cfg.windup, opacity: 0.5, y: 0.06,
+        color: cfg.color, life: e.wdWindup, opacity: 0.5, y: 0.06,
       });
     }
   }
@@ -5194,11 +5398,27 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
       state: e.state, gap: e.wdGap == null ? null : +e.wdGap.toFixed(2),
       speed: +e.speed.toFixed(2),
       x: +e.pos.x.toFixed(2), z: +e.pos.z.toFixed(2),
+      // 第 96 块：五招之后要能看见「砸柜冷却还剩多久」「这一下吃没吃 haste」
+      cabCd: e.wdCabinetCd == null ? null : +e.wdCabinetCd.toFixed(2),
+      haste: +(e.haste || 1).toFixed(3),
+      windup: e.wdWindup == null ? null : +e.wdWindup.toFixed(2),
     })),
     wardenStrikes: () => wardenStrikes.map((st) => ({
       x: +st.x.toFixed(2), z: +st.z.toFixed(2), r: st.r, t: +st.t.toFixed(2), delay: st.delay,
+      // 第 96 块：扇形与圆形要能分开断言
+      fan: !!st.fan,
+      angle: st.fan ? +st.angle.toFixed(3) : null,
+      half: st.fan ? +st.half.toFixed(3) : null,
     })),
     wardenTags: () => wardenTags.length,
+    // 第 96 块：追踪牌的细节（朝向 / 剩余转向预算 / 位置）——
+    // 只给个数验不了「它会拐一次弯」，得看得见 ang 和 turnLeft 在动。
+    wardenTagList: () => wardenTags.map((tg) => ({
+      x: +tg.x.toFixed(2), z: +tg.z.toFixed(2),
+      ang: +tg.ang.toFixed(3), turnLeft: +tg.turnLeft.toFixed(3),
+      vx: +tg.vx.toFixed(2), vz: +tg.vz.toFixed(2),
+      life: +tg.life.toFixed(2), dmg: +tg.dmg.toFixed(2),
+    })),
     //   反隐（第 63 块，路口灯）：强行把一圈里的隐身雾鬼点亮，返回点亮了几只
     revealInRadius: (at, radius) => {
       let n = 0;

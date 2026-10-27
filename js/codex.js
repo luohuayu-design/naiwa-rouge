@@ -13,13 +13,13 @@
 // （击杀 / 弹事件卡 / 选升级卡）。
 // ============================================================
 
-import { ENEMY_TYPES } from './enemy.js?v=109';
-import { SWORD_KINDS } from './swordKinds.js?v=109';
-import { RELIC_DEFS } from './relics.js?v=109';
-import { UPGRADES } from './upgrade.js?v=109';
-import { ALL_EVENTS } from './events.js?v=109';
-import { RARITIES } from './rarity.js?v=109';
-import { codexAll, codexCount } from './profile.js?v=109';
+import { ENEMY_TYPES } from './enemy.js?v=110';
+import { SWORD_KINDS } from './swordKinds.js?v=110';
+import { RELIC_DEFS } from './relics.js?v=110';
+import { UPGRADES } from './upgrade.js?v=110';
+import { ALL_EVENTS } from './events.js?v=110';
+import { RARITIES } from './rarity.js?v=110';
+import { codexAll, codexCount } from './profile.js?v=110';
 
 export const CODEX_TABS = [
   { id: 'enemies', name: '怪物' },
@@ -41,11 +41,11 @@ const statLine = (pairs) =>
 // 怪物数值行。没有 damage 的（孢冠菌王）显式写「不还手」，
 // 不然玩家会以为是数值漏填。
 function enemySub(cfg) {
-  // 寄存处看守（第 83 块）：它只在柜子满了才出场，所以数值行要带上「三套攻击」
-  // 和「半血暴怒」—— 玩家在图鉴里得先知道这东西不是拿来硬顶的。
+  // 寄存处看守（第 83 块，第 96 块补到五招）：它只在柜子满了才出场，所以数值行
+  // 要带上「五套攻击」和「半血暴怒」—— 玩家在图鉴里得先知道这东西不是拿来硬顶的。
   if (cfg.warden) {
     return statLine([['生命', cfg.hp], ['伤害', cfg.damage], ['速度', cfg.speed]])
-      + ' · 满柜召唤 · 半血暴怒';
+      + ' · 满柜召唤 · 五套攻击 · 半血暴怒';
   }
   // 称量官（第 82 块）：它自己的数值不重要，重要的是「它叠的那一层」。
   // 写穿上称间隔和三层加成 —— 玩家得先知道「为什么突然都变快了」。
@@ -61,16 +61,21 @@ function enemySub(cfg) {
 
 // 怪物一句话说明：按「它给你什么压力」分类，第二关三个巫师各有专属文案
 function enemyDesc(cfg) {
-  // 寄存处看守（第 83 块）：第八关唯一由玩法召唤出来的怪。
-  // 文案要把「怎么来的」「三套攻击怎么躲」「半血会变凶」说全 —— 玩家第一眼
+  // 寄存处看守（第 83 块；第 96 块从三招扩到五招）：第八关唯一由玩法召唤出来的怪。
+  // 文案要把「怎么来的」「五套攻击怎么躲」「半血会变凶」说全 —— 玩家第一眼
   // 看到它从柜子里走出来时，是没有时间读说明的（世界不暂停）。
+  // ⚠️ 图鉴 desc 是 textContent 渲染的（见 main.js 的 cx-desc），**不能写 HTML 标签、
+  // 也不能写**加粗**，否则玩家看到的是字面的 `<b>` 和星号。
   if (cfg.warden) {
     const w = cfg.warden;
     return `爆发压力：寄存柜攒满 8 块牌子就会把它放出来 —— 它不是刷出来的，是你没清柜的代价。`
-      + `三套攻击各占一个距离带：贴脸（${w.sweepR} 格内）横扫，前摇半秒、脚下一圈橙光；`
-      + `中距在你脚下钉三个金圈，${w.slamDelay} 秒后落锤；拉远到 9 格外它就抡木牌砸过来（有实体飞行物）。`
+      + `五套攻击：贴脸（${w.sweepR} 格内）横扫，前摇半秒、脚下一圈橙光；`
+      + `中距在你脚下钉三个金圈，${w.slamDelay} 秒后落锤；`
+      + `同一档还有木牌雨 —— 它正面张开一片扇形，往后退没用，必须绕到侧面或背后；`
+      + `拉远到 9 格外它就抡木牌砸过来，而且那块牌会拐一次弯追你（闪一次它跟着拐，再闪才躲得掉）；`
+      + `另外它还会回身砸开寄存柜放小怪出来（一次两只，最多同时三只）。`
       + `血量掉到 ${Math.round(w.rageAt * 100)}% 会暴怒：移速 ×${w.rageSpeed}、出手间隔 ×${w.rageGap}，自发光转暗金。`
-      + `所以「贴脸站着换血」和「拉远了跑」都不安全 —— 它逼你不停在两种距离之间切换`;
+      + `所以「贴脸站着换血」和「拉远了跑」都不安全 —— 它逼你一直在换距离，也逼你判断方向`;
   }
   // 并联体（第 75 块，第 80 块把机制写全）：这是唯一一个「危险不在它身上、
   // 在它们之间」的怪，不说清 n 只连几条、多久咬一次、缝在哪，玩家只会觉得莫名掉血。
@@ -79,7 +84,7 @@ function enemyDesc(cfg) {
   // 它自己几乎不打人，玩家第一反应一定是「先打围上来的」，那就正好踩进机制里。
   if (cfg.weigh) {
     const p = cfg.weigh.per;
-    return `记账压力：它自己几乎不打人，活儿是给**全场**叠层 —— 每 ${cfg.weigh.every} 秒翻一次簿子，场上所有存活的怪一起加：移速 +${Math.round(p.speed * 100)}%、伤害 +${Math.round(p.damage * 100)}%、减伤 +${Math.round(p.armor * 100)}%，最多 ${cfg.weigh.cap} 层（被记名的怪脚下会长出一只金环，层数越大环越大）。拖着不管，同一批骷髅会每九秒换一副更凶的面孔；**砍掉它，所有层当场清零**。所以它躲得比谁都远，也只在你够不到它的时候最快活 —— 它翻开簿子站定那 ${cfg.attackDuration} 秒，就是这一关的输出窗口`;
+    return `记账压力：它自己几乎不打人，活儿是给全场叠层 —— 每 ${cfg.weigh.every} 秒翻一次簿子，场上所有存活的怪一起加：移速 +${Math.round(p.speed * 100)}%、伤害 +${Math.round(p.damage * 100)}%、减伤 +${Math.round(p.armor * 100)}%，最多 ${cfg.weigh.cap} 层（被记名的怪脚下会长出一只金环，层数越大环越大）。拖着不管，同一批骷髅会每九秒换一副更凶的面孔；砍掉它，所有层当场清零。所以它躲得比谁都远，也只在你够不到它的时候最快活 —— 它翻开簿子站定那 ${cfg.attackDuration} 秒，就是这一关的输出窗口`;
   }
   if (cfg.erase) return '损失压力：它从不还手，读条 4.5 秒后把你环上的一把剑「擦掉」，然后转身往场地外跑 —— 跑出去那把剑这一局就没了。冰剑冻住 / 震剑击退 / 冲过去砍死它，都行';
   if (cfg.reboot) return '耐心压力：打死不算完 —— 躺 4 秒后原地半血重启，而且比上一次更快（最多重启 2 次）。地上那圈红光就是倒计时，守着它补刀';
