@@ -291,7 +291,7 @@ for (const [id, needle] of [['eraser_10', '擦名者'], ['reboot_10', '重启体
   const a = ach.achById(id);
   ok(!!a && a.desc.includes(needle), `成就 ${id} 存在且描述对得上`, a && a.desc);
 }
-ok(ach.ACHS.length === 41, '成就总数 41（第 62 块 38 + 3）', ach.ACHS.length);
+ok(ach.ACHS.length === 67, '成就总数 67（第 62 块 41 → 第 94 块大扩到 67）', ach.ACHS.length);
 
 // ============================================================
 sec('J、版本号：所有模块同一个 ?v=');

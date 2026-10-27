@@ -2,7 +2,21 @@
 
 > 新对话从这里开始读，不要先翻聊天记录。**先读 §0「给新对话的话」，再按需查后面章节。**
 >
-> 最后更新：2026-10-26 · 线上 **v=104** · 第 93 块（**防御上限 70%**：用户先问「你觉得是削弱每次的防御力提升，还是提高怪物伤害曲线好」，我给的答复是「两个都是治标」，最后定案 —— **无论防御堆多高，每一下至少吃 30% 伤害**（防御最多减 70%），并且这条**必须写进属性介绍**。
+> 最后更新：2026-10-27 · 线上 **v=105** · 第 94 块（**标题页三 tab + 每日任务 + 成就重做 + 盲盒降价 + 10 个兑换码**）。
+>
+> **① 标题页三 tab**：底部常驻 tab 条「主页面 / 每日任务 / 成就」，三块面板叠在同一处，切 tab 只切 `.on`（`.tt-pane` 交叉淡入淡出）。每日任务有待领奖励时 tab 亮红点，成就 tab 带「已解锁/总数」徽章。主页面剩下 15 个按钮按功能分区重排（开始·读取 / 今日挑战·种子·签到 / 夜行商店整行 / 图鉴·夜行记忆·我的记录 / 永夜火种·属性 / 礼包·设置·公告·宣传）。
+> **② 盲盒降价 5% → 3%**：`BOX_PRICE_STEP` 0.05 → 0.03（木匣 30→39→48，银匣 100→130→160，金匣 280→364→448）。`index.html` 说明文案、`metaShop.js` 注释价目表、block74/82 老套件的断言三处一起改。
+> **③ 盲盒奖池手风琴**：`metaShop.js` 新增 `boxPoolEntries(boxId)` 返回 `{box,curse,rare,pos,rows,sum}`，概率口径与开箱判定**顺序一致**（诅咒 → 稀有 → 普通正面，三条瓜分 100%；稀有项内部再对半：永久法器 50% / 技能CD 50%）。UI 按木/银/金三组，正面绿 / 诅咒红 / 稀有金。手风琴引擎抽成 `js/accordion.js`（懒构建 + 单组展开）。
+> **④ 成就 41 → 67 条**：`js/achievements.js` 重写，新增 `ACH_CATS`（八类）/ `ACH_TIERS`（寻常 30 / 不易 60 / 罕见 120 骨币）/ `achsByCat`。`tryAch()` 解锁即发骨币，**一次性、不补发老档**。进度 `prog` 五种 kind：`stat` / `enemy`（按怪种）/ `events` / `meta`（局外，读 `metaShopState().opened`）/ `enemies`。
+> **⑤ 每日任务**（新文件 `js/dailyQuest.js`）：每天 5 条 = 简单 3（含常驻 `dq_clear_any`）+ 中等 1 + 困难 1。抽签用**日期哈希**（FNV-1a + mulberry32），一天之内刷新网页任务不变。奖励 30 / 80 / 150，进度自动累计、**骨币手动领**（可一键全领）。计数器语义分 `sum` / `max`；逐怪不写 localStorage，只在「刚好达成」那一帧落盘。
+> **⑥ 10 个兑换码** `FXYXGG01`~`FXYXGG10`，每个 3000 骨币。只存哈希，明文只在 gitignore 掉的 `兑换码大全.txt`。
+>
+> ⚠️ **本块三个新坑**：
+> 1. **单色 SVG 图标不能用外链 `<img>`** —— SVG 是独立文档，`fill="currentColor"` 只会算出黑色，拿不到外层 CSS 颜色。全部改成 `<i style="--ic:url(...)">` + `background:currentColor` + `mask:var(--ic)`，颜色随文字色走。
+> 2. **成就面板每次进去都整体重建**，只有展开的那一组会建 DOM —— 断言「某条显示为已解锁」必须先点开对应分组，否则 `querySelector` 拿到 null。
+> 3. **手风琴展开动画不能用 `grid-template-rows:0fr→1fr`**（要 Chrome 107+，项目要照顾老 WebView）。改成 `max-height` + `visibility` 延迟切换（`visibility 0s linear .28s`）。
+>
+> 上一块第 93 块（**防御上限 70%**）：用户先问「你觉得是削弱每次的防御力提升，还是提高怪物伤害曲线好」，我给的答复是「两个都是治标」，最后定案 —— **无论防御堆多高，每一下至少吃 30% 伤害**（防御最多减 70%），并且这条**必须写进属性介绍**。
 > **根因（为什么两个选项都不是正解）**：`mitigate()` 是**纯减法** `实际伤害 = 攻击 − 防御`（第 33 块改的，最少 1 点），而伤害曲线九关只从 1 长到 7（第九关 R20 的 4.8×1.55=7.44 → `Math.round` 后 **7 点**），防御在单局里却能堆到 6 以上。一旦防御 ≥ 攻击 − 1，伤害就**锁死在 1 点**，之后每多叠一点防御全是废的 —— 上限 20+ 生命下等于「站着挨 20 多下才倒」，后期所有攻击威胁一起消失。这是**量级撞车**，不是斜率问题。
 > **为什么不选「削防御提升幅度」**：减法公式下防御是**阈值属性**（够用 / 不够用），甲壳卡 `vals 0.3/0.55/1.0` 无获取上限、且 `gw: +0.040` 是**正数**（拿得越多越容易再出）。把单卡从 1.0 砍到 0.5，玩家不会改拿别的，只会**多拿一张**，总防御不变、还多占一个卡位并挤压别的 build。
 > **为什么不单选「提怪物伤害曲线」**：伤害被 `Math.round` 取整，且对**裸防玩家是 1:1 疼度**。从 7 抬到 12，堆防御的人终于会疼，但没堆防御的人 R20 一下掉 12、两下死。而且第 90 块刚把扣血事件翻倍、第 91 块刚加攻速/移速曲线 —— 再来一刀全线加伤害，体感是「一夜之间变难」而不是「某个流派被修」。
@@ -102,7 +116,7 @@
 
 ## 0. 给新对话的话（2026-10-23 交接）
 
-1. **当前基线**：v=103（**第 92 块**：结算出口改成「回主界面」，不再整页刷新，细节见文首）。**改这块要注意的**：
+1. **当前基线**：v=105（**第 94 块**：标题页三 tab + 每日任务 + 成就重做 + 盲盒降价 + 10 个兑换码，细节见文首）。**改这块要注意的**：
    ① **别再用 `location.reload()` 当「清干净」的手段**。整个 `main.js` 现在只剩 2 处真的 reload：**导入存档**（各模块自己缓存档案，只能刷新）和 `closeBoons` 的 `after === 'reload'` 兼容分支。结算出口走 `exitToTitle()`；
    ② **「刷新」曾经顺手完成了三件事，换掉它必须显式补上**：站位归零（`pos.set(0,0,0)`）、奶蛙姿势扶正（`frog.root.rotation.z = 0` + `position.copy(pos)`）、攻击范围环重新可见（`playerRing.setVisible(true)`）。第 92 块之前一直是刷新在兜底，所以这三样**从来没写进过开局流程**，改动时漏一个就是「不报错的怪状态」；
    ③ 新增「结算后弹出来的浮层」时，`exitToTitle()` 里要一起收掉。现在收的是：失败提示、结算卡、攻略面板、音效包卡。**首通那两张（音效包 1.4s / 成就 toast）是定时器弹的**，出口被点得早反而更容易漏；
@@ -343,6 +357,8 @@ Three.js r160 的单摇杆幸存者肉鸽《奶蛙夜行》，纯静态站点（
 
 | **91** | **v=102** | **关内难度梯度**（用户：「让难度梯度更明显，例如攻击更快、移动更快、伤害更高，而不只是叠个数和生命」；定案：加攻速+移速两维、曲线后期加速）。① 新维度 `haste`（出手频率）进 `roundScale`，R20 各关 ×1.45~1.55；**前摇/红圈/弹道时间一律不动**；② 移速斜率 0.035 → 0.045（R20 ×1.855，小兵 4.27 贴主角 4.4）；③ `curve 0.28` 平方后期加速，**只作用于 haste**（R1 1.00 → R5 1.04 → R10 1.13 → R15 1.27 → R20 1.45），hp/damage 保持线性；④ 九套出手机制全部收进 `enemy.js` 的 `cdOf()`，白名单仅剩重启躺尸 0.35 / 震钟打断 0.9；⑤ 孢生菇小兵 / 菌王卫队 / 寄存柜看守三处召唤都继承 `hasteScale`；⑥ 称量官上称用 `Math.sqrt(haste)`（半量，防与五层记名相乘失控）；⑦ `DIFFS` 加 `haste`（1 / 1.04 / 1.10）。测试 `.tmp-block91-test.mjs` **114** + `.tmp-91-smoke.js` **24** |
 | **92** | **v=103** | **结算出口改「回到主界面」**（用户 bug：「点再来一次会重新刷新网页，而不是直接回主页面」+ 要求改文案）。① `rsBtn` 不再 `location.reload()`，新增 `exitToTitle()`：收失败提示 / 结算卡 / 攻略面板 / **音效包卡（首通 1.4s 后弹）** → `showTitle()`；② 文案「再来一次」→「回到主界面」（HTML + 运行时 fallback 两处），「领取 N 次永夜火种」保留，`closeBoons` 新增 `after='title'`；③ **三个原来靠刷新复位的状态改成显式复位**：`pos.set(0,0,0)`、`frog.root.rotation.z=0`、`playerRing.setVisible(true)`，统一收进 `restoreRunVisuals()`，`resetRunState` / `startPlay` / `resumeGame` 三处调用。测试 `.tmp-block92-test.mjs` **27** + `.tmp-92-smoke.js` **33**（`__navMark` + `performance.timeOrigin` 双判据验「没刷新」） |
+| **93** | **v=104** | **防御上限 70%**（用户问「削防御提升幅度还是提怪物伤害曲线」，答复「两个都治标」）。`stats.js` 新增 `ARMOR_FLOOR = 0.30`，`mitigate(raw, armor, floorPct = 0)` 返回 `Math.max(1, raw-armor, raw*floorPct)` —— **默认 0 = 旧行为**，只有 `damage()`（主角受伤）传保底，打怪侧一律不动。防御 6 时 1 → 2.1，从「免疫开关」变成边际递减曲线。属性面板 / 甲壳卡 / 铜皮厚甲 / 引导页都写明这条上限（属性面板原本不渲染 `desc`，为此给 `STAT_DEFS` 加了 `note` 字段）。
+| **94** | **v=105** | **用户五条**：① 盲盒涨价曲线降到 **3%** + 手风琴展开展示奖池内容和概率 ② 丰富成就系统（**41 → 67 条**，八类分栏，解锁发骨币 30/60/120，标题页找位置做 UI）③ 新增**每日任务**（简单 3 含常驻「通关任一关」+ 中等 1 + 困难 1，日期哈希抽签，30/80/150 骨币，手动领）④ 优化主页面按钮顺序 ⑤ 新增 10 个兑换码 `FXYXGG01`~`10`（各 3000 骨币）。标题页改成底部**三 tab**（主页面 / 每日任务 / 成就），主页面 15 个按钮按功能分区重排。新增 `js/accordion.js`（手风琴引擎）、`js/dailyQuest.js`，`js/achievements.js` 重写，`js/metaShop.js` 新增 `boxPoolEntries()`，`js/profile.js` 新增 `clears` 通关记录。
 21. **第 77 块的三条新坑（都是「悄悄错、不报错」型）**：
     ① **蒙皮模型别用 `Box3.setFromObject` 量身高**。它会给出荒谬的数（wolf.glb 量出 527，真值 2.707 —— 蒙皮顶点被重复施加了节点缩放），而 `SkinnedMesh.computeBoundingBox()` 再乘 `matrixWorld` 同样会双重计算。**唯一可靠的办法是渲染出来读像素**：正交相机（半高已知）拍一张、洋红纯色背景、找非背景像素的包围盒，世界高度 = 像素行数 × 每像素世界单位。新模型标定完**先拿老模型对表**（wolf 应 ≈2.6~2.7、tribal 应 ≈4.2）确认口径一致，再信新模型的数。
     ② **换怪物模型后，图鉴缩略图必须重出**。`assets/codex/*.webp` 是 `.tmp-codex-shots.js` 离线渲染的静态图，运行时根本不会加载 glb —— 不重出就是「局内换了新模型、图鉴还是旧的换色占位」，而且不会有任何报错提示。
@@ -431,6 +447,9 @@ Three.js r160 的单摇杆幸存者肉鸽《奶蛙夜行》，纯静态站点（
 | `signin.js` | 每日签到（第 59 块）：周一起算的 7 天进度、20/100/200 三档奖励、跨周清零、脏数据过滤 |
 | `skills.js` | **技能注册表（第 64 块扩充）**：`visible/ready/progress/press/cdText` + `cd/cdNow/desc/unlockNote/state`；`fmtCd()` 统一两位小数（原 `Math.ceil`） |
 | `story.js` | 主线 18 夜数据 + 印记/结局 + 调度（加新关只改对应夜的 `levelId`+`atRound`） |
+| `achievements.js` | **第 94 块重写**：`ACHS`（**67 条**）+ `ACH_CATS`（八类）+ `ACH_TIERS`（30/60/120）+ `achById` / `achsByCat`。`prog` 五种 kind：`stat` / `enemy`（按怪种）/ `events` / `meta` / `enemies` |
+| `dailyQuest.js` | **第 94 块新增**：每日任务。日期哈希抽签（FNV-1a + mulberry32），`DQ_PINNED` 常驻 + `DQ_POOL` 任务池，`dqPump` / `dqClaim` / `dqClaimAll` / `dqMsLeft`。计数语义 `sum` / `max` 两张表 |
+| `accordion.js` | **第 94 块新增**：通用手风琴（`renderAccordion(root, sections, opts)`）。**懒构建** + 单组展开 + `visibility:hidden` 收起。匣子奖池与成就八类共用这一套 |
 | `codex.js` / `achievements.js` / `audio.js` / `joystick.js` / `scene.js` / `frog.js` / `fx.js` / `gold.js` / `input.js` / `rangeRing.js` / `swordKinds.js` / `guide.js` | 图鉴渲染数据 / **41 条成就** / 音频引擎 / 摇杆 / 场景 / 角色 / 特效 / 金币 / 输入 / 范围环 / 剑种（`tagline`+`desc` 走 textContent，**别写 markdown 星号**）/ 攻略面板（含 `richText()` 加粗渲染） |
 | `assets/` | `rigged.glb`（奶蛙）、`weapons/`、`monsters/`（**18 个 glb**，按关预载）、`props/`（CC0 道具）、`codex/*.webp`（**21 张**图鉴缩略图，加怪后必须跑 `node .tmp-codex-shots.js <type>` 重出）、`audio/` |
 | `scene.js` | 场景 / 相机 / 灯光 / 五套主题地面程序化贴图（含**第 82 块** `registry` 鎏金墨色 `makeRegistryTexture()`） |
@@ -532,7 +551,11 @@ __game.shop.stock（getter）/ open(roundNo) / close() / roll(rng)       ← 第
 
 **第 72 块的加载验证**：`.tmp-block72-cdp.js` 用 CDP 的 `Network.requestWillBeSent` 数首屏到底请求了几个 `.glb`（生产应只有 4 只第一关的怪），再验 debug 全量 + `ensureLevelAssets` 只补差集。**改了预载策略就跑这套**。
 
-**CDP 端到端（需先起 8124；一次只跑一套，套间跑 `.tmp-cdp-clean.js`）**：开局/战斗/菜单/设置/存档续玩/图鉴/成就/武器教程/炮台法器/`block18~57` 各块专项/`admin`/`seed`/`pack`/`promo`/`start-test`/`block64`/`block65`/`block66`/`block67` 等共 **57 套**，约 1950 项。脚本在上级目录（第 32 块前）与 `naiwa-rouge/`（第 41 块起）。
+**CDP 端到端（需先起 8124；一次只跑一套，套间跑 `.tmp-cdp-clean.js`）**：开局/战斗/菜单/设置/存档续玩/图鉴/成就/武器教程
+
+**第 94 块**：`.tmp-block94-test.mjs`（**225 项**纯 Node 契约）+ `.tmp-94-smoke.js`（**87 项** CDP 冒烟，含三块面板截图）。
+`sh .tmp-94-runall.sh` 一次跑完全部纯 Node 套件（只报挂了的）。**改数值类断言时记得回头改老套件**：
+第 94 块动了盲盒价格（block74 / block82）、礼包码总数（block55 / block57 / gift-test）、成就总数（block63）四处写死的数字。/炮台法器/`block18~57` 各块专项/`admin`/`seed`/`pack`/`promo`/`start-test`/`block64`/`block65`/`block66`/`block67` 等共 **57 套**，约 1950 项。脚本在上级目录（第 32 块前）与 `naiwa-rouge/`（第 41 块起）。
 
 **跑全量回归的正确姿势（2026-10-21 定）**：
 - 启动参数带 `--num-raster-threads=2 --renderer-process-limit=1` + 关后台节流（SwiftShader 会按核数开线程打满 CPU）。

@@ -33,28 +33,28 @@ const cssSrc = readFileSync(new URL('./style.css', import.meta.url), 'utf8');
 // ============================================================
 sec('一、盲盒按购买次数线性涨价（三种各自独立）');
 // ============================================================
-ok('导出涨价步长 BOX_PRICE_STEP', BOX_PRICE_STEP === 0.05, String(BOX_PRICE_STEP));   // 第 82 块：6% → 5%（用户「涨得太快」）
+ok('导出涨价步长 BOX_PRICE_STEP', BOX_PRICE_STEP === 0.03, String(BOX_PRICE_STEP));   // 第 94 块：5% → 3%（用户「涨得太快」）
 ok('cost 现在是「首价」：木 30 / 银 100 / 金 280',
   BOX_BY_ID.wood.cost === 30 && BOX_BY_ID.silver.cost === 100 && BOX_BY_ID.gold.cost === 280);
 for (const b of BOXES) {
   ok(`${b.name} 第 1 次买 = 首价 ${b.cost}`, boxCost(b.id, 0) === b.cost, String(boxCost(b.id, 0)));
-  ok(`${b.name} 每买一次 +5% 首价`,
-    boxCost(b.id, 1) === Math.round(b.cost * 1.05) && boxCost(b.id, 2) === Math.round(b.cost * 1.10),
+  ok(`${b.name} 每买一次 +3% 首价`,
+    boxCost(b.id, 1) === Math.round(b.cost * 1.03) && boxCost(b.id, 2) === Math.round(b.cost * 1.06),
     `${boxCost(b.id, 1)} / ${boxCost(b.id, 2)}`);
-  // 线性（不是复利）：第 20 次 = 首价 × 2.0（第 82 块起步长 5%）
-  ok(`${b.name} 第 20 次 = 首价 ×2.0（线性不是复利）`,
-    boxCost(b.id, 20) === Math.round(b.cost * 2.0), String(boxCost(b.id, 20)));
+  // 线性（不是复利）：第 20 次 = 首价 × 1.6（第 94 块起步长 3%）
+  ok(`${b.name} 第 20 次 = 首价 ×1.6（线性不是复利）`,
+    boxCost(b.id, 20) === Math.round(b.cost * 1.6), String(boxCost(b.id, 20)));
   let mono = true;
   for (let n = 1; n <= 60; n++) if (boxCost(b.id, n) < boxCost(b.id, n - 1)) mono = false;
   ok(`${b.name} 价格单调不降（0~60 次）`, mono);
   ok(`${b.name} 涨得比篝火（每级 +35%）缓`, (boxCost(b.id, 10) / b.cost) < 2.0,
     `第 10 次 ${boxCost(b.id, 10)}`);
 }
-ok('木匣 第 10 / 20 / 30 次 = 45 / 60 / 75（第 82 块起步长 5%）',
-  boxCost('wood', 10) === 45 && boxCost('wood', 20) === 60 && boxCost('wood', 30) === 75,
+ok('木匣 第 10 / 20 / 30 次 = 39 / 48 / 57（第 94 块起步长 3%）',
+  boxCost('wood', 10) === 39 && boxCost('wood', 20) === 48 && boxCost('wood', 30) === 57,
   `${boxCost('wood', 10)}/${boxCost('wood', 20)}/${boxCost('wood', 30)}`);
-ok('银匣 第 10 次 150、金匣 第 10 次 420',
-  boxCost('silver', 10) === 150 && boxCost('gold', 10) === 420,
+ok('银匣 第 10 次 130、金匣 第 10 次 364',
+  boxCost('silver', 10) === 130 && boxCost('gold', 10) === 364,
   `${boxCost('silver', 10)}/${boxCost('gold', 10)}`);
 ok('未知箱子返回 0', boxCost('nope', 3) === 0);
 ok('次数为负 / 非数字也不炸', boxCost('wood', -5) === 30 && boxCost('wood', undefined) === 30);
@@ -66,7 +66,7 @@ addBones(100000);
   const p0 = [boxPriceOf('wood'), boxPriceOf('silver'), boxPriceOf('gold')];
   ok('没买过时三个都是首价', p0.join() === '30,100,280', p0.join());
   for (let i = 0; i < 10; i++) buyBox('wood', Math.random, false);
-  ok('买了 10 次木匣 → 木匣涨价', boxPriceOf('wood') === 45, String(boxPriceOf('wood')));
+  ok('买了 10 次木匣 → 木匣涨价', boxPriceOf('wood') === 39, String(boxPriceOf('wood')));
   ok('银匣 / 金匣不受影响（各数各的）',
     boxPriceOf('silver') === 100 && boxPriceOf('gold') === 280,
     `${boxPriceOf('silver')}/${boxPriceOf('gold')}`);
@@ -74,7 +74,7 @@ addBones(100000);
     `${boxBought('wood')}/${boxBought('silver')}`);
   const r = buyBox('gold', Math.random, false);
   ok('买金匣扣的是金匣的价（280）', r.ok && r.cost === 280 && r.nth === 1, JSON.stringify({ c: r.cost, n: r.nth }));
-  ok('金匣第二次就是 294', boxPriceOf('gold') === 294, String(boxPriceOf('gold')));
+  ok('金匣第二次就是 288', boxPriceOf('gold') === 288, String(boxPriceOf('gold')));
 }
 
 // buyBox 真的按涨价扣钱
@@ -88,8 +88,8 @@ addBones(1000);
     seq.push(before - bones());
     if (!r.ok) break;
   }
-  // 第 82 块（步长 6% → 5%）：30 → 31.5→32 → 33→33 → 34.5→35 → 36→36
-  const want = [30, 32, 33, 35, 36];
+  // 第 94 块（步长 5% → 3%）：30 → 30.9→31 → 31.8→32 → 32.7→33 → 33.6→34
+  const want = [30, 31, 32, 33, 34];
   ok('连买 5 次木匣，扣的钱逐次变多且等于 boxCost',
     seq.join() === want.join(), `${seq.join()} vs ${want.join()}`);
 }

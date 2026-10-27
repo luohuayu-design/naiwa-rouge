@@ -64,7 +64,17 @@ for (const c of uniq.values()) {
 }
 ok(hashOk === 40, `40 个码的哈希在 gift.js 里都查得到（${hashOk}/40）`);
 ok(tierOk === 40, `档位全对：NA-* = 300 骨币、NB-* = 100 骨币（${tierOk}/40）`);
-ok(giftTable.size === 40, `gift.js 码表 40 条（实际 ${giftTable.size}）`);
+ok(giftTable.size === 50, `gift.js 码表 50 条（第 94 块新增夜行礼包 10 个，实际 ${giftTable.size}）`);
+
+// 第 94 块：夜行礼包 FXYXGG01 ~ FXYXGG10，每个 3000 骨币
+{
+  const fx = [...txt.matchAll(/\bFXYXGG(\d{2})\b/g)].map((m) => m[0]);
+  const fxUniq = [...new Set(fx)];
+  ok(fxUniq.length === 10, `txt 里有 10 个夜行礼包码（实际 ${fxUniq.length}）`);
+  let fxOk = 0;
+  for (const c of fxUniq) if (giftTable.get(codeHash(c)) === 3000) fxOk++;
+  ok(fxOk === 10, `10 个夜行礼包码的哈希都对得上且是 3000 骨币（${fxOk}/10）`);
+}
 
 // 分类展示：宣传礼包 / 推荐礼包段 + 第一批两段 + 总览 + 使用说明，一个都不能少
 ok(/宣传礼包/.test(txt) && /300 骨币/.test(txt), '有「宣传礼包 · 300 骨币」的分类段');

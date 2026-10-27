@@ -30,7 +30,7 @@
 // 判定放在 main.js 的死亡钩子里（deposit 只管收牌，不掷骰）。
 // 买了铃以后柜子上会挂铜铃（挂几个 = 几级），柜面左上角多一个「镇」字。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=104';
+import * as THREE from '../lib/three.module.js?v=105';
 
 // 没有法器时：一半的怪会留牌子（用户定的 50%）。
 export const TAG_BASE = 0.50;

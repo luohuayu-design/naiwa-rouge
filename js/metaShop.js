@@ -24,13 +24,13 @@
 import {
   profile, bones, addBones, metaShopState, metaAddMod, metaGrantRelic,
   metaGrantSkillCd, metaLog, metaBought, save,
-} from './profile.js?v=104';
-import { RELIC_DEFS } from './relics.js?v=104';
+} from './profile.js?v=105';
+import { RELIC_DEFS } from './relics.js?v=105';
 
 // ---------------- 三档宝箱 ----------------
 // tier 0/1/2 对应「最低可出现的池子档位」；mag 是木匣基准的强度倍率；
 // special / specialW 只有银、金能出稀有项；curse 是诅咒（强制负面）概率。
-// cost 是**首价**（第 74 块）：每买一次按首价 +5% 线性加价，三种各自独立计数。
+// cost 是**首价**（第 74 块）：每买一次按首价 +3% 线性加价，三种各自独立计数。
 export const BOXES = [
   { id: 'wood',   tier: 0, name: '木匣', icon: '📦', cost: 30,  curse: 0.35, mag: 1.0, special: false, specialW: 0 },
   { id: 'silver', tier: 1, name: '银匣', icon: '🎁', cost: 100, curse: 0.18, mag: 1.6, special: true,  specialW: 0.12 },
@@ -41,14 +41,15 @@ export const BOX_BY_ID = Object.fromEntries(BOXES.map((b) => [b.id, b]));
 
 // ---------------- 第 74 块：按购买次数线性涨价 ----------------
 // 和篝火一个思路（篝火是每级 +35%）但**缓得多**：盲盒有 35% / 18% / 7% 的诅咒率，
-// 买的时候本来就在赌，加价再猛就没人开了。每买一次 +5% **首价**（不是复利）：
-//   木匣 30 → 第 10 次 45 → 第 20 次 60 → 第 30 次 75
-//   银匣 100 → 第 10 次 150 → 第 20 次 200
-//   金匣 280 → 第 10 次 420 → 第 20 次 560
-// 第 82 块（用户反馈「涨得太快」）：6% → 5%。玩家实际体感是「同一个箱子连着买，
-// 三四十次之后就开不动了」——线性加价本来就是要慢慢收，不被它逼着只买便宜的。
+// 买的时候本来就在赌，加价再猛就没人开了。每买一次 +3% **首价**（不是复利）：
+//   木匣 30 → 第 10 次 39 → 第 20 次 48 → 第 30 次 57
+//   银匣 100 → 第 10 次 130 → 第 20 次 160
+//   金匣 280 → 第 10 次 364 → 第 20 次 448
+// 第 82 块（用户反馈「涨得太快」）：6% → 5%。第 94 块再降到 **3%** —— 玩家实际
+// 体感是「同一个箱子连着买，三四十次之后就开不动了」，而第 94 块同时上了成就与
+// 每日任务两条新的骨币来源，盲盒要跟着让利，不然攒的币全被加价吃掉。
 // 三种箱子各数各的（买木匣不会把金匣抬贵），否则玩家会被逼着只买便宜的。
-export const BOX_PRICE_STEP = 0.05;
+export const BOX_PRICE_STEP = 0.03;
 
 // 第 n 次买这个箱子要多少钱（n = 已经买过几次）
 export function boxCost(boxId, boughtN = 0) {
@@ -191,6 +192,70 @@ export function rollBox(boxId, rng = Math.random) {
   const e = pickWeighted(pool, rng);
   const t = effectText(e, box.mag, true);
   return { cursed: false, kind: 'stat', mod: { stat: t.stat, flat: t.flat, pct: t.pct, scope: t.scope }, icon: t.icon, name: t.name, effectText: t.effectText, stat: t.stat, scope: t.scope, flat: t.flat, pct: t.pct };
+}
+
+// ---------------- 第 94 块：奖池一览（给手风琴看，纯计算不落账） ----------------
+// 玩家一直只能看到「诅咒率 35%」这一句，不知道木匣里到底有几条、各多大概率。
+// 这里把**实际概率**算出来：开箱的判定顺序是「诅咒 → 稀有 → 普通正面」，
+// 所以三条路径的概率必须按这个顺序瓜分 100%，不能各自单独算。
+//   · 诅咒     c                        → 负面池按权重分摊
+//   · 稀有     (1-c) × specialW         → 一半永久法器、一半技能CD
+//   · 普通正面 (1-c) × (1-specialW)     → 正面池按权重分摊
+// ⚠️ 概率必须和 rollBox 的判定顺序一致 —— 改 rollBox 就要改这里，
+//    .tmp-block94-test.mjs 有一条「三组各自合计 100%」的断言盯着。
+// kind 给 UI 上色：pos 正面（绿）/ neg 诅咒（红）/ rare 稀有（金）。
+export function boxPoolEntries(boxId) {
+  const box = BOX_BY_ID[boxId];
+  if (!box) return null;
+
+  const pos = POS.filter((e) => e.minTier <= box.tier);
+  const neg = NEG.filter((e) => e.minTier <= box.tier);
+  const posW = pos.reduce((a, e) => a + e.weight, 0) || 1;
+  const negW = neg.reduce((a, e) => a + e.weight, 0) || 1;
+
+  const c = box.curse;
+  const rare = box.special ? box.specialW : 0;
+  const rareP = (1 - c) * rare;
+  const posP = (1 - c) * (1 - rare);
+
+  const rows = [];
+  if (box.special) {
+    rows.push({
+      kind: 'rare', icon: '🔮', name: '永久法器',
+      sub: `随机一件还没满级的（${RELIC_KINDS.length} 件里挑）`,
+      pct: rareP * 0.5,
+    });
+    rows.push({
+      kind: 'rare', icon: '⏱️', name: '技能冷却缩短',
+      sub: `−${Math.round((1 - SKILL_CD_MUL) * 100)}%（万剑齐发 / 箭雨）`,
+      // 法器全满级时那一半也会落到技能CD上，UI 里注明即可，不单列一行
+      pct: rareP * 0.5,
+    });
+  }
+  for (const e of pos) {
+    const s = scaleMod(e, box.mag);
+    rows.push({
+      kind: 'pos', icon: e.icon, name: e.name,
+      sub: `${e.desc} +${s.text}`,
+      pct: posP * (e.weight / posW),
+    });
+  }
+  for (const e of neg) {
+    const s = scaleMod(e, box.mag);
+    rows.push({
+      kind: 'neg', icon: e.icon, name: e.name,
+      sub: `${e.desc} −${s.text}`,
+      pct: c * (e.weight / negW),
+    });
+  }
+  return {
+    box,
+    curse: c,
+    rare: rareP,
+    pos: posP,
+    rows,
+    sum: rows.reduce((a, r) => a + r.pct, 0),
+  };
 }
 
 // ---------------- 购买并开箱（落账） ----------------

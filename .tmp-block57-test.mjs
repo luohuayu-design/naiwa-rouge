@@ -90,7 +90,7 @@ ok(/tt-promo-btn/.test(cssSrc), '主菜单入口有暖金色样式');
 // ============================================================
 sec('B、兑换码：宣传礼包 300 ×10 / 推荐礼包 100 ×10');
 
-ok(GIFT_COUNT === 40, `码表共 40 个（第一批 20 + 本批 20，实际 ${GIFT_COUNT}）`);
+ok(GIFT_COUNT === 50, `码表共 50 个（第一批 20 + 本批 20 + 第 94 块夜行礼包 10，实际 ${GIFT_COUNT}）`);
 const promoRows = [...giftSrc.matchAll(/\['([0-9a-f]{16})', 300, '宣传礼包'\]/g)];
 const recRows = [...giftSrc.matchAll(/\['([0-9a-f]{16})', 100, '推荐礼包'\]/g)];
 ok(promoRows.length === 10, `宣传礼包 10 条（实际 ${promoRows.length}）`);

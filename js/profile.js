@@ -99,6 +99,17 @@ const DEFAULT_PROFILE = {
   //   days  本周已签到的日期数组（一天一条，去重后就是「本周签了几天」）
   //   got3 / got6  本周 3 天 / 6 天里程碑的 100 / 200 骨币领过没有
   signin: { week: '', days: [], got3: false, got6: false },
+  // 每日任务（第 94 块）：跨天整条重掷（连没领的奖励一起作废）。
+  //   day     今天（YYYY-MM-DD）
+  //   picked  今天抽到的 5 条任务 id（抽签用日期哈希，一天内刷新不变）
+  //   c       计数器 { kills: 12, roundMax: 8, 'kT:minion': 5, ... }
+  //   got     已领奖励的 { 任务 id: 时间戳 }
+  dq: { day: '', picked: [], c: {}, got: {} },
+  // 通关过的关卡（第 94 块）：{ 1: true, 2: true ... }
+  //   只记「通关过没有」，不记次数（次数在 naiwa_rouge_records_v1 里）。
+  //   成就「登临第五关 / 骨塔之巅 / 九关皆通」看这张表 —— 战绩档案是分关卡的，
+  //   但它在结算时的写入顺序不好依赖，这里单独存一份最简单也最不容易错。
+  clears: {},
 };
 
 let cache = null;
@@ -298,6 +309,32 @@ export function unlockAch(id) {
   p.ach[id] = Date.now();
   save();
   return true;
+}
+
+// ---------------- 通关过的关卡（第 94 块） ----------------
+// 成就「登临第五关 / 骨塔之巅 / 九关皆通」看这张表。
+// 只记「通关过没有」，通关次数在 naiwa_rouge_records_v1（loadRecords）里。
+export function clearsMap() {
+  const p = profile();
+  if (!p.clears || typeof p.clears !== 'object') p.clears = {};
+  return p.clears;
+}
+
+export function levelCleared(id) {
+  return !!clearsMap()[id];
+}
+
+// 记一笔「这一关通关了」。返回 true 表示这次是新纪录。
+export function markLevelClear(id) {
+  const c = clearsMap();
+  if (!id || c[id]) return false;
+  c[id] = true;
+  save();
+  return true;
+}
+
+export function clearCount() {
+  return Object.keys(clearsMap()).length;
 }
 
 // ---------------- 骨币 ----------------

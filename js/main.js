@@ -5,40 +5,40 @@
 // 目标是把三件事调顺：摇杆输入 → 角色速度/朝向 → 相机跟随。
 // 后续叠战斗时，只需要在 tick() 里加敌人更新与自动攻击，不用动输入层。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=104';
-import { buildNightScene } from './scene.js?v=104';
-import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=104';
+import * as THREE from '../lib/three.module.js?v=105';
+import { buildNightScene } from './scene.js?v=105';
+import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=105';
 // 第 80 块：给 glb 拼上版本号 → SW 缓存优先（详见 assetUrl.js）
-import { withV } from './assetUrl.js?v=104';
-import { createInput } from './input.js?v=104';
-import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=104';
-import { createStatView } from './statView.js?v=104';
-import { createWeaponStats } from './weaponStats.js?v=104';
-import { createFx } from './fx.js?v=104';
-import { createEnemySystem, ENEMY_TYPES } from './enemy.js?v=104';
+import { withV } from './assetUrl.js?v=105';
+import { createInput } from './input.js?v=105';
+import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=105';
+import { createStatView } from './statView.js?v=105';
+import { createWeaponStats } from './weaponStats.js?v=105';
+import { createFx } from './fx.js?v=105';
+import { createEnemySystem, ENEMY_TYPES } from './enemy.js?v=105';
 import {
   createLevel, LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVEL_5, LEVEL_6, LEVEL_7, LEVEL_8, LEVEL_9, LEVELS_BY_ID, DIFFS, setDifficulty, getDifficulty, roundScale, levelStats, levelTypes,
-} from './wave.js?v=104';
-import { createRangeRing } from './rangeRing.js?v=104';
-import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=104';
-import { createWeaponSystem } from './weapon.js?v=104';
-import { createArrowRainSystem } from './arrowRain.js?v=104';
-import { SWORD_KINDS } from './swordKinds.js?v=104';
-import { createGoldSystem } from './gold.js?v=104';
-import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW, SHOP_PINNED } from './shop.js?v=104';
-import { createTurretSystem, TURRET } from './turret.js?v=104';
-import { createRelicSystem, RELIC_DEFS } from './relics.js?v=104';
-import { createHazards } from './hazards.js?v=104';
-import { createDeposit, tagChance } from './deposit.js?v=104';   // 第 81 块：寄存柜；第 84 块：掉牌概率
-import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=104';
-import audio from './audio.js?v=104';
-import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=104';
+} from './wave.js?v=105';
+import { createRangeRing } from './rangeRing.js?v=105';
+import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=105';
+import { createWeaponSystem } from './weapon.js?v=105';
+import { createArrowRainSystem } from './arrowRain.js?v=105';
+import { SWORD_KINDS } from './swordKinds.js?v=105';
+import { createGoldSystem } from './gold.js?v=105';
+import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW, SHOP_PINNED } from './shop.js?v=105';
+import { createTurretSystem, TURRET } from './turret.js?v=105';
+import { createRelicSystem, RELIC_DEFS } from './relics.js?v=105';
+import { createHazards } from './hazards.js?v=105';
+import { createDeposit, tagChance } from './deposit.js?v=105';   // 第 81 块：寄存柜；第 84 块：掉牌概率
+import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=105';
+import audio from './audio.js?v=105';
+import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=105';
 // 第 62 块：回血技能（第四关通关后永久解锁，回 5 点 / CD 25 秒）
-import { createHealSkill, HEAL_AMOUNT, HEAL_CD } from './healSkill.js?v=104';
+import { createHealSkill, HEAL_AMOUNT, HEAL_CD } from './healSkill.js?v=105';
 // 第 62 块：民心专属事件（升档走良性池、掉档走恶性池）
-import { repPoolForTier, REP_GOOD, REP_BAD } from './repEvents.js?v=104';
+import { repPoolForTier, REP_GOOD, REP_BAD } from './repEvents.js?v=105';
 // 第 62 块：攻略面板（战败提示上的「查看攻略」，手风琴三组）
-import { renderGuide, GUIDE_SECTIONS } from './guide.js?v=104';
+import { renderGuide, GUIDE_SECTIONS } from './guide.js?v=105';
 import {
   settings as readSettings, setSetting, save as saveProfile, profile,
   bumpStat, setStatMax, codexAdd, codexCount, countCard, unlockAch, hasAch, addBones, bones, resetAll,
@@ -51,53 +51,67 @@ import {
   healUnlocked, markHealUnlocked,
   rainObtained, markRainObtained,          // 第 65 块：技能的「有没有」只跟解锁有关
   hintSeen, markHintSeen,                  // 第 65 块：一次性提示卡
-} from './profile.js?v=104';
+  markLevelClear, levelCleared, clearCount, // 第 94 块：通关过哪些关（成就用）
+} from './profile.js?v=105';
 // 第 44 块：礼包兑换（码表只有哈希，明细在 gift.js 顶部注释）
-import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=104';
+import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=105';
 // 第 46 块：音效包（抽象奶蛙音效包 —— 4 段奶蛙叫声，通关第一关解锁）
-import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=104';
-import * as runSave from './runSave.js?v=104';
+import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=105';
+import * as runSave from './runSave.js?v=105';
 // 第 78 块：存档导出 / 导入。数据逻辑全在这个模块里（不碰 DOM），这里只接按钮
-import * as saveIO from './saveIO.js?v=104';
+import * as saveIO from './saveIO.js?v=105';
 import {
   CAMPFIRE, CAMP_STEP, campBuy, campOwned, campLevel,
   campCost, campApply, bonesFor, diffBoneMul, levelBoneMul, coinBones, BONE,
-} from './campfire.js?v=104';
+} from './campfire.js?v=105';
 // 第 23 块：永夜火种（通关白给的 3 次永久三选一）
 import {
   BOONS, BOON_BY_ID, BOON_PICKS, boonOwned, boonStacks, boonPending, boonTotalStacks,
   grantBoons, rollBoons, takeBoon, applyBoons, boonStackText,
-} from './boons.js?v=104';
+} from './boons.js?v=105';
 // 第 21 块：夜行诅咒（自选 debuff 换骨币倍率）
-import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=104';
+import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=105';
 // 第 22 块：种子与每日挑战
 import {
   DAILY_RULES, dayKey, dayText, dailySeed, seedCode, pickDailyCurses,
   seedFromText, pickSeedRules, loadSeedRecords, saveSeedRecord, pruneSeeds,
   dailyRecord, saveDailyRecord, pruneDaily, makeRng,
-} from './seed.js?v=104';
-import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=104';
+} from './seed.js?v=105';
+import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=105';
 // 第 58 块：局外商店 · 宝箱（花骨币买，开箱随机给永久属性 / 永久法器 / 技能CD缩短）
 import {
   BOXES, BOX_BY_ID, buyBox, rollBox, metaApplyStats, applyMeta,
   // 第 74 块：盲盒按购买次数加价（三种各自独立计数）
   boxCost, boxPriceOf, boxBought, BOX_PRICE_STEP,
-} from './metaShop.js?v=104';
+  // 第 94 块：奖池一览（手风琴里那些条目与概率，纯计算）
+  boxPoolEntries,
+} from './metaShop.js?v=105';
 // 第 59 块：每日签到（以周为单位，周一 00:00 重置）
 import {
   WEEK_TIERS, SIGN_BONES, weekCells, signSummary, signToday, signedToday,
-} from './signin.js?v=104';
-import { achById, ACHS } from './achievements.js?v=104';
+} from './signin.js?v=105';
+// 第 94 块：成就（八类 × 三档骨币奖励）
+import {
+  ACHS, ACH_CATS, ACH_TIERS, ACH_COUNT, achById, achsByCat, achTier,
+} from './achievements.js?v=105';
+// 第 94 块：通用手风琴（盲盒奖池与成就面板共用，不复制第三份引擎）
+import { renderAccordion } from './accordion.js?v=105';
+// 第 94 块：每日任务（简单 3 + 中等 1 + 困难 1，每天 0 点刷新）
+import {
+  DQ_TIERS, DQ_BONES, dqTasks, dqPump, dqSave, dqClaim, dqClaimAll,
+  dqPending, dqGained, dqMsLeft, dayKeyOf, dqTier, dqTaskName,
+  dqState, dqForceReroll, dqReset,   // 调试口：跨天重掷 / 整条重置
+} from './dailyQuest.js?v=105';
 import {
   EVENTS, ALL_EVENTS, getEventById, pickEvent, effectLines,
   choiceHint, canAfford, costShort, REP_MIN, REP_MAX, REP_START,
   isTalk, eventChoices, resolveRoll, mergeEffects,
-} from './events.js?v=104';
+} from './events.js?v=105';
 // 第 32 块：主线《笑不出来的那一夜》（18 夜，一夜一关，前 3 夜已有关卡）
 import {
   STORY_ARC, STORY_CHAPTERS, STORY_ENDINGS, MARK_INFO,
   storyChapterAt, storyChapterById, storyEndingKey,
-} from './story.js?v=104';
+} from './story.js?v=105';
 
 // 标记模块已经跑起来了：index.html 的兜底自检靠它判断
 // 「模块根本没执行」还是「执行了但加载慢」。
@@ -718,6 +732,14 @@ async function boot() {
       // 第五/六关的两只新怪（第 63 块）
       if (e.type === 'eraser' && codexCount('enemies', 'eraser') >= 10) tryAch('eraser_10');
       if (e.type === 'reboot' && codexCount('enemies', 'reboot') >= 10) tryAch('reboot_10');
+      // 第六~九关的新怪（第 94 块）：这些怪只在自己的关卡露脸，击倒数就是进度
+      if (e.type === 'arc' && codexCount('enemies', 'arc') >= 10) tryAch('arc_10');
+      if (e.type === 'wellfrog' && codexCount('enemies', 'wellfrog') >= 10) tryAch('wellfrog_10');
+      if (e.type === 'woodfish' && codexCount('enemies', 'woodfish') >= 10) tryAch('woodfish_10');
+      if (e.type === 'warden' && codexCount('enemies', 'warden') >= 5) tryAch('warden_5');
+      if (e.type === 'weigher' && codexCount('enemies', 'weigher') >= 5) tryAch('weigh_5');
+      // 第 94 块：每日任务的击杀计数（每天 0 点自己清零）
+      dqToast(dqPump({ kills: 1, [`kT:${e.type}`]: 1 }));
       // 第 84 块（用户定案）：掉牌改成**概率** —— 约一半的怪会留下牌子，不是每只都掉。
       // （第 83 块是 100%，一关 500 多只怪会把柜子开几十次。）概率的真相源在
       // deposit.js 的 TAG_SEAL，法器「镇牌铃」每升一级往下压一档。
@@ -1359,6 +1381,7 @@ async function boot() {
     else if (def.heal) stats.heal(def.heal);
     bumpStat('potions');              // 成就：累计喝药
     if (profile().stats.potions >= 10) tryAch('potion_10');
+    dqToast(dqPump({ potions: 1 }));   // 第 94 块：每日任务「喝 2 瓶药水」
     audio.sfx('heal');
     renderHud();
     renderBag();
@@ -1482,6 +1505,10 @@ async function boot() {
     const raw = amount * (1 + runCurseDmg);
     if (isHazard) stats.damageTrue(raw);
     else stats.damage(raw);
+    // 第 94 块：这一回合受了多少伤（成就「一根汗毛都没少」+ 每日任务的无伤回合数）。
+    // **只数真的掉了血的**：被金钟罩挡下、被无敌帧吃掉的那一下不算挨打 ——
+    // 玩家体感上「这回合没被打到」就是没掉血。
+    roundDmgTaken += 1;
     // 棘甲法器（第 29 块）：挨打时对身边一圈怪反伤（被动解场，不需要操作）
     if (!noIframe && relics.thornsHit) relics.thornsHit(pos);
     // 木鱼法器（第 71 块）：挨打时震一圈，把身边怪击退 + 短暂定身（解围用）
@@ -2123,6 +2150,10 @@ async function boot() {
     renderMsBadge();              // 局外商店按钮上的骨币数（第 58 块）
     renderSignBtn();              // 每日签到入口的红点与本周进度（第 59 块）
     renderDailyBadge();           // 今日挑战按钮上的「今天最好」（第 22 块）
+    // 第 94 块：回标题页一律落在主页面那一格（用户在商店里切过去的不动），
+    // 顺手把两个 tab 上的徽章刷一遍 —— 成就和每日任务的进度是在局里涨的。
+    setTitleTab('main');
+    refreshTabBadges();
     // 第 57 块：在主界面停留一会儿 → 默默建图鉴缓存（用户建议的「自动缓存」）
     scheduleCodexPrewarm();
     // 第 23 块：上次通关后直接关了网页，这 3 次永久选择还欠着 —— 回标题页补上
@@ -2162,6 +2193,10 @@ async function boot() {
     reputation = REP_START;
     upgradesTaken = 0;
     upSerial = 0;
+    // 第 94 块：本局「无伤回合」计数。这是**单局**口径（成就看单回合、每日任务看
+    // 一局里几个回合），所以必须跟着一局走 —— 不清的话上一局攒的两个回合会带进新局。
+    flawlessRounds = 0;
+    roundDmgTaken = 0;
     shopSerial = 0;
     nextShopDiscount = 0;
     sealBlocked = 0;
@@ -4044,6 +4079,10 @@ async function boot() {
     if (roundNo === 1) audio.sfx('roundStart');
     else if (roundNo >= level.totals.rounds) audio.sfx('boss');
     showToast(`第 ${roundNo} 回合`, tip);
+    // 第 94 块：这一回合受了多少伤害，从 0 开始数（成就「一根汗毛都没少」+
+    // 每日任务「一局里 2 个回合不掉血」）。回合开始而不是结束才归零，
+    // 因为「结束」那一刻本回合的伤害已经全记完了。
+    roundDmgTaken = 0;
   }
 
   // ============================================================
@@ -4191,6 +4230,8 @@ async function boot() {
     if (adminOn) coins = ADMIN_GOLD; else coins -= price;
     renderGold();
     bumpStat('spent', price);         // 战绩：累计消费（shop_20 成就）
+    if (profile().stats.spent >= 200) tryAch('shop_20');   // 第 94 块：即时对表，不用等结算
+    dqToast(dqPump({ shopBuys: 1 }));  // 第 94 块：每日任务「在商店买 3 件东西」
     // 炮台 / 法器 / 富裕相关的即时成就
     if (item.type === 'turret' && turrets.count() + 1 >= TURRET.MAX_COUNT) tryAch('turret_3');
 
@@ -4247,6 +4288,16 @@ async function boot() {
   function handleRoundClear(roundNo) {
     clearRoundBuffs();
     const isLast = roundNo >= level.totals.rounds;
+
+    // 第 94 块：这一回合一下都没被打到 → 成就 + 每日任务。
+    // 「回合清空」是唯一能保证「这一回合已经打完了」的时刻，放这儿不会漏。
+    if (roundDmgTaken <= 0 && !isLast) {
+      flawlessRounds++;
+      tryAch('flawless_round');
+      dqToast(dqPump({ flawlessRunMax: flawlessRounds }));
+    }
+    // 每日任务：单局最远回合 / 单局最多击杀（都是「取最高」的口径）
+    dqToast(dqPump({ roundMax: roundNo, killRunMax: kills, cardsMax: upgradesTaken, swordMax: weapon.orbitingCount() }));
 
     // 第 67 块（用户定案）：民心跨档事件的口子 —— **本回合内、属性选择之后**播。
     //   原来它排在「下一回合」的奇遇时段，还让位给主线：玩家选完事件得再打一整
@@ -4322,6 +4373,7 @@ async function boot() {
       seenEvents.push(ev.id);
       if (seenEvents.length > 8) seenEvents.shift();
       codexAdd('events', ev.id);        // 图鉴：遇见过的奇遇点亮
+      dqToast(dqPump({ events: 1 }));    // 第 94 块：每日任务「遇到 3 次随机事件」
       openEvent(ev, roundNo, runUpgrade);
     };
 
@@ -4724,16 +4776,54 @@ async function boot() {
   }
   exitBtn.addEventListener('click', saveAndExit);
 
-  // ---------------- 成就 / 图鉴 / 战绩（第 18 块） ----------------
-  // 解锁即弹 toast（战斗中的提示条）；已解锁的重复调用是空操作。
+  // ---------------- 成就 / 图鉴 / 战绩（第 18 块，第 94 块重做） ----------------
+  // 解锁即**直接发骨币**并弹 toast；已解锁的重复调用是空操作。
+  //
+  // 第 94 块之前成就纯装饰 —— 67 条成就解锁完玩家什么也拿不到，只有一句 toast。
+  // 现在它是夜行骨币的第三条来源（前两条是每局结算与签到）：寻常 30 / 不易 60 /
+  // 罕见 120，档位写在 achievements.js 的 ACH_TIERS 里，**这里不写死数字**。
+  //
+  // ⚠️ 已解锁的旧成就是**不发**的：老存档里那 30 条一下子补发两千骨币，
+  //    会把盲盒那套靠成本兜底的平衡直接冲掉。玩家会看到「已解锁」，仅此而已。
   function tryAch(id) {
     if (!unlockAch(id)) return false;
     const a = achById(id);
-    showToast('成就解锁 · ' + a.name, a.desc);
+    if (!a) return false;
+    const gain = achTier(a.tier).bones;
+    addBones(gain);
+    showToast(`成就解锁 · ${a.name}`, `${a.desc} · +${gain} 骨币`);
     audio.sfx('ach');       // 第 25 块：解锁铃（原来是蹭页签切换声）
+    refreshTabBadges();     // 第 94 块：tab 上的「n/67」当场跟着涨
     return true;
   }
-  // 跨局累计型成就统一在结算时对一次表；即时型（喝药/挡刀）在各埋点单独查
+
+  // 本局拿到过的品质档（cards_all_kinds 用），开局清空
+  let runRarities = new Set();
+  // 本局「几个回合没掉一滴血」（成就「一根汗毛都没少」与每日任务用），开局清零
+  let flawlessRounds = 0;
+  let roundDmgTaken = 0;
+
+  // ------------------------------------------------------------
+  // 成就进度（面板上的进度条）
+  // 只认 achievements.js 里声明的四种 prog：stat / enemy / events / meta / enemies
+  // ------------------------------------------------------------
+  function achProgress(a) {
+    const p = a.prog;
+    if (!p) return { cur: 0, need: 0, ratio: 0, text: '' };
+    let cur = 0;
+    const need = p.need;
+    if (p.k === 'stat') cur = Number(profile().stats[p.key]) || 0;
+    else if (p.k === 'enemy') cur = codexCount('enemies', p.id);
+    else if (p.k === 'events') cur = ALL_EVENTS.filter((ev) => codexCount('events', ev.id) > 0).length;
+    else if (p.k === 'meta') cur = Number(metaShopState()[p.key]) || 0;
+    else if (p.k === 'enemies') {
+      cur = Object.keys(ENEMY_TYPES).filter((k) => !ENEMY_TYPES[k].planned && codexCount('enemies', k) > 0).length;
+    }
+    const c = Math.min(cur, need);
+    return { cur: c, need, ratio: need > 0 ? Math.min(1, c / need) : 0, text: `${c} / ${need}` };
+  }
+
+  // 跨局累计型成就统一在结算时对一次表；即时型（喝药/挡刀/杀怪）在各埋点单独查
   function checkCumulativeAchs({ isWin, roundShown }) {
     const st = profile().stats;
     if (st.kills >= 100) tryAch('kills_100');
@@ -4747,23 +4837,442 @@ async function boot() {
     if (st.runs >= 1) tryAch('first_run');
     if (isWin) {
       tryAch('first_win');
+      tryAch('round_20');       // 第 94 块：原来这条没人发，通关本身就等于打满 20 回合
       if (elapsed < 600) tryAch('win_fast');
+      if (elapsed < 300) tryAch('win_faster');
       if (!weapon.granted) tryAch('win_no_sword');
       if (stats.hp.cur < 2) tryAch('low_hp_win');
       if (getDifficulty() === DIFFS.hell) tryAch('hell_win');
+      if (pendingCurses.length >= 5) tryAch('curse_5');
     }
     if (roundShown >= 10) tryAch('round_10');
     if (roundShown >= 15) tryAch('round_15');
     if (kills >= 100) tryAch('run_kills_100');
     if (kills >= 200) tryAch('run_kills_200');
+    if (kills >= 300) tryAch('run_kills_300');
     if (upgradesTaken >= 10) tryAch('cards_10');
     if (runRarities.size >= 5) tryAch('cards_all_kinds');
     if (stats.get('luck') >= 10) tryAch('lucky_10');
+    if (stats.get('maxHp') >= 30) tryAch('hp_30');
+    if (stats.get('armor') >= 10) tryAch('armor_10');
+    if (coins >= 500) tryAch('gold_500');
     if (turrets.count() >= 3) tryAch('turret_3');
+    if (weapon.orbitingCount() >= 8) tryAch('sword_8');
     if (relics.levels().spikes > 0 && relics.levels().frost > 0 && turrets.count() >= 1) tryAch('all_relics');
+    if (weaponHasAllElements()) tryAch('all_elements');
+    // 关卡专属怪（击倒数是图鉴里那条，杀怪的钩子里已经 +1 过了）
+    for (const [id, need] of [['arc', 10], ['wellfrog', 10], ['woodfish', 10]]) {
+      if (codexCount('enemies', id) >= need) tryAch(`${id}_10`);
+    }
+    if (codexCount('enemies', 'warden') >= 5) tryAch('warden_5');
+    if (codexCount('enemies', 'weigher') >= 5) tryAch('weigh_5');
+    // 图鉴 / 奇遇收集
+    const metEnemies = Object.keys(ENEMY_TYPES).filter((k) => !ENEMY_TYPES[k].planned && codexCount('enemies', k) > 0).length;
+    if (metEnemies >= Object.keys(ENEMY_TYPES).filter((k) => !ENEMY_TYPES[k].planned).length) tryAch('all_enemies');
+    const seenEv = ALL_EVENTS.filter((ev) => codexCount('events', ev.id) > 0).length;
+    if (seenEv >= 50) tryAch('event_50');
+    if (seenEv >= 100) tryAch('event_100');
   }
-  // 本局拿到过的品质档（cards_all_kinds 用），开局清空
-  let runRarities = new Set();
+
+  // 「六种剑都有一把」—— 看的是**总库存**（weapon.owned），不是环上现在挂着什么：
+  // 环上的剑会被消耗（万剑齐发射出去 / 擦名者偷走），拿六种当战利品的判定
+  // 应该是「这一局攒齐过」，不然玩家为了凑成就反而不能放技能。
+  function weaponHasAllElements() {
+    const kinds = Object.keys(SWORD_KINDS);
+    if (!kinds.length) return false;
+    const owned = weapon.owned || [];
+    return kinds.every((k) => owned.includes(k));
+  }
+
+  // ============================================================
+  // 第 94 块：标题页三面板（主页面 / 每日任务 / 成就）
+  //
+  // 三个面板叠在同一块地方，切 tab 只切 .on —— 用户要的是「平滑」，所以
+  // 三个面板都常驻 DOM，靠 opacity + translateY 交叉淡入淡出（CSS 里 .tt-pane）。
+  // 内容在**切过去那一瞬间**才建：
+  //   · 每日任务的进度会变，每次切过去都整个重画；
+  //   · 成就 67 条分八组，靠 accordion 的懒构建只建展开的那一组；
+  //   · 盲盒奖池是静态表，建过一次就打上标记不再建。
+  //
+  // ⚠️ 收起的面板必须是 visibility:hidden（不是只 opacity:0）——
+  //    第 65 / 66 块的教训：只淡出的按钮仍然吃点击，会变成压在别人上面的隐形按钮。
+  // ============================================================
+  const ttPaneMain = document.getElementById('ttPaneMain');
+  const ttPaneQuest = document.getElementById('ttPaneQuest');
+  const ttPaneAch = document.getElementById('ttPaneAch');
+  const ttTabMain = document.getElementById('ttTabMain');
+  const ttTabQuest = document.getElementById('ttTabQuest');
+  const ttTabAch = document.getElementById('ttTabAch');
+  const tabDotQuest = document.getElementById('tabDotQuest');
+  const tabAchN = document.getElementById('tabAchN');
+  const qpList = document.getElementById('qpList');
+  const qpBones = document.getElementById('qpBones');
+  const qpDate = document.getElementById('qpDate');
+  const qpLeft = document.getElementById('qpLeft');
+  const qpFoot = document.getElementById('qpFoot');
+  const qpAllBtn = document.getElementById('qpAll');
+  const acRoot = document.getElementById('acRoot');
+  const acProg = document.getElementById('acProg');
+  const acFill = document.getElementById('acFill');
+  const acBones = document.getElementById('acBones');
+  const boxPoolRoot = document.getElementById('boxPoolRoot');
+
+  // 三个匣子各自的图标（game-icons，CC BY 3.0）
+  const BOX_ICONS = {
+    wood: 'assets/icons/box-wood.svg',
+    silver: 'assets/icons/box-silver.svg',
+    gold: 'assets/icons/box-gold.svg',
+  };
+
+  // 当前在哪个面板（'main' / 'quest' / 'ach'）
+  let titleTab = 'main';
+  // 成就面板里展开着哪一组（切回来时保持原来的位置）
+  let achOpenCat = 'battle';
+  // 奖池手风琴只建一次（静态表，开了箱也不变）
+  let boxPoolBuilt = false;
+  // 每日任务面板上记录的是哪一天 —— 跨天了要整块重画
+  let qpDayKey = '';
+  // 倒计时定时器：只在「标题页 + 每日任务面板可见」时跑，别在后台空转
+  let qpTimer = null;
+
+  const WEEK_CN = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+
+  function fmtHMS(ms) {
+    const s = Math.max(0, Math.floor(ms / 1000));
+    const p = (n) => String(n).padStart(2, '0');
+    return `${p(Math.floor(s / 3600))}:${p(Math.floor(s / 60) % 60)}:${p(s % 60)}`;
+  }
+
+  // 每日任务达成时的那句提示（战斗里打的，玩家不点标题页也能知道）
+  function dqToast(hits) {
+    if (!hits || !hits.length) return;
+    const names = hits.map((id) => dqTaskName(id));
+    showToast('每日任务达成', `${names.join(' · ')} · 回标题页领骨币`);
+    refreshTabBadges();
+  }
+
+  // ---------------- 切面板 ----------------
+  function setTitleTab(which) {
+    if (titleTab === which) return;
+    titleTab = which;
+    audio.sfx('uiSwitch');
+    ttPaneMain.classList.toggle('on', which === 'main');
+    ttPaneQuest.classList.toggle('on', which === 'quest');
+    ttPaneAch.classList.toggle('on', which === 'ach');
+    ttPaneMain.setAttribute('aria-hidden', which === 'main' ? 'false' : 'true');
+    ttPaneQuest.setAttribute('aria-hidden', which === 'quest' ? 'false' : 'true');
+    ttPaneAch.setAttribute('aria-hidden', which === 'ach' ? 'false' : 'true');
+    ttTabMain.classList.toggle('on', which === 'main');
+    ttTabQuest.classList.toggle('on', which === 'quest');
+    ttTabAch.classList.toggle('on', which === 'ach');
+    ttTabMain.setAttribute('aria-pressed', which === 'main' ? 'true' : 'false');
+    ttTabQuest.setAttribute('aria-pressed', which === 'quest' ? 'true' : 'false');
+    ttTabAch.setAttribute('aria-pressed', which === 'ach' ? 'true' : 'false');
+    if (which === 'quest') { renderQuestPane(); startQuestTimer(); } else stopQuestTimer();
+    if (which === 'ach') renderAchPane();
+  }
+
+  ttTabMain.addEventListener('click', () => setTitleTab('main'));
+  ttTabQuest.addEventListener('click', () => setTitleTab('quest'));
+  ttTabAch.addEventListener('click', () => setTitleTab('ach'));
+
+  // ---------------- tab 上的红点与徽章 ----------------
+  // 这两处是玩家在主页面就能看到的全部信息：成就有几个 / 每日任务有没有得领。
+  // 每次回标题页、每次领奖、每次开箱都刷一遍。
+  function refreshTabBadges() {
+    const p = profile();
+    const got = (p.ach && typeof p.ach === 'object' ? Object.keys(p.ach) : []).length;
+    tabAchN.textContent = `${got}/${ACH_COUNT}`;
+    const pend = dqPending();
+    tabDotQuest.hidden = pend <= 0;
+  }
+
+  // ============================================================
+  // 面板二：每日任务
+  // ============================================================
+  function renderQuestPane() {
+    const now = new Date();
+    qpDayKey = dayKeyOf(now);
+    const list = dqTasks(now);
+
+    qpDate.textContent = `${now.getMonth() + 1} 月 ${now.getDate()} 日 · ${WEEK_CN[now.getDay()]}`;
+    qpBones.textContent = adminOn ? '∞' : String(bones());
+
+    qpList.textContent = '';
+    for (const t of list) {
+      const ti = dqTier(t.tier);
+      const row = document.createElement('div');
+      row.className = `qp-item t-${t.tier === 'mid' ? 'mid' : (t.tier === 'hard' ? 'hard' : 'easy')}`
+        + (t.got ? ' got' : (t.done ? ' done' : ''));
+      row.dataset.q = t.id;      // 整条的身份（测试与调试口都按这个找行）
+
+      const ic = document.createElement('i');
+      ic.className = 'qp-i-ic';
+      ic.style.setProperty('--ic', `url(${ti.icon})`);
+      // 三档用不同颜色 —— 图标是 mask 填充 currentColor 的，颜色跟着文字色走
+      ic.style.color = t.tier === 'hard' ? '#ff9a6a' : (t.tier === 'mid' ? '#7cc4ff' : '#8fe6b8');
+
+      const mid = document.createElement('div');
+      mid.className = 'qp-i-t';
+      const nm = document.createElement('div');
+      nm.className = 'qp-i-n';
+      const nmt = document.createElement('span');
+      nmt.textContent = t.name;
+      const tag = document.createElement('span');
+      tag.className = 'qp-i-tag';
+      tag.textContent = ti.name;
+      nm.append(nmt, tag);
+      mid.appendChild(nm);
+      const ds = document.createElement('div');
+      ds.className = 'qp-i-d';
+      ds.textContent = t.desc;
+      mid.appendChild(ds);
+      const bar = document.createElement('div');
+      bar.className = 'qp-i-bar';
+      const fill = document.createElement('i');
+      fill.style.width = `${Math.round((t.need > 0 ? Math.min(1, t.cur / t.need) : 0) * 100)}%`;
+      bar.appendChild(fill);
+      mid.appendChild(bar);
+
+      const rt = document.createElement('div');
+      rt.className = 'qp-i-r';
+      const pr = document.createElement('div');
+      pr.className = 'qp-i-p';
+      pr.textContent = `${t.cur} / ${t.need}`;
+      rt.appendChild(pr);
+      const bn = document.createElement('span');
+      bn.className = 'qp-i-b';
+      const bi = document.createElement('i');
+      bi.style.setProperty('--ic', 'url(assets/icons/bone.svg)');
+      bn.appendChild(bi);
+      bn.appendChild(document.createTextNode(String(t.bones)));
+      rt.appendChild(bn);
+
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'qp-btn' + (t.done && !t.got ? ' done-ok' : '');
+      btn.dataset.claim = t.id;
+      if (t.got) {
+        btn.textContent = '已领';
+        btn.disabled = true;
+      } else if (t.done) {
+        btn.textContent = '领取';
+        btn.addEventListener('click', () => doClaimQuest(t.id));
+      } else {
+        btn.textContent = '去做';
+        btn.disabled = true;
+      }
+
+      row.append(ic, mid, rt, btn);
+      qpList.appendChild(row);
+    }
+
+    const pend = list.filter((t) => t.done && !t.got).length;
+    qpAllBtn.disabled = pend <= 0;
+    qpAllBtn.textContent = pend > 0 ? `一键领取 · ${pend} 条` : '还没有能领的';
+
+    const gained = dqGained(now);
+    // 一天全清的骨币量：三条简单（含常驻那条）+ 中等 + 困难
+    const cap = DQ_BONES.easy * 3 + DQ_BONES.mid + DQ_BONES.hard;
+    qpFoot.textContent = `进度自动记 · 骨币要点「领取」才到手 · 今天已领 ${gained} / ${cap} 骨币`
+      + (pend > 0 ? ` · 有 ${pend} 条在等你` : ' · 跨 0 点整批换新，没领的不保留');
+    qpLeft.textContent = fmtHMS(dqMsLeft(now));
+    refreshTabBadges();
+  }
+
+  function doClaimQuest(id) {
+    const r = dqClaim(id);
+    if (!r.ok) { renderQuestPane(); return; }
+    audio.sfx('card');
+    renderQuestPane();
+    renderCampBadge();
+    renderMsBadge();
+    showToast('骨币到手', `${dqTaskName(id)} · +${r.bones} 骨币`);
+  }
+
+  function doClaimAllQuests() {
+    const got = dqClaimAll();
+    if (!got.length) { renderQuestPane(); return; }
+    audio.sfx('card');
+    let sum = 0;
+    for (const g of got) sum += g.bones;
+    renderQuestPane();
+    renderCampBadge();
+    renderMsBadge();
+    showToast('骨币到手', `${got.length} 条每日任务 · +${sum} 骨币`);
+  }
+
+  qpAllBtn.addEventListener('click', doClaimAllQuests);
+
+  // 倒计时：**只在面板可见时**跑。标题页背后还开着 3D 主循环，
+  // 再挂一个每秒写的定时器纯属浪费；离开面板 / 离开标题页就摘掉。
+  function startQuestTimer() {
+    stopQuestTimer();
+    const tick = () => {
+      if (gameState !== 'title' || titleTab !== 'quest') { stopQuestTimer(); return; }
+      const now = new Date();
+      if (dayKeyOf(now) !== qpDayKey) { renderQuestPane(); return; }   // 跨天：整块重掷
+      qpLeft.textContent = fmtHMS(dqMsLeft(now));
+    };
+    qpTimer = setInterval(tick, 1000);
+  }
+  function stopQuestTimer() {
+    if (qpTimer) { clearInterval(qpTimer); qpTimer = null; }
+  }
+
+  // ============================================================
+  // 面板三：成就（八类手风琴）
+  // ============================================================
+  function renderAchPane() {
+    const p = profile();
+    const ach = (p.ach && typeof p.ach === 'object') ? p.ach : {};
+    const gotAll = Object.keys(ach).length;
+
+    acProg.textContent = `${gotAll} / ${ACH_COUNT}`;
+    acFill.style.width = `${Math.round((gotAll / ACH_COUNT) * 100)}%`;
+    acBones.textContent = adminOn ? '∞' : String(bones());
+
+    const sections = ACH_CATS.map((cat) => {
+      const list = achsByCat(cat.id);
+      const got = list.filter((a) => ach[a.id]).length;
+      return {
+        id: cat.id,
+        icon: cat.icon,
+        title: cat.name,
+        count: `${got}/${list.length}`,
+        sub: cat.lead,
+        build: (body) => buildAchItems(body, list, ach),
+      };
+    });
+    renderAccordion(acRoot, sections, { openId: achOpenCat });
+    // 记住玩家展开着哪一组：面板每次都整体重建，不记的话一开箱就弹回第一组
+    for (const b of acRoot.querySelectorAll('.ac-hd')) {
+      b.addEventListener('click', () => { achOpenCat = b.parentElement.dataset.sec; });
+    }
+  }
+
+  // 成就条目（只有展开的那一组会走到这里 —— 八组 67 条不会一次性建出来）
+  function buildAchItems(body, list, ach) {
+    const wrap = document.createElement('div');
+    wrap.className = 'ac-items';
+    for (const a of list) {
+      const on = !!ach[a.id];
+      const pg = achProgress(a);
+      const ti = achTier(a.tier);
+      const row = document.createElement('div');
+      row.className = `ac-it t${a.tier}` + (on ? ' on' : '');
+      row.dataset.ach = a.id;
+
+      const ic = document.createElement('span');
+      ic.className = 'ac-it-ic';
+      ic.textContent = a.icon || '•';
+
+      const mid = document.createElement('div');
+      mid.className = 'ac-it-t';
+      const nm = document.createElement('div');
+      nm.className = 'ac-it-n';
+      const nmt = document.createElement('b');
+      nmt.textContent = a.name;
+      const tg = document.createElement('span');
+      tg.className = 'ac-it-tg';
+      tg.textContent = ti.name;
+      nm.append(nmt, tg);
+      mid.appendChild(nm);
+      const ds = document.createElement('div');
+      ds.className = 'ac-it-d';
+      ds.textContent = a.desc;
+      mid.appendChild(ds);
+      // 没有 prog 的（单局达成型 / 条件型）不画进度条 —— 画了也是 0%，纯噪音
+      if (a.prog) {
+        const bar = document.createElement('div');
+        bar.className = 'ac-it-bar';
+        const f = document.createElement('i');
+        f.style.width = `${Math.round((on ? 1 : pg.ratio) * 100)}%`;
+        bar.appendChild(f);
+        mid.appendChild(bar);
+      }
+
+      const rt = document.createElement('div');
+      rt.className = 'ac-it-r';
+      const bn = document.createElement('span');
+      bn.className = 'ac-it-b';
+      const bi = document.createElement('i');
+      bi.style.setProperty('--ic', 'url(assets/icons/bone.svg)');
+      bn.appendChild(bi);
+      bn.appendChild(document.createTextNode(String(ti.bones)));
+      rt.appendChild(bn);
+      const pr = document.createElement('div');
+      pr.className = 'ac-it-p';
+      pr.textContent = on ? '已解锁' : (a.prog ? pg.text : '');
+      rt.appendChild(pr);
+
+      row.append(ic, mid, rt);
+      wrap.appendChild(row);
+    }
+    body.appendChild(wrap);
+  }
+
+  // ============================================================
+  // 盲盒奖池手风琴（夜行商店的「盲盒」那一区）
+  // ============================================================
+  // 三个匣子各一组，条目按类型三色：正面绿 / 诅咒红 / 稀有金。
+  // 概率必须和 metaShop.js 的开箱判定顺序一致：先掷诅咒（c），
+  // 没中诅咒再掷稀有（rare），剩下的才是普通正面 —— 三条路径瓜分 100%。
+  // 这是静态表（开了箱也不变），所以建过一次就打标记，之后不再重建。
+  function renderBoxPool() {
+    if (!boxPoolRoot || boxPoolBuilt) return;
+    const sections = BOXES.map((box) => {
+      const e = boxPoolEntries(box.id);
+      return {
+        id: `box-${box.id}`,
+        icon: BOX_ICONS[box.id] || 'assets/icons/ach-meta.svg',
+        title: `${box.name} · ${box.cost} 骨币`,
+        count: `${e.rows.length} 条`,
+        sub: `诅咒率 ${Math.round(e.curse * 100)}%${box.special ? ' · 未中诅咒时再掷稀有' : ''} · 强度 ×${box.mag}`,
+        build: (body) => buildPoolRows(body, e.rows),
+      };
+    });
+    renderAccordion(boxPoolRoot, sections);
+    boxPoolBuilt = true;
+  }
+
+  function buildPoolRows(body, rows) {
+    const wrap = document.createElement('div');
+    wrap.className = 'ac-pool';
+    for (const r of rows) {
+      const row = document.createElement('div');
+      row.className = `ac-pl ${r.kind === 'pos' ? 'pos' : (r.kind === 'neg' ? 'neg' : 'rare')}`;
+
+      const ic = document.createElement('span');
+      ic.className = 'ac-pl-ic';
+      ic.textContent = r.icon || '•';
+
+      const k = document.createElement('span');
+      k.className = 'ac-pl-k';
+      k.textContent = r.kind === 'pos' ? '正面' : (r.kind === 'neg' ? '诅咒' : '稀有');
+
+      const t = document.createElement('div');
+      t.className = 'ac-pl-n';
+      const n = document.createElement('div');
+      n.textContent = r.name;
+      t.appendChild(n);
+      if (r.sub) {
+        const s = document.createElement('div');
+        s.className = 'ac-pl-s';
+        s.textContent = r.sub;
+        t.appendChild(s);
+      }
+
+      const pct = document.createElement('span');
+      pct.className = 'ac-pl-p';
+      // pct 是 0~1 的**概率**不是百分数（metaShop.js 里和开箱判定共用一套数）
+      pct.textContent = `${(r.pct * 100).toFixed(1)}%`;
+
+      row.append(ic, k, t, pct);
+      wrap.appendChild(row);
+    }
+    body.appendChild(wrap);
+  }
 
   // ---------------- 图鉴面板 ----------------
   const codexScr = document.getElementById('codexScr');
@@ -4970,6 +5479,9 @@ async function boot() {
     addBones(hit.bones);
     markGift(hit.hash);
     giftCode.value = '';
+    // 第 94 块：成就「第一个码」+ 「小康」（身上同时有 1000 骨币）
+    tryAch('gift_first');
+    if (bones() >= 1000) tryAch('bones_1000');
     // 第 57 块：宣传礼包 / 推荐礼包直接报组名；第一批老码报「A 类 / B 类」
     const what = hit.name || `${hit.tier} 类礼包`;
     giftSay(`兑换成功 —— ${what}，+${hit.bones} 骨币`, 'ok');
@@ -5244,6 +5756,9 @@ async function boot() {
     showToast('签到成功', `本周已签 ${r.days} 天 · 骨币 +${sum}`);
     renderCampBadge();
     renderMsBadge();
+    // 第 94 块：成就「满勤」（七天全签）与「小康」（身上同时有 1000 骨币）
+    if (r.days >= 7) tryAch('sign_full');
+    if (bones() >= 1000) tryAch('bones_1000');
     return true;
   }
 
@@ -5659,6 +6174,8 @@ async function boot() {
           audio.sfx('uiSwitch');
           renderCampfire();
           renderCampBadge();
+          // 第 94 块：成就「九簇篝火」（九簇全部点燃过）
+          if (CAMPFIRE.every((c) => campLevel(c.id) > 0)) tryAch('camp_9');
         });
       }
       row.appendChild(btn);
@@ -5703,7 +6220,7 @@ async function boot() {
     msBones.textContent = adminOn ? '∞' : String(have);
     msList.textContent = '';
     for (const box of BOXES) {
-      // 第 74 块：价格按「这个箱子买了几次」涨（首价 +6%/次，三种各自算）
+      // 第 74 块：价格按「这个箱子买了几次」涨（首价 +3%/次，三种各自算）
       const price = boxPriceOf(box.id);
       const nth = boxBought(box.id);
       const poor = have < price;
@@ -5765,6 +6282,9 @@ async function boot() {
         msLog.appendChild(li);
       }
     }
+
+    // 第 94 块：奖池一览（手风琴，只建一次 —— 概率表是静态的）
+    renderBoxPool();
   }
 
   function doBuyBox(id) {
@@ -5774,6 +6294,9 @@ async function boot() {
       return;
     }
     audio.sfx('uiSwitch');
+    // 第 94 块：成就「开箱十连 / 开箱狂魔」按开箱数即时对表（开完在揭示卡后面弹）
+    if (metaShopState().opened >= 10) tryAch('box_10');
+    if (metaShopState().opened >= 50) tryAch('box_50');
     renderMetaShop();
     renderShopBadge();
     showBoxReveal(r.box, r.res);
@@ -6352,7 +6875,41 @@ async function boot() {
     setStatMax('bestRound', roundShown);
     setStatMax('bestRunKills', kills);
     if (isWin) bumpStat('wins');
+    // 第 94 块：通关过的关卡单独记一份（成就「登临第五关 / 骨塔之巅 / 九关皆通」）。
+    // 放在 checkCumulativeAchs **之前**：那三条成就读的就是这张表，晚一步就漏掉本次。
+    if (isWin) markLevelClear(curLevelId);
     checkCumulativeAchs({ isWin, roundShown });
+    if (isWin) {
+      if (levelCleared(5)) tryAch('clear_5');
+      if (levelCleared(9)) tryAch('clear_9');
+      // 九关全通：拿 LEVELS 里 playable 的关卡数当目标，以后加第十关不用改这里
+      const need = LEVELS.filter((lv) => lv.playable).length;
+      if (clearCount() >= need) tryAch('clear_all');
+    }
+    // 第 94 块：每日任务的「这一局」口径 —— 全部在结算时一次性喂进去。
+    // 为什么不边打边喂：roundMax / killRunMax 这类是「取单局最高」的口径，
+    // 只有在结算这一刻才知道这一局的最终值；边打边喂会把中间值当成最高值。
+    const dqRun = {
+      runs: 1,
+      wins: isWin ? 1 : 0,
+      coinMax: coins,
+      cardsMax: upgradesTaken,
+      roundMax: roundShown,
+      killRunMax: kills,
+      swordMax: weapon.orbitingCount(),
+      flawlessRunMax: flawlessRounds,
+    };
+    if (isWin) {
+      dqRun.clearLv = curLevelId;
+      if (pendingCurses.length > 0) dqRun.curseWins = 1;
+      if (getDifficulty() === DIFFS.hell) dqRun.hellWins = 1;
+      if (elapsed < 420) dqRun.fast7 = 1;
+    }
+    if (getDifficulty() === DIFFS.hell || getDifficulty() === DIFFS.nightmare) {
+      dqRun.hellRoundMax = roundShown;
+    }
+    dqToast(dqPump(dqRun));
+    dqSave();
     // 篝火（第 19 块）：结算发骨币 —— 打得多深、杀得多狠、选多难，都算进去
     // 第 21 / 22 块：诅咒倍率与每日挑战加成乘在上面（都是玩家自己挣的）
     // 第 23 块：没花完的金币折成骨币，关卡越往后倍率越高
@@ -6366,6 +6923,8 @@ async function boot() {
       diffKey, mulCurse * mulDaily,
     );
     const boneTotal = addBones(boneGain);
+    // 第 94 块：成就「小康」（身上同时有 1000 骨币）
+    if (boneTotal >= 1000) tryAch('bones_1000');
     // 第 23 块：通关一大关 → 3 次永久三选一；第 27 块改为**只在本关首次
     // 通关**时发（重复刷同一关不给）。先写档案，玩家就算直接关网页，
     // 下次回标题页也会补弹（showTitle 里检查）。
@@ -6857,6 +7416,40 @@ async function boot() {
         try: (id) => tryAch(id),
         has: (id) => hasAch(id),
         list: () => ACHS.map((a) => a.id),
+        // 第 94 块：面板数据（进度条 / 骨币档位 / 八类分组）
+        cats: () => ACH_CATS.map((c) => ({ id: c.id, name: c.name, n: achsByCat(c.id).length })),
+        tiers: () => ACH_TIERS.map((t) => ({ ...t })),
+        unlocked: () => Object.keys((profile().ach && typeof profile().ach === 'object') ? profile().ach : {}).length,
+        total: () => ACH_COUNT,
+        prog: (id) => achProgress(achById(id) || {}),
+      },
+      // 第 94 块：每日任务（调试口）
+      dq: {
+        tasks: () => dqTasks(),
+        state: () => {
+          const s = dqState();
+          return { day: s.day, picked: s.picked.slice(), c: { ...s.c }, got: Object.keys(s.got) };
+        },
+        pump: (o) => dqPump(o || {}),
+        claim: (id) => dqClaim(id),
+        claimAll: () => dqClaimAll(),
+        pending: () => dqPending(),
+        gained: () => dqGained(),
+        msLeft: () => dqMsLeft(),
+        dayKey: (d) => dayKeyOf(d ? new Date(d) : new Date()),
+        reroll: () => dqForceReroll(),
+        reset: () => dqReset(),
+      },
+      // 第 94 块：标题页三面板（切面板 + 读当前在哪一格）
+      tab: (id) => { if (id) setTitleTab(id); return titleTab; },
+      // 盲盒奖池（第 94 块：概率表，三个匣子各自合计 100%）
+      boxPool: (id) => {
+        const e = boxPoolEntries(id);
+        return {
+          box: e.box.id, curse: e.curse, rare: e.rare, pos: e.pos, sum: e.sum,
+          n: e.rows.length,
+          rows: e.rows.map((r) => ({ kind: r.kind, name: r.name, pct: +r.pct.toFixed(3) })),
+        };
       },
       stats2: () => profile().stats,
       // 篝火 / 夜行骨币（第 19 块）

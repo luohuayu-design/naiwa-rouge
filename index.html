@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#080f14">
 <link rel="icon" href="data:,">
 <title>蛙步 · 夜行</title>
-<link rel="stylesheet" href="style.css?v=104">
+<link rel="stylesheet" href="style.css?v=105">
 </head>
 <body>
 
@@ -53,7 +53,7 @@
   </div>
   <!-- 背包（第 13 块）：商店买的药水存这里，作战中随时打开用（快捷键 B） -->
   <button class="bag-btn" id="bagBtn" type="button" aria-label="打开背包">
-    <img class="bg-img" src="assets/icons/backpack.svg" alt="" draggable="false"><i id="bagNum">0</i>
+    <i class="bg-img" style="--ic:url(assets/icons/backpack.svg)"></i><i id="bagNum">0</i>
   </button>
   <!-- 声音开关（BGM + 音效一起）；手机上没有键盘，点这里；偏好记在 localStorage -->
   <button class="mute-btn" id="muteBtn" type="button" aria-label="关闭声音" aria-pressed="false">
@@ -286,67 +286,134 @@
   <div class="cp-foot" id="cpFoot">输错或超时，牌子还留在柜里</div>
 </div>
 
-<!-- 主页面（标题 + 主菜单）
+<!-- 主页面（标题 + 主菜单）+ 底部三个常驻 tab（主页面 / 每日任务 / 成就）
      第 57 块：加载段整页藏着（display:none + .off）—— 以前它一直绘在加载遮罩
      背后，手机上两个全屏大图层互相抢合成器，用户看到「进度条还在走，主页面
-     在后面闪」。到遮罩淡出那一刻（main.js boot 尾部）才 display:'' + 淡入。 -->
+     在后面闪」。到遮罩淡出那一刻（main.js boot 尾部）才 display:'' + 淡入。
+
+     第 94 块：三个面板是**叠在一起的同一块地方**，切 tab 只切 .on 类（淡入淡出 + 上浮）。
+     为什么不做成三个弹进弹出的子面板：用户要的是「在成就和每日任务之间切换要平滑」，
+     子面板每次打开都要重画一遍 DOM，67 条成就的卡片在老手机上会明显顿一下。
+     现在的做法是三个面板的 DOM 常驻，只有第一次切过去时才建内容，之后只贴心血。 -->
 <div id="titleScr" class="title-scr off" style="display:none">
   <div class="tt-glow"></div>
-  <div class="tt-body">
-    <div class="tt-kicker">ROGUELIKE · 荒草地</div>
-    <h1 class="tt-name">奶蛙夜行</h1>
-    <p class="tt-sub">夜色里的草地不太平，骷髅从四面钻出来。<br>选一关，撑过所有回合。</p>
-    <div class="tt-notice" id="ttNotice" hidden></div>
-    <div class="tt-menu">
-      <!-- 第 54 块（用户定案）：开始/读取一行，今日/种子一行，主菜单不再一路竖排 -->
-      <div class="tt-row tt-row-main">
-        <button class="tt-start" id="btnStart" type="button">开始游戏</button>
-        <button class="tt-resume" id="btnResume" type="button" hidden>读取存档</button>
-      </div>
-      <!-- 今日挑战（第 22 块）：日期哈希出固定种子，同一天所有人抽到同一手牌 -->
-      <div class="tt-row tt-row-chal">
-        <button class="tt-daily" id="btnDaily" type="button">
-          <span class="tt-daily-k">今日挑战</span>
-          <span class="tt-daily-s" id="btnDailySub">同一颗种子</span>
+
+  <!-- ============ 面板一：主页面 ============ -->
+  <div class="tt-pane on" id="ttPaneMain">
+    <div class="tt-body tt-scroll">
+      <div class="tt-kicker">ROGUELIKE · 荒草地</div>
+      <h1 class="tt-name">奶蛙夜行</h1>
+      <p class="tt-sub">夜色里的草地不太平，骷髅从四面钻出来。<br>选一关，撑过所有回合。</p>
+      <div class="tt-notice" id="ttNotice" hidden></div>
+      <div class="tt-menu">
+        <!-- 第 94 块重排：按功能分区。① 开局 ② 每天要点的三件事 ③ 花骨币
+             ④ 查阅（图鉴 / 剧情 / 战绩）⑤ 成长（火种 / 属性）⑥ 系统与活动。
+             原来「属性」和「公告 / 宣传有礼」挤在最后一排，那是最常用的一个
+             查阅入口，被压在最底下。 -->
+        <div class="tt-row tt-row-main">
+          <button class="tt-start" id="btnStart" type="button">开始游戏</button>
+          <button class="tt-resume" id="btnResume" type="button" hidden>读取存档</button>
+        </div>
+        <!-- 今日挑战（第 22 块）：日期哈希出固定种子，同一天所有人抽到同一手牌 -->
+        <div class="tt-row tt-row-chal">
+          <button class="tt-daily" id="btnDaily" type="button">
+            <span class="tt-daily-k">今日挑战</span>
+            <span class="tt-daily-s" id="btnDailySub">同一颗种子</span>
+          </button>
+          <!-- 种子挑战（第 49 块）：自己输入种子，难度按战绩自动匹配 -->
+          <button class="tt-daily tt-seedbtn" id="btnSeed" type="button">
+            <span class="tt-daily-k">种子挑战</span>
+            <span class="tt-daily-s">输入种子开一局</span>
+          </button>
+          <!-- 每日签到（第 59 块）：没签到的那天按钮上会亮一个红点 -->
+          <button class="tt-daily tt-signbtn" id="btnSign" type="button">
+            <span class="tt-daily-k">每日签到<i class="tt-dot" id="signDot" hidden></i></span>
+            <span class="tt-daily-s" id="btnSignSub">本周 0 / 7 天</span>
+          </button>
+        </div>
+        <!-- 夜行商店（第 74 块：篝火商店 + 局外商店合成一个入口，进去再分「篝火 / 盲盒」两区）
+             骨币只在结算发，只在这里花 —— 第 94 块起还会从成就和每日任务进账 -->
+        <button class="tt-camp" id="btnShop" type="button">
+          <span class="tt-camp-fire">🔥</span>
+          <span class="tt-camp-name">夜行商店</span>
+          <span class="tt-camp-bone"><i></i><b id="msBadge">0</b></span>
         </button>
-        <!-- 种子挑战（第 49 块）：自己输入种子，难度按战绩自动匹配 -->
-        <button class="tt-daily tt-seedbtn" id="btnSeed" type="button">
-          <span class="tt-daily-k">种子挑战</span>
-          <span class="tt-daily-s">输入种子开一局</span>
-        </button>
-        <!-- 每日签到（第 59 块）：没签到的那天按钮上会亮一个红点 -->
-        <button class="tt-daily tt-signbtn" id="btnSign" type="button">
-          <span class="tt-daily-k">每日签到<i class="tt-dot" id="signDot" hidden></i></span>
-          <span class="tt-daily-s" id="btnSignSub">本周 0 / 7 天</span>
-        </button>
+        <div class="tt-row">
+          <button class="tt-menu-btn" id="btnCodex" type="button">图鉴</button>
+          <button class="tt-menu-btn" id="btnStory" type="button">夜行记忆</button>
+          <button class="tt-menu-btn" id="btnRecords" type="button">我的记录</button>
+        </div>
+        <div class="tt-row tt-row-w2">
+          <button class="tt-menu-btn" id="btnBoons" type="button">永夜火种</button>
+          <button class="tt-menu-btn" id="btnStats" type="button">属性</button>
+        </div>
+        <div class="tt-row tt-row-w4">
+          <button class="tt-menu-btn" id="btnGift" type="button">礼包兑换</button>
+          <button class="tt-menu-btn" id="btnSettings" type="button">设置</button>
+          <button class="tt-menu-btn" id="btnNotice" type="button">📢 公告</button>
+          <!-- 宣传有礼（第 57 块）：暖金色，随时回看 -->
+          <button class="tt-menu-btn tt-promo-btn" id="btnPromo" type="button">🎁 宣传</button>
+        </div>
       </div>
-      <!-- 夜行商店（第 74 块：篝火商店 + 局外商店合成一个入口，进去再分「篝火 / 盲盒」两区）
-           骨币只在结算发，只在这里花 -->
-      <button class="tt-camp" id="btnShop" type="button">
-        <span class="tt-camp-fire">🔥</span>
-        <span class="tt-camp-name">夜行商店</span>
-        <span class="tt-camp-bone"><i></i><b id="msBadge">0</b></span>
-      </button>
-      <div class="tt-row">
-        <button class="tt-menu-btn" id="btnStory" type="button">夜行记忆</button>
-        <button class="tt-menu-btn" id="btnBoons" type="button">永夜火种</button>
-        <button class="tt-menu-btn" id="btnRecords" type="button">我的记录</button>
-      </div>
-      <div class="tt-row">
-        <button class="tt-menu-btn" id="btnCodex" type="button">图鉴</button>
-        <button class="tt-menu-btn" id="btnGift" type="button">礼包兑换</button>
-        <button class="tt-menu-btn" id="btnSettings" type="button">设置</button>
-      </div>
-      <div class="tt-row">
-        <button class="tt-menu-btn" id="btnStats" type="button">属性</button>
-        <button class="tt-menu-btn" id="btnNotice" type="button">📢 公告</button>
-        <!-- 宣传有礼（第 57 块）：和公告同一排，暖金色，随时回看 -->
-        <button class="tt-menu-btn tt-promo-btn" id="btnPromo" type="button">🎁 宣传有礼</button>
-      </div>
-      <!-- 公告挪进上面的第四排（第 50 块：属性 + 公告同排） -->
+      <div class="tt-tip">按住左半屏拖动移动 · 走到怪身边自动攻击</div>
+      <div class="tt-saved" id="ttSaved" hidden></div>
     </div>
-    <div class="tt-tip">按住左半屏拖动移动 · 走到怪身边自动攻击</div>
-    <div class="tt-saved" id="ttSaved" hidden></div>
+  </div>
+
+  <!-- ============ 面板二：每日任务 ============ -->
+  <div class="tt-pane" id="ttPaneQuest" aria-hidden="true">
+    <div class="tt-pane-in">
+      <div class="qp-head">
+        <i class="qp-head-ic" style="--ic:url(assets/icons/quest-scroll.svg)"></i>
+        <div class="qp-head-t">
+          <b>每日任务</b>
+          <span id="qpDate">今天</span>
+        </div>
+        <span class="qp-bone"><i style="--ic:url(assets/icons/bone.svg)"></i><b id="qpBones">0</b></span>
+      </div>
+      <div class="qp-sub">
+        <span>每天 0 点刷新 · 没领的奖励不保留</span>
+        <span class="qp-left"><i style="--ic:url(assets/icons/clock.svg)"></i><b id="qpLeft">--:--:--</b></span>
+      </div>
+      <div class="qp-list" id="qpList"></div>
+      <button class="qp-all" id="qpAll" type="button">一键领取</button>
+      <div class="qp-foot" id="qpFoot">进度自动记 · 骨币要自己点领取 · 简单 3 条（通关那条每天必有）+ 中等 1 条 + 困难 1 条</div>
+    </div>
+  </div>
+
+  <!-- ============ 面板三：成就 ============ -->
+  <div class="tt-pane" id="ttPaneAch" aria-hidden="true">
+    <div class="tt-pane-in">
+      <div class="ac-head">
+        <i class="ac-head-ic" style="--ic:url(assets/icons/ach-challenge.svg)"></i>
+        <div class="ac-head-t">
+          <b>成就</b>
+          <span id="acProg">0 / 67</span>
+        </div>
+        <span class="qp-bone"><i style="--ic:url(assets/icons/bone.svg)"></i><b id="acBones">0</b></span>
+      </div>
+      <div class="ac-bar"><i id="acFill"></i></div>
+      <div class="ac-sub2">解锁直接发夜行骨币 · 寻常 30 / 不易 60 / 罕见 120</div>
+      <div class="ac-root" id="acRoot"></div>
+    </div>
+  </div>
+
+  <!-- 底部常驻 tab 条（第 94 块）。aria-hidden 交给切面板的函数翻 -->
+  <div class="tt-tabs" id="ttTabs">
+    <button class="tt-tab on" id="ttTabMain" type="button">
+      <i class="tt-tab-ic" style="--ic:url(assets/icons/home.svg)"></i>
+      <span>主页面</span>
+    </button>
+    <button class="tt-tab" id="ttTabQuest" type="button">
+      <i class="tt-tab-ic" style="--ic:url(assets/icons/quest-scroll.svg)"></i>
+      <span>每日任务</span>
+      <i class="tt-tab-dot" id="tabDotQuest" hidden></i>
+    </button>
+    <button class="tt-tab" id="ttTabAch" type="button">
+      <i class="tt-tab-ic" style="--ic:url(assets/icons/ach-challenge.svg)"></i>
+      <span>成就</span>
+      <b class="tt-tab-n" id="tabAchN">0/67</b>
+    </button>
   </div>
 </div>
 
@@ -578,9 +645,16 @@
           <span class="ms-purse-label">夜行骨币</span>
           <b id="msBones">0</b>
         </div>
-        <i>买宝箱，开箱随机给一次永久属性变化（可能触发诅咒·强制负面）。高品箱更不易踩雷，还能出永久法器 / 技能CD缩短。同一种箱子买得越多越贵（每买一次 +5% 首价，三种各自计算）。花掉不退回。</i>
+        <i>买宝箱，开箱随机给一次永久属性变化（可能触发诅咒·强制负面）。高品箱更不易踩雷，还能出永久法器 / 技能CD缩短。同一种箱子买得越多越贵（每买一次 +3% 首价，三种各自计算）。花掉不退回。</i>
       </div>
       <div class="ms-list" id="msList"></div>
+      <!-- 第 94 块：奖池一览手风琴。三组（木匣 / 银匣 / 金匣），展开列出这个匣子
+           能开出的每一条和它的实际概率。条目的三种颜色 = 正面（绿）/ 诅咒（红）/
+           稀有（金）。概率由 metaShop.boxPoolEntries() 算，和开箱判定同源。 -->
+      <div class="ms-pool">
+        <div class="ms-pool-h">奖池一览 · 点开看看每个匣子里到底有什么</div>
+        <div class="ac-root ms-pool-root" id="boxPoolRoot"></div>
+      </div>
       <div class="lv-foot" id="msFoot"></div>
       <div class="ms-log">
         <h3>开箱记录</h3>
@@ -905,7 +979,7 @@
 <!-- 不用 importmap：老手机浏览器（iOS 16.4 以下、旧版微信/安卓 WebView）
      不支持 import maps，会让整个模块解析失败、加载页永远停在 0%。
      项目内所有 import 都写成相对路径，直接靠原生 ES Module 解析。 -->
-<script type="module" src="js/main.js?v=104"></script>
+<script type="module" src="js/main.js?v=105"></script>
 
 <!-- 兜底自检（第 79 块重写）：把「慢」和「真的失败」分开，别再把慢当错。
      - 脚本 404 / 解析失败 → 红字 + 重试按钮（这才是真失败）
