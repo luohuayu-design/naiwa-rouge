@@ -115,10 +115,11 @@ const DEFAULT_PROFILE = {
   //   成就「登临第五关 / 骨塔之巅 / 九关皆通」看这张表 —— 战绩档案是分关卡的，
   //   但它在结算时的写入顺序不好依赖，这里单独存一份最简单也最不容易错。
   clears: {},
-  // 管理员模式二（第 95 块）：属性面板里手改过的基础属性 { statKey: 数值 }。
-  // 覆盖某条属性的「基础值」（不是加成），存进存档，之后每一局开局都用这个值。
-  // 键不存在 = 用代码里的原始 base；删掉键 = 恢复默认。
-  statBases: {},
+  // 管理员模式二（第 98 块）：属性面板里手改最终值留下的「追加项」{ statKey: 数值 }。
+  // 作用于 final = (base + Σflat) × (1 + Σpct) + adminFlat —— **基础值永远不动**，
+  // 追加项也不参与百分比乘法，所以之后加的成只会乘原始 base。
+  // 键不存在 / 值为 0 = 没改；删掉键 = 恢复默认。
+  statAdmin: {},
 };
 
 let cache = null;
@@ -370,24 +371,43 @@ export function clearCount() {
   return Object.keys(clearsMap()).length;
 }
 
-// ---------------- 管理员模式二（属性面板手改基础属性，第 95 块） ----------------
-// 直接覆盖某条属性的「基础值」，存进存档，下次开局（及之后每局）生效。
-// 空字符串 / 非法值 = 删除该键 = 恢复代码原始 base。
-export function getStatBases() {
+// ---------------- 管理员模式二（属性面板手改最终值，第 95 / 98 块） ----------------
+// 第 98 块（用户）：**基础值不许变**。填的是最终值，存的是一个「追加项」——
+//   追加项 = 填进去的最终值 − 当时的自然最终值，作用于公式末尾且**不参与百分比乘法**。
+//   所以之后抽到升级卡 / 篝火 / 火种，加成只乘原始 base：
+//     新最终值 = 改后最终值 + 改动率 × 基础值
+//   （第 95 块是「反解 base」：基础值会被改掉，后续百分比还会把改动一起放大，已废弃。）
+// 空字符串 / 非法值 = 删除该键 = 该属性没有追加项。
+let statMigrating = false;
+export function getStatAdmin() {
   const p = profile();
-  if (!p.statBases || typeof p.statBases !== 'object') p.statBases = {};
-  return p.statBases;
+  if (!p.statAdmin || typeof p.statAdmin !== 'object') p.statAdmin = {};
+  // 老字段 statBases（第 95 块存的反解 base）语义已废：留着会让「基础」显示成错的数，
+  // 而且它就是个被放大的 base —— 必须清掉，否则用户看到的「基础变了」永远不会消失。
+  if (p.statBases) {
+    delete p.statBases;          // 先删再落盘：saveStatNow 里会回调本函数，删过就不会再进来
+    if (!statMigrating) {
+      statMigrating = true;      // 护栏：万一将来 saveStatNow 的路径变长，也不会绕成环
+      try { saveStatNow(); } finally { statMigrating = false; }
+    }
+  }
+  return p.statAdmin;
 }
 
-export function setStatBase(key, value) {
-  const m = getStatBases();
-  if (value == null || value === '' || !Number.isFinite(Number(value))) delete m[key];
-  else m[key] = Number(value);
+export function setStatAdmin(key, value) {
+  const m = getStatAdmin();
+  if (value == null || value === '' || !Number.isFinite(Number(value)) || Math.abs(Number(value)) < 1e-9) {
+    delete m[key];
+  } else {
+    m[key] = Number(value);
+  }
   saveStatNow();
 }
 
-export function resetStatBases() {
-  profile().statBases = {};
+export function resetStatAdmin() {
+  const p = profile();
+  p.statAdmin = {};
+  delete p.statBases;      // 顺手清掉老字段，避免它再被读出来
   saveStatNow();
 }
 
@@ -396,13 +416,14 @@ export function resetStatBases() {
 // 用户定案：改完关掉管理员模式，属性必须还在（关掉那一刻 applyAdmin(false) 会
 // reloadFromStorage()，磁盘上没有就等于白改）。
 // 但也不能直接 save()：沙盒期内存里的 profile 混着战绩等脏数据，整份写下去等于把
-// 沙盒打穿了。所以沙盒期只把 statBases 这一个字段并进磁盘上那份档案。
+// 沙盒打穿了。所以沙盒期只把 statAdmin 这一个字段并进磁盘上那份档案。
 function saveStatNow() {
   if (!suppressSave) { save(); return; }
   let disk = null;
   try { disk = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (_) { disk = null; }
   if (!disk || typeof disk !== 'object') disk = JSON.parse(JSON.stringify(DEFAULT_PROFILE));
-  disk.statBases = JSON.parse(JSON.stringify(getStatBases()));
+  disk.statAdmin = JSON.parse(JSON.stringify(getStatAdmin()));
+  delete disk.statBases;
   try { localStorage.setItem(KEY, JSON.stringify(disk)); } catch (_) { /* 隐私模式：内存里照样生效 */ }
 }
 

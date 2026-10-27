@@ -2,16 +2,16 @@
 //   ① 并联体两两实时最小间距 8.0 → 16.0（用户「放大到原来的二倍」），
 //      且 16 格在第六关 arena 19 的场地里仍容得下 4 只
 //   ② 并联体生命 12 → 8（用户「现在太高了，适当降低」）
-//   ③ 管理员模式二改成「填最终值」：stats.sumMods 暴露加成合计，反解 base 的数学成立
+//   ③ 管理员模式二「填最终值」的数学（第 98 块改版：存**追加项**，基础值不动）
 //   ④ 密码门：没开管理员模式一时整栏隐藏
-//   ⑤ 生效时机：新开一局 + 读档续玩两条路都 applyBases
+//   ⑤ 生效时机：新开一局 + 读档续玩两条路都 applyAdmin
 //   ⑥ 版本号同步
 // 跑法：node .tmp-block95-test.mjs（cwd = naiwa-rouge）
 import { readFileSync } from 'node:fs';
 import { ENEMY_TYPES } from './js/enemy.js';
 import { createStats, STAT_DEFS } from './js/stats.js';
 import { LEVEL_6 } from './js/wave.js';
-import { getStatBases, setStatBase, resetStatBases } from './js/profile.js';
+import { getStatAdmin, setStatAdmin, resetStatAdmin } from './js/profile.js';
 
 let pass = 0, fail = 0;
 const fails = [];
@@ -52,9 +52,10 @@ ok(/hp: 8,/.test(enemySrc), 'enemy.js 里写的是 hp: 8');
 ok(!/hp: 12,\s*\/\/ 第 82 块：3\.2 → 12/.test(enemySrc), '旧的 hp: 12 注释行已替换');
 
 // ---------------------------------------------------------------- ③ 反解数学
-sec('③ 管理员模式二「填最终值」的数学');
+sec('③ 管理员模式二「填最终值」的数学（第 98 块：基础值不动）');
 const s = createStats(STAT_DEFS);
 ok(typeof s.sumMods === 'function', 'stats 实例暴露 sumMods(key)');
+ok(typeof s.natural === 'function', 'stats 实例暴露 natural(key)（不含手改项的自然最终值）');
 let sum = s.sumMods('attack');
 ok(sum.flat === 0 && sum.pct === 0, `空加成时 {flat:${sum.flat}, pct:${sum.pct}}`);
 s.addMod({ stat: 'attack', flat: 3, src: 'test' });
@@ -64,34 +65,59 @@ ok(sum.flat === 3 && Math.abs(sum.pct - 0.5) < 1e-9, `合计 {flat:${sum.flat}, 
 // get: (base 1 + 3) * 1.5 = 6
 ok(Math.abs(s.get('attack') - 6) < 1e-9, `基础 1 +3 攻 +50% = ${s.get('attack')}`);
 
-// 与 main.js 里 submitStatFinal 完全一致的公式
-function solveBase(target, sum) {
-  const den = 1 + sum.pct;
-  return (den > 1e-4 ? target / den : target) - sum.flat;
-}
+// 与 main.js 里 submitStatFinal 完全一致的算法：追加项 = 目标最终值 − 自然最终值
+const solveAdj = (target, st) => target - st.natural('attack');
+const ATK_BASE = STAT_DEFS.find((d) => d.key === 'attack').base;
 const target = 100;
-const b = solveBase(target, sum);
-const s2 = createStats(STAT_DEFS, { attack: b });
+const adj = solveAdj(target, s);
+const s2 = createStats(STAT_DEFS, { attack: adj });
 s2.addMod({ stat: 'attack', flat: 3, src: 'test' });
 s2.addMod({ stat: 'attack', pct: 0.5, src: 'test' });
 ok(Math.abs(s2.get('attack') - target) < 1e-9,
-  `填最终值 ${target} → 反解 base ${b.toFixed(4)} → 面板回读 ${s2.get('attack').toFixed(4)}`);
-// 反解出来的 base 存回去再渲染，面板必须还是 100（不会每渲染一次漂一点）
-const sum2 = s2.sumMods('attack');
-const b2 = solveBase(100, sum2);
-ok(Math.abs(b2 - b) < 1e-9, `二次反解稳定（${b2.toFixed(6)} vs ${b.toFixed(6)}），不会越改越漂`);
+  `填最终值 ${target} → 追加项 ${adj.toFixed(4)} → 面板回读 ${s2.get('attack').toFixed(4)}`);
+// ★ 用户的核心诉求：基础值一个字节都没动
+ok(s2.base.attack === ATK_BASE,
+  `基础值没被改（仍是 ${s2.base.attack}，第 95 块会变成 ${adj.toFixed(2)}）`);
+// 再渲染一次不能漂（追加项是固定值，跟加成无关）
+ok(Math.abs(solveAdj(100, s2) - adj) < 1e-9, `二次换算稳定（${solveAdj(100, s2).toFixed(6)} vs ${adj.toFixed(6)}）`);
 
-// 「之后抽到加成照旧往上叠」—— 这是用户第 3 问的补充要求
+// 之后抽到 flat 加成：加在改后最终值上。
+// 注意 flat 仍然吃引擎原有的百分比（(base+Σflat)×(1+Σpct) 是第 1 块就定下的公式，
+// 这轮不动它）—— 所以在**没有 pct** 的属性上才能看到干净的「+N 就是 +N」。
+const s5 = createStats(STAT_DEFS);
+const adj5 = 100 - s5.natural('attack');
+const s6 = createStats(STAT_DEFS, { attack: adj5 });
+s6.addMod({ stat: 'attack', flat: 20, src: 'upg:test' });
+ok(Math.abs(s6.get('attack') - 120) < 1e-9,
+  `（无 pct）改完 100 后抽到 +20 攻击 → ${s6.get('attack')}（= 100 + 20）`);
+// 有 pct 时 flat 照旧被放大 —— 这是引擎老规则，不是追加项引入的
 s2.addMod({ stat: 'attack', flat: 20, src: 'upg:test' });
-// (63.667 + 3 + 20) × 1.5 = 130 —— flat 也吃 pct，这是引擎本来的公式，不改
-ok(Math.abs(s2.get('attack') - 130) < 1e-9,
-  `改完 100 之后抽到 +20 攻击 → ${s2.get('attack')}（老规则继续叠，不是锁死）`);
-s2.addMod({ stat: 'attack', pct: 0.5, src: 'upg:test2' });
-ok(Math.abs(s2.get('attack') - 173.333333) < 1e-6,
-  `再加 +50% → ${s2.get('attack').toFixed(2)}（(63.67+3+20)×2）`);
+ok(Math.abs(s2.get('attack') - (100 + 20 * 1.5)) < 1e-9,
+  `（有 +50%）+20 攻击 → +30 → ${s2.get('attack')}（flat 吃 pct 是老公式，追加项不受影响）`);
 
-// pct 为 -100% 的极端值不能算出 Infinity
-ok(Number.isFinite(solveBase(10, { flat: 0, pct: -1 })), 'pct = -1 时不会算出 Infinity');
+// 之后抽到 pct 加成：只乘**基础值**，不乘改后的值（用户原话「改后最终值 + 改动率 × 基础值」）
+const s3 = createStats(STAT_DEFS);
+const HP_BASE = STAT_DEFS.find((d) => d.key === 'maxHp').base;
+const adj3 = 100 - s3.natural('maxHp');
+const s4 = createStats(STAT_DEFS, { maxHp: adj3 });
+ok(Math.abs(s4.get('maxHp') - 100) < 1e-9, `生命填 100 → ${s4.get('maxHp')}`);
+s4.addMod({ stat: 'maxHp', pct: 0.2, src: 'camp' });
+ok(Math.abs(s4.get('maxHp') - (100 + 0.2 * HP_BASE)) < 1e-9,
+  `再加 +20% → ${s4.get('maxHp')}（= 100 + 0.2 × 基础 ${HP_BASE}，不是 100×1.2=120）`);
+ok(s4.base.maxHp === HP_BASE, `加完百分比后基础值仍是 ${s4.base.maxHp}`);
+// flat 也一样：只加绝对值，不吃百分比
+// 追加项本身绝对不参与乘法：不管怎么加 pct，get − natural 恒等于追加项
+for (const p of [0.2, 0.5, 1.0]) {
+  const t = createStats(STAT_DEFS, { maxHp: adj3 });
+  t.addMod({ stat: 'maxHp', pct: p, src: 'camp' });
+  ok(Math.abs((t.get('maxHp') - t.natural('maxHp')) - adj3) < 1e-9,
+    `pct=${p} 时 追加项 恒定（${(t.get('maxHp') - t.natural('maxHp')).toFixed(4)}）`);
+}
+
+// 追加项本身不产生 Infinity / NaN
+ok(Number.isFinite(createStats(STAT_DEFS, { attack: 1e6 }).get('attack')), '极大追加项不会算出 Infinity');
+ok(createStats(STAT_DEFS, {}).get('attack') === createStats(STAT_DEFS).get('attack'),
+  '空 map 与不传第二参完全等价');
 
 // ---------------------------------------------------------------- ④ 密码门
 sec('④ 属性页那一栏跟「管理员模式一」共用密码');
@@ -102,24 +128,32 @@ ok(/\.st-admin\[hidden\]\{display:none\}/.test(cssSrc), 'hidden 时确实不占�
 
 // ---------------------------------------------------------------- ⑤ 生效时机
 sec('⑤ 生效时机：新开一局 + 读档续玩');
-const applyCalls = (mainSrc.match(/stats\.applyBases\(getStatBases\(\)\)/g) || []).length;
-ok(applyCalls >= 2, `applyBases(getStatBases()) 出现 ${applyCalls} 次（resetRunState + resumeGame）`);
+const applyCalls = (mainSrc.match(/stats\.applyAdmin\(getStatAdmin\(\)\)/g) || []).length;
+ok(applyCalls >= 2, `applyAdmin(getStatAdmin()) 出现 ${applyCalls} 次（resetRunState + resumeGame）`);
 const resumeAt = mainSrc.indexOf('async function resumeGame');
 const resumeSeg = mainSrc.slice(resumeAt, resumeAt + 4000);
-ok(/stats\.applyBases\(getStatBases\(\)\);/.test(resumeSeg), 'resumeGame 里确实调了（读档吃新值）');
-ok(resumeSeg.indexOf('stats.applyBases') < resumeSeg.indexOf('stats.loadMods(saved.playerMods'),
-  'applyBases 在 loadMods 之前（先定 base 再叠加成）');
+ok(/stats\.applyAdmin\(getStatAdmin\(\)\);/.test(resumeSeg), 'resumeGame 里确实调了（读档吃新值）');
+ok(resumeSeg.indexOf('stats.applyAdmin') < resumeSeg.indexOf('stats.loadMods(saved.playerMods'),
+  'applyAdmin 在 loadMods 之前（先定基准再叠加成）');
+ok(!/stats\.applyBases/.test(mainSrc), '老入口 applyBases 已经彻底删掉（不会两条路各管一半）');
 
 // ---------------------------------------------------------------- 存档往返
-sec('⑥ statBases 存档往返');
-resetStatBases();
-ok(Object.keys(getStatBases()).length === 0, '初始为空');
-setStatBase('attack', 12.5);
-ok(getStatBases().attack === 12.5, `写进档案：${getStatBases().attack}`);
-setStatBase('armor', '3');
-ok(getStatBases().armor === 3, '字符串输入被转成数字');
-resetStatBases();
-ok(Object.keys(getStatBases()).length === 0, '恢复默认清空');
+sec('⑥ statAdmin 存档往返');
+resetStatAdmin();
+ok(Object.keys(getStatAdmin()).length === 0, '初始为空');
+setStatAdmin('attack', 12.5);
+ok(getStatAdmin().attack === 12.5, `写进档案：${getStatAdmin().attack}`);
+setStatAdmin('armor', '3');
+ok(getStatAdmin().armor === 3, '字符串输入被转成数字');
+setStatAdmin('armor', 0);
+ok(!('armor' in getStatAdmin()), '写 0 = 删掉这个键（没有追加项）');
+setStatAdmin('armor', '');
+ok(!('armor' in getStatAdmin()), '空字符串 = 删掉这个键');
+resetStatAdmin();
+ok(Object.keys(getStatAdmin()).length === 0, '恢复默认清空');
+// 老字段必须被清掉，否则「基础」永远显示成被放大的值
+ok(!('statBases' in JSON.parse(JSON.stringify((await import('./js/profile.js')).profile()))),
+  '老字段 statBases 不再出现在档案里');
 
 // ---------------------------------------------------------------- 版本号
 sec('⑦ 版本号同步');

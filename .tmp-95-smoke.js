@@ -175,7 +175,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     const atk1 = await ev(ROW('攻击力'));
     ok(atk1 && Math.abs(Number(atk1.input) - 100) < 1e-6, `填完输入框回读 ${atk1 && atk1.input}（不漂）`);
     ok(atk1 && atk1.edited && atk1.flag, '这一行挂上「已改」标记');
-    const saved1 = await ev(`JSON.stringify(__game.ui.profile().statBases || {})`);
+    const saved1 = await ev(`JSON.stringify(__game.ui.profile().statAdmin || {})`);
     ok(/attack/.test(saved1), `档案里记下了 ${saved1}`);
 
     // 截图留证（编辑态）
@@ -241,7 +241,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     const atk5 = await ev(ROW('攻击力'));
     ok(atk5 && Math.abs(Number(atk5.val) - 1) < 1e-6, `恢复默认后回到 ${atk5 && atk5.val}（出厂值）`);
     ok(atk5 && !atk5.flag, '「已改」标记消失');
-    const left = await ev(`Object.keys(__game.ui.profile().statBases || {}).length`);
+    const left = await ev(`Object.keys(__game.ui.profile().statAdmin || {}).length`);
     ok(left === 0, `档案里已改项清空（剩 ${left} 条）`);
     await ev(`__game.setAdmin(false)`);
 

@@ -17,8 +17,8 @@
 //   boonPending  还没领的永久选择次数（通关 +3；关页面也不丢，回标题会补弹）
 // ============================================================
 
-import { profile, save } from './profile.js?v=111';
-import { rarityWeight } from './rarity.js?v=111';
+import { profile, save } from './profile.js?v=112';
+import { rarityWeight } from './rarity.js?v=112';
 
 // 每次通关给几次永久选择（用户定案：三次）
 export const BOON_PICKS = 3;

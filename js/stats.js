@@ -125,18 +125,25 @@ export function mitigate(raw, armor, floorPct = 0) {
 }
 
 // defs 可以换成武器自己的属性表（weaponStats.js），逻辑完全一样。
-// baseOverride（可选）：{ key: 数值 }，直接覆盖对应属性的「基础值」——
-//   属性面板「管理员模式二」手改的基础属性就走这里（持久化在存档里，每局开局注入）。
-export function createStats(defs = STAT_DEFS, baseOverride) {
+// adminFlat（可选）：{ key: 数值 }，一个**追加到最终值末尾**的常数项 ——
+//   属性面板「管理员模式二」手改的数值走这里（第 98 块）。
+//   ⚠️ 它**不是**基础值、也**不参与**百分比乘法：
+//     final = (base + Σflat) × (1 + Σpct) + adminFlat
+//   所以填进去多少，面板上就是多少；之后再抽到升级卡 / 篝火 / 火种，
+//   加成都只乘**原始 base**（"改后最终值 + 改动率 × 基础值"），不会把改动一起放大。
+//   第 95 块那种「反解 base」的写法会把基础值改掉，用户明确否掉了。
+export function createStats(defs = STAT_DEFS, adminFlat) {
   const base = {};
+  const adj = {};           // key -> 手改追加项（0 = 没改）
   const mods = new Map();   // key -> [{ flat, pct, src }]
+  const numOr = (v, d) => (v != null && Number.isFinite(Number(v))) ? Number(v) : d;
   for (const d of defs) {
-    const ov = baseOverride && baseOverride[d.key];
-    base[d.key] = (ov != null && Number.isFinite(Number(ov))) ? Number(ov) : d.base;
+    base[d.key] = d.base;
+    adj[d.key] = numOr(adminFlat && adminFlat[d.key], 0);
     mods.set(d.key, []);
   }
 
-  // 最终值：(base + Σflat) × (1 + Σpct)，下限 0（移速等不能为负）
+  // 最终值：(base + Σflat) × (1 + Σpct) + 手改追加项，下限 0（移速等不能为负）
   function get(key) {
     const b = base[key] ?? 0;
     let flat = 0, p = 0;
@@ -144,12 +151,22 @@ export function createStats(defs = STAT_DEFS, baseOverride) {
       flat += m.flat || 0;
       p += m.pct || 0;
     }
-    const v = (b + flat) * (1 + p);
+    const v = (b + flat) * (1 + p) + (adj[key] || 0);
     return v < 0 ? 0 : v;
   }
 
-  // 加成合计（第 95 块）：管理员模式二要「填最终值 → 反解基础值」，
-  // 公式是 final = (base + Σflat) × (1 + Σpct)，所以得把这两项拆出来。
+  // 不含手改项的「自然最终值」：面板要用它把输入值换算成追加项
+  function natural(key) {
+    const b = base[key] ?? 0;
+    let flat = 0, p = 0;
+    for (const m of mods.get(key) || []) {
+      flat += m.flat || 0;
+      p += m.pct || 0;
+    }
+    return (b + flat) * (1 + p);
+  }
+
+  // 加成合计（第 95 块）：要把 flat / pct 两项拆出来做展示与换算。
   function sumMods(key) {
     let flat = 0, p = 0;
     for (const m of mods.get(key) || []) {
@@ -176,7 +193,7 @@ export function createStats(defs = STAT_DEFS, baseOverride) {
       f += m.flat || 0;
       pp += m.pct || 0;
     }
-    const v = (b + f + flat) * (1 + pp + p);
+    const v = (b + f + flat) * (1 + pp + p) + (adj[key] || 0);
     return v < 0 ? 0 : v;
   }
 
@@ -260,12 +277,11 @@ export function createStats(defs = STAT_DEFS, baseOverride) {
     clampHp();
   }
 
-  // 管理员模式二（第 95 块）：运行时重设基础值（存档被改后，下一局开局调一次）。
-  // 只动 base，不动 mods；重设 maxHp 后把当前血量夹进新上限。
-  function applyBases(map) {
+  // 管理员模式二（第 98 块）：运行时重灌手改的追加项（存档被改后，下一局开局调一次）。
+  // 只动追加项，**基础值一个字节都不动**；重算 maxHp 后把当前血量夹进新上限。
+  function applyAdmin(map) {
     for (const d of defs) {
-      const ov = map && map[d.key];
-      base[d.key] = (ov != null && Number.isFinite(Number(ov))) ? Number(ov) : d.base;
+      adj[d.key] = numOr(map && map[d.key], 0);
     }
     clampHp();
   }
@@ -288,10 +304,10 @@ export function createStats(defs = STAT_DEFS, baseOverride) {
   }
 
   return {
-    base, get, sumMods, addMod, removeBySource, preview,
+    base, adj, get, natural, sumMods, addMod, removeBySource, preview,
     hp, heal, damage, damageTrue, syncHp, clampHp,
     mitigate: mitigateFn, rollDamage, snapshot, grouped,
-    dumpMods, loadMods, applyBases,
+    dumpMods, loadMods, applyAdmin,
     defs,
     // 近战判定入口：主角自动攻击时直接调用
     distanceTo: distance2D,

@@ -5,40 +5,40 @@
 // 目标是把三件事调顺：摇杆输入 → 角色速度/朝向 → 相机跟随。
 // 后续叠战斗时，只需要在 tick() 里加敌人更新与自动攻击，不用动输入层。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=111';
-import { buildNightScene } from './scene.js?v=111';
-import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=111';
+import * as THREE from '../lib/three.module.js?v=112';
+import { buildNightScene } from './scene.js?v=112';
+import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=112';
 // 第 80 块：给 glb 拼上版本号 → SW 缓存优先（详见 assetUrl.js）
-import { withV } from './assetUrl.js?v=111';
-import { createInput } from './input.js?v=111';
-import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=111';
-import { createStatView } from './statView.js?v=111';
-import { createWeaponStats } from './weaponStats.js?v=111';
-import { createFx } from './fx.js?v=111';
-import { createEnemySystem, ENEMY_TYPES } from './enemy.js?v=111';
+import { withV } from './assetUrl.js?v=112';
+import { createInput } from './input.js?v=112';
+import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=112';
+import { createStatView } from './statView.js?v=112';
+import { createWeaponStats } from './weaponStats.js?v=112';
+import { createFx } from './fx.js?v=112';
+import { createEnemySystem, ENEMY_TYPES } from './enemy.js?v=112';
 import {
   createLevel, LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVEL_5, LEVEL_6, LEVEL_7, LEVEL_8, LEVEL_9, LEVELS_BY_ID, DIFFS, setDifficulty, getDifficulty, roundScale, levelStats, levelTypes,
-} from './wave.js?v=111';
-import { createRangeRing } from './rangeRing.js?v=111';
-import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=111';
-import { createWeaponSystem } from './weapon.js?v=111';
-import { createArrowRainSystem } from './arrowRain.js?v=111';
-import { SWORD_KINDS } from './swordKinds.js?v=111';
-import { createGoldSystem } from './gold.js?v=111';
-import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW, SHOP_PINNED } from './shop.js?v=111';
-import { createTurretSystem, TURRET } from './turret.js?v=111';
-import { createRelicSystem, RELIC_DEFS } from './relics.js?v=111';
-import { createHazards } from './hazards.js?v=111';
-import { createDeposit, tagChance } from './deposit.js?v=111';   // 第 81 块：寄存柜；第 84 块：掉牌概率
-import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=111';
-import audio from './audio.js?v=111';
-import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=111';
+} from './wave.js?v=112';
+import { createRangeRing } from './rangeRing.js?v=112';
+import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=112';
+import { createWeaponSystem } from './weapon.js?v=112';
+import { createArrowRainSystem } from './arrowRain.js?v=112';
+import { SWORD_KINDS } from './swordKinds.js?v=112';
+import { createGoldSystem } from './gold.js?v=112';
+import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW, SHOP_PINNED } from './shop.js?v=112';
+import { createTurretSystem, TURRET } from './turret.js?v=112';
+import { createRelicSystem, RELIC_DEFS } from './relics.js?v=112';
+import { createHazards } from './hazards.js?v=112';
+import { createDeposit, tagChance } from './deposit.js?v=112';   // 第 81 块：寄存柜；第 84 块：掉牌概率
+import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=112';
+import audio from './audio.js?v=112';
+import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=112';
 // 第 62 块：回血技能（第四关通关后永久解锁，回 5 点 / CD 25 秒）
-import { createHealSkill, HEAL_AMOUNT, HEAL_CD } from './healSkill.js?v=111';
+import { createHealSkill, HEAL_AMOUNT, HEAL_CD } from './healSkill.js?v=112';
 // 第 62 块：民心专属事件（升档走良性池、掉档走恶性池）
-import { repPoolForTier, REP_GOOD, REP_BAD } from './repEvents.js?v=111';
+import { repPoolForTier, REP_GOOD, REP_BAD } from './repEvents.js?v=112';
 // 第 62 块：攻略面板（战败提示上的「查看攻略」，手风琴三组）
-import { renderGuide, GUIDE_SECTIONS } from './guide.js?v=111';
+import { renderGuide, GUIDE_SECTIONS } from './guide.js?v=112';
 import {
   settings as readSettings, setSetting, save as saveProfile, profile,
   bumpStat, setStatMax, codexAdd, codexCount, countCard, unlockAch, hasAch, addBones, bones, resetAll,
@@ -52,33 +52,33 @@ import {
   rainObtained, markRainObtained,          // 第 65 块：技能的「有没有」只跟解锁有关
   hintSeen, markHintSeen,                  // 第 65 块：一次性提示卡
   markLevelClear, levelCleared, clearCount, // 第 94 块：通关过哪些关（成就用）
-  getStatBases, setStatBase, resetStatBases, // 第 95 块：管理员模式二（属性面板手改基础属性）
-} from './profile.js?v=111';
+  getStatAdmin, setStatAdmin, resetStatAdmin, // 第 95 / 98 块：管理员模式二（手改最终值 → 存追加项，基础值不动）
+} from './profile.js?v=112';
 // 第 44 块：礼包兑换（码表只有哈希，明细在 gift.js 顶部注释）
-import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=111';
+import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=112';
 // 第 46 块：音效包（抽象奶蛙音效包 —— 4 段奶蛙叫声，通关第一关解锁）
-import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=111';
-import * as runSave from './runSave.js?v=111';
+import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=112';
+import * as runSave from './runSave.js?v=112';
 // 第 78 块：存档导出 / 导入。数据逻辑全在这个模块里（不碰 DOM），这里只接按钮
-import * as saveIO from './saveIO.js?v=111';
+import * as saveIO from './saveIO.js?v=112';
 import {
   CAMPFIRE, CAMP_STEP, campBuy, campOwned, campLevel,
   campCost, campApply, bonesFor, diffBoneMul, levelBoneMul, coinBones, BONE,
-} from './campfire.js?v=111';
+} from './campfire.js?v=112';
 // 第 23 块：永夜火种（通关白给的 3 次永久三选一）
 import {
   BOONS, BOON_BY_ID, BOON_PICKS, boonOwned, boonStacks, boonPending, boonTotalStacks,
   grantBoons, rollBoons, takeBoon, applyBoons, boonStackText,
-} from './boons.js?v=111';
+} from './boons.js?v=112';
 // 第 21 块：夜行诅咒（自选 debuff 换骨币倍率）
-import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=111';
+import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=112';
 // 第 22 块：种子与每日挑战
 import {
   DAILY_RULES, dayKey, dayText, dailySeed, seedCode, pickDailyCurses,
   seedFromText, pickSeedRules, loadSeedRecords, saveSeedRecord, pruneSeeds,
   dailyRecord, saveDailyRecord, pruneDaily, makeRng,
-} from './seed.js?v=111';
-import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=111';
+} from './seed.js?v=112';
+import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=112';
 // 第 58 块：局外商店 · 宝箱（花骨币买，开箱随机给永久属性 / 永久法器 / 技能CD缩短）
 import {
   BOXES, BOX_BY_ID, buyBox, rollBox, metaApplyStats, applyMeta,
@@ -86,35 +86,35 @@ import {
   boxCost, boxPriceOf, boxBought, BOX_PRICE_STEP,
   // 第 94 块：奖池一览（手风琴里那些条目与概率，纯计算）
   boxPoolEntries,
-} from './metaShop.js?v=111';
+} from './metaShop.js?v=112';
 // 第 59 块：每日签到（以周为单位，周一 00:00 重置）
 import {
   WEEK_TIERS, SIGN_BONES, weekCells, signSummary, signToday, signedToday,
-} from './signin.js?v=111';
+} from './signin.js?v=112';
 // 第 94 块：成就（八类 × 三档骨币奖励）
 // 第 94-2 块：骨币改成**手动领取**（achPending / achClaim），老用户补发走 achMigrate
 import {
   ACHS, ACH_CATS, ACH_TIERS, ACH_COUNT, achById, achsByCat, achTier,
   achPending, achPendingBones, achClaim, achClaimAll, achClaimed, achMigrate,
-} from './achievements.js?v=111';
+} from './achievements.js?v=112';
 // 第 94 块：通用手风琴（盲盒奖池与成就面板共用，不复制第三份引擎）
-import { renderAccordion } from './accordion.js?v=111';
+import { renderAccordion } from './accordion.js?v=112';
 // 第 94 块：每日任务（简单 3 + 中等 1 + 困难 1，每天 0 点刷新）
 import {
   DQ_TIERS, DQ_BONES, dqTasks, dqPump, dqSave, dqClaim, dqClaimAll,
   dqPending, dqGained, dqMsLeft, dayKeyOf, dqTier, dqTaskName,
   dqState, dqForceReroll, dqReset,   // 调试口：跨天重掷 / 整条重置
-} from './dailyQuest.js?v=111';
+} from './dailyQuest.js?v=112';
 import {
   EVENTS, ALL_EVENTS, getEventById, pickEvent, effectLines,
   choiceHint, canAfford, costShort, REP_MIN, REP_MAX, REP_START,
   isTalk, eventChoices, resolveRoll, mergeEffects,
-} from './events.js?v=111';
+} from './events.js?v=112';
 // 第 32 块：主线《笑不出来的那一夜》（18 夜，一夜一关，前 3 夜已有关卡）
 import {
   STORY_ARC, STORY_CHAPTERS, STORY_ENDINGS, MARK_INFO,
   storyChapterAt, storyChapterById, storyEndingKey,
-} from './story.js?v=111';
+} from './story.js?v=112';
 
 // 标记模块已经跑起来了：index.html 的兜底自检靠它判断
 // 「模块根本没执行」还是「执行了但加载慢」。
@@ -388,7 +388,7 @@ async function boot() {
   // 第 6 块起是两套完全独立的表：
   //   stats  奶蛙自己（生命 / 近战 / 机动 / 经济）
   //   wstats 环剑自己（剑伤害 / 剑暴击 / 元素）—— 与主角零关系
-  const stats = createStats(STAT_DEFS, getStatBases());   // 第 95 块：并入手改的基础属性
+  const stats = createStats(STAT_DEFS, getStatAdmin());   // 第 98 块：并入手改的追加项（基础值不动）
   const wstats = createWeaponStats();
 
   // 脚下的攻击范围环：半径实时跟着 attackRange 走（升级加范围会立刻变大）。
@@ -2180,7 +2180,7 @@ async function boot() {
   function resetRunState() {
     // ① 属性表：mods 全清、血按新的上限回满。局外那三份（篝火 / 夜行商店 /
     //    永夜火种）紧接着在 startPlay 里各自 removeBySource + 重放，都是幂等的。
-    stats.applyBases(getStatBases());   // 第 95 块：把「管理员模式二」改过的基础属性重灌进本局
+    stats.applyAdmin(getStatAdmin());   // 第 98 块：把「管理员模式二」改过的追加项重灌进本局
     stats.loadMods([]);
     wstats.loadMods([]);
     stats.hp.cur = stats.get('maxHp');
@@ -4846,7 +4846,7 @@ async function boot() {
     // 第 95 块：管理员模式二改过的属性走的是「开局重灌 base」这条路，
     // 而 resumeGame 不经过 resetRunState —— 少了这一行，改完属性再点「继续」
     // 本局读到的还是改之前的基础值（下一局才生效，用户会觉得没改上）。
-    stats.applyBases(getStatBases());
+    stats.applyAdmin(getStatAdmin());
     stats.loadMods(saved.playerMods, saved.hp);
     weapon.restore(saved.weapon);
     arrowRain.restore(saved.arrowRain);   // 第 47 块
@@ -7000,16 +7000,18 @@ async function boot() {
   const statRows = document.getElementById('statRows');
   const statView = createStatView(statCanvas);
 
-  // ---------------- 管理员模式二（第 95 块）：属性面板手改属性 ----------------
+  // ---------------- 管理员模式二（第 95 / 98 块）：属性面板手改属性 ----------------
   // 与「管理员沙盒（adminOn）」是两回事，但**共用同一串密码**：没开沙盒这一栏
   // 整个不出现（第 95 块用户定案「要密码，和模式一共用」）。
   // 沙盒期一切不落地、退出即还原；这里的改动写进本机存档，退出模式也保留。
   //
-  // 语义（第 95 块用户定案）：填的是**最终值**，不是基础值。
-  //   填 100 → 面板就是 100 → 之后抽到升级卡 / 篝火 / 火种的加成照旧往上叠（老规则不变）。
-  // 实现是反解：final = (base + Σflat) × (1 + Σpct)，所以
-  //   base = final / (1 + Σpct) − Σflat
-  // 存的仍然是 base（profile.statBases），只是写进去的值是反解出来的。
+  // 语义（第 98 块用户定案）：填的是**最终值**，而且**基础值永远不许变**。
+  //   最终值 = (base + Σflat) × (1 + Σpct) + 追加项
+  //   追加项 = 填进去的最终值 − 当时的自然最终值（存在 profile.statAdmin）
+  // 追加项挂在公式**末尾且不参与百分比乘法**，所以之后抽到升级卡 / 篝火 / 火种：
+  //   新最终值 = 改后最终值 + 改动率 × 基础值
+  // ⚠️ 第 95 块是「反解 base」写进 statBases：基础值会被改掉，之后百分比还会把
+  //    改动一起放大（填 100 再 +20% 变 120 而不是 100 + 0.2×基础）。用户否掉了。
   let statAdmin2 = false;
   const stAdminToggle = document.getElementById('stAdminToggle');
   const stAdminReset = document.getElementById('stAdminReset');
@@ -7022,7 +7024,7 @@ async function boot() {
     stAdminToggle.textContent = statAdmin2 ? '管理员模式二：开' : '管理员模式二：关';
     stAdminToggle.classList.toggle('on', statAdmin2);
     stAdminToggle.setAttribute('aria-hidden', adminOn ? 'false' : 'true');
-    const n = Object.keys(getStatBases()).length;
+    const n = Object.keys(getStatAdmin()).length;
     if (stAdminReset) stAdminReset.textContent = n ? `恢复默认（已改 ${n}）` : '恢复默认';
   }
 
@@ -7030,21 +7032,23 @@ async function boot() {
   function trimNum(v) {
     return String(Math.round(v * 10000) / 10000);
   }
-  // 「填最终值 → 反解基础值」。Σ 取的是**属性页口径**（篝火 / 祝福 / 盲盒），
-  // 也就是此刻面板上显示的那一份加成 —— 所以填进去多少，面板就显示多少。
+  // 「填最终值 → 存追加项」（第 98 块，用户定案：**基础值不许变**）。
+  //   追加项 = 填进去的最终值 − 此刻的自然最终值（不含追加项）
+  //   最终值 = (base + Σflat) × (1 + Σpct) + 追加项
+  // 因为追加项在公式**末尾且不参与乘法**，之后再抽到升级卡 / 篝火 / 火种：
+  //   新最终值 = 改后最终值 + 改动率 × 基础值（百分比只乘原始 base，不乘改动）
+  // 第 95 块是反解 base 写进 statBases —— 那会把「基础」显示成被放大的值，已废弃。
   function submitStatFinal(key, raw, s) {
     const v = Number(raw);
     if (!Number.isFinite(v)) { renderStatRows(); return; }
-    const sum = s.sumMods(key);
-    const den = 1 + sum.pct;
-    const b = (den > 1e-4 ? v / den : v) - sum.flat;
-    setStatBase(key, b);
+    const nat = s.natural(key);      // 不含手改项的自然最终值
+    setStatAdmin(key, v - nat);
     renderStatRows();
   }
 
   function renderStatRows() {
-    const ov = getStatBases();
-    const s = createStats(STAT_DEFS, ov);            // 干净 base（并入手改项）
+    const ov = getStatAdmin();                       // 手改追加项（不是 base！）
+    const s = createStats(STAT_DEFS, ov);            // base 永远是代码原值，手改项单独挂在公式末尾
     const w = createWeaponStats();               // camp/boon 里的武器加成有处可去即可
     campApply(s, w);
     applyBoons(s, w);
@@ -7063,10 +7067,10 @@ async function boot() {
         name.className = 'st-name';
         name.textContent = d.name;
         row.appendChild(name);
-        const edited = Object.prototype.hasOwnProperty.call(ov, d.key);
-        const effectiveBase = edited ? ov[d.key] : d.base;
+        const edited = Math.abs(ov[d.key] || 0) > 1e-9;
+        const effectiveBase = d.base;               // 第 98 块：基础值永远显示代码里的原值
         if (statAdmin2) {
-          // 编辑态：输入框里放**最终值**（所见即所得），右边标出反解后的基础值
+          // 编辑态：输入框里放**最终值**（所见即所得），右边标出真正的基础值
           const input = document.createElement('input');
           input.type = 'number';
           input.step = 'any';
@@ -7130,7 +7134,7 @@ async function boot() {
     renderStatRows();
   });
   if (stAdminReset) stAdminReset.addEventListener('click', () => {
-    resetStatBases();
+    resetStatAdmin();
     statAdmin2 = true;   // 打开好让用户看到已清空、可继续改
     renderStatAdminBar();
     renderStatRows();
