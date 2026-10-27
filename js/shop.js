@@ -26,9 +26,9 @@
 // 第 11 块：每件货都带 rarity（0 普通 ~ 4 传说），店里按品质加权抽取 ——
 // 幸运越高，摆出来的货越往金/红那一头走（见 rarity.js）。
 // ============================================================
-import { rarityWeight } from './rarity.js?v=106';
-import { TURRET } from './turret.js?v=106';
-import { RELIC_DEFS } from './relics.js?v=106';
+import { rarityWeight } from './rarity.js?v=107';
+import { TURRET } from './turret.js?v=107';
+import { RELIC_DEFS } from './relics.js?v=107';
 
 export const SHOP_ITEMS = [
   // ---------------- 生命药水（第 13 块起：买进背包，作战中随时用） ----------------

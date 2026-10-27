@@ -25,12 +25,12 @@
 // 第四关三只（wraith/leaper/mender，第 35 块，第 52 块换模型），
 // 各自在下面 ENEMY_TYPES 里有详细注释。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=106';
-import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=106';
-import { clone as cloneSkinned } from '../lib/jsm/utils/SkeletonUtils.js?v=106';
-import { distance2D } from './stats.js?v=106';
-import { createRangeRing } from './rangeRing.js?v=106';
-import { withV } from './assetUrl.js?v=106';
+import * as THREE from '../lib/three.module.js?v=107';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=107';
+import { clone as cloneSkinned } from '../lib/jsm/utils/SkeletonUtils.js?v=107';
+import { distance2D } from './stats.js?v=107';
+import { createRangeRing } from './rangeRing.js?v=107';
+import { withV } from './assetUrl.js?v=107';
 
 // KayKit 模型正面朝 +Z；如果哪天换模型发现怪倒着走，把这里改成 Math.PI
 export const ENEMY_MODEL_YAW = 0;
