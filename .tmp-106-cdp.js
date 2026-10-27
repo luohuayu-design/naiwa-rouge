@@ -137,6 +137,14 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
       })()`);
       ok(g320.l >= 0 && g320.r <= g320.vw && g320.clipped === 0,
         `320 窄屏四个 tab 也不溢出（${g320.r} / ${g320.vw}）`, JSON.stringify(g320));
+      // 属性横卡在 320 上不能把第四项截掉（CSS 有 ellipsis，截了就是「防御 0.0 · …」）
+      const bar320 = await ev(`(() => {
+        const el = document.getElementById('ttStatVals');
+        return { clip: el.scrollWidth > el.clientWidth + 1, txt: el.textContent,
+          w: el.clientWidth, sw: el.scrollWidth };
+      })()`);
+      ok(!bar320.clip && /暴击 \d+%/.test(bar320.txt),
+        '320 窄屏属性横卡四项都排得下（没被省略号截断）', JSON.stringify(bar320));
       await shot('a-tabs-320.png');
       await send('Emulation.clearDeviceMetricsOverride');
       await sleep(300);

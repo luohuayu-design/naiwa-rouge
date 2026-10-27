@@ -40,7 +40,9 @@ function fresh() { store.clear(); resetAll(); }
 // ============================================================ 0. 版本号
 console.log('[0] 版本号');
 {
-  ok(VER === '120', 'index.html 的 main.js 版本号是 120', VER);
+  // ⚠️ 别写死版本号（第 105 块的教训：block104 硬编码 v=118，全站 bump 后立刻假红）。
+  // 这里只钉「是个正整数」「style.css 与 main.js 同一个号」，数字由 index.html 说了算。
+  ok(/^\d+$/.test(VER) && Number(VER) > 0, 'index.html 里读得到 main.js 的版本号', VER);
   ok(idx.includes(`style.css?v=${VER}`), `style.css 带 ?v=${VER}`);
   // 全站 import 都跟着 bump（漏一个 = SW 缓存优先下拿到旧模块）
   const files = ['main.js', 'achievements.js', 'weapon.js', 'profile.js', 'metaShop.js', 'dailyQuest.js'];
