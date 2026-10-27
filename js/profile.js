@@ -115,6 +115,10 @@ const DEFAULT_PROFILE = {
   //   成就「登临第五关 / 骨塔之巅 / 九关皆通」看这张表 —— 战绩档案是分关卡的，
   //   但它在结算时的写入顺序不好依赖，这里单独存一份最简单也最不容易错。
   clears: {},
+  // 管理员模式二（第 95 块）：属性面板里手改过的基础属性 { statKey: 数值 }。
+  // 覆盖某条属性的「基础值」（不是加成），存进存档，之后每一局开局都用这个值。
+  // 键不存在 = 用代码里的原始 base；删掉键 = 恢复默认。
+  statBases: {},
 };
 
 let cache = null;
@@ -364,6 +368,27 @@ export function markLevelClear(id) {
 
 export function clearCount() {
   return Object.keys(clearsMap()).length;
+}
+
+// ---------------- 管理员模式二（属性面板手改基础属性，第 95 块） ----------------
+// 直接覆盖某条属性的「基础值」，存进存档，下次开局（及之后每局）生效。
+// 空字符串 / 非法值 = 删除该键 = 恢复代码原始 base。
+export function getStatBases() {
+  const p = profile();
+  if (!p.statBases || typeof p.statBases !== 'object') p.statBases = {};
+  return p.statBases;
+}
+
+export function setStatBase(key, value) {
+  const m = getStatBases();
+  if (value == null || value === '' || !Number.isFinite(Number(value))) delete m[key];
+  else m[key] = Number(value);
+  save();
+}
+
+export function resetStatBases() {
+  profile().statBases = {};
+  save();
 }
 
 // ---------------- 骨币 ----------------

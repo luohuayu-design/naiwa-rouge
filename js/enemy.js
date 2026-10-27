@@ -25,12 +25,12 @@
 // 第四关三只（wraith/leaper/mender，第 35 块，第 52 块换模型），
 // 各自在下面 ENEMY_TYPES 里有详细注释。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=107';
-import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=107';
-import { clone as cloneSkinned } from '../lib/jsm/utils/SkeletonUtils.js?v=107';
-import { distance2D } from './stats.js?v=107';
-import { createRangeRing } from './rangeRing.js?v=107';
-import { withV } from './assetUrl.js?v=107';
+import * as THREE from '../lib/three.module.js?v=108';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=108';
+import { clone as cloneSkinned } from '../lib/jsm/utils/SkeletonUtils.js?v=108';
+import { distance2D } from './stats.js?v=108';
+import { createRangeRing } from './rangeRing.js?v=108';
+import { withV } from './assetUrl.js?v=108';
 
 // KayKit 模型正面朝 +Z；如果哪天换模型发现怪倒着走，把这里改成 Math.PI
 export const ENEMY_MODEL_YAW = 0;
@@ -831,9 +831,10 @@ export const ENEMY_TYPES = {
       hitR: 0.42,          // 判定半径（再加主角自己的半径）
       damage: 1,
       cd: 0.70,            // 全局节流：同一刻只吃一次
-      minGap: 8.0,         // 两两**实时**最小间距（格）—— 小于它立刻被推到 8.0
+      minGap: 16.0,        // 两两**实时**最小间距（格）—— 小于它立刻被推到 16.0
       // 第 82 块：分离改成硬约束之后，这个值就是真实距离，不再是「软推的期望值」。
-      // 8.0 格 ≈ 场地直径（38）的 21%：一条电弧横跨小半个机房。
+      // 16.0 格 ≈ 场地直径（38）的 42%：一条电弧横跨大半个机房（用户要求放大到 2 倍）。
+      // 注意：场地上最多 4 只并联体，半径 19 的场地里彼此 ≥16 格仍可容下。
       segs: 4,             // 一条电弧折成几段（锯齿感）
       jitter: 0.10,        // 折线横向抖动幅度（格）
       dots: 2,             // 沿线流动的光点数（电流在流的感觉全靠它）
@@ -2295,7 +2296,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
 
   function separateArcs(nodes, dt) {
     if (nodes.length < 2) return;
-    const gap = nodes[0].cfg.arc.minGap || 8.0;
+    const gap = nodes[0].cfg.arc.minGap || 16.0;
     const maxStep = ARC_PUSH_MAX * Math.min(dt, 0.05);
     // 4 轮：三只挤成一坨时，一轮推完会互相抵消；夹回边界之后也得再审一遍
     for (let pass = 0; pass < 4; pass++) {
@@ -2338,7 +2339,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
   // 否则刚升起来那 0.8 秒是贴在一起的两块铁疙瘩，玩家第一眼看到的就是「太近」。
   // 这里允许一次到位（spawn 动画期间位移看不出来）。
   function seatArc(e) {
-    const gap = (e.cfg.arc && e.cfg.arc.minGap) || 8.0;
+    const gap = (e.cfg.arc && e.cfg.arc.minGap) || 16.0;
     for (let pass = 0; pass < 6; pass++) {
       let moved = false;
       for (const o of list) {

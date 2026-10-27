@@ -124,12 +124,15 @@ export function mitigate(raw, armor, floorPct = 0) {
   return Math.max(1, flat, raw * floorPct);
 }
 
-// defs 可以换成武器自己的属性表（weaponStats.js），逻辑完全一样
-export function createStats(defs = STAT_DEFS) {
+// defs 可以换成武器自己的属性表（weaponStats.js），逻辑完全一样。
+// baseOverride（可选）：{ key: 数值 }，直接覆盖对应属性的「基础值」——
+//   属性面板「管理员模式二」手改的基础属性就走这里（持久化在存档里，每局开局注入）。
+export function createStats(defs = STAT_DEFS, baseOverride) {
   const base = {};
   const mods = new Map();   // key -> [{ flat, pct, src }]
   for (const d of defs) {
-    base[d.key] = d.base;
+    const ov = baseOverride && baseOverride[d.key];
+    base[d.key] = (ov != null && Number.isFinite(Number(ov))) ? Number(ov) : d.base;
     mods.set(d.key, []);
   }
 
@@ -246,6 +249,16 @@ export function createStats(defs = STAT_DEFS) {
     clampHp();
   }
 
+  // 管理员模式二（第 95 块）：运行时重设基础值（存档被改后，下一局开局调一次）。
+  // 只动 base，不动 mods；重设 maxHp 后把当前血量夹进新上限。
+  function applyBases(map) {
+    for (const d of defs) {
+      const ov = map && map[d.key];
+      base[d.key] = (ov != null && Number.isFinite(Number(ov))) ? Number(ov) : d.base;
+    }
+    clampHp();
+  }
+
   // 面板/日志用的快照（text 统一为字符串，避免数字/字符串混用）
   function snapshot() {
     return defs.map((d) => ({ ...d, value: get(d.key), text: String(d.fmt(get(d.key))) }));
@@ -267,7 +280,7 @@ export function createStats(defs = STAT_DEFS) {
     base, get, addMod, removeBySource, preview,
     hp, heal, damage, damageTrue, syncHp, clampHp,
     mitigate: mitigateFn, rollDamage, snapshot, grouped,
-    dumpMods, loadMods,
+    dumpMods, loadMods, applyBases,
     defs,
     // 近战判定入口：主角自动攻击时直接调用
     distanceTo: distance2D,

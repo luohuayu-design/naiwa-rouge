@@ -1992,6 +1992,22 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
 .st-row .st-note{flex:0 0 100%;font-size:10.5px;line-height:1.45;
   color:rgba(255,209,122,.72);letter-spacing:.02em}
 
+/* 第 95 块：属性面板「管理员模式二」—— 手改基础属性的工具栏与编辑态 */
+.st-admin{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:10px}
+.st-adm-btn{font:inherit;font-size:12px;font-weight:700;color:rgba(210,236,222,.85);
+  background:rgba(10,24,21,.7);border:1px solid rgba(126,235,196,.22);
+  border-radius:9px;padding:6px 12px;cursor:pointer;letter-spacing:.02em}
+.st-adm-btn:hover{border-color:rgba(126,235,196,.5)}
+.st-adm-btn.on{background:rgba(126,235,196,.18);border-color:#7eebc4;color:#d8fff0}
+.st-adm-tip{font-size:10.5px;color:rgba(150,190,174,.55);letter-spacing:.02em}
+.st-input{width:78px;font:inherit;font-size:13px;font-weight:800;text-align:right;
+  color:#ffe9a8;background:rgba(0,0,0,.35);border:1px solid rgba(126,235,196,.4);
+  border-radius:8px;padding:4px 8px;-moz-appearance:textfield}
+.st-input::-webkit-outer-spin-button,.st-input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.st-row.st-edited{border-color:rgba(255,209,122,.5);background:rgba(40,30,8,.6)}
+.st-row .st-flag{flex:0 0 auto;font-size:9.5px;font-weight:800;letter-spacing:.08em;
+  color:#1a1206;background:#ffd17a;border-radius:6px;padding:1px 6px}
+
 /* ============================================================
    第 57 块：宣传有礼 / 菜单卡顿优化 / 一摞 UI 修复
    ============================================================ */
