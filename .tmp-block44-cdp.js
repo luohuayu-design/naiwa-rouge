@@ -140,7 +140,11 @@ async function httpJson(url, method = 'GET') {
     ok('成功提示是亮字态', await ev("document.getElementById('giftMsg').classList.contains('ok')"));
     ok('输入框已清空', await ev("document.getElementById('giftCode').value === ''"));
     ok('页面骨币同步更新', await ev("document.getElementById('giftBoneNum').textContent") === String(baseBones + 300));
-    ok('主菜单篝火角标同步', await ev("document.getElementById('campBoneNum').textContent") === String(baseBones + 300));
+    // 第 103 块：老断言读的 `#campBoneNum` 早就不存在了（null.textContent 直接抛异常，
+    // 把后面 [5][6][7] 全打断 —— 既有黄账）。主菜单那颗骨币角标是 `#msBadge`，
+    // `renderShopBadge()` 刷的就是它；`#msBones` 是盲盒商店面板里的另一个数，别混。
+    ok('主菜单骨币角标同步', await ev("document.getElementById('msBadge') ? document.getElementById('msBadge').textContent : ''") === String(baseBones + 300),
+      await ev("document.getElementById('msBadge') ? document.getElementById('msBadge').textContent : '<无 msBadge>'"))
     ok('已兑换列表出现', await ev("document.getElementById('giftLog').classList.contains('on')"));
     ok('列表写「A 类 · +300 骨币」', /A 类 · \+300 骨币/.test(await ev("document.getElementById('giftLog').textContent")));
 
