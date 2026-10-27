@@ -25,12 +25,12 @@
 // 第四关三只（wraith/leaper/mender，第 35 块，第 52 块换模型），
 // 各自在下面 ENEMY_TYPES 里有详细注释。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=108';
-import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=108';
-import { clone as cloneSkinned } from '../lib/jsm/utils/SkeletonUtils.js?v=108';
-import { distance2D } from './stats.js?v=108';
-import { createRangeRing } from './rangeRing.js?v=108';
-import { withV } from './assetUrl.js?v=108';
+import * as THREE from '../lib/three.module.js?v=109';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=109';
+import { clone as cloneSkinned } from '../lib/jsm/utils/SkeletonUtils.js?v=109';
+import { distance2D } from './stats.js?v=109';
+import { createRangeRing } from './rangeRing.js?v=109';
+import { withV } from './assetUrl.js?v=109';
 
 // KayKit 模型正面朝 +Z；如果哪天换模型发现怪倒着走，把这里改成 Math.PI
 export const ENEMY_MODEL_YAW = 0;
@@ -811,7 +811,9 @@ export const ENEMY_TYPES = {
     sourceHeight: 0.40,    // 实测包围盒最高点（Kenney 的 1 单位 ≈ 1 格）
     height: 1.30,          // 放大到近人高：一块浮在半空的铁疙瘩
     radius: 0.55,
-    hp: 12,                // 第 82 块：3.2 → 12（用户「大幅提高」）。拆一只 ≈ 六七秒
+    hp: 8,                 // 第 82 块：3.2 → 12（用户「大幅提高」）；第 95 块 12 → 8
+    //                        （用户「现在太高了，适当降低」）。8 仍是全关第二厚，
+    //                         拆一只 ≈ 四秒：禁区拆得起但拆得慢，网才有意义。
     armor: 0,
     speed: 1.75,
     damage: 0.9,

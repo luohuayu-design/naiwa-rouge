@@ -44,8 +44,8 @@ sec('二、并联体：配置（间距 / 折线 / 不自转）');
 // ============================================================
 const cfgArc = enemySrc.match(/arc: \{\s*\n\s*name: '并联体'/);
 ok(!!cfgArc, 'ENEMY_TYPES 里还是叫并联体');
-ok(/minGap: 8\.0/.test(enemySrc), 'arc.minGap = 8.0（第 82 块：两两实时最小间距，从 3.0 提高）');
-ok(/hp: 12/.test(enemySrc), '并联体 hp = 12（第 82 块：从 3.2 大幅提高）');
+ok(/minGap: 16\.0/.test(enemySrc), 'arc.minGap = 16.0（第 95 块：用户要求放大到原来的二倍，8.0 → 16.0）');
+ok(/hp: 8,/.test(enemySrc), '并联体 hp = 8（第 95 块：12 → 8，用户「现在太高了」）');
 ok(/segs: 4/.test(enemySrc) && /dots: 2/.test(enemySrc), '电弧折 4 段 + 2 个流光（实机调参后的值）');
 ok(/jitter: 0\.10/.test(enemySrc), '折线横向抖动 0.10');
 ok(/width: 0\.145/.test(enemySrc), '线宽 0.145（0.075 在实机里细得看不见）');

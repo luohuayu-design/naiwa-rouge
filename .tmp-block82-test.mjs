@@ -33,7 +33,7 @@ const weaponSrc = readFileSync('js/weapon.js', 'utf8');
 sec('一、并联体：实时两两间距 / 血量 / 电弧无视无敌时段');
 // ============================================================
 const arc = ENEMY_TYPES.arc;
-ok(arc.hp >= 12, `血量大幅提高（hp ${arc.hp}，原 3.2）`, String(arc.hp));
+ok(arc.hp >= 8, `血量仍明显高于原版（hp ${arc.hp}，原 3.2；第 95 块 12 → 8）`, String(arc.hp));
 ok(arc.arc.minGap >= 8, `minGap ${arc.arc.minGap}（原 3.0）`, String(arc.arc.minGap));
 // 实时距离要成立，分离必须**每帧补满差额**（不是补 15%）
 ok(/let moved = false;/.test(enemySrc) && /ARC_PUSH_MAX/.test(enemySrc),

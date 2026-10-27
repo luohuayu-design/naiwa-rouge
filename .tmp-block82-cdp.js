@@ -97,7 +97,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     console.log('\n— A 并联体 hp = 12 —');
     // ============================================================
     const arcCfg = JSON.parse(await ev('JSON.stringify({ hp: __game.enemyTypes.arc.hp, minGap: __game.enemyTypes.arc.arc.minGap })'));
-    ok(arcCfg.hp === 12, `并联体 hp = 12（原 3.2，实际 ${arcCfg.hp}）`);
+    ok(arcCfg.hp === 8, `并联体 hp = 8（第 95 块从 12 降下来，实际 ${arcCfg.hp}）`);
     ok(arcCfg.minGap === 8, `minGap = 8（原 3.0，实际 ${arcCfg.minGap}）`);
 
     // ============================================================

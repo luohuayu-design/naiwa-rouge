@@ -148,6 +148,17 @@ export function createStats(defs = STAT_DEFS, baseOverride) {
     return v < 0 ? 0 : v;
   }
 
+  // 加成合计（第 95 块）：管理员模式二要「填最终值 → 反解基础值」，
+  // 公式是 final = (base + Σflat) × (1 + Σpct)，所以得把这两项拆出来。
+  function sumMods(key) {
+    let flat = 0, p = 0;
+    for (const m of mods.get(key) || []) {
+      flat += m.flat || 0;
+      p += m.pct || 0;
+    }
+    return { flat, pct: p };
+  }
+
   // 加成：stat 属性 key，flat 加法，pct 百分比（0.1 = +10%），src 来源标识（便于整批撤销）
   // ⚠️ 百分比是「乘在 (base + flat) 上」的，所以 base 为 0 的属性（暴击率、吸血、防御…）
   //    用 pct 不会生效 —— 这类属性一律用 flat 加绝对值。
@@ -277,7 +288,7 @@ export function createStats(defs = STAT_DEFS, baseOverride) {
   }
 
   return {
-    base, get, addMod, removeBySource, preview,
+    base, get, sumMods, addMod, removeBySource, preview,
     hp, heal, damage, damageTrue, syncHp, clampHp,
     mitigate: mitigateFn, rollDamage, snapshot, grouped,
     dumpMods, loadMods, applyBases,

@@ -383,12 +383,27 @@ export function setStatBase(key, value) {
   const m = getStatBases();
   if (value == null || value === '' || !Number.isFinite(Number(value))) delete m[key];
   else m[key] = Number(value);
-  save();
+  saveStatNow();
 }
 
 export function resetStatBases() {
   profile().statBases = {};
-  save();
+  saveStatNow();
+}
+
+// 属性改动的落盘（第 95 块）：**不能被管理员沙盒的「不落地」拦住**。
+// 沙盒的语义是「这一局打出来的战绩 / 花的骨币不算数」，不是「调试改的属性也不算」——
+// 用户定案：改完关掉管理员模式，属性必须还在（关掉那一刻 applyAdmin(false) 会
+// reloadFromStorage()，磁盘上没有就等于白改）。
+// 但也不能直接 save()：沙盒期内存里的 profile 混着战绩等脏数据，整份写下去等于把
+// 沙盒打穿了。所以沙盒期只把 statBases 这一个字段并进磁盘上那份档案。
+function saveStatNow() {
+  if (!suppressSave) { save(); return; }
+  let disk = null;
+  try { disk = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (_) { disk = null; }
+  if (!disk || typeof disk !== 'object') disk = JSON.parse(JSON.stringify(DEFAULT_PROFILE));
+  disk.statBases = JSON.parse(JSON.stringify(getStatBases()));
+  try { localStorage.setItem(KEY, JSON.stringify(disk)); } catch (_) { /* 隐私模式：内存里照样生效 */ }
 }
 
 // ---------------- 骨币 ----------------

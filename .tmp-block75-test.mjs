@@ -84,7 +84,7 @@ sec('五、第六关新怪：并联体（成对 · 电弧网）');
   ok(!cfg.animFamily, '静态模型不写 animFamily（resolveClipAliases 安全返回空表）');
   ok(cfg.arc && cfg.arc.damage > 0 && cfg.arc.cd > 0, '电弧有伤害与节流冷却');
   ok(cfg.arc.hitR > 0 && cfg.arc.hitR < 1, `判定半径 ${cfg.arc.hitR}（不吃满屏幕）`);
-  ok(cfg.hp >= 10, `血厚（${cfg.hp}）—— 第 82 块起并联体大幅加血，拆网要有成本`);
+  ok(cfg.hp >= 8, `血厚（${cfg.hp}）—— 并联体比同期普通怪厚得多（第 82 块加到 12，第 95 块按用户要求降到 8），拆网要有成本`);
 
   const types = levelTypes(LEVEL_6);
   ok(types.includes('arc'), '第六关的预载表里有 arc');
