@@ -1086,6 +1086,11 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
 .set-io-auto span{flex:1;font-size:10.5px;line-height:1.6;color:rgba(170,214,196,.7)}
 .set-io-btn.mini{padding:6px 10px;font-size:10.5px;letter-spacing:.04em}
 .set-io-btn[disabled]{opacity:.4;cursor:default}
+/* 第 104 块：导出文件的手动兜底行（点了导出才出现） */
+.set-io-save{margin-top:9px;display:flex;align-items:center;gap:8px}
+.set-io-save[hidden]{display:none}
+.set-io-save span{flex:1;font-size:10.5px;line-height:1.6;color:rgba(170,214,196,.7)}
+.set-io-save a{display:inline-block;text-decoration:none}
 /* 存档码是多行文本，别套密码框那套「居中 + 大字距」。
    必须写成 .md-input.md-area —— 单写 .md-area 权重和后面的 .md-input 一样，
    排在前面就被覆盖回去了（居中 / 字距全回来）。

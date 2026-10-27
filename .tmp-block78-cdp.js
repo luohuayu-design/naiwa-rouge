@@ -206,6 +206,12 @@ const LOCAL_PROFILE = {
       for (const x of w) console.log('     bones=' + x.bones + ' @' + x.at + 'ms  ' + x.st);
     }
     ok(await click('#ioExportFile'), '点了「导出文件」');
+    // 第 104 块：点完必须出现「点这里手动保存」兜底行（各家 ROM 的下载器脾气不一样）
+    await sleep(300);
+    ok(await ev("document.getElementById('ioSaveRow') && !document.getElementById('ioSaveRow').hidden"),
+      '导出后出现「点这里手动保存」兜底行');
+    ok((await ev("document.getElementById('ioSaveLink').getAttribute('href') || ''")).startsWith('data:application/json'),
+      '兜底链接是自包含的 data: URL（跨 App 移交也不会变死链）');
     let dlFile = '';
     for (let i = 0; i < 60; i++) {
       const fs2 = fs.readdirSync(OUT).filter((f) => f.endsWith('.json'));
@@ -214,7 +220,10 @@ const LOCAL_PROFILE = {
     }
     ok(!!dlFile, '磁盘上出现了导出的文件', fs.readdirSync(OUT).join(',') || '(空目录)');
     if (dlFile) {
-      ok(/^蛙步夜行-存档-\d{8}-\d{4}\.json$/.test(path.basename(dlFile)), `文件名带日期时间（${path.basename(dlFile)}）`);
+      // 第 104 块：文件名改成**纯 ASCII**（安卓下载管理器对中文名的处理各家不一样，
+      // 见过的最坏表现是「点了完全没反应」）。日期时间照旧在里面。
+      ok(/^wabu-save-\d{8}-\d{4}\.json$/.test(path.basename(dlFile)), `文件名是纯 ASCII + 日期时间（${path.basename(dlFile)}）`);
+      ok(!/[^\x20-\x7e]/.test(path.basename(dlFile)), '文件名里没有非 ASCII 字符（安卓下载管理器最省心）');
       const raw = fs.readFileSync(dlFile, 'utf8');
       ok(/\n/.test(raw) && /\n {2}"/.test(raw), '文件是缩进过的 JSON（人能直接看/改）');
       const p = JSON.parse(raw);
@@ -240,10 +249,11 @@ const LOCAL_PROFILE = {
     await click('#ioExportCode');
     await sleep(500);
     let tC = await toast();
-    ok(/存档码已复制|复制失败/.test(tC), `点了复制有反馈（${tC}）`);
+    // 无头环境常常写不进剪贴板 → 走到第 99 块加的「自动复制被拦了 + 码填进框里」那一档
+    ok(/存档码已复制|复制失败|自动复制被拦了/.test(tC), `点了复制有反馈（${tC}）`);
     let code = '';
     try { code = await ev('navigator.clipboard.readText()'); } catch (_) { code = ''; }
-    if (!code || !/^NWSAVE1:/.test(code)) {
+    if (!code || !/^NWSZ1:/.test(code)) {
       // 无头环境剪贴板读不回来就自己按同一份数据生成一份（逻辑完全一样）
       console.log('  .. 剪贴板读不回来，改用页内同一份数据生成的码继续后面的检查');
       code = await ev(`(async () => { const io = await import('./js/saveIO.js?v=${V}');
@@ -251,7 +261,7 @@ const LOCAL_PROFILE = {
     } else {
       ok(true, '剪贴板里读回来的就是存档码');
     }
-    ok(/^NWSAVE1:/.test(code), `码以 NWSAVE1: 开头（长 ${code.length}）`);
+    ok(/^NWSZ1:/.test(code), `码以 NWSZ1: 开头（第 97 块起了压缩，长 ${code.length}）`);
     ok(!/\s/.test(code), '码里没有任何空白（塞进微信不会被截断）');
 
     // ============================================================
@@ -279,7 +289,7 @@ const LOCAL_PROFILE = {
       localStorage.setItem('naiwa_rouge_profile_v1', keep);   // 本机进度放回去
       return io.payloadCode(snap);
     })()`);
-    ok(/^NWSAVE1:/.test(foreignCode), '备好一份外来存档码');
+    ok(/^NWSZ1:/.test(foreignCode), '备好一份外来存档码');
 
     await ev('__game.ui.showSettings()');
     await sleep(300);
@@ -353,10 +363,16 @@ const LOCAL_PROFILE = {
     ok(await ev("document.getElementById('saveCodeAsk').classList.contains('on')"), '弹窗没关（让人直接改，不用从头点）');
     ok(!(await ev("document.getElementById('confirmAsk').classList.contains('on')")), '没进到确认那一步（坏数据不往下走）');
     // 空内容也要拦
+    // 第 104 块修：第 97 块加了分段累积，上一段坏码已经被 codeStaged 收下 ——
+    // 清空输入框后 whole 仍非空，报的是「还没凑齐」而不是「空的」。这条要断言的是
+    // 「不往下走」，不是具体哪句文案。
     await ev("document.getElementById('saveCodeInput').value = ''");
     await click('#saveCodeYes');
     await sleep(300);
-    ok(/空/.test(await ev("document.getElementById('saveCodeErr').textContent")), '空内容报「存档码是空的」');
+    const errTxt2 = await ev("document.getElementById('saveCodeErr').textContent");
+    ok(await ev("document.getElementById('saveCodeErr').classList.contains('on')") && /空|凑齐|解不出|不完整|损坏/.test(errTxt2),
+      `清空后仍然给红字（${errTxt2}）`);
+    ok(!(await ev("document.getElementById('confirmAsk').classList.contains('on')")), '清空后不会跳到确认那一步');
     await click('#saveCodeNo');
     await sleep(300);
     ok(!(await ev("document.getElementById('saveCodeAsk').classList.contains('on')")), '点取消能关掉弹窗');

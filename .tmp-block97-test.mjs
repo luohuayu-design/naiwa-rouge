@@ -222,11 +222,13 @@ ok(/autoBackup\(\);[\s\S]{0,80}第 97 块/.test(mainSrc) || /autoBackup\(\)/.tes
 ok(/renderAutoSlot/.test(mainSrc) && /ioAutoInfo/.test(htmlSrc), '面板上有「本机自动备份」一行');
 ok(/ioAutoRestore/.test(htmlSrc), '有恢复按钮');
 
-sec('⑦-c 分享文件（手机唯一能落到「文件」里的路）');
-ok(/ioShareFile/.test(htmlSrc), '面板上有「分享文件」按钮');
-ok(/navigator\.canShare/.test(mainSrc) && /navigator\.share/.test(mainSrc), '走 Web Share API');
-ok(/AbortError/.test(mainSrc), '用户取消分享不算失败（不能弹报错）');
-ok(/function exportFile/.test(mainSrc), '导出动作抽成了函数（分享 / 下载 / 复制共用）');
+// 第 104 块：用户说「导出文件和分享文件一个效果」，直接把这颗按钮删了。
+// 这里**反向钉住**，防止哪天又长回来。
+sec('⑦-c 导出文件（第 104 块删掉了「分享文件」）');
+ok(!/ioShareFile/.test(htmlSrc), '面板上**没有**「分享文件」按钮了');
+ok(!/navigator\.share\b/.test(mainSrc), '代码里也不再调 Web Share API');
+ok(!/navigator\.canShare/.test(mainSrc), '也没有 canShare');
+ok(/function exportFile/.test(mainSrc), '导出动作还是抽成了函数');
 
 sec('⑦-d 粘贴容错（分段累积保留：手机输入框仍可能截断一次粘贴）');
 ok(/let codeStaged = ''/.test(mainSrc), '有分段累积缓冲');

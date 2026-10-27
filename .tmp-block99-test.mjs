@@ -72,31 +72,15 @@ ok(/存档码（分段）/.test(htmlSrc) === false, '按钮文案不再写「（
 ok(/id="ioExportCode"[^>]*>复制存档码</.test(htmlSrc), '按钮文案 = 复制存档码');
 
 // ============================================================
-sec('③ 分享文件：不用 canShare 当门闩，三级回退');
-// ============================================================
-const shareFn = mainSrc.match(/async function shareFree\(\) \{[\s\S]*?\n  \}\n/);
-ok(!!shareFn, '有独立的 shareFree()（分享逻辑抽出来了）');
-if (shareFn) {
-  const b = shareFn[0];
-  ok(/if \(!navigator\.share\) return false;/.test(b), '没有 navigator.share 才算真不支持');
-  ok(!/if \(!canShare\)|canShare\s*&&/.test(b), '**没有**拿 canShare 结果当门闩（第 97 块的病根）');
-  ok(/files: \[file\]/.test(b), '第一级：带文件分享');
-  ok(/navigator\.share\(\{ title: SHARE_TITLE, text: SHARE_TEXT \+ '\\n\\n' \+ saveIO\.payloadCode\(snap\) \}\)/.test(b),
-    '第二级：退成纯文本分享（整串码，内嵌 WebView 只支持这种）');
-  ok(/err\.name === 'AbortError'/.test(b), '两级都认「用户取消不算失败」');
-  ok((b.match(/AbortError/g) || []).length >= 2, '两级各拦一次 AbortError');
-}
-const shareBtn = mainSrc.match(/ioShareFile'\)\.addEventListener\('click', async \(\) => \{[\s\S]{0,600}?\n  \}\);/);
-ok(!!shareBtn, 'ioShareFile 有 handler');
-if (shareBtn) {
-  ok(/await shareFree\(\)/.test(shareBtn[0]), '先走 shareFree');
-  ok(/exportFile\(\)/.test(shareBtn[0]), '分享真的打不开才退回下载');
-  ok(/这台设备没有分享面板/.test(shareBtn[0]), '兜底 toast 说的是「没有分享面板」而不是「不支持」');
-}
-ok(!/navigator\.canShare/.test(mainSrc.split('\n').filter((l) => !/^\s*\/\//.test(l)).join('\n')),
-  '代码里已经没有 navigator.canShare（只在注释里留了解释）');
-ok(/navigator\.share/.test(mainSrc), '仍然走 Web Share API');
-ok(/function exportFile/.test(mainSrc), 'exportFile 抽成函数，三级回退共用');
+// 第 104 块改写：用户说「导出文件和分享文件一个效果」，分享整体删掉。
+// 这一节从「验三级回退」翻成「钉住它确实没了 + 导出那条路还在」。
+sec('③ 分享文件：已整体删除（第 104 块）');
+ok(!/ioShareFile/.test(htmlSrc), 'index.html 里没有「分享文件」按钮');
+ok(!/shareFree|SHARE_TITLE|SHARE_TEXT/.test(mainSrc), 'main.js 里 shareFree / 标题文案全删干净');
+ok(!/navigator\.share|navigator\.canShare/.test(mainSrc), '不再碰 Web Share / canShare');
+// 注释里允许出现（要写清楚为什么删），查的是可见文案
+ok(!/分享文件/.test(htmlSrc.replace(/<!--[\s\S]*?-->/g, '')), '界面文案里也不提「分享文件」（别再把人往那条路上引）');
+ok(/function exportFile/.test(mainSrc), '「导出文件」这条还在，抽成了函数');
 
 // ============================================================
 sec('④ 速度感：新档默认开 + 老档一次性迁移');

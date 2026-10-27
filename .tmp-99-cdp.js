@@ -1,7 +1,7 @@
 // 第 99 块 · CDP 冒烟（真实点面板，走 UI 链路）
 //   ① 速度感：新档默认「开」；老档（存着 false）迁移成开；玩家手动关掉后不再被重开
 //   ② 「复制存档码」= 一键整串：剪贴板里拿到 NWSZ1: 整串，且**没有任何弹窗图层**
-//   ③ 「分享文件」三级回退：带文件成功 / 文件被拒自动退纯文本 / 两次都失败退下载 /
+//   ③ （第 104 块已删）分享文件 —— 用户说和「导出文件」一个效果，整颗按钮撤了；
 //      用户取消不算失败
 // 跑法：先起 `python -m http.server 8124`（cwd=naiwa-rouge），再 `node .tmp-99-cdp.js`
 const { spawn } = require('child_process');
@@ -186,47 +186,27 @@ document.addEventListener('click', (e) => {
     ok(await ev(`document.getElementById('codeBox') === null && document.querySelectorAll('.modal.on').length === 0`),
       '没有任何弹层盖上来（不会再出现「点在设置底下」）');
 
-    // ---------------------------------------------------------- ③ 分享三级回退
-    console.log('\n—— ③ 分享文件三级回退 ——');
+    // ---------------------------------------------------------- ③ 第 104 块：分享文件已删
+    console.log('\n—— ③ 分享文件已删除（用户：和导出文件一个效果，删掉） ——');
+    ok(await ev(`document.getElementById('ioShareFile') === null`), '设置页没有「分享文件」按钮了');
+    ok(await ev(`document.querySelectorAll('.set-io-btns .set-io-btn').length === 4`),
+      '存档区正好 4 颗按钮（导出 / 复制码 / 导入 / 粘贴码）',
+      await ev(`document.querySelectorAll('.set-io-btns .set-io-btn').length`));
+    ok(await ev(`!/分享文件/.test(document.getElementById('setScr').textContent)`),
+      '设置页文案里也不提「分享文件」');
+    ok(await ev(`typeof navigator.share !== 'function' ? true : (window.__shareCalls || []).length === 0`),
+      '点过任何按钮都没再触发系统分享面板');
 
-    // A. 正常：带文件分享成功
-    await ev(`window.__shareCalls = []; window.__shareMode = 'ok'; document.getElementById('ioShareFile').click()`);
-    await sleep(700);
-    let calls = await ev(`window.__shareCalls`);
-    ok(calls.length === 1 && calls[0].hasFiles === true, '① 带文件分享：只调一次、带 files',
-      JSON.stringify(calls));
-
-    // B. 浏览器不认 files（手机上最常见的误判）→ 自动退成纯文本分享
-    await ev(`window.__shareCalls = []; window.__shareMode = 'filesFail'; document.getElementById('ioShareFile').click()`);
-    await sleep(900);
-    calls = await ev(`window.__shareCalls`);
-    ok(calls.length === 2, '② files 被拒后自动再试一次（而不是直接报不支持）', JSON.stringify(calls));
-    ok(calls[1] && calls[1].hasFiles === false, '② 第二次不带 files');
-    ok(calls[1] && calls[1].textLen > 800, `② 第二次带的是整串存档码（${calls[1] && calls[1].textLen} 字）`);
-
-    // C. 两次都失败 → 退回下载，并说清楚
-    const dl0 = await ev(`window.__downloads`);
-    await ev(`window.__shareCalls = []; window.__shareMode = 'allFail'; document.getElementById('ioShareFile').click()`);
-    await sleep(900);
-    calls = await ev(`window.__shareCalls`);
-    ok(calls.length === 2, '③ 两级都试过了（files + text）', JSON.stringify(calls));
-    ok(await ev(`window.__downloads`) > dl0, '③ 最后退回下载文件（不会停在「不支持」上什么都不做）');
-
-    // D. 用户取消 → 不算失败，不弹错、不下载
-    const dl1 = await ev(`window.__downloads`);
-    await ev(`window.__shareCalls = []; window.__shareMode = 'abort'; document.getElementById('ioShareFile').click()`);
-    await sleep(800);
-    calls = await ev(`window.__shareCalls`);
-    ok(calls.length === 1, '④ 用户取消后不再重试别的通道', JSON.stringify(calls));
-    ok(await ev(`window.__downloads`) === dl1, '④ 取消不触发下载（不吓人）');
-
-    // E. 真的没有 share（老 WebView）→ 直接下载 + 明确的 toast
-    const dl2 = await ev(`window.__downloads`);
-    await ev(`window.__shareOff = true; document.getElementById('ioShareFile').click()`);
-    await sleep(900);
-    ok(await ev(`window.__downloads`) > dl2, '⑤ 没有分享面板时直接下载文件');
-    const t2 = await ev(toast);
-    ok(/没有分享面板/.test(t2.t), '⑤ toast 说「这台设备没有分享面板」', t2.t);
+    // 点「导出文件」→ 兜底行走出来，链接是自包含的 data: URL
+    await ev(`document.getElementById('ioSaveRow').hidden = true`);
+    await ev(`document.getElementById('ioExportFile').click()`);
+    await sleep(400);
+    ok(await ev(`!document.getElementById('ioSaveRow').hidden`), '点导出后兜底行出现了');
+    ok(/^data:application\/json/.test(await ev(`document.getElementById('ioSaveLink').getAttribute('href') || ''`)),
+      '兜底链接是 data: URL（不是 blob: —— 移交到别的 App 也不会变死链）');
+    ok(/^wabu-save-\d{8}-\d{4}\.json$/.test(await ev(`document.getElementById('ioSaveLink').getAttribute('download') || ''`)),
+      '兜底链接的下载文件名是纯 ASCII',
+      await ev(`document.getElementById('ioSaveLink').getAttribute('download') || ''`));
 
     console.log('\n—— 收尾 ——');
     ok(jsErrors.length === 0, '全程没有 JS 异常', jsErrors.slice(0, 2).join(' | '));

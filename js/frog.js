@@ -12,8 +12,8 @@
 //   yaw      —— 朝向组（rotation.y = 面朝方向，模型正面是 +Z）
 //   update(dt, speed01) —— speed01 = 当前速度 / 最大速度，0 待机、1 全速
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=117';
-import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=117';
+import * as THREE from '../lib/three.module.js?v=118';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=118';
 
 // 切分点与蛙步 dancer.js 的 SPLIT 保持一致（换模型时对照这里调）
 const RIG = {

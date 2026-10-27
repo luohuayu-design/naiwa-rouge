@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#080f14">
 <link rel="icon" href="data:,">
 <title>蛙步 · 夜行</title>
-<link rel="stylesheet" href="style.css?v=117">
+<link rel="stylesheet" href="style.css?v=118">
 </head>
 <body>
 
@@ -717,15 +717,15 @@
       <button class="lv-back" id="setBack" type="button">‹ 返回</button>
     </div>
     <div class="set-list" id="setList"></div>
-    <!-- 存档备份（第 78 块，用户第 11 条；第 97 块补三件事）：
-         ① 「分享文件」走系统分享面板 —— 手机上不用下载目录也能把档存到「文件」或发给微信；
-         ② 存档码改成压缩 + 分段，手机上复制不会被字符数卡住；
-         ③ 「本机自动备份」—— 每回合自动留档，留最近 3 份，防手滑重置。 -->
+    <!-- 存档备份（第 78 块，用户第 11 条；第 97 块补三件套；第 104 块定稿）
+         ① 导出文件 —— 唯一一条「存成文件」的路（第 104 块按用户要求删掉了「分享文件」，
+            两者在他机器上效果一样，留着只是多一颗按钮）；
+         ② 存档码 —— 复制整串 / 粘贴整串，走剪贴板，最不容易被浏览器拦；
+         ③ 本机自动备份 —— 每回合自动留档，留最近 3 份，防手滑重置。 -->
     <div class="set-io">
       <div class="set-io-hd">存档备份</div>
       <div class="set-io-btns">
         <button class="set-io-btn" id="ioExportFile" type="button">导出文件</button>
-        <button class="set-io-btn" id="ioShareFile" type="button">分享文件</button>
         <button class="set-io-btn" id="ioExportCode" type="button">复制存档码</button>
         <button class="set-io-btn" id="ioImportFile" type="button">导入文件</button>
         <button class="set-io-btn" id="ioImportCode" type="button">粘贴存档码</button>
@@ -735,7 +735,14 @@
         <span id="ioAutoInfo">本机自动备份：暂无</span>
         <button class="set-io-btn mini" id="ioAutoRestore" type="button" disabled>恢复</button>
       </div>
-      <div class="set-io-tip">换手机、清缓存前先导出一份。手机上「分享文件」会弹系统分享面板（能直接存到「文件」或发微信），装不了文件的浏览器就用「存档码」一段段复制。导入只覆盖进度，音量 / 摇杆这些设置保留本机的。</div>
+      <!-- 第 104 块：点了「导出文件」之后才出现的手动兜底。
+           安卓各家的下载管理器脾气不一样，有的点了就悄悄什么都不干（尤其是
+           微信 / QQ 内嵌内核把链接交给 QQ 浏览器的时候），这里留一条能长按另存的链接。 -->
+      <div class="set-io-save" id="ioSaveRow" hidden>
+        <span>没看到下载？</span>
+        <a class="set-io-btn mini" id="ioSaveLink" download>点这里手动保存</a>
+      </div>
+      <div class="set-io-tip">换手机、清缓存前先导出一份。点了「导出文件」没动静，就点下面出现的「点这里手动保存」，或者改用「复制存档码」—— 存到微信 / 备忘录里，换设备粘回来一样能恢复。导入只覆盖进度，音量 / 摇杆这些设置保留本机的。</div>
     </div>
     <div class="set-foot">
       <button class="set-reset" id="setReset" type="button">重置全部进度</button>
@@ -1011,7 +1018,7 @@
 <!-- 不用 importmap：老手机浏览器（iOS 16.4 以下、旧版微信/安卓 WebView）
      不支持 import maps，会让整个模块解析失败、加载页永远停在 0%。
      项目内所有 import 都写成相对路径，直接靠原生 ES Module 解析。 -->
-<script type="module" src="js/main.js?v=117"></script>
+<script type="module" src="js/main.js?v=118"></script>
 
 <!-- 兜底自检（第 79 块重写）：把「慢」和「真的失败」分开，别再把慢当错。
      - 脚本 404 / 解析失败 → 红字 + 重试按钮（这才是真失败）
