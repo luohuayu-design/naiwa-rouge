@@ -32,7 +32,7 @@
 //
 // ctx 由 main.js 每帧拼好传进来：{ playing, weapon, playerPos, stats, coins }
 // ============================================================
-import audio from './audio.js?v=121';
+import audio from './audio.js?v=122';
 
 // 冷却数字统一两位小数（第 64 块用户需求：倒计时精确到两位小数）。
 // 不补零会跳字（3.4 → 3.35 期间宽度变化），toFixed(2) 宽度恒定。
@@ -138,6 +138,52 @@ export const SKILLS = [
     },
     press(ctx) {
       if (!ctx.heal.fire()) return false;   // 满血 / CD 中：什么都不发生（不播音效）
+      return true;
+    },
+  },
+
+  // ---- 第 10 件法器「傀儡术」（第 107 块，用户定案） ----
+  // 商店里买到傀儡术（第十关起上架）后出现。按下：真暂停 → 铁 / 雪二选一 → 召出。
+  // 铁傀儡不拉仇恨、两秒一拳（主力级输出）；雪傀儡拉仇恨（怪改追它）、雪球纯击退。
+  // 冷却 40 秒，同时最多一只（传说卡「上限 +1」后两只）；傀儡碎了等 CD 再召。
+  // ⚠️ press 里只负责把「二选一」面板叫出来（ctx.openGolemPick），真正的召唤
+  //    在玩家点完卡之后 —— 所以按下就返回 true（音效照放，暂停立刻生效）。
+  {
+    id: 'golem',
+    name: '傀儡术',
+    // 内联 SVG：一只铁傀儡的脸（灰方块 + 红眼睛 + 藤蔓），一眼 MC
+    art: '<svg viewBox="0 0 40 40" aria-hidden="true">'
+      + '<rect x="7" y="7" width="26" height="26" rx="2" fill="#c8ccc8"/>'
+      + '<rect x="7" y="7" width="26" height="26" rx="2" fill="none" stroke="#8f9a93" stroke-width="2"/>'
+      + '<rect x="13" y="16" width="4" height="3" fill="#a03a2e"/>'
+      + '<rect x="23" y="16" width="4" height="3" fill="#a03a2e"/>'
+      + '<rect x="15" y="25" width="10" height="2.4" fill="#8f9a93"/>'
+      + '<path d="M9 10 Q14 6 19 10" stroke="#5f8f5a" stroke-width="1.8" fill="none"/>'
+      + '<path d="M24 31 Q29 27 33 30" stroke="#5f8f5a" stroke-width="1.8" fill="none"/>'
+      + '</svg>',
+    hint: '召一只傀儡并肩作战：铁的不拉仇恨但会重拳，雪的替你挨打、雪球击退。冷却 40 秒',
+    key: '4',
+    cd: 40.0,
+    cdNow: (ctx) => (ctx.golems ? ctx.golems.cdTotal : 40.0),
+    desc: '傀儡术：按下后整个世界暂停，在铁傀儡和雪傀儡里选一只召在脚下。'
+      + '铁傀儡不拉仇恨，站在原地两秒一拳，一拳是你攻击的 1.5 倍；'
+      + '雪傀儡拉仇恨 —— 追你的怪改去围殴它（贴脸的怪持续磨它的血），它扔雪球把怪推开但一点伤害都没有。'
+      + '同时最多站一只（传说卡「傀儡上限 +1」后两只），碎了要等 40 秒冷却才能再召。'
+      + '雪傀儡嘲讽的是「追着人跑」的怪：弓手、投手这些保持距离打你的，它管不着。',
+    unlockNote: '夜行商店买到「傀儡术」（第十关起上架）后拥有',
+    visible: (ctx) => ctx.playing && !!ctx.golems && ctx.golems.owned,
+    state: (ctx) => {
+      if (!ctx.golems || !ctx.golems.owned) return 'lock';
+      if (ctx.golems.count() >= ctx.golems.cap()) return 'full';
+      return ctx.golems.ready() ? 'ready' : 'cd';
+    },
+    ready: (ctx) => !!ctx.golems && ctx.golems.owned && ctx.playing && ctx.golems.ready(),
+    progress: (ctx) => (ctx.golems ? 1 - ctx.golems.cdLeft() / ctx.golems.cdTotal : 0),
+    cdText: (ctx) => (!ctx.golems || !ctx.golems.owned || ctx.golems.ready())
+      ? '' : fmtCd(ctx.golems.cdLeft()),
+    press(ctx) {
+      if (!ctx.golems) return false;
+      ctx.openGolemPick();          // 真暂停 + 二选一（main.js 里实现）
       return true;
     },
   },

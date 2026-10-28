@@ -5,40 +5,41 @@
 // 目标是把三件事调顺：摇杆输入 → 角色速度/朝向 → 相机跟随。
 // 后续叠战斗时，只需要在 tick() 里加敌人更新与自动攻击，不用动输入层。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=121';
-import { buildNightScene } from './scene.js?v=121';
-import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=121';
+import * as THREE from '../lib/three.module.js?v=122';
+import { buildNightScene } from './scene.js?v=122';
+import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=122';
 // 第 80 块：给 glb 拼上版本号 → SW 缓存优先（详见 assetUrl.js）
-import { withV } from './assetUrl.js?v=121';
-import { createInput } from './input.js?v=121';
-import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=121';
-import { createStatView } from './statView.js?v=121';
-import { createWeaponStats } from './weaponStats.js?v=121';
-import { createFx } from './fx.js?v=121';
-import { createEnemySystem, ENEMY_TYPES } from './enemy.js?v=121';
+import { withV } from './assetUrl.js?v=122';
+import { createInput } from './input.js?v=122';
+import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=122';
+import { createStatView } from './statView.js?v=122';
+import { createWeaponStats } from './weaponStats.js?v=122';
+import { createFx } from './fx.js?v=122';
+import { createEnemySystem, ENEMY_TYPES } from './enemy.js?v=122';
 import {
-  createLevel, LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVEL_5, LEVEL_6, LEVEL_7, LEVEL_8, LEVEL_9, LEVELS_BY_ID, DIFFS, setDifficulty, getDifficulty, roundScale, levelStats, levelTypes,
-} from './wave.js?v=121';
-import { createRangeRing } from './rangeRing.js?v=121';
-import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=121';
-import { createWeaponSystem } from './weapon.js?v=121';
-import { createArrowRainSystem } from './arrowRain.js?v=121';
-import { SWORD_KINDS } from './swordKinds.js?v=121';
-import { createGoldSystem } from './gold.js?v=121';
-import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW, SHOP_PINNED } from './shop.js?v=121';
-import { createTurretSystem, TURRET } from './turret.js?v=121';
-import { createRelicSystem, RELIC_DEFS } from './relics.js?v=121';
-import { createHazards } from './hazards.js?v=121';
-import { createDeposit, tagChance } from './deposit.js?v=121';   // 第 81 块：寄存柜；第 84 块：掉牌概率
-import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=121';
-import audio from './audio.js?v=121';
-import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=121';
+  createLevel, LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVEL_5, LEVEL_6, LEVEL_7, LEVEL_8, LEVEL_9, LEVEL_10, LEVELS_BY_ID, DIFFS, setDifficulty, getDifficulty, roundScale, levelStats, levelTypes,
+} from './wave.js?v=122';
+import { createRangeRing } from './rangeRing.js?v=122';
+import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=122';
+import { createWeaponSystem } from './weapon.js?v=122';
+import { createArrowRainSystem } from './arrowRain.js?v=122';
+import { SWORD_KINDS } from './swordKinds.js?v=122';
+import { createGoldSystem } from './gold.js?v=122';
+import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW, SHOP_PINNED } from './shop.js?v=122';
+import { createTurretSystem, TURRET } from './turret.js?v=122';
+import { createRelicSystem, RELIC_DEFS } from './relics.js?v=122';
+import { createGolemSystem } from './golem.js?v=122';   // 第 107 块：法器「傀儡术」的铁 / 雪傀儡
+import { createHazards } from './hazards.js?v=122';
+import { createDeposit, tagChance } from './deposit.js?v=122';   // 第 81 块：寄存柜；第 84 块：掉牌概率
+import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=122';
+import audio from './audio.js?v=122';
+import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=122';
 // 第 62 块：回血技能（第四关通关后永久解锁，回 5 点 / CD 25 秒）
-import { createHealSkill, HEAL_AMOUNT, HEAL_CD } from './healSkill.js?v=121';
+import { createHealSkill, HEAL_AMOUNT, HEAL_CD } from './healSkill.js?v=122';
 // 第 62 块：民心专属事件（升档走良性池、掉档走恶性池）
-import { repPoolForTier, REP_GOOD, REP_BAD } from './repEvents.js?v=121';
+import { repPoolForTier, REP_GOOD, REP_BAD } from './repEvents.js?v=122';
 // 第 62 块：攻略面板（战败提示上的「查看攻略」，手风琴三组）
-import { renderGuide, GUIDE_SECTIONS } from './guide.js?v=121';
+import { renderGuide, GUIDE_SECTIONS } from './guide.js?v=122';
 import {
   settings as readSettings, setSetting, save as saveProfile, profile,
   bumpStat, setStatMax, codexAdd, codexCount, countCard, unlockAch, hasAch, addBones, bones, resetAll,
@@ -53,32 +54,32 @@ import {
   hintSeen, markHintSeen,                  // 第 65 块：一次性提示卡
   markLevelClear, levelCleared, clearCount, // 第 94 块：通关过哪些关（成就用）
   getStatAdmin, setStatAdmin, resetStatAdmin, // 第 95 / 98 块：管理员模式二（手改最终值 → 存追加项，基础值不动）
-} from './profile.js?v=121';
+} from './profile.js?v=122';
 // 第 44 块：礼包兑换（码表只有哈希，明细在 gift.js 顶部注释）
-import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=121';
+import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=122';
 // 第 46 块：音效包（抽象奶蛙音效包 —— 4 段奶蛙叫声，通关第一关解锁）
-import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=121';
-import * as runSave from './runSave.js?v=121';
+import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=122';
+import * as runSave from './runSave.js?v=122';
 // 第 78 块：存档导出 / 导入。数据逻辑全在这个模块里（不碰 DOM），这里只接按钮
-import * as saveIO from './saveIO.js?v=121';
+import * as saveIO from './saveIO.js?v=122';
 import {
   CAMPFIRE, CAMP_STEP, campBuy, campOwned, campLevel,
   campCost, campApply, bonesFor, diffBoneMul, levelBoneMul, coinBones, BONE,
-} from './campfire.js?v=121';
+} from './campfire.js?v=122';
 // 第 23 块：永夜火种（通关白给的 3 次永久三选一）
 import {
   BOONS, BOON_BY_ID, BOON_PICKS, boonOwned, boonStacks, boonPending, boonTotalStacks,
   grantBoons, rollBoons, takeBoon, applyBoons, boonStackText,
-} from './boons.js?v=121';
+} from './boons.js?v=122';
 // 第 21 块：夜行诅咒（自选 debuff 换骨币倍率）
-import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=121';
+import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=122';
 // 第 22 块：种子与每日挑战
 import {
   DAILY_RULES, dayKey, dayText, dailySeed, seedCode, pickDailyCurses,
   seedFromText, pickSeedRules, loadSeedRecords, saveSeedRecord, pruneSeeds,
   dailyRecord, saveDailyRecord, pruneDaily, makeRng,
-} from './seed.js?v=121';
-import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=121';
+} from './seed.js?v=122';
+import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=122';
 // 第 58 块：局外商店 · 宝箱（花骨币买，开箱随机给永久属性 / 永久法器 / 技能CD缩短）
 import {
   BOXES, BOX_BY_ID, buyBox, rollBox, metaApplyStats, applyMeta,
@@ -88,36 +89,36 @@ import {
   boxPoolEntries,
   // 第 105 块：属性幅度统一系数（UI 显示的「强度 ×」必须和实际算法同源）
   boxMag,
-} from './metaShop.js?v=121';
+} from './metaShop.js?v=122';
 // 第 59 块：每日签到（以周为单位，周一 00:00 重置）
 // 第 105 块：固定 +20 改成每天随机 0~100；里程碑 3/5/7 天 → 100 / 150 骨币 + 一次永夜火种
 import {
   SIGN_BONES_MIN, SIGN_BONES_MAX, weekCells, signSummary, signToday, signedToday,
-} from './signin.js?v=121';
+} from './signin.js?v=122';
 // 第 94 块：成就（八类 × 三档骨币奖励）
 // 第 94-2 块：骨币改成**手动领取**（achPending / achClaim），老用户补发走 achMigrate
 import {
   ACHS, ACH_CATS, ACH_TIERS, ACH_COUNT, achById, achsByCat, achTier,
   achPending, achPendingBones, achClaim, achClaimAll, achClaimed, achMigrate,
-} from './achievements.js?v=121';
+} from './achievements.js?v=122';
 // 第 94 块：通用手风琴（盲盒奖池与成就面板共用，不复制第三份引擎）
-import { renderAccordion } from './accordion.js?v=121';
+import { renderAccordion } from './accordion.js?v=122';
 // 第 94 块：每日任务（简单 3 + 中等 1 + 困难 1，每天 0 点刷新）
 import {
   DQ_TIERS, DQ_BONES, dqTasks, dqPump, dqSave, dqClaim, dqClaimAll,
   dqPending, dqGained, dqMsLeft, dayKeyOf, dqTier, dqTaskName,
   dqState, dqForceReroll, dqReset,   // 调试口：跨天重掷 / 整条重置
-} from './dailyQuest.js?v=121';
+} from './dailyQuest.js?v=122';
 import {
   EVENTS, ALL_EVENTS, getEventById, pickEvent, effectLines,
   choiceHint, canAfford, costShort, REP_MIN, REP_MAX, REP_START,
   isTalk, eventChoices, resolveRoll, mergeEffects,
-} from './events.js?v=121';
+} from './events.js?v=122';
 // 第 32 块：主线《笑不出来的那一夜》（18 夜，一夜一关，前 3 夜已有关卡）
 import {
   STORY_ARC, STORY_CHAPTERS, STORY_ENDINGS, MARK_INFO,
   storyChapterAt, storyChapterById, storyEndingKey,
-} from './story.js?v=121';
+} from './story.js?v=122';
 
 // 标记模块已经跑起来了：index.html 的兜底自检靠它判断
 // 「模块根本没执行」还是「执行了但加载慢」。
@@ -744,6 +745,11 @@ async function boot() {
       if (e.type === 'woodfish' && codexCount('enemies', 'woodfish') >= 10) tryAch('woodfish_10');
       if (e.type === 'warden' && codexCount('enemies', 'warden') >= 5) tryAch('warden_5');
       if (e.type === 'weigher' && codexCount('enemies', 'weigher') >= 5) tryAch('weigh_5');
+      // 第 107 块：第十关四只新怪各一条里程碑
+      if (e.type === 'mirror' && codexCount('enemies', 'mirror') >= 10) tryAch('mirror_10');
+      if (e.type === 'addressee' && codexCount('enemies', 'addressee') >= 10) tryAch('addressee_10');
+      if (e.type === 'waiter' && codexCount('enemies', 'waiter') >= 5) tryAch('waiter_5');
+      if (e.type === 'echo' && codexCount('enemies', 'echo') >= 10) tryAch('echo_10');
       // 第 94 块：每日任务的击杀计数（每天 0 点自己清零）
       dqToast(dqPump({ kills: 1, [`kT:${e.type}`]: 1 }));
       // 第 84 块（用户定案）：掉牌改成**概率** —— 约一半的怪会留下牌子，不是每只都掉。
@@ -877,6 +883,12 @@ async function boot() {
       if (profile().stats.lanternReveal >= 50) tryAch('lantern_50');
     },
   });
+
+  // ---------------- 傀儡（第 107 块：法器「傀儡术」） ----------------
+  // 铁傀儡不拉仇恨会重拳，雪傀儡拉仇恨纯击退；模型与战斗都在 golem.js。
+  // 法器等级每帧对一次账（买到 / 读档 / 换关都会变，和上面 setSeal 同一个思路）。
+  const golems = createGolemSystem({ scene, fx, enemies });
+  golems.setPlayerAttack(() => stats.get('attack'));
 
   // ---------------- 场地危险区（第 63 块，第六关的漏电地板） ----------------
   // 位置写在关卡数据里（wave.js 的 hazards），由 setLevel 重建。
@@ -1554,7 +1566,7 @@ async function boot() {
     for (const h of hits) {
       const e = h.target;
       const roll = stats.rollDamage({ targetArmor: e.cfg && e.cfg.armor });
-      enemies.takeDamage(e, roll.damage, roll.crit);
+      enemies.takeDamage(e, roll.damage, roll.crit, { cls: 'phys' });
       meleeDmg = roll.damage;
       if (roll.crit) anyCrit = true;
       // 第 106 块：暴击 / 累计伤害两条成就要的数量都在这里记账。
@@ -1611,7 +1623,12 @@ async function boot() {
     // 幸运只放宽高品质那一头（第 11 块）：史诗/传说的权重 ×(1 + 幸运 × 该档系数)
     const luck = stats.get('luck');
     // 第 22 块：种子局用固定随机流（同一天同一颗种子 → 同一手牌）
-    const picks = rollChoices(rngOf('card'), { round: roundNo, hasWeapon: weapon.granted, luck });
+    const picks = rollChoices(rngOf('card'), {
+      round: roundNo, hasWeapon: weapon.granted, luck,
+      // 第 107 块：买到傀儡术后傀儡卡才进池子；上限卡拿过一次就收摊
+      puppetOwned: relics.levels().puppet > 0,
+      golemCap: Math.max(0, golems.bonuses().cap - 1),
+    });
 
     upTitle.textContent = `第 ${roundNo} 回合结束 · 三选一`;
     upSub.textContent = upgradesTaken > 0
@@ -1652,7 +1669,7 @@ async function boot() {
       // 精确的「原值 → 选后值」：用 stats.preview 算，和真选下去的数字完全一致
       const delta = document.createElement('div');
       delta.className = 'up-delta';
-      for (const c of previewUpgrade(stats, up, wstats, weapon)) {
+      for (const c of previewUpgrade(stats, up, wstats, weapon, golems)) {
         const row = document.createElement('span');
         row.className = 'up-chg';
         const label = document.createElement('i');
@@ -1693,7 +1710,7 @@ async function boot() {
 
     upSerial++;
     upgradesTaken++;
-    const res = applyUpgrade(stats, up, upSerial, wstats, weapon);
+    const res = applyUpgrade(stats, up, upSerial, wstats, weapon, golems);
     takenUpgrades.push(up);
     // 图鉴 / 战绩 / 成就（第 18 块）：拿到的卡记一笔，本局品质集合也记一笔
     const rIdx = up.rarity ?? 0;
@@ -1816,7 +1833,22 @@ async function boot() {
     // 第 66 块（用户：新手教程时期技能键像是坏的）：'tutorial' 也要算 ——
     // 八步教程第 5 步讲的就是「右下角技能栏」，原来那一刻整栏是 display:none，
     // 等于对着空气讲；老玩家重打第一关时明明有剑，更会觉得键不见了。
-    return { playing: gameState === 'playing' || gameState === 'wtut' || gameState === 'tutorial', weapon, arrowRain, heal: healSkill, playerPos: pos, stats, coins };
+    // 第 107 块：golems 那层 facade —— owned 来自法器等级（局内买的），
+    // 其余透传给技能键做冷却显示 / 状态判定。
+    const lvPuppet = relics.levels().puppet;
+    return {
+      playing: gameState === 'playing' || gameState === 'wtut' || gameState === 'tutorial',
+      weapon, arrowRain, heal: healSkill, playerPos: pos, stats, coins,
+      golems: golems && lvPuppet > 0 ? {
+        owned: true,
+        count: () => golems.count(),
+        cap: () => golems.cap(),
+        ready: () => golems.ready(),
+        cdLeft: () => golems.cdLeft(),
+        cdTotal: golems.cdTotal,
+      } : null,
+      openGolemPick,   // 第 107 块：技能键按下时叫开铁 / 雪二选一
+    };
   }
 
   // 第 66 块（用户：箭雨刚出时按键像没反应）：箭雨在空地按不动是刻意的
@@ -1980,15 +2012,52 @@ async function boot() {
         '应对只有一条：<b>冲过去打断它</b>（打死，或者把它打退），条没读满它就白读一次。',
       ],
     },
+    // 第 107 块：第一次买到「傀儡术」（局内商店）后讲的教程卡。
+    // 弹的时机是买完回到场上（hintPump 只在 playing 弹），世界冻住讲完再开打。
+    puppet: {
+      kicker: '新技能 · 傀儡术',
+      title: '技能栏多了一颗木偶按钮',
+      text: [
+        '按下它会<b>把整个世界暂停</b>，然后让你在两只傀儡里选一只召在脚下：',
+        '<b>铁傀儡</b>：不拉仇恨，怪照旧追你；它站在原地两秒一拳，一拳是你攻击的 <b>1.5 倍</b>。'
+          + '把它摆在怪必经的路口，它就是一台会挥拳的炮台。',
+        '<b>雪傀儡</b>：拉仇恨 —— 追你的怪会<b>改去围殴它</b>（贴脸的怪持续磨它的血）；'
+          + '它扔雪球把怪<b>推开但不伤害</b>。它是替你挨打的那一个。',
+        '同时只能站一只（传说卡「双傀合璧」后两只）；碎了要等 <b>40 秒</b>冷却才能再召。'
+          + '注意：弓手、投手这类<b>站远处打你的怪不会被雪傀儡拉走</b> —— 它拉的是追着人跑的那批。',
+      ],
+    },
   };
 
   // 渲染当前这一页（单页卡 = steps 里只有一条）
+  // 第 107 块：hintChoices 非空时，「知道了」藏起来，选项直接画在卡里
+  // （傀儡术的铁 / 雪二选一就是这条路 —— 点完卡才真正召出、才开始转冷却）。
+  let hintChoices = null;
+  let hintChoiceCb = null;
   function renderHintPage() {
     if (!hintSteps) return;
     const st = hintSteps[hintStepIx] || hintSteps[0];
     hiKicker.textContent = st.kicker || '';
     hiTitle.textContent = st.title || '';
     hiText.innerHTML = (st.text || []).map((t) => `<div>${t}</div>`).join('');
+    hiText.querySelectorAll('.hi-choice').forEach((n) => n.remove());
+    if (hintChoices && hintChoices.length) {
+      hiOk.style.display = 'none';
+      for (const c of hintChoices) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'hi-choice';
+        b.innerHTML = `<b>${c.label}</b><span>${c.desc}</span>`;
+        b.addEventListener('click', () => {
+          const fn = hintChoiceCb;
+          closeHint();
+          if (fn) fn(c.value);
+        });
+        hiText.appendChild(b);
+      }
+    } else {
+      hiOk.style.display = '';
+    }
     hiOk.textContent = hintStepIx < hintSteps.length - 1 ? '下一步' : '知道了';
   }
 
@@ -2000,6 +2069,8 @@ async function boot() {
     // 单页卡（heal / cast）也当成只有一步的 steps —— 只有一条代码路径
     hintSteps = cfg.steps || [{ kicker: cfg.kicker, title: cfg.title, text: cfg.text }];
     hintStepIx = 0;
+    hintChoices = null;
+    hintChoiceCb = null;
     renderHintPage();
     hintCard.classList.add('on');
     hintCard.setAttribute('aria-hidden', 'false');
@@ -2018,6 +2089,8 @@ async function boot() {
     hintOpen = false;
     hintSteps = null;
     hintStepIx = 0;
+    hintChoices = null;
+    hintChoiceCb = null;
     hintCard.classList.remove('on');
     hintCard.setAttribute('aria-hidden', 'true');
     gameState = hintBack === 'hint' ? 'playing' : hintBack;
@@ -2062,6 +2135,46 @@ async function boot() {
     if (!healUnlocked()) return false;
     if (hintSeen('heal')) return false;
     return queueHint('heal');
+  }
+
+  // ============================================================
+  // 傀儡术 · 铁 / 雪二选一（第 107 块，用户定案「点击之后游戏暂停，要求选择卡片」）
+  // ============================================================
+  // 复用提示卡那张 DOM（.hint-card），但**不走 HINTS / 不记已读**：
+  // 它是每次按键都会弹的选择面板，不是一辈子一次的教程。
+  // 点卡 → closeHint() → 回调里真正召唤（召唤那一刻才开始转 40 秒冷却）；
+  // 点卡外空白 = 取消：不召、不转冷却（误按不罚）。
+  function openGolemPick() {
+    if (hintOpen || gameState !== 'playing') return false;
+    hintOpen = true;
+    hintBack = 'playing';
+    hintSteps = [{
+      kicker: '傀儡术 · 二选一',
+      title: '召哪一只？',
+      text: ['世界已经暂停 —— 想好了再点。点卡外面=取消，不消耗冷却。'],
+    }];
+    hintStepIx = 0;
+    hintChoices = [
+      { value: 'iron', label: '⚒ 铁傀儡', desc: '不拉仇恨 · 站原地两秒一拳 · 一拳 = 你攻击的 1.5 倍' },
+      { value: 'snow', label: '⛄ 雪傀儡', desc: '拉仇恨：追你的怪改去围殴它 · 雪球击退但不伤人' },
+    ];
+    hintChoiceCb = (kind) => {
+      // 召在主角面朝的方向 1.5 格：不压在脚底下（傀儡是实体站位）
+      golems.summon(kind, {
+        x: pos.x + Math.sin(yaw) * 1.5,
+        z: pos.z + Math.cos(yaw) * 1.5,
+      });
+    };
+    renderHintPage();
+    hintCard.classList.add('on');
+    hintCard.setAttribute('aria-hidden', 'false');
+    // 真的停：摇杆归零、世界这一帧起不再推进（和 showHint 同一套）
+    input.joystick.release();
+    vel.set(0, 0, 0);
+    gameState = 'hint';
+    syncSkillLift();
+    audio.sfx('event');
+    return true;
   }
 
   // ============================================================
@@ -2205,6 +2318,7 @@ async function boot() {
     healSkill.reset();
     turrets.reset();
     relics.reset();          // 局内买的法器不带过去（局外永久法器由 applyMeta 重放）
+    golems.reset();          // 第 107 块：场上傀儡与冷却 / 卡片加成也不带过去（法器等级随 relics 归零）
 
     // ③ 局内计数与背包（时长 elapsed 不在这里归零 —— startPlay 里那一处负责，
     //    读档续算的路径也不会被误清）
@@ -2250,6 +2364,13 @@ async function boot() {
     //    （第 86 块漏了这一条 —— 那时「离开 → 回来」必然刷新整页，位置自然回原点）。
     //    侧倒姿势与攻击范围环也一并在 restoreRunVisuals() 里扶正。
     pos.set(0, 0, 0);
+    // 第 107 块：第十关的井就在场地正中 —— 出生点得让开，不然开局一帧
+    // 「掉进去了」白吃 3 点再被吐到井沿。出生在井沿外 0.6 格（朝 -z 一侧，
+    // 背对场上大多数怪的来向意义不大，主要是「不在井里」）。
+    {
+      const well = (LEVELS_BY_ID[pendingLevelId]?.hazards || []).find((h) => h.kind === 'well');
+      if (well) pos.set(well.x, 0, well.z - well.r - 0.6);
+    }
     vel.set(0, 0, 0);
     restoreRunVisuals();
   }
@@ -2480,6 +2601,7 @@ async function boot() {
     { id: 7, name: LEVEL_7.name, playable: true },   // 第 71 块：第七关 · 骨塔井底
     { id: 8, name: LEVEL_8.name, playable: true },   // 第 81 块：第八关 · 骨塔寄存层
     { id: 9, name: LEVEL_9.name, playable: true },   // 第 82 块：第九关 · 骨塔登记庭
+    { id: 10, name: LEVEL_10.name, playable: true },  // 第 107 块：第十关 · 塔顶井台
   ];
   // 选关面板点了哪一关 —— beginGame 时按它切关卡（点的时候还没进战斗）
   let pendingLevelId = 1;
@@ -4433,6 +4555,12 @@ async function boot() {
       // 第 84 块：镇牌铃挂在柜门上，买到就立刻显形。
       // （不能只等主循环 —— 商店打开时 gameState 是 shop，那段不一定在跑）
       if (item.relic === 'seal') deposit.setSeal(relics.sealLevel());
+      // 第 107 块：傀儡术买到立刻点亮技能栏（不能等商店关了才出现）；
+      // 第一次拥有时排一张教程卡（只讲一次，档案 tut）。
+      if (item.relic === 'puppet') {
+        golems.setRelicLevel(relics.levels().puppet);
+        queueHint('puppet');
+      }
       showToast(`${def.name} ${lv} 级`, def.desc[lv - 1] + (lv < def.maxLevel ? ' · 再买可升级' : ' · 已满级'));
     }
     renderHud();
@@ -7388,6 +7516,7 @@ async function boot() {
     if (isWin) {
       if (levelCleared(5)) tryAch('clear_5');
       if (levelCleared(9)) tryAch('clear_9');
+      if (levelCleared(10)) tryAch('clear_10');   // 第 107 块：第十关「塔顶井台」
       // 九关全通：拿 LEVELS 里 playable 的关卡数当目标，以后加第十关不用改这里
       const need = LEVELS.filter((lv) => lv.playable).length;
       if (clearCount() >= need) tryAch('clear_all');
@@ -8324,6 +8453,35 @@ async function boot() {
         stateOf: (type) => enemies.list.filter((e) => e.type === type).map((e) => e.state),
         hpOf: (type) => enemies.list.filter((e) => e.type === type).map((e) => ({ hp: e.hp, max: e.maxHp, reboots: e.reboots })),
       },
+      // 第 107 块：第十关井台 + 傀儡术的现场（CDP 套件用）
+      block107: {
+        // 井口位置（hazard 系统里那口）；没进第十关时返回 null
+        well: () => hazards.wellAt(),
+        // 傀儡系统整个递出去：count / info / ready / cdLeft / tauntAt / bonuses。
+        // ⚠️ summon 要包一层：裸的返回值里有 root（THREE.Group，循环引用），
+        // returnByValue 序列化会炸「Object reference chain is too long」。
+        golems: Object.assign(Object.create(golems), {
+          summon: (kind, at) => {
+            const g = golems.summon(kind, at);
+            return g ? { kind: g.kind, x: g.x, z: g.z } : null;
+          },
+        }),
+        // 免费把傀儡术灌到 lv 级（购买扣款链路在 block84 商店套件里验过）
+        grantPuppet: (lv = 1) => {
+          let n = 0;
+          while (relics.levels().puppet < lv && n < 5) { relics.buy('puppet'); n++; }
+          golems.setRelicLevel(relics.levels().puppet);
+          return relics.levels().puppet;
+        },
+        // 技能键在不在栏里（renderSkill 每帧刷，CDP 直接读 DOM）
+        skillBtn: () => !!document.querySelector('#skillBar .sk[data-skill="golem"]'),
+        skillBtnVisible: () => {
+          const b = document.querySelector('#skillBar .sk[data-skill="golem"]');
+          if (!b) return false;
+          const cs = getComputedStyle(b);
+          return cs.display !== 'none' && cs.visibility !== 'hidden';
+        },
+      },
       // 第 64 块：新手教程 / 属性面板技能页 / 元素群体 / 环剑恢复顺序（测试钩子）
       block64: {
         tut: {
@@ -9048,6 +9206,19 @@ async function boot() {
       showToast('名字被擦干净了', `擦名者带着你的${nm}消失在雾里 —— 这一局再也拿不回来了`);
       audio.sfx('die');
     },
+    // 第 107 块：第十关「照影」要照抄玩家的面板。
+    // ⚠️ 只往外给**四个数的快照**，不要把 stats 实例交出去 —— 那是玩家的属性表，
+    // 交出去等于让怪能改玩家的属性（照影只需要读，不需要写）。
+    // 抄的是「此刻的最终值」：篝火 / 火种 / 盲盒 / 局内升级卡全在里面，
+    // 所以真的是「你越强它越强」，而不是照着一个基础值。
+    playerStats: () => ({
+      attack: stats.get('attack'),
+      maxHp: stats.get('maxHp'),
+      moveSpeed: stats.get('moveSpeed'),
+      critRate: stats.get('critRate'),
+    }),
+    // 第 107 块：收件人「填名」要看玩家手上哪一类剑占多数（决定免物理还是免元素）
+    ringKinds: () => weapon.ringKinds,
     // 第 81 块：无名者的队伍把人挤开。dx/dz 是**单位推力方向**，amount 已乘 dt。
     // 和 pullPlayer 的区别：pull 是「被拽向一个点」，push 是「顺着一个方向被推」——
     // 队伍推人的方向是它自己的法线，不是「怪→玩家」，所以不能用 pull 表达。
@@ -9060,6 +9231,10 @@ async function boot() {
     },
     // 第 81 块：队伍要绕开寄存柜（它是地面上的实体），位置从这儿拿
     get depositHub() { return deposit.pos(); },
+    // 第 107 块：怪要绕开塔顶那口井（同类的实体掩体），位置从 hazard 系统拿
+    wellAt: () => hazards.wellAt(),
+    // 第 107 块：雪傀儡拉仇恨 —— 正朝玩家走的怪改朝雪傀儡走（见 moveToward 顶部）
+    tauntAt: () => golems.tauntAt(),
     // 第 71 块：井蛙吐舌把主角拉过来。amount = 这一帧要拖拽的距离（已乘 dt）。
     // 直接把 pos 朝 (x,z) 拽过去，并夹回场地内（边界约束在外面那块已跑过，这里补一刀）。
     pullPlayer: (x, z, amount) => {
@@ -9199,6 +9374,9 @@ async function boot() {
       // 取牌按钮 / 四位数字面板（只有 playing 里才动）
       if (gameState === 'playing') depositUiTick(dt);
       relics.update(dt, { playerPos: pos, hazards });  // 绝缘斗篷要问地板通没通电
+      // 第 107 块：傀儡（法器等级每帧对账 —— 买到 / 读档 / 换关都会变，和上面 setSeal 同一思路）
+      golems.setRelicLevel(relics.levels().puppet);
+      golems.update(dt);
       aegisUpdate(dt);
       // 金币：攻击范围圈就是拾取范围（第 23 块，进圈即吸），圈外的 3 秒后自动入账
       gold.update(dt, pos, stats.get('attackRange'));

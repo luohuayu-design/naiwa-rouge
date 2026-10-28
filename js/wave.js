@@ -676,10 +676,76 @@ export const LEVEL_9 = {
   ],
 };
 
+// ============================================================
+// 第十关「塔顶井台」（第 107 块）
+// ============================================================
+// 剧情接 s10「井水照见的东西」：骨塔顶层也有一口井，阿井从下面那口挖到了这一口。
+// 这口井照出来的不是你的样子，是**别人记住的那个版本** —— 所以这一关的四只新怪
+// 全是「照」出来的东西：照出你（照影）、照出那张单子（收件人）、
+// 照出井壁上那句「等」（等的那个）、照出这一局死掉的人（回声）。
+//
+// 场地中央那口井是**本作第一个会挡路的实体地形**：怪绕开它、玩家掉进去，
+// 所以它同时是减益区和掩体 —— 这是第十关和前九关最大的区别。
+// 难度按用户定案「明显更狠」：hpMul 1.45 / dmgMul 1.80 + 杂兵密度回升
+// （第九关是杂兵 ×0.70 压节奏，这里回到 ×0.9 一带，怪更多但节奏仍快）。
+export const LEVEL_10 = {
+  id: 10,
+  name: '第十关 · 塔顶井台',
+  theme: 'welltop',          // 第 107 块：墨蓝 + 井沿暖黄（scene.js 的 THEMES）
+  arena: 17,
+  order: [
+    ['minion', 1], ['warrior', 1.6], ['mirror', 1.9],
+    ['archer', 2.0], ['bowman', 2.2], ['leaper', 2.2],
+    ['wraith', 2.4], ['shielder', 2.4], ['brood', 2.6],
+    ['mender', 2.6], ['reboot', 2.8], ['hexer', 3.0],
+    ['addressee', 3.2], ['waiter', 3.4], ['echo', 3.6],
+  ],
+  spawnRadius: 15.2,
+  spawnJitter: 0.5,
+  minPlayerDistance: 7.6,
+  minSpawnGap: 2.4,
+  gapScale: 1.12,
+  gap: 2.6,
+  upgradeAfter: [1, 2, 3, 4, 5, 8, 10, 12, 15, 17, 19, 20],
+  shopAfter: [3, 6, 9, 12, 15, 18],
+  weaponAt: 4,
+  scale: { hp: 0.34, damage: 0.20, speed: 0.045, haste: 0.0110, curve: 0.28, hpMul: 1.45, dmgMul: 1.80 },
+  hazards: [
+    { kind: 'well', x: 0, z: 0, r: 2.4, damage: 3, cd: 1.2 },
+  ],
+  rounds: [
+    // ---- 第一幕（R1~R4）：井 + 照影 + 收件人 ----
+    { minion: 4, warrior: 1, mirror: 0, addressee: 0, waiter: 0, echo: 0, archer: 0, bowman: 0, leaper: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, reboot: 0, hexer: 0, gap: 0.86, tip: '塔顶也有一口井。它照的不是你，是别人记住的那个你 —— 掉进去会摔掉 3 点，怪却会绕开它' },
+    { minion: 4, warrior: 2, mirror: 1, addressee: 0, waiter: 0, echo: 0, archer: 0, bowman: 0, leaper: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, reboot: 0, hexer: 0, gap: 0.80, tip: '新面孔·照影：井里爬出来的那只蛙，抄的是你此刻的面板 —— 你攻击越高，它打得越疼' },
+    { minion: 5, warrior: 2, mirror: 1, addressee: 0, waiter: 0, echo: 0, archer: 1, bowman: 0, leaper: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, reboot: 0, hexer: 0, gap: 0.76, tip: '它每八秒重照一次：你中途变强，它也跟着变强 —— 阿井说过，别拼命变强' },
+    { minion: 5, warrior: 2, mirror: 1, addressee: 1, waiter: 0, echo: 0, archer: 1, bowman: 1, leaper: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, reboot: 0, hexer: 0, gap: 0.72, tip: '新面孔·收件人：那张收件人栏空着的单子 —— 它把名字填给别人，被填上的那只就免掉你手上那一类伤害' },
+    // ---- 第二幕（R5~R8）：它开始填名字 ----
+    { minion: 5, warrior: 3, mirror: 1, addressee: 1, waiter: 0, echo: 0, archer: 1, bowman: 1, leaper: 1, wraith: 0, shielder: 0, brood: 0, mender: 0, reboot: 0, hexer: 0, gap: 0.70, tip: '头上有白框的那只免疫你环上占多数的那一类 —— 换一类武器打，或者先拆掉那张单子' },
+    { minion: 6, warrior: 3, mirror: 1, addressee: 1, waiter: 0, echo: 0, archer: 2, bowman: 1, leaper: 1, wraith: 1, shielder: 0, brood: 0, mender: 0, reboot: 0, hexer: 0, gap: 0.68, tip: '它专挑你正在打的那只填 —— 看见白框就换目标，别死磕' },
+    { minion: 6, warrior: 3, mirror: 2, addressee: 1, waiter: 0, echo: 0, archer: 2, bowman: 1, leaper: 1, wraith: 1, shielder: 1, brood: 0, mender: 0, reboot: 0, hexer: 0, gap: 0.66, tip: '两只照影一起上：它们的血是你自己的六成 —— 别先把血堆太厚' },
+    { minion: 6, warrior: 4, mirror: 2, addressee: 1, waiter: 1, echo: 0, archer: 2, bowman: 2, leaper: 1, wraith: 1, shielder: 1, brood: 0, mender: 0, reboot: 0, hexer: 0, gap: 0.64, tip: '新面孔·等的那个：井壁上刻着「第 70 层，等」。它站着不动，头上那圈金环在缩 —— 缩没了它就活过来' },
+    // ---- 第三幕（R9~R12）：等的人醒了 ----
+    { minion: 6, warrior: 4, mirror: 2, addressee: 1, waiter: 1, echo: 0, archer: 2, bowman: 2, leaper: 2, wraith: 1, shielder: 1, brood: 1, mender: 0, reboot: 0, hexer: 0, gap: 0.62, tip: '它二十二血、站着不动，很好打 —— 问题是你要不要现在花这个时间' },
+    { minion: 7, warrior: 4, mirror: 2, addressee: 1, waiter: 1, echo: 1, archer: 2, bowman: 2, leaper: 2, wraith: 2, shielder: 1, brood: 1, mender: 1, reboot: 0, hexer: 0, gap: 0.60, tip: '新面孔·回声：井水照出过去的东西 —— 它把这一局已经死掉的怪，再照回来一只' },
+    { minion: 7, warrior: 4, mirror: 2, addressee: 2, waiter: 1, echo: 1, archer: 3, bowman: 2, leaper: 2, wraith: 2, shielder: 1, brood: 1, mender: 1, reboot: 1, hexer: 0, gap: 0.58, tip: '两只单子同时填名：场上会同时有两类免疫 —— 看清楚再出手' },
+    { minion: 7, warrior: 5, mirror: 2, addressee: 2, waiter: 1, echo: 1, archer: 3, bowman: 3, leaper: 2, wraith: 2, shielder: 2, brood: 1, mender: 1, reboot: 1, hexer: 1, gap: 0.56, tip: '第 12 回合：井水浮出来的东西越来越多了' },
+    // ---- 第四幕（R13~R16）：四只齐活 ----
+    { minion: 8, warrior: 5, mirror: 3, addressee: 2, waiter: 2, echo: 1, archer: 3, bowman: 3, leaper: 3, wraith: 2, shielder: 2, brood: 2, mender: 1, reboot: 1, hexer: 1, gap: 0.54, tip: '两只都在等：金环是分开缩的 —— 一只醒了，另一只可能还剩一半' },
+    { minion: 8, warrior: 5, mirror: 3, addressee: 2, waiter: 2, echo: 2, archer: 3, bowman: 3, leaper: 3, wraith: 3, shielder: 2, brood: 2, mender: 2, reboot: 1, hexer: 1, gap: 0.52, tip: '两只回声：照回来的都是半血，但它们照的是你刚打死的那些' },
+    { minion: 9, warrior: 6, mirror: 3, addressee: 2, waiter: 2, echo: 2, archer: 4, bowman: 3, leaper: 3, wraith: 3, shielder: 2, brood: 2, mender: 2, reboot: 2, hexer: 1, gap: 0.50, tip: '照影的血跟着你的上限走：这时候你堆的生命正在变成它们的生命' },
+    { minion: 9, warrior: 6, mirror: 3, addressee: 2, waiter: 2, echo: 2, archer: 4, bowman: 4, leaper: 4, wraith: 3, shielder: 3, brood: 2, mender: 2, reboot: 2, hexer: 2, gap: 0.48, tip: '第 16 回合：井壁上又多了一行字，看不清写的是什么' },
+    // ---- 第五幕（R17~R20）：门前 ----
+    { minion: 10, warrior: 6, mirror: 3, addressee: 3, waiter: 2, echo: 2, archer: 4, bowman: 4, leaper: 4, wraith: 4, shielder: 3, brood: 2, mender: 2, reboot: 2, hexer: 2, gap: 0.46, tip: '三张单子：场上会一直有被填名的怪 —— 把单子全清掉才是解法' },
+    { minion: 10, warrior: 7, mirror: 4, addressee: 3, waiter: 3, echo: 2, archer: 5, bowman: 4, leaper: 4, wraith: 4, shielder: 3, brood: 2, mender: 2, reboot: 2, hexer: 2, gap: 0.44, tip: '三只一起等：这一波先认清楚哪三只头上还有金环' },
+    { minion: 11, warrior: 7, mirror: 4, addressee: 3, waiter: 3, echo: 3, archer: 5, bowman: 5, leaper: 5, wraith: 4, shielder: 3, brood: 2, mender: 2, reboot: 3, hexer: 2, gap: 0.42, tip: '倒数第二波：照影会跟着你最后的面板一起变凶 —— 别在这时候猛堆攻击' },
+    { minion: 11, warrior: 8, mirror: 4, addressee: 3, waiter: 3, echo: 3, archer: 5, bowman: 5, leaper: 5, wraith: 5, shielder: 4, brood: 2, mender: 2, reboot: 3, hexer: 2, gap: 0.40, tip: '最后一波：把自己认的那个名字，从井里捞出来' },
+  ],
+};
+
 // 关卡号 → 关卡表（主流程 / 选关 / 测试都从这里取）
 export const LEVELS_BY_ID = {
   1: LEVEL_1, 2: LEVEL_2, 3: LEVEL_3, 4: LEVEL_4, 5: LEVEL_5, 6: LEVEL_6, 7: LEVEL_7, 8: LEVEL_8,
-  9: LEVEL_9,
+  9: LEVEL_9, 10: LEVEL_10,
 };
 
 // 第 roundNo 回合（从 1 开始）的怪物属性倍率

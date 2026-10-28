@@ -8,7 +8,7 @@
 // 两套配色集中在 THEMES 里，buildNightScene({ theme }) 建哪套，
 // 局中要换就调返回的 setTheme('crypt')（不改几何，只改颜色和贴图）。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=121';
+import * as THREE from '../lib/three.module.js?v=122';
 
 export const THEMES = {
   // 第一关 · 荒草地：冷月光 + 青绿边圈 + 萤火虫
@@ -145,6 +145,22 @@ export const THEMES = {
     tuft: 0x4a4234, tuftVisible: false,     // 登记庭是石地，不长草
     fly: 0xffe08a, flyCount: 88,            // 飘着的金粉
     ground: 'registry',
+  },
+  // 第十关 · 塔顶井台（第 107 块）：夜空直接压在头顶，地面是**湿的**墨蓝石板。
+  // 配色思路：整关只有两个颜色 —— 井水的冷青（边圈 / 萤火 / 月光都偏青）
+  // 和井沿那一点暖黄（rim 用暖色，把中间的井口衬出来）。
+  // 比第九关暗一档（fogDensity 0.0132 → 0.0152）：塔顶没有墙，光留不住。
+  welltop: {
+    bg: 0x070c12,
+    fog: 0x0e1822, fogDensity: 0.0152,
+    hemiSky: 0x5a7fa8, hemiGround: 0x0b121a, hemiIntensity: 1.28,
+    moon: 0xcfe6ff, moonIntensity: 3.02, moonBase: 2.82,
+    rim: 0x2a6a8a, rimIntensity: 0.80,
+    edge: 0x6fd8e8, edgeOpacity: 0.32,      // 井水的青
+    stone: 0x27333f,
+    tuft: 0x27333f, tuftVisible: false,     // 塔顶是石头地，不长草
+    fly: 0x9fe8ff, flyCount: 76,            // 飘着的是井里冒上来的水汽
+    ground: 'welltop',
   },
 };
 
@@ -482,6 +498,7 @@ function makeGroundTexture(kind) {
   if (kind === 'well') return makeWellTexture();
   if (kind === 'ossuary') return makeOssuaryTexture();
   if (kind === 'registry') return makeRegistryTexture();
+  if (kind === 'welltop') return makeWelltopTexture();
   return makeGrassTexture();
 }
 
@@ -1040,6 +1057,85 @@ function makeGrassTexture() {
 //   ⑤ 金粉：最细的一层，月下的星星点点。
 // ⚠️ 石板**不能排成等距网格**：贴图要平铺 16 次，规整的网格会在十六次重复里
 //    立刻露出周期（第 81 块骨堆那个坑）。
+// 塔顶井台的地面（第 107 块）：被井水泡了几十年的墨蓝石板。
+// 三层：① 大块明暗（湿一块干一块）② 石板缝 + 缝里渗出来的青 ③ 水渍与裂纹。
+// 刻意**不画井** —— 井口是 hazard 自己画的（hazards.js 的 kind:'well'），
+// 贴图上再画一个会和那个洞错位。
+function makeWelltopTexture() {
+  const S = 512;
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = S;
+  const g = cv.getContext('2d');
+  g.fillStyle = '#141b24';
+  g.fillRect(0, 0, S, S);
+
+  let seed = 424243;
+  const rnd = () => {
+    seed = (seed * 1103515245 + 12345) % 2147483648;
+    return seed / 2147483648;
+  };
+
+  // ① 湿一块干一块：湿的地方反光偏青，干的地方发灰
+  for (let i = 0; i < 140; i++) {
+    const x = rnd() * S, y = rnd() * S, r = 26 + rnd() * 96;
+    const rad = g.createRadialGradient(x, y, 0, x, y, r);
+    const wet = rnd() > 0.42;
+    rad.addColorStop(0, wet ? 'rgba(70,150,180,0.22)' : 'rgba(8,12,18,0.42)');
+    rad.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = rad;
+    g.beginPath();
+    g.arc(x, y, r, 0, Math.PI * 2);
+    g.fill();
+  }
+
+  // ② 石板：缝比登记庭宽（塔顶年久失修），缝里渗着一层青
+  const ROW = 4;
+  const step = S / ROW;
+  for (let r = 0; r < ROW; r++) {
+    for (let c = 0; c < ROW; c++) {
+      const jx = (rnd() - 0.5) * 20;
+      const jy = (rnd() - 0.5) * 20;
+      const w = step - 10 - rnd() * 14;
+      const h = step - 10 - rnd() * 14;
+      const x = c * step + 5 + jx;
+      const y = r * step + 5 + jy;
+      const lum = 0.04 + rnd() * 0.07;
+      g.fillStyle = `rgba(88,110,132,${lum})`;
+      g.fillRect(x, y, w, h);
+      g.strokeStyle = 'rgba(6,10,14,0.62)';
+      g.lineWidth = 3.0;
+      g.strokeRect(x, y, w, h);
+      g.strokeStyle = `rgba(111,216,232,${0.10 + rnd() * 0.12})`;
+      g.lineWidth = 1.0;
+      g.strokeRect(x + 2, y + 2, w - 4, h - 4);
+    }
+  }
+
+  // ③ 裂纹：从缝里岔出去的细线（塔顶裂了，夜空是从裂缝里压下来的）
+  for (let i = 0; i < 34; i++) {
+    const x = rnd() * S, y = rnd() * S;
+    const a2 = rnd() * Math.PI * 2;
+    const len = 14 + rnd() * 52;
+    g.strokeStyle = `rgba(4,8,12,${0.30 + rnd() * 0.30})`;
+    g.lineWidth = 0.8 + rnd() * 1.1;
+    g.beginPath();
+    g.moveTo(x, y);
+    let cx = x, cy = y, ang = a2;
+    for (let k = 0; k < 4; k++) {
+      ang += (rnd() - 0.5) * 0.9;
+      cx += Math.cos(ang) * (len / 4);
+      cy += Math.sin(ang) * (len / 4);
+      g.lineTo(cx, cy);
+    }
+    g.stroke();
+  }
+
+  const tex = new THREE.CanvasTexture(cv);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  return tex;
+}
+
 function makeRegistryTexture() {
   const S = 512;
   const cv = document.createElement('canvas');

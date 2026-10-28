@@ -55,14 +55,19 @@ const typeNames = TYPES.map(([k]) => k);
 // （自己的 deposit-warden.glb）→ 条目 21 → 20，文件 18 → 19。
 // 第 97 块：称量官换成 Quaternius King（ledger-king.glb）+ 新增盖章人（stamp-goblin.glb）
 //   → 条目 21，文件 21，**零复用**。
-sec('一、21 只怪 · 零复用（每条一个独立模型）');
-ok(TYPES.length === 21, `怪物条目 21 只（实际 ${TYPES.length}）`);   // 第 97 块 +stamper
-const files = TYPES.map(([, t]) => t.file);
-ok(files.every((f) => typeof f === 'string' && f.startsWith('assets/monsters/')), '每条都写了 assets/monsters/ 下的模型');
+// 第 107 块：第十关 +mirror / addressee / waiter / echo → 条目 25；
+//   收件人是**本作第一只没有 glb 的怪**（一张程序化的纸，enemy.js 的 cfg.proc 通道）
+//   → 有模型的 24 条，零复用不变。
+sec('一、25 只怪 · 零复用（有模型的每条一个独立模型）');
+ok(TYPES.length === 25, `怪物条目 25 只（实际 ${TYPES.length}）`);   // 第 97 块 +stamper，第 107 块 +4
+const noModel = TYPES.filter(([, t]) => !t.file);
+ok(noModel.length === 1 && noModel[0][0] === 'addressee', '唯一无模型怪 = 收件人（程序化的纸）', noModel.map((x) => x[0]).join(','));
+const files = TYPES.map(([, t]) => t.file).filter(Boolean);
+ok(files.every((f) => typeof f === 'string' && f.startsWith('assets/monsters/')), '有模型的都写了 assets/monsters/ 下的路径');
 const dupFiles = files.filter((f, i) => files.indexOf(f) !== i);
 // 第 97 块起称量官也换了模型，历史上有意复用（无名者 / 旗手 / 称量官）已全部消除
 const ALLOWED_DUP = new Set([]);
-ok(dupFiles.every((f) => ALLOWED_DUP.has(f)) && new Set(files).size === 21,
+ok(dupFiles.every((f) => ALLOWED_DUP.has(f)) && new Set(files).size === 24,
   `${files.length} 条目 / ${new Set(files).size} 文件，零复用`,
   `重复：${dupFiles.join(', ')}`);
 const names = TYPES.map(([, t]) => t.name);
@@ -74,6 +79,7 @@ for (const k of ['minion', 'warrior', 'archer', 'bowman']) {
 
 sec('二、模型文件真的在，且是合法 glb');
 for (const [k, t] of TYPES) {
+  if (!t.file) continue;   // 第 107 块：收件人没有 glb
   const abs = path.join(ROOT, t.file);
   ok(fs.existsSync(abs), `${k} 文件存在（${t.file.split('/').pop()}）`);
   if (!fs.existsSync(abs)) continue;
@@ -83,6 +89,7 @@ for (const [k, t] of TYPES) {
 sec('三、动作名对得上（clipOverrides 不许抄错）');
 const CLIP_KEYS = ['idle', 'walk', 'run', 'attack', 'cast', 'death', 'hit', 'spawn'];
 for (const [k, t] of TYPES) {
+  if (!t.file) continue;   // 第 107 块：收件人没有 glb
   const abs = path.join(ROOT, t.file);
   if (!fs.existsSync(abs)) continue;
   const clips = glbClipNames(abs);

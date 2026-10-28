@@ -63,10 +63,11 @@ const live = CH.filter((c) => c.levelId != null);
 // 第 71 块：第七关「骨塔井底」接了 s07，局内变成 7 夜绑 1~7 关
 // 第 81 块：s08 接上第八关 → 8 夜
 // 第 82 块：s09 接上第九关（「骨塔登记庭」）→ 9 夜
-ok('局内有 9 夜', live.length === 9, `实际 ${live.length}`);
-ok('局内九夜分别绑 1~9 关', live.map((c) => c.levelId).sort().join() === '1,2,3,4,5,6,7,8,9');
+// 第 107 块：s10 接上第十关（「塔顶井台」）→ 10 夜
+ok('局内有 10 夜', live.length === 10, `实际 ${live.length}`);
+ok('局内十夜分别绑 1~10 关', live.map((c) => c.levelId).sort((a,b)=>a-b).join() === '1,2,3,4,5,6,7,8,9,10');
 ok('局内七夜都在第 2 回合结束触发', live.every((c) => c.atRound === 2));
-ok('其余 9 夜 levelId 为 null', CH.filter((c) => c.levelId == null).length === 9);
+ok('其余 8 夜 levelId 为 null（第九夜起已全部接上）', CH.filter((c) => c.levelId == null).length === 8);
 
 // ---------------- 4. 调度：storyChapterAt ----------------
 ok('第 1 关第 1 回合不播（还没到 2 回合）', storyChapterAt(1, 1, {}) === null);

@@ -114,7 +114,7 @@ ok(BOX_BY_ID.gold.curse < BOX_BY_ID.silver.curse && BOX_BY_ID.silver.curse < BOX
 // ============================================================ 3. 成就
 sec('3. 成就（八类 × 三档）');
 // 第 106 块：67 → 106（删掉「一线生机」+ 补 40 条）
-ok(ACH_COUNT === 106, `共 106 条成就（第 94 块 41 → 第 94 块 67 → 第 106 块 106）`, String(ACH_COUNT));
+ok(ACH_COUNT === 111, `共 111 条成就（第 106 块 106 → 第 107 块 +5）`, String(ACH_COUNT));
 ok(ACHS.length === ACH_COUNT, 'ACHS 长度与 ACH_COUNT 一致');
 ok(ACH_CATS.length === 8, '八个类别', String(ACH_CATS.length));
 {
@@ -147,7 +147,7 @@ ok(achTier(9).bones === 30, 'achTier 对越界档位回退到第一档（不会�
     '罕见档不是最多（档位真的代表难度）', byTier.join('/'));
   // 全清一共发多少骨币 —— 这是平衡口径，改档位会跟着变，必须钉住
   const totalBones = ACHS.reduce((a, x) => a + achTier(x.tier).bones, 0);
-  ok(totalBones === 7440, `106 条全清共 ${totalBones} 骨币（约 27 个金匣，克制档）`, String(totalBones));
+  ok(totalBones === 7800, `111 条全清共 ${totalBones} 骨币（约 28 个金匣，克制档）`, String(totalBones));
   ok(totalBones / 280 < 30, '全清骨币不到 30 个金匣（不会把盲盒那套成本平衡冲掉）',
     (totalBones / 280).toFixed(1));
 }

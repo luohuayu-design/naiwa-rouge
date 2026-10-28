@@ -93,7 +93,8 @@ ok(!/s\.wait === 'rain' && arrowRain\.strikeCount > 0\)\s*\{\s*wtFired = true;\s
 // ============================================================
 sec('四、新手教程期间技能栏可见');
 // ============================================================
-const ctxLine = (mainSrc.match(/function skillCtx\(\)[\s\S]*?return \{ playing:[^\n]*/) || [''])[0];
+// 第 107 块：skillCtx 改成了多行 return（加了 golems facade），正则跟着放宽
+const ctxLine = (mainSrc.match(/function skillCtx\(\)[\s\S]*?\n  \};?\n/) || [''])[0];
 ok(/gameState === 'tutorial'/.test(ctxLine), 'skillCtx().playing 含 tutorial', ctxLine.slice(0, 120));
 ok(/gameState === 'wtut'/.test(ctxLine), '仍然含 wtut（武器教程要求真放一次技能）');
 ok(/gameState === 'playing'/.test(ctxLine), '仍然含 playing');

@@ -26,9 +26,9 @@
 // 第 11 块：每件货都带 rarity（0 普通 ~ 4 传说），店里按品质加权抽取 ——
 // 幸运越高，摆出来的货越往金/红那一头走（见 rarity.js）。
 // ============================================================
-import { rarityWeight } from './rarity.js?v=121';
-import { TURRET } from './turret.js?v=121';
-import { RELIC_DEFS } from './relics.js?v=121';
+import { rarityWeight } from './rarity.js?v=122';
+import { TURRET } from './turret.js?v=122';
+import { RELIC_DEFS } from './relics.js?v=122';
 
 export const SHOP_ITEMS = [
   // ---------------- 生命药水（第 13 块起：买进背包，作战中随时用） ----------------
@@ -209,6 +209,17 @@ export const SHOP_ITEMS = [
     glyph: '🔕', name: '镇牌铃',
     desc: `挂在寄存柜门上的铜铃：掉牌概率从 ${Math.round(RELIC_DEFS.seal.tagChance[0] * 100)}% 压到 ${Math.round(RELIC_DEFS.seal.tagChance[1] * 100)}%，再买还能更低 —— 柜子攒得慢，寄存处看守就来得晚。挡回去的牌子每 ${RELIC_DEFS.seal.coinPer} 块化一枚骨币。`,
   },
+  // ---------------- 第十关新增（第 107 块）：傀儡术 ----------------
+  // 第十关起上架；第 12 回合的商店常驻摆它（SHOP_PINNED）—— 这是本关的
+  // 头号新玩具，不让人抽不到。买到后技能栏多一颗「傀儡术」。
+  {
+    id: 'buyPuppet', type: 'relic', relic: 'puppet', price: 34, needRound: 8, needLevel: 10,
+    rarity: 3,
+    glyph: '🎎', name: '傀儡术',
+    desc: '学会召傀：技能栏多一颗「傀儡术」。按下真暂停，在铁 / 雪傀儡里选一只召在脚下'
+      + '—— 铁的不拉仇恨、两秒一拳（一拳 = 你攻击的 1.5 倍）；雪的替你挨打（追你的怪改去围殴它）、'
+      + '雪球把怪推开但不伤人。同时最多一只，碎了等 40 秒冷却再召。再买可升级（最多 3 级）。',
+  },
 ];
 
 // 商店里买不到 / 已卖光时给出原因（渲染禁用态用）
@@ -240,7 +251,7 @@ export const SHOP_SHOW = 4;
 // 用户定案：「第 9 回合、12 回合的商店加入法器购买（不是随机，是常驻）」。
 // 常驻只占固定格子（4 件里 1 件常驻 → 剩下 3 件照旧抽签），
 // 而且**仍然要过可用性判定**：铃已满级 / 没到解锁回合时不会硬摆出来。
-export const SHOP_PINNED = { 9: ['buySeal'], 12: ['buySeal'] };
+export const SHOP_PINNED = { 9: ['buySeal'], 12: ['buySeal', 'buyPuppet'] };
 
 // 抽本次商店的货物：返回一个**不含重复**的物品数组（默认 4 件）。
 // hasWeapon = 已拿到环剑（没有时剑类买了也用不了，先不进池）

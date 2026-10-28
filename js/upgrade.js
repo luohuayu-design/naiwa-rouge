@@ -34,9 +34,9 @@
 //   标了 scope:'weapon' 的项改的是武器表（剑系 / 元素系），其余改主角表。
 //   两块表都要传进来，没传 wstats 时武器项会退化到主角表（只为兼容老调用）。
 // ============================================================
-import { STAT_DEFS } from './stats.js?v=121';
-import { WEAPON_STAT_DEFS } from './weaponStats.js?v=121';
-import { RARITIES, rarityWeight, oddsOf } from './rarity.js?v=121';
+import { STAT_DEFS } from './stats.js?v=122';
+import { WEAPON_STAT_DEFS } from './weaponStats.js?v=122';
+import { RARITIES, rarityWeight, oddsOf } from './rarity.js?v=122';
 
 // 一张卡改的是哪块表
 function tableFor(scope, stats, wstats) {
@@ -314,6 +314,41 @@ const UNIQUE = [
       { stat: 'goldRate', flat: 0.10 },
     ],
   },
+  // ---------------- 傀儡卡（第 107 块，用户定案） ----------------
+  // 买到「傀儡术」后才会进池子（weightOf 里拦：opts.puppetOwned）。
+  // 这四张不走属性表：up.golem 由 applyUpgrade 转交给 golem.applyCard()。
+  {
+    id: 'golemSnowHp', tag: 'def', glyph: '⛄', name: '雪傀儡强化',
+    rarity: 1,
+    w0: 0.55, gw: +0.015,
+    golem: { stat: 'hp', kind: 'snow', flat: 4 },
+    title: '雪傀儡生命 +4',
+    desc: '雪傀儡的最大生命 +4（对下一只召出的生效；能重复拿）',
+  },
+  {
+    id: 'golemIronHp', tag: 'def', glyph: '🗿', name: '铁傀儡强化',
+    rarity: 1,
+    w0: 0.55, gw: +0.015,
+    golem: { stat: 'hp', kind: 'iron', flat: 5 },
+    title: '铁傀儡生命 +5',
+    desc: '铁傀儡的最大生命 +5（对下一只召出的生效；能重复拿）',
+  },
+  {
+    id: 'golemIronAtk', tag: 'atk', glyph: '⚒', name: '铁傀儡重拳',
+    rarity: 2,
+    w0: 0.40, gw: +0.020,
+    golem: { stat: 'atk', flat: 0.3 },
+    title: '铁傀儡攻击 +30%',
+    desc: '铁傀儡每一拳都在你攻击的 1.5 倍上再乘一档（能重复拿，乘算叠加大）',
+  },
+  {
+    id: 'golemCap', tag: 'atk', glyph: '🎎', name: '双傀合璧',
+    rarity: 4,
+    w0: 0.35, gw: +0.010,
+    golem: { stat: 'cap', flat: 1 },
+    title: '场上可同时站两只傀儡',
+    desc: '传说：傀儡上限 +1 —— 铁 / 雪可以各站一只（只能拿一次）',
+  },
 ];
 
 // 把「族 × 三档」摊平成一张张卡。小档沿用原来的 id（老存档 / 老测试照旧认得）。
@@ -364,6 +399,11 @@ export const TAG_NAMES = { atk: '进攻', def: '生存', mov: '机动' };
 // 权重随回合线性变化：w0 + gw × (回合 - 1) —— 所以每个回合的概率都不一样，
 // 前期偏「立刻能感知」的属性（攻击力/生命上限），后期偏暴击/吸血/剑系。
 export function weightOf(up, round = 1, opts = {}) {
+  // 第 107 块：傀儡卡只有买到「傀儡术」后才进池子；上限卡拿过一次就收摊
+  if (up.golem) {
+    if (!opts.puppetOwned) return 0;
+    if (up.golem.stat === 'cap' && (opts.golemCap || 0) >= 1) return 0;
+  }
   if (up.needsWeapon && !opts.hasWeapon) return 0;
   const r = Math.max(1, round);
   return Math.max(0, (up.w0 ?? 1) + (up.gw ?? 0) * (r - 1));
@@ -412,7 +452,35 @@ export function rollChoices(rng = Math.random, opts = {}) {
 // wstats = 武器属性表：scope:'weapon' 的条目改它，其余改主角 stats。
 // weapon = 武器系统本身：只有「直接给一把剑」的卡（sword 字段）才需要它。
 // 返回 { src, changes }：changes 是精确的「选前 → 选后」（用于卡片/提示文案）。
-export function applyUpgrade(stats, up, serial = 0, wstats = null, weapon = null) {
+export function applyUpgrade(stats, up, serial = 0, wstats = null, weapon = null, golems = null) {
+  // 第 107 块：傀儡卡不碰属性表，交给傀儡系统记账（golem.applyCard）
+  if (up.golem) {
+    const g = up.golem;
+    const before = golems ? golems.bonuses() : null;
+    if (golems) golems.applyCard(g);
+    let name, from, to;
+    if (g.stat === 'hp') {
+      name = g.kind === 'iron' ? '铁傀儡生命' : '雪傀儡生命';
+      from = before ? before.hp[g.kind] : 0;
+      to = from + g.flat;
+    } else if (g.stat === 'atk') {
+      name = '铁傀儡攻击';
+      from = before ? before.atk : 0;
+      to = from + g.flat;
+    } else {
+      name = '傀儡上限';
+      from = before ? before.cap : 1;
+      to = from + g.flat;
+    }
+    return {
+      src: `upg:${up.id}:${serial}`,
+      changes: [{
+        key: `golem_${g.stat}`, scope: 'golem', name,
+        from, to, fromText: String(from), toText: `+${g.flat}`,
+        text: `${from} → ${to}`,
+      }],
+    };
+  }
   // 剑阵这类「直接加一把剑」的卡：不碰属性表，交给武器系统上环
   if (up.sword) {
     const before = weapon ? weapon.count : 0;
@@ -459,7 +527,30 @@ export function applyUpgrade(stats, up, serial = 0, wstats = null, weapon = null
 
 // 预演一张升级：返回与 applyUpgrade 同结构的 changes，但不改任何状态。
 // 三选一卡片上的「1 → 2」就是用它算的，所以点下去之后数值一定与预览一致。
-export function previewUpgrade(stats, up, wstats = null, weapon = null) {
+export function previewUpgrade(stats, up, wstats = null, weapon = null, golems = null) {
+  if (up.golem) {
+    const g = up.golem;
+    const b = golems ? golems.bonuses() : null;
+    let name, from, to;
+    if (g.stat === 'hp') {
+      name = g.kind === 'iron' ? '铁傀儡生命' : '雪傀儡生命';
+      from = b ? b.hp[g.kind] : 0;
+      to = from + g.flat;
+    } else if (g.stat === 'atk') {
+      name = '铁傀儡攻击';
+      from = b ? b.atk : 0;
+      to = from + g.flat;
+    } else {
+      name = '傀儡上限';
+      from = b ? b.cap : 1;
+      to = from + g.flat;
+    }
+    return [{
+      key: `golem_${g.stat}`, scope: 'golem', name,
+      from, to, fromText: String(from), toText: `+${g.flat}`,
+      text: `${from} → ${to}`,
+    }];
+  }
   if (up.sword) {
     const n = weapon ? weapon.count : 0;
     return [{

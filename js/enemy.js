@@ -25,12 +25,12 @@
 // 第四关三只（wraith/leaper/mender，第 35 块，第 52 块换模型），
 // 各自在下面 ENEMY_TYPES 里有详细注释。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=121';
-import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=121';
-import { clone as cloneSkinned } from '../lib/jsm/utils/SkeletonUtils.js?v=121';
-import { distance2D } from './stats.js?v=121';
-import { createRangeRing } from './rangeRing.js?v=121';
-import { withV } from './assetUrl.js?v=121';
+import * as THREE from '../lib/three.module.js?v=122';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=122';
+import { clone as cloneSkinned } from '../lib/jsm/utils/SkeletonUtils.js?v=122';
+import { distance2D } from './stats.js?v=122';
+import { createRangeRing } from './rangeRing.js?v=122';
+import { withV } from './assetUrl.js?v=122';
 
 // KayKit 模型正面朝 +Z；如果哪天换模型发现怪倒着走，把这里改成 Math.PI
 export const ENEMY_MODEL_YAW = 0;
@@ -105,6 +105,22 @@ const CLIP_FAMILIES = {
   royal: {
     idle: 'Idle', walk: 'Walk', run: 'Run', attack: 'Sword_Slash', cast: 'Interact',
     death: 'Death', hit: 'HitRecieve', spawn: 'Idle',
+  },
+  // 第 107 块：Quaternius 的**四足蛙**（`reflect-frog.glb`，FrogArmature，只有 4 段）。
+  // 照影是第十关「井水照出来的那只蛙」，所以刻意选了和第七关井蛙（frog.glb，
+  // 直立蛙人、humanoid 族）不一样的一只 —— 四足、贴地、跳着走。
+  // ⚠️ 这套 clip 没有「走路」：walk 借 Frog_Jump（四足蛙本来就是一跳一跳地挪，
+  // 正好当成移动动画），也没有受击段，hit 退回 Idle（挨打靠闪白表现，见 takeDamage）。
+  frogbeast: {
+    idle: 'Frog_Idle', walk: 'Frog_Jump', run: 'Frog_Jump', attack: 'Frog_Attack',
+    cast: 'Frog_Attack', death: 'Frog_Death', hit: 'Frog_Idle', spawn: 'Frog_Idle',
+  },
+  // 第 107 块：Quaternius 的**史莱姆**（`echo-slime.glb`，Armature，4 段）。
+  // 回声是「井里浮上来的一团水」，所以本体就是一坨会弹的胶 —— 半透明 + 冷青色。
+  // Walk 是真的有（弹跳前进），cast 借 Attack（吐出一只怪就是那一下前冲）。
+  slime: {
+    idle: 'Slime_Idle', walk: 'Slime_Walk', run: 'Slime_Walk', attack: 'Slime_Attack',
+    cast: 'Slime_Attack', death: 'Slime_Death', hit: 'Slime_Idle', spawn: 'Slime_Idle',
   },
 };
 
@@ -1191,6 +1207,177 @@ export const ENEMY_TYPES = {
       death: 'death', spawn: 'spawn',
     },
   },
+
+  // ============================================================
+  // 第十关「塔顶井台」四只（第 107 块）
+  // ============================================================
+  // 四只全部从 s10「井水照见的东西」那几句话里长出来，机制口径也刻意和前面九关错开：
+  //   照影    —— 「这口井能照出你被人记住的样子」：井里爬出来的那只蛙，抄你的面板打你
+  //   收件人  —— 「一张单子，收件人那一栏空着」：给别的怪填上名字，让它免掉你手上那把剑
+  //   等的那个 —— 井壁上新刻的一行字「第 70 层，等」：站着不动地等，等到点就活过来
+  //   回声    —— 井水照出过去的东西：把这一局已经死掉的怪，再照回来一只
+  // ------------------------------------------------------------
+  mirror: {
+    name: '照影',
+    file: 'assets/monsters/reflect-frog.glb',
+    sourceHeight: 1.30,    // 实测（Idle 渲染身高，.tmp-107-calib.js）
+    footY: 0.0,
+    height: 1.55,          // 比主角矮一头：它是「照出来的」，不是真的那只
+    radius: 0.55,
+    hp: 8,                 // 只是兜底值 —— 真正的血在 spawn 时按玩家最大生命算
+    armor: 0,
+    speed: 2.2,            // 同上：只是兜底，抄完后用玩家的移速
+    attackRange: 1.9,
+    keepDistance: 0,
+    damage: 1,
+    attackInterval: 1.5,
+    windup: 0.32,
+    attackDuration: 0.66,  // 必须 > windup
+    // 「照」= 把玩家此刻的面板抄一份过来（阿井那句「别拼命变强了」的机制版：
+    // 你越强，它越强 —— 唯独这一只怪的强度和玩家的养成成正比）。
+    // ⚠️ 抄的是**生成那一刻**的面板，每 every 秒重照一次（中途吃了三选一也会跟上）；
+    // 血量只在生成时算（重照不回血也不扣血，否则「照一下就满血」太赖）。
+    mirror: {
+      every: 8.0,
+      hpRatio: 0.6, hpCap: 26, hpFloor: 6,     // 血 = 玩家最大生命 ×0.6，夹在 6~26
+      dmgRatio: 0.8, dmgFloor: 2, dmgCap: 12,  // 攻击 = 玩家攻击 ×0.8
+      speedRatio: 1.0,                          // 移速照抄 → 跑是跑不掉的，只能定住/击退
+      copyCrit: true,                           // 暴击率也抄
+    },
+    spawnTime: 0.9,
+    deathTime: 1.4,
+    selfDestruct: false,
+    color: 0x9fe8ff,        // 井水的冷青
+    tint: 0xdff0ff,
+    glow: { color: 0x2a6a88, intensity: 0.9 },
+    phantom: 0.62,          // 第 107 块：半透明（它是一层水影，不是实体）
+    animFamily: 'frogbeast',
+    anim: {
+      walk: 'walk', idle: 'idle', attack: 'attack',
+      death: 'death', spawn: 'spawn',
+    },
+  },
+  addressee: {
+    name: '收件人',
+    // ⚠️ 第 107 块第一只**完全没有 glb** 的怪：它就是一张单子。
+    // 模型是程序化的（Box + canvas 画的表格，收件人那一栏留空），
+    // 见 buildSlipModel() —— 和木牌 / 台账 / 印章同一套「零资产」思路。
+    proc: 'slip',
+    hover: 1.35,            // 飘在空中（它不是走路的，是飘的）
+    sourceHeight: 1.55,     // 程序化模型按世界单位写死（见 buildSlipModel），所以 s === 1
+    height: 1.55,
+    radius: 0.62,
+    hp: 6,
+    armor: 0,
+    speed: 1.15,
+    attackRange: 9.0,       // 远远地就能给别的怪填名字
+    keepDistance: 6.0,      // 躲着玩家走
+    damage: 0,              // 它自己一下都不打人
+    attackInterval: 5.0,
+    windup: 0.70,
+    attackDuration: 1.10,
+    // 「填名」：给场上另一只怪写上名字 —— 被写上的那只，
+    // 接下来 time 秒里免疫你**环上占多数的那一类**伤害（物理 / 元素二选一）。
+    // 破法只有两条：换一类武器打它，或者先把收件人拆了。
+    fill: {
+      every: 5.0,
+      time: 6.0,
+      color: 0xf3e6c0,
+      ringColor: 0xfff2c8,
+    },
+    spawnTime: 0.8,
+    deathTime: 1.2,
+    selfDestruct: false,
+    color: 0xf3e6c0,        // 旧纸黄
+    glow: { color: 0x6a5a2a, intensity: 0.5 },
+    animFamily: null,       // 程序化网格没有骨骼动画（和并联体一个待遇）
+    anim: {
+      walk: 'idle', idle: 'idle', cast: 'idle',
+      death: 'death', spawn: 'spawn',
+    },
+  },
+  waiter: {
+    name: '等的那个',
+    file: 'assets/monsters/goleling.glb',
+    sourceHeight: 1.90,    // 实测
+    footY: 0.0,
+    height: 2.05,
+    radius: 0.62,
+    hp: 22,                // 站着不动、很好打 —— 但也很厚，不是顺手就能拆掉的
+    armor: 0.15,
+    speed: 0.0,            // ⚠️ 等待期间一步都不走（wait 分支里直接不调 moveToward）
+    attackRange: 2.0,
+    keepDistance: 0,
+    damage: 3,
+    attackInterval: 1.6,
+    windup: 0.42,
+    attackDuration: 0.80,
+    // 「等」：井壁上刻着「第 70 层，等」。它从上场就开始倒数，
+    // 头顶那圈金环从大缩到小 —— 缩没了它就活过来（狂暴）。
+    // 玩家每回合都要做一个判断：**现在花时间拆它**，还是**抢在它醒前清场**。
+    wait: {
+      time: 90,            // 秒
+      ringColor: 0xffd86b,
+      from: 3.2, to: 0.55, // 金环半径：越大说明还剩越多时间
+      callAt: [60, 30, 10],// 这三个点各报一次（「它动了一下」）
+    },
+    rage: {
+      speed: 1.98,         // 狂暴后的绝对移速（不再吃 cfg.speed）
+      dmgMul: 2.0,
+      heal: 1.0,           // 活过来那一下血回满
+      color: 0xff5a3c,
+    },
+    spawnTime: 1.2,
+    deathTime: 1.8,
+    selfDestruct: false,
+    color: 0xb8c4cc,       // 石灰色
+    tint: 0x9aa6ae,
+    glow: { color: 0x3a4a55, intensity: 0.6 },
+    animFamily: 'flying',
+    anim: {
+      walk: 'walk', idle: 'idle', attack: 'attack',
+      death: 'death', spawn: 'spawn',
+    },
+  },
+  echo: {
+    name: '回声',
+    file: 'assets/monsters/echo-slime.glb',
+    sourceHeight: 1.10,    // 实测
+    footY: 0.0,
+    height: 1.35,
+    radius: 0.60,
+    hp: 7,
+    armor: 0,
+    speed: 1.00,
+    attackRange: 2.0,
+    keepDistance: 8.0,     // 站得远远的：它的活儿是照，不是打
+    damage: 1,
+    attackInterval: 2.2,
+    windup: 0.40,
+    attackDuration: 0.80,
+    // 「照出过去的东西」：每隔 every 秒，从**这一局已经死掉的怪**里随机挑一种，
+    // 在它脚边照出一只半血版（井水把过去又浮了一遍）。
+    // 和重启体的区别：重启体是**自己**躺下再起来、最多一次；
+    // 回声是把**别人的**捡回来，而且只要它活着就一直照。
+    echo: {
+      every: 15.0,
+      hpRatio: 0.5,
+      cap: 4,              // 场上「照回来」的怪最多几只（超了就这次不照）
+      radius: 3.0,         // 落点在自己周围多少格内
+      color: 0x6fd8e8,
+    },
+    spawnTime: 1.0,
+    deathTime: 1.3,
+    selfDestruct: false,
+    color: 0x6fd8e8,
+    tint: 0xa8e8f2,
+    glow: { color: 0x1a6a80, intensity: 0.85 },
+    animFamily: 'slime',
+    anim: {
+      walk: 'walk', idle: 'idle', cast: 'attack',
+      death: 'death', spawn: 'spawn',
+    },
+  },
 };
 
 // ------------------------------------------------------------
@@ -1543,6 +1730,115 @@ function makeLedgerTexture() {
   return ledgerTex;
 }
 
+// ------------------------------------------------------------
+// 第十关「收件人」：一张飘在空中的单子（第 107 块）
+// ------------------------------------------------------------
+// 它是本作第一只**完全没有 glb** 的怪 —— 因为它就是一张纸。
+// 剧情出处：s10 井水浮出来的那三样东西之一 —— 「一张单子，备注栏写着
+// 『齁齁齁』，收件人那一栏空着」。所以贴图里**收件人那一行必须留空**，
+// 那是这只怪的全部意义（它拿这个名字去给别人填上）。
+//
+// ⚠️ 用薄 Box 而不是 Plane：零厚度的 Plane 侧过身去就是一条线（第 81 块的教训），
+// 而它是飘着转的，会经常侧过来。0.07 的厚度在任何角度都还是一张纸的样子。
+// ⚠️ 材质用 Standard（不是 Basic）：它要吃 tint / glow / 受击闪白，
+// 挂在 userData.isTag 上的那些挂件才不吃这些（那是为了保证贴图本色）。
+// ------------------------------------------------------------
+let slipTex = null;
+const SLIP_W = 1.05, SLIP_H = 1.45, SLIP_D = 0.07;
+
+function makeSlipTexture() {
+  if (slipTex) return slipTex;
+  if (typeof document === 'undefined') return null;
+  const W = 132, H = 182;
+  const cv = document.createElement('canvas');
+  cv.width = W; cv.height = H;
+  const g = cv.getContext('2d');
+  // 旧纸：米黄底 + 四角压深（像被人攥过）
+  g.fillStyle = '#efe2bd';
+  g.fillRect(0, 0, W, H);
+  const grd = g.createRadialGradient(W / 2, H / 2, W * 0.2, W / 2, H / 2, W * 0.78);
+  grd.addColorStop(0, 'rgba(255,250,232,0)');
+  grd.addColorStop(1, 'rgba(150,124,80,0.30)');
+  g.fillStyle = grd;
+  g.fillRect(0, 0, W, H);
+  // 纸的折痕
+  for (let i = 0; i < 3; i++) {
+    g.strokeStyle = 'rgba(120,96,58,0.16)';
+    g.lineWidth = 1;
+    const y = H * (0.3 + i * 0.25);
+    g.beginPath();
+    g.moveTo(0, y);
+    g.bezierCurveTo(W * 0.3, y + 3, W * 0.7, y - 3, W, y + 1);
+    g.stroke();
+  }
+  // 抬头（送货单三个字压在顶上）
+  g.fillStyle = '#3a2f1c';
+  g.font = '700 21px system-ui,"PingFang SC","Microsoft YaHei",sans-serif';
+  g.textAlign = 'center';
+  g.textBaseline = 'alphabetic';
+  g.fillText('送货单', W / 2, 30);
+  g.strokeStyle = 'rgba(58,47,28,0.55)';
+  g.lineWidth = 1.6;
+  g.beginPath();
+  g.moveTo(W * 0.16, 38);
+  g.lineTo(W * 0.84, 38);
+  g.stroke();
+  // 三行表格：只有「收件人」那一行是**空的**（这只怪的全部意义）
+  g.textAlign = 'left';
+  g.font = '600 15px system-ui,"PingFang SC","Microsoft YaHei",sans-serif';
+  g.fillStyle = '#4a3d26';
+  g.fillText('收件人', 12, 62);
+  g.strokeStyle = '#2f2617';
+  g.lineWidth = 1.4;
+  g.beginPath();
+  g.moveTo(56, 64);
+  g.lineTo(W - 14, 64);
+  g.stroke();                       // ← 空的那条横线，永远不填
+  g.fillText('备注', 12, 90);
+  g.fillStyle = '#6a5837';
+  g.fillText('齁齁齁', 56, 90);      // 剧情里那句备注
+  g.fillStyle = '#4a3d26';
+  g.fillText('件数', 12, 116);
+  g.fillText('1', 56, 116);
+  // 右下角：盖章处（也是空的）
+  g.strokeStyle = 'rgba(180,60,44,0.75)';
+  g.lineWidth = 2.2;
+  g.strokeRect(W - 46, 128, 34, 34);
+  g.strokeStyle = 'rgba(120,96,58,0.30)';
+  g.lineWidth = 1;
+  g.beginPath();
+  g.moveTo(12, 128);
+  g.lineTo(W - 56, 128);
+  g.stroke();
+  slipTex = new THREE.CanvasTexture(cv);
+  slipTex.colorSpace = THREE.SRGBColorSpace;
+  return slipTex;
+}
+
+// 单子本体：竖着的一张纸（底边在 y=0，飘起来靠 cfg.hover）+ 顶上一个深色夹子。
+// 尺寸直接按世界单位写（sourceHeight = height = 1.55，所以 spawn 里的 s === 1）。
+export function buildSlipModel() {
+  if (typeof document === 'undefined') return new THREE.Group();
+  const g = new THREE.Group();
+  const mat = new THREE.MeshStandardMaterial({
+    map: makeSlipTexture(), roughness: 0.92, metalness: 0.0,
+  });
+  const paper = new THREE.Mesh(new THREE.BoxGeometry(SLIP_W, SLIP_H, SLIP_D), mat);
+  paper.position.y = SLIP_H / 2;
+  paper.castShadow = true;
+  paper.receiveShadow = false;
+  paper.frustumCulled = false;
+  g.add(paper);
+  // 夹子：一小条深色，让它看起来是「被夹着的单子」而不是一张飞纸
+  const clipMat = new THREE.MeshStandardMaterial({ color: 0x4a4038, roughness: 0.6, metalness: 0.35 });
+  const clip = new THREE.Mesh(new THREE.BoxGeometry(SLIP_W * 0.34, 0.09, SLIP_D * 2.2), clipMat);
+  clip.position.set(0, SLIP_H - 0.06, 0);
+  clip.castShadow = true;
+  clip.frustumCulled = false;
+  g.add(clip);
+  return g;
+}
+
 // 把木牌挂到模型上。
 // ⚠️ 挂在 model 里要**反向缩放**：model.scale 是 (height/sourceHeight) ≈ 1.5，
 // 直接挂一块 0.38 的牌子会被放大成 0.57，而且位置也会跟着放大。
@@ -1639,12 +1935,18 @@ function attachTag(model, kind, s, cfg) {
 export async function buildPreviewModel(type) {
   const cfg = ENEMY_TYPES[type];
   if (!cfg) return null;
-  let gltf = previewGltf.get(cfg.file);
-  if (!gltf) {
-    gltf = await new GLTFLoader().loadAsync(withV(cfg.file));
-    previewGltf.set(cfg.file, gltf);
-  }
-  const model = cloneSkinned(gltf.scene);
+  let gltf = null;
+  // 第 107 块：程序化模型（收件人 `proc:'slip'`）没有 file，直接走局内同一套构建。
+  const model = cfg.proc
+    ? (cfg.proc === 'slip' ? buildSlipModel() : new THREE.Group())
+    : await (async () => {
+        gltf = previewGltf.get(cfg.file);
+        if (!gltf) {
+          gltf = await new GLTFLoader().loadAsync(withV(cfg.file));
+          previewGltf.set(cfg.file, gltf);
+        }
+        return cloneSkinned(gltf.scene);
+      })();
   const s = cfg.height / cfg.sourceHeight;
   model.scale.setScalar(s);
   // 脚底对齐（同 spawn）：实测脚底在原点以下的模型要往上抬一点，不然缩略图会「陷」进影子
@@ -1699,13 +2001,16 @@ export async function buildPreviewModel(type) {
   if (cfg.skin && cfg.skin.staff) attachStaff(model, model, cfg.skin.staff);
   // 绑定姿态是张牙舞爪的 T pose，不能直接用 —— 先推进 Idle 半拍再定格。
   // 第 52 块：新模型的 idle 叫 Flying_Idle / 带 CharacterArmature| 前缀，走别名表解析。
-  const aliases = resolveClipAliases(gltf, cfg);
-  const idleName = aliases.idle || ANIM.idle;
-  const clip = gltf.animations.find((c) => c.name === idleName) || gltf.animations[0];
-  if (clip) {
-    const mixer = new THREE.AnimationMixer(model);
-    mixer.clipAction(clip).play();
-    mixer.update(0.45);
+  // 第 107 块：程序化模型没有骨骼动画，跳过整段。
+  if (!cfg.proc) {
+    const aliases = resolveClipAliases(gltf, cfg);
+    const idleName = aliases.idle || ANIM.idle;
+    const clip = gltf.animations.find((c) => c.name === idleName) || gltf.animations[0];
+    if (clip) {
+      const mixer = new THREE.AnimationMixer(model);
+      mixer.clipAction(clip).play();
+      mixer.update(0.45);
+    }
   }
   // 第 80 块：把模型摆到几何中心上，并用一层 pivot 承担旋转。
   // Kenney 这类模型的顶点离原点很远（并联体实测中心在 x≈2 / z≈1.5 格，
@@ -1813,11 +2118,25 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
   const assets = new Map();   // type -> { scene, clips, height, minY }
   const list = [];            // 场上所有怪（含正在消散的）
   let uid = 0;
+  // 第 107 块：**本局死掉的怪种流水账**（回声要从这里挑一只照回来）。
+  // 只记 type 字符串，不记实例（实例早就回收了）；reset() 里清空 ——
+  // 上一局的死人不能跟着进下一局（第 86 块那条「局内状态跨局残留」的老坑）。
+  let deadLog = [];
 
   // ---------------- 加载 ----------------
   async function loadType(type) {
     if (assets.has(type)) return assets.get(type);
     const cfg = ENEMY_TYPES[type];
+    // 第 107 块：**程序化怪没有 glb**（目前只有第十关的「收件人」一张单子）。
+    // 它不进网络、没有动画，直接造一个 Group 当模型 —— 后面 spawn / 预载 /
+    // 图鉴走的都是同一条路，所以唯一要打标记的就是 `proc: true`（clone 时
+    // 不能用 SkeletonUtils，它没有骨架）。
+    if (cfg.proc) {
+      const built = cfg.proc === 'slip' ? buildSlipModel() : new THREE.Group();
+      const pd = { scene: built, clips: {}, aliases: {}, offset: null, proc: true };
+      assets.set(type, pd);
+      return pd;
+    }
     // 同一个 glb 只解析一次（同文件的怪共用一份模型与动画）。
     // 第 52 块换模型后 13 只怪已经各用各的文件，这条只对「以后又复用」的怪有用。
     for (const [k, v] of assets) {
@@ -1923,7 +2242,9 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
 
     // 克隆蒙皮模型（SkeletonUtils 会重建骨骼绑定，普通 clone 会共享骨架）
     // 缩放按实测的 sourceHeight 归一（见 ENEMY_TYPES 顶部注释）
-    const model = cloneSkinned(src.scene);
+    // 第 107 块：程序化怪（收件人）没有骨架，走普通 clone —— 它本来就是
+    // 一堆 Mesh，材质在下面 traverse 里照旧各自 clone（受击闪白才不连坐）。
+    const model = src.proc ? src.scene.clone(true) : cloneSkinned(src.scene);
     // opts.scale：同一个模型可以按实例缩放（第 53 块，菌王的四个卫队用 0.7）——
     // 只改这一只，不动 ENEMY_TYPES 里 warrior 本体的身高（第一关还在用）。
     const scaleMul = opts.scale ?? 1;
@@ -1975,6 +2296,15 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
       for (const m of mats) {
         m.transparent = true;
         m.opacity = 1;
+      }
+    }
+    // 第 107 块：「照影」是井水照出来的一层影子 —— 整体半透明（固定值，
+    // 不像雾鬼那样会淡进淡出）。depthWrite 保持 true：关掉的话它会被自己
+    // 后面那半张脸盖住，看起来像破了个洞。
+    if (cfg.phantom) {
+      for (const m of mats) {
+        m.transparent = true;
+        m.opacity = cfg.phantom;
       }
     }
     // 第 80 块：给「原点离几何体很远」的静态模型加一层 pivot。
@@ -2101,6 +2431,26 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
       ring,
       auraRing,
       guard: opts.guard || null,   // 霜牢卫队：{ master, angle, radius }（第 28 块）
+      // 第 107 块：这一只**出生时**的回合倍率，存下来给「回声」照抄。
+      // ⚠️ 第 83 块踩过一次：寄存处看守是**召唤**出来的，召唤时漏传倍率，
+      // 第 15 回合走出来的看守还是 20 点血（一关的成长全没吃到）。
+      // 回声照回来的怪同理 —— 不抄倍率就是「照出来一只第 1 回合的小兵」。
+      spawnScale: {
+        hp: opts.hpScale ?? 1,
+        dmg: opts.damageScale ?? 1,
+        haste: opts.hasteScale ?? 1,
+      },
+      filled: null,       // 收件人填的名：{ cls: 'phys'|'elem', t }（t = 剩余秒数）
+      filledRing: null,   // 被填名的怪头上那个空白框（程序化）
+      mirrorT: 0,         // 照影：下一次「重照」的倒计时
+      waitT: null,        // 等的那个：还剩多少秒活过来
+      waitCalls: 0,       // 等的那个：已经报过几次时
+      waitRing: null,     // 等的那个：头顶那圈倒计时金环
+      raged: false,       // 等的那个：已经活过来没有
+      echoCd: 3.0,        // 回声：下一次照出一只的倒计时（上场先给 3 秒适应）
+      echoed: false,      // 回声：这只怪是「被照回来」的（不再进 deadLog，见 die）
+      mirrorSized: false, // 照影：血量已经按玩家面板定过了吗（只定一次）
+      critRate: 0,        // 照影：从玩家那儿抄来的暴击率（别处不用）
       auraHaste: 0,      // 本帧站在谁的霜牢环里（由 update 里的 collectAuras 写）
       auraArmor: 0,
       glowT: 0,          // 被霜牢环加成的发光过渡（0~1，样貌改变用）
@@ -2180,6 +2530,15 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     // 第 82 块：并联体一落地就摆到离每一台都 ≥ minGap 的位置（见 seatArc）。
     // 放在 push 之后、onSpawn 之前：新怪信息卡弹出来时它已经在正确位置上了。
     if (cfg.arc) seatArc(e);
+    // 第 107 块：「等的那个」上一场就挂上那圈倒计时金环 —— 玩家第一眼就得
+    // 看见「这只怪身上有个在走的计时器」，而不是等它活过来才反应过来。
+    if (cfg.wait) {
+      e.waitRing = createRangeRing({
+        radius: cfg.wait.from, color: cfg.wait.ringColor,
+        opacity: 0.5, pulse: 0.06, y: 0.03,
+      });
+      root.add(e.waitRing.mesh);
+    }
     // 第 55 块：新怪第一次上场时通报一声 —— main.js 据此冻结世界、弹「它怎么打人」的信息卡。
     // 放在 push 之后：回调里就看得见这只怪已经在场上了（测试也靠这点断言）。
     if (onSpawn) onSpawn(e);
@@ -2203,6 +2562,20 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
   //   quiet 只扣血不播命中碎屑（连锁闪电等批量伤害用）
   function takeDamage(e, amount, crit = false, opts = {}) {
     if (!hittable(e)) return false;
+    // 第 107 块：被收件人填名的怪 —— 免掉**一类**伤害（'phys' 物理 / 'elem' 元素）。
+    // 免哪一类由填名那一刻玩家环上占多数的剑决定（见 performFill）。
+    // ⚠️ opts.cls 是**必须传**的：不传就是「不免疫」，漏一个调用点 =
+    // 那一路伤害能无视填名打进去，玩家会觉得「明明写着免疫怎么还掉血」。
+    // 全部伤害通路（近战 / 环剑 / 元素溅射 / 雷链 / 箭雨 / 炮台 / 地刺 / 毒）
+    // 都要带上它 —— 第 97 块「统一判据要找全调用点」是同一个教训。
+    if (e.filled && opts.cls && e.filled.cls === opts.cls) {
+      if (fx && !opts.quiet && !opts.dot) {
+        fx.text({ x: e.pos.x, z: e.pos.z }, '免', {
+          color: '#fff2c8', y: e.height * 0.95, size: 0.58,
+        });
+      }
+      return false;
+    }
     // 雾鬼隐身（第 35 块）：无形之物不受击 —— 近战、剑、炮台、法器全部打空。
     // 想打它只有两条路：等它显形，或者贴脸逼它显形。
     if (e.ghostHidden) return false;
@@ -2275,6 +2648,10 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     e.deathT = 0;
     e.hp = 0;
     e.bar.spr.visible = false;
+    // 第 107 块：记一笔「这一局死过这种怪」—— 回声照的就是这本账。
+    // ⚠️ 被照回来的怪**不再记**（它就是从这本账里出来的，再记一次会让
+    // deadLog 被同一种越滚越多，后期照出来的全是同一种）。
+    if (!e.echoed) deadLog.push(e.type);
     // 第 82 块：称量官一倒，**全场层数立刻清零** —— 这是第九关唯一的解，
     // 反馈必须发生在这一瞬间（没有「等一句 UI 提示」的余地）。
     if (e.cfg.weigh) clearWeigh(e);
@@ -3590,6 +3967,23 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
       // ---- 木鱼灵（第 77 块）：鱼型灵体只浮空、不自转 ----
       // 河豚模型的原点在身体正中，不抬就有一半埋进地里；这里纯粹上下呼吸。
       e.root.position.y = e.cfg.hover + Math.sin(e.t * 2.2) * 0.10;
+      // 第 107 块：程序化的「收件人」是一张纸 —— 光上下呼吸会像贴在空中的贴图，
+      // 再叠一层小幅的纸面翻动（绕 z 轴），看着才是「飘着的」。
+      // ⚠️ 只转 z（纸面翻），不转 y：y 是朝向，root 已经朝玩家转好了。
+      if (e.cfg.proc) {
+        const rig = e.modelPivot || e.model;
+        rig.rotation.z = Math.sin(e.t * 1.4 + e.driftPhase) * 0.16;
+      }
+    }
+
+    // ---- 第 107 块：被填名的免疫倒计时 ----
+    // 放在所有行为分支**之前**：不管这一帧它在追人、读条还是站桩，到期就得摘白框。
+    if (e.filled) {
+      e.filled.t -= dt;
+      if (e.filled.t <= 0) {
+        e.filled = null;
+        setFilledRing(e, false);
+      }
     }
 
     // ---- 冰缓：减速倒计时（移速在 moveToward 里按 slowT 折算） ----
@@ -3788,6 +4182,15 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     // ---- 第九关 · 称量官：给全场记账（第 82 块）----
     // 它没有 spell / projectile / volley，占不到「施法者」那条骨架，所以自己开一条。
     if (e.cfg.weigh) { handleWeigher(e, dt, ctx, dx, dz, dist); return; }
+
+    // ---- 第十关 · 四只（第 107 块）----
+    // ⚠️ 这四条必须排在「通用近战 / 施法者」之前：照影和「活过来的」等的那个
+    // 都是近战怪、收件人和回声都有 attack 分支 —— 掉进下面的通用分支就会
+    // 按 cfg.damage 打，照影抄的面板全部作废。
+    if (e.cfg.mirror) { handleMirror(e, dt, ctx, dx, dz, dist); return; }
+    if (e.cfg.fill) { handleAddressee(e, dt, ctx, dx, dz, dist); return; }
+    if (e.cfg.wait) { handleWaiter(e, dt, ctx, dx, dz, dist); return; }
+    if (e.cfg.echo) { handleEcho(e, dt, ctx, dx, dz, dist); return; }
 
     // ---- 雾鬼：隐身 / 显形循环（第 35 块；第 61 块改规则）----
     // 隐身时不可被索敌、打不着；**但贴脸不再强制显形**，只能等它自己露头。
@@ -4724,6 +5127,358 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
   }
 
   // ============================================================
+  // 第十关「塔顶井台」四只（第 107 块）
+  // ============================================================
+  // 四只全从 s10「井水照见的东西」那几句话里长出来，四条机制彼此不重叠：
+  //   照影    井里爬出来的那只蛙 —— 抄玩家的面板（你越强它越强）
+  //   收件人  那张收件人栏空着的单子 —— 给别的怪填名字，让它免掉你手上那一类伤害
+  //   等的那个 井壁上新刻的「第 70 层，等」—— 站着不动地倒数，数完就活过来
+  //   回声    井水照出过去的东西 —— 把这一局已经死掉的怪，再照回来一只
+  // ------------------------------------------------------------
+
+  // ---- ① 照影：「照」= 把玩家此刻的面板抄一份 ----
+  // 只在两个时机抄：生成那一刻（spawn 末尾调），之后每 every 秒重照一次。
+  // ⚠️ 血量**只在生成时算**：重照不回血也不扣血。否则每 8 秒照一下就等于
+  // 满血复活，玩家永远拆不掉它。
+  function reMirror(e, ctx) {
+    const st = ctx.playerStats ? ctx.playerStats() : null;
+    if (!st) return;
+    const m = e.cfg.mirror;
+    // ⚠️ 血量**只在第一次照的时候定**：spawn 那会儿还拿不到玩家面板（spawn 没有 ctx），
+    // 所以先按 cfg.hp 造出来，进第一帧 handleMirror 时才把 maxHp 换成「玩家生命的 60%」。
+    // 之后每次重照都不再动血量 —— 否则每 8 秒照一下等于满血复活，永远拆不掉。
+    if (!e.mirrorSized) {
+      e.mirrorSized = true;
+      const want = Math.max(m.hpFloor, Math.min(m.hpCap, (st.maxHp || 10) * m.hpRatio));
+      const ratio = e.maxHp > 0 ? e.hp / e.maxHp : 1;
+      e.maxHp = Math.max(1, Math.round(want * (e.spawnScale ? e.spawnScale.hp : 1)));
+      e.hp = Math.max(1, Math.round(e.maxHp * ratio));
+      e.bar.draw(e.hp / e.maxHp, e.hp, e.maxHp);
+    }
+    e.damage = Math.max(m.dmgFloor, Math.min(m.dmgCap, (st.attack || 1) * m.dmgRatio));
+    e.dmg0 = e.damage;
+    e.critRate = m.copyCrit ? Math.min(0.75, st.critRate || 0) : 0;
+    if (m.speedRatio) e.speed = Math.max(0.8, (st.moveSpeed || 2.2) * m.speedRatio);
+    if (fx) {
+      fx.ring(e.pos, { from: 0.35, to: 1.7, color: e.cfg.color, life: 0.5, opacity: 0.55, y: 0.06 });
+    }
+  }
+
+  function handleMirror(e, dt, ctx, dx, dz, dist) {
+    e.mirrorT -= dt;
+    if (e.mirrorT <= 0) {
+      e.mirrorT = e.cfg.mirror.every;
+      reMirror(e, ctx);
+    }
+    if (e.state === 'attack') {
+      if (!e.hitDone && e.t >= e.cfg.windup) {
+        e.hitDone = true;
+        // 落手那一帧再看一次距离：玩家已经挪开就打空（它贴身，这是主要失手原因）
+        const d2 = Math.hypot(ctx.playerPos.x - e.pos.x, ctx.playerPos.z - e.pos.z);
+        if (d2 <= e.cfg.attackRange + ctx.playerRadius) {
+          const crit = e.critRate > 0 && Math.random() < e.critRate;
+          ctx.hurtPlayer(crit ? e.damage * 1.6 : e.damage, e);
+        }
+      }
+      if (e.t >= e.cfg.attackDuration) {
+        e.state = 'chase';
+        e.t = 0;
+        e.attackCd = cdOf(e, e.cfg.attackInterval, 0.5);
+        e.currentAnim = e.cfg.anim.walk;
+        e.play(e.cfg.anim.walk, { fade: 0.16 });
+      }
+      return;
+    }
+    if (dist > e.cfg.attackRange) {
+      moveToward(e, dx, dz, dist, dt, ctx);
+      if (e.currentAnim !== e.cfg.anim.walk) {
+        e.currentAnim = e.cfg.anim.walk;
+        e.play(e.cfg.anim.walk, { fade: 0.2 });
+      }
+      return;
+    }
+    e.attackCd -= dt;
+    if (e.attackCd <= 0) {
+      e.state = 'attack';
+      e.t = 0;
+      e.hitDone = false;
+      e.currentAnim = e.cfg.anim.attack;
+      e.play(e.cfg.anim.attack, { once: true, fade: 0.1, duration: e.cfg.attackDuration });
+      return;
+    }
+    if (e.currentAnim !== e.cfg.anim.idle) {
+      e.currentAnim = e.cfg.anim.idle;
+      e.play(e.cfg.anim.idle, { fade: 0.2 });
+    }
+  }
+
+  // 被填名的那只怪头上挂一圈白框（持续显示，直到免疫到期自己消失）。
+  // 为什么是圆环不是方框：收件人填的是「名字」，圈住 = 被点名，
+  // 而且 createRangeRing 自带脉动，一眼能和地面上的紫阵 / 方印区分开。
+  function setFilledRing(e, on) {
+    if (!on) {
+      if (e.filledRing) {
+        e.root.remove(e.filledRing.mesh);
+        e.filledRing.dispose();
+        e.filledRing = null;
+      }
+      return;
+    }
+    if (e.filledRing) return;
+    const r = createRangeRing({ radius: 0.95, color: 0xfff2c8, opacity: 0.55, pulse: 0.10, y: 0.04 });
+    e.filledRing = r;
+    e.root.add(r.mesh);
+  }
+
+  // ---- ② 收件人：「填名」----
+  // 给场上另一只怪写上名字 → 那只怪接下来 time 秒免疫**你环上占多数的那一类**伤害。
+  // 之所以按「占多数」而不是「第一把」分：环上三把里两把是铁剑，玩家的实际手感
+  // 就是「我在用物理」—— 按第一把分会变成「明明在用元素却被免掉物理」。
+  function performFill(e, ctx) {
+    const f = e.cfg.fill;
+    // 从活着的、还没被填名的怪里挑一只（不填自己，也不重复填）
+    const pool = list.filter((o) => o !== e && hittable(o) && !o.filled && !o.cfg.boss);
+    if (!pool.length) {
+      if (fx) fx.ring(e.pos, { from: 0.3, to: 1.1, color: f.color, life: 0.35, opacity: 0.4, y: 0.06 });
+      return null;
+    }
+    // 挑离玩家最近的那只 —— 玩家正要打谁，就免谁
+    let best = pool[0], bd = Infinity;
+    for (const o of pool) {
+      const d = Math.hypot(ctx.playerPos.x - o.pos.x, ctx.playerPos.z - o.pos.z);
+      if (d < bd) { bd = d; best = o; }
+    }
+    const kinds = (ctx.ringKinds && ctx.ringKinds()) || [];
+    let elem = 0;
+    for (const k of kinds) if (k && k !== 'iron') elem++;
+    const cls = elem > kinds.length - elem ? 'elem' : 'phys';
+    best.filled = { cls, t: f.time };
+    setFilledRing(best, true);
+    if (fx) {
+      fx.ring(best.pos, { from: 0.3, to: 1.6, color: f.ringColor, life: 0.45, opacity: 0.7, y: 0.05 });
+      fx.text({ x: best.pos.x, z: best.pos.z }, cls === 'phys' ? '免物理' : '免元素', {
+        color: '#fff2c8', y: best.height * 1.15, size: 0.52,
+      });
+    }
+    return best;
+  }
+
+  function handleAddressee(e, dt, ctx, dx, dz, dist) {
+    const f = e.cfg.fill;
+    if (e.state === 'attack') {
+      if (!e.hitDone && e.t >= e.cfg.windup) {
+        e.hitDone = true;
+        performFill(e, ctx);
+      }
+      if (e.t >= e.cfg.attackDuration) {
+        e.state = 'chase';
+        e.t = 0;
+        e.attackCd = Math.max(0.5, (f.every - e.cfg.attackDuration) / (e.haste || 1));
+      }
+      return;
+    }
+    // 躲着玩家走（它自己一下都不打人，被贴脸就跑）
+    if (dist < e.cfg.keepDistance) {
+      moveToward(e, -dx, -dz, dist, dt, ctx);
+      return;
+    }
+    if (dist > e.cfg.attackRange) {
+      moveToward(e, dx, dz, dist, dt, ctx);
+      return;
+    }
+    e.attackCd -= dt;
+    if (e.attackCd <= 0) {
+      e.state = 'attack';
+      e.t = 0;
+      e.hitDone = false;
+      if (fx) {
+        fx.ring(e.pos, { from: 0.25, to: 1.3, color: f.color, life: e.cfg.windup, opacity: 0.5, y: 0.06 });
+      }
+    }
+  }
+
+  // ---- ③ 等的那个：「等」----
+  // 上场后一步不走，头顶那圈金环从大缩到小。缩没了 = 活过来（狂暴）。
+  // 玩家每回合都要判断：现在花时间拆它（22 血、站着不动很好打），
+  // 还是抢在它醒前把这一波清完。
+  function handleWaiter(e, dt, ctx, dx, dz, dist) {
+    const w = e.cfg.wait;
+    if (e.waitT == null) e.waitT = w.time;
+    if (!e.raged) {
+      e.waitT -= dt;
+      // 金环：从 from 缩到 to。玩家一眼能看出还剩多久（不是靠文字）
+      if (e.waitRing) {
+        const k = Math.max(0, Math.min(1, e.waitT / w.time));
+        e.waitRing.setRadius(w.to + (w.from - w.to) * k);
+      }
+      // 三个报时点各叫一声（「它动了一下」）—— 不动的话玩家会忘了它
+      if (e.waitCalls == null) e.waitCalls = 0;
+      const calls = w.callAt || [];
+      while (e.waitCalls < calls.length && e.waitT <= calls[e.waitCalls]) {
+        if (fx) {
+          fx.text({ x: e.pos.x, z: e.pos.z }, '它动了一下', {
+            color: '#ffd86b', y: e.height * 1.2, size: 0.62,
+          });
+        }
+        e.waitCalls++;
+      }
+      if (e.waitT <= 0) {
+        wakeWaiter(e, ctx);
+        return;
+      }
+      // 等待期间：连朝向都不改（它就是一块石头），但被打了会正常掉血
+      return;
+    }
+    // ---- 活过来之后：一只普通但很凶的近战怪 ----
+    if (e.state === 'attack') {
+      if (!e.hitDone && e.t >= e.cfg.windup) {
+        e.hitDone = true;
+        const d2 = Math.hypot(ctx.playerPos.x - e.pos.x, ctx.playerPos.z - e.pos.z);
+        if (d2 <= e.cfg.attackRange + ctx.playerRadius) ctx.hurtPlayer(e.damage, e);
+      }
+      if (e.t >= e.cfg.attackDuration) {
+        e.state = 'chase';
+        e.t = 0;
+        e.attackCd = cdOf(e, e.cfg.attackInterval, 0.5);
+        e.currentAnim = e.cfg.anim.walk;
+        e.play(e.cfg.anim.walk, { fade: 0.16 });
+      }
+      return;
+    }
+    if (dist > e.cfg.attackRange) {
+      moveToward(e, dx, dz, dist, dt, ctx);
+      if (e.currentAnim !== e.cfg.anim.walk) {
+        e.currentAnim = e.cfg.anim.walk;
+        e.play(e.cfg.anim.walk, { fade: 0.2 });
+      }
+      return;
+    }
+    e.attackCd -= dt;
+    if (e.attackCd <= 0) {
+      e.state = 'attack';
+      e.t = 0;
+      e.hitDone = false;
+      e.currentAnim = e.cfg.anim.attack;
+      e.play(e.cfg.anim.attack, { once: true, fade: 0.1, duration: e.cfg.attackDuration });
+      return;
+    }
+    if (e.currentAnim !== e.cfg.anim.idle) {
+      e.currentAnim = e.cfg.anim.idle;
+      e.play(e.cfg.anim.idle, { fade: 0.2 });
+    }
+  }
+
+  function wakeWaiter(e, ctx) {
+    const r = e.cfg.rage;
+    e.raged = true;
+    e.waitT = 0;
+    e.hp = e.maxHp;                    // 活过来那一下是满血的
+    e.speed = r.speed;                 // ⚠️ cfg.speed 是 0（等待期不走），这里给绝对值
+    e.damage = Math.round((e.dmg0 || e.cfg.damage) * r.dmgMul);
+    e.dmg0 = e.damage;
+    if (e.waitRing) {
+      e.root.remove(e.waitRing.mesh);
+      try { e.waitRing.dispose(); } catch (_) {}
+      e.waitRing = null;
+    }
+    // 自发光转暗红：一眼看出「它活了」（和称量官的金环是两套视觉，不会混）
+    for (const m of e.mats) {
+      if (!m.emissive) continue;
+      m.emissive.setHex(r.color);
+      m.emissiveIntensity = 1.15;
+    }
+    if (fx) {
+      fx.ring(e.pos, { from: 0.3, to: 3.0, color: r.color, life: 0.7, opacity: 0.9, y: 0.06 });
+      fx.burst(e.pos, { color: r.color, count: 20, speed: 3.0, life: 0.7, size: 0.13, y: 0.4, up: 1.8 });
+      fx.text({ x: e.pos.x, z: e.pos.z }, '它活过来了', { color: '#ff8a6a', y: e.height * 1.2, size: 0.85 });
+    }
+    if (ctx && ctx.onWaiterWake) ctx.onWaiterWake(e);
+  }
+
+  // ---- ④ 回声：「照出过去的东西」----
+  // 从**这一局已经死掉**的怪里随机挑一种，在脚边照出一只半血版。
+  // 和重启体的区别：重启体是**自己**躺下再起来（最多一次）；
+  // 回声是把**别人的**捡回来，而且只要它活着就一直照 —— 所以要先拆它。
+  function performEcho(e, ctx) {
+    const c = e.cfg.echo;
+    if (!deadLog.length) return null;
+    // 场上「照回来」的怪已经够多就这次不照（防止后期滚雪球）
+    let born = 0;
+    for (const o of list) if (o.echoed && hittable(o)) born++;
+    if (born >= c.cap) return null;
+    const type = deadLog[(Math.random() * deadLog.length) | 0];
+    if (!ENEMY_TYPES[type] || ENEMY_TYPES[type].boss) return null;
+    const a = Math.random() * Math.PI * 2;
+    const r = c.radius * (0.4 + Math.random() * 0.6);
+    let x = e.pos.x + Math.cos(a) * r;
+    let z = e.pos.z + Math.sin(a) * r;
+    // 夹回场地（回声自己站得远，容易贴边）
+    const lim = (ctx.arenaRadius || arenaR) - 1.2;
+    const d = Math.hypot(x, z);
+    if (d > lim) { x = (x / d) * lim; z = (z / d) * lim; }
+    const sc = e.spawnScale || { hp: 1, dmg: 1, haste: 1 };
+    const born2 = spawn(type, { x, z }, {
+      hpScale: sc.hp * c.hpRatio,
+      damageScale: sc.dmg,
+      hasteScale: sc.haste,
+    });
+    if (born2) {
+      born2.echoed = true;
+      if (fx) {
+        fx.spawnRing({ x, z }, c.color);
+        fx.text({ x, z }, '照回来了', { color: '#9fe8ff', y: 1.4, size: 0.55 });
+      }
+    }
+    return born2;
+  }
+
+  function handleEcho(e, dt, ctx, dx, dz, dist) {
+    const c = e.cfg.echo;
+    e.echoCd -= dt;
+    if (e.echoCd <= 0) {
+      e.echoCd = c.every;
+      if (e.state !== 'attack') performEcho(e, ctx);
+    }
+    // 站得远远的：被打到就往回退（它的活儿是照，不是打）
+    if (dist < e.cfg.keepDistance * 0.7) {
+      moveToward(e, -dx, -dz, dist, dt, ctx);
+      if (e.currentAnim !== e.cfg.anim.walk) {
+        e.currentAnim = e.cfg.anim.walk;
+        e.play(e.cfg.anim.walk, { fade: 0.2 });
+      }
+      return;
+    }
+    // 够得着就顺手来一下（贴脸时它是有近战的，只是不追）
+    if (dist <= e.cfg.attackRange) {
+      if (e.state === 'attack') {
+        if (!e.hitDone && e.t >= e.cfg.windup) {
+          e.hitDone = true;
+          ctx.hurtPlayer(e.damage, e);
+        }
+        if (e.t >= e.cfg.attackDuration) {
+          e.state = 'chase';
+          e.t = 0;
+          e.attackCd = cdOf(e, e.cfg.attackInterval, 0.5);
+        }
+        return;
+      }
+      e.attackCd -= dt;
+      if (e.attackCd <= 0) {
+        e.state = 'attack';
+        e.t = 0;
+        e.hitDone = false;
+        e.currentAnim = e.cfg.anim.cast;
+        e.play(e.cfg.anim.cast, { once: true, fade: 0.1, duration: e.cfg.attackDuration });
+      }
+      return;
+    }
+    if (e.currentAnim !== e.cfg.anim.idle) {
+      e.currentAnim = e.cfg.anim.idle;
+      e.play(e.cfg.anim.idle, { fade: 0.2 });
+    }
+  }
+
+  // ============================================================
   // 第八关 · 寄存处看守（第 83 块）：三套距离带攻击
   // ============================================================
   // 它是本关唯一由**玩法**召唤出来的怪（柜子满 8 块 → 封柜 5 秒 → 走出来），
@@ -5267,6 +6022,29 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
 
   function moveToward(e, dx, dz, dist, dt, ctx) {
     if (dist < 0.0001) return;
+    // 第 107 块：雪傀儡的「拉仇恨」。改法刻意收在一个口子上 —— 25 套行为全
+    // 从这里走向玩家，所以只在这里判断「这只怪**这一步**是不是正朝玩家走」：
+    // 移动方向与「怪 → 玩家」同向（dot > 0.45）就改成朝雪傀儡走；
+    // 逃跑向的怪（擦名者读条完往场外跑）方向相反，dot < 0，不受影响；
+    // 横向绕行（dot ≈ 0）也不管。场上没有雪傀儡时这一层是零开销的。
+    // ⚠️ 只改走位，不改出手：怪的攻击判定全对着玩家，「怪在打傀儡」由
+    // golem.js 的贴脸磨血模拟（见 golem.js 头注释，这里不重复）。
+    if (ctx && ctx.tauntAt) {
+      const g = ctx.tauntAt();
+      if (g) {
+        const pdx = ctx.playerPos.x - e.pos.x, pdz = ctx.playerPos.z - e.pos.z;
+        const pl = Math.hypot(pdx, pdz) || 1;
+        const dot = (dx / dist) * (pdx / pl) + (dz / dist) * (pdz / pl);
+        if (dot > 0.45) {
+          const gx = g.x - e.pos.x, gz = g.z - e.pos.z;
+          const gl = Math.hypot(gx, gz) || 1;
+          // 已经贴到傀儡脸上就不往前拱了（站定挨磨血的是傀儡）
+          if (gl > 0.85 + e.cfg.radius * 0.5) {
+            dx = gx; dz = gz; dist = gl;
+          } else return;
+        }
+      }
+    }
     // 冰缓：被冰剑命中后移速打折（slowFactor = 减速比例）
     // 第 82 块：第九关「记名」叠层也给移速（每层 per.speed，见 cfg.weigh）
     const namedBoost = 1 + (e.named || 0) * ((WEIGH() && WEIGH().per.speed) || 0);
@@ -5290,6 +6068,26 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     if (r > lim) {
       e.pos.x = (e.pos.x / r) * lim;
       e.pos.z = (e.pos.z / r) * lim;
+    }
+
+    // 第 107 块：绕开井口。井是**实体**，怪不会掉进去 —— 这一条是玩家能把它
+    // 当掩体用的前提（不然怪直接穿井追过来，掩体就是假的）。
+    // 做法和「绕开寄存柜」一致：踩进去就沿「井心 → 自己」方向顶回井沿外。
+    // ⚠️ 只顶位置、不改朝向，也不打断追击 —— 它不是被挡住，是绕过去。
+    const well = ctx.wellAt ? ctx.wellAt() : null;
+    if (well) {
+      const wx = e.pos.x - well.x, wz = e.pos.z - well.z;
+      const wd = Math.hypot(wx, wz);
+      const need = well.r + e.cfg.radius * 0.5;
+      if (wd < need) {
+        if (wd > 0.0001) {
+          e.pos.x = well.x + (wx / wd) * need;
+          e.pos.z = well.z + (wz / wd) * need;
+        } else {
+          e.pos.x = well.x + need;
+          e.pos.z = well.z;
+        }
+      }
     }
   }
 
@@ -5491,12 +6289,15 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
       if (e.ring) e.ring.dispose();
       if (e.auraRing) e.auraRing.dispose();
       if (e.namedRing) e.namedRing.dispose();   // 第 82 块：称量官的金环
+      if (e.waitRing) e.waitRing.dispose();     // 第 107 块：等的那个的倒计时金环
+      if (e.filledRing) e.filledRing.dispose(); // 第 107 块：被填名那个空白框
       disposeChargeLine(e);
       disposeLeapRing(e);
       e.mixer.stopAllAction();
       e.mixer.uncacheRoot(e.model);
     }
     list.length = 0;
+    deadLog.length = 0;   // 第 107 块：上一局的死人不进下一局
     for (const s of shots) scene.remove(s.mesh);
     shots.length = 0;
     for (const v of zones) scene.remove(v.disc, v.rim, v.tick);

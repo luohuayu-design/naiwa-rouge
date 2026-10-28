@@ -22,7 +22,7 @@
 //   drip 走的是和漏电地板完全独立的一条分支，互不影响：
 //   `isPowered` 仍然只服务于漏电地板（绝缘斗篷的判定照旧）。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=121';
+import * as THREE from '../lib/three.module.js?v=122';
 
 export function createHazards({ scene, fx, playerPos, playerRadius = 0.32, hurtPlayer }) {
   // 漏电地板 def: { x, z, r, cycle, on, warm, damage }
@@ -35,6 +35,7 @@ export function createHazards({ scene, fx, playerPos, playerRadius = 0.32, hurtP
   let defs = [];
   let nodes = [];
   let drips = [];           // 第 71 块：井底滴水落点（kind:'drip'）
+  let wells = [];           // 第 107 块：第十关「井口」（kind:'well'，塔顶那口井）
   let clock = 0;
   let tickT = 0;
   let playerHurt = 0;       // 本次「站在电上」累计时间（离开就清零）
@@ -56,6 +57,12 @@ export function createHazards({ scene, fx, playerPos, playerRadius = 0.32, hurtP
       if (d.warn) { scene.remove(d.warn); d.warn.material.dispose(); }
     }
     drips = [];
+    for (const w of wells) {
+      scene.remove(w.disc, w.rim);
+      w.disc.material.dispose();
+      w.rim.material.dispose();
+    }
+    wells = [];
   }
 
   function build(list) {
@@ -64,6 +71,34 @@ export function createHazards({ scene, fx, playerPos, playerRadius = 0.32, hurtP
     defs = [];
     drips = [];
     for (const d of src) {
+      // ---- 第 107 块：井口（kind:'well'）----
+      // 和另外两种都不一样：它**没有通电/断电循环**，从开局到关底一直在；
+      // 而且它不是「站在上面持续掉血」，而是掉进去一次疼一下、然后被吐回井沿。
+      if (d.kind === 'well') {
+        const w = {
+          x: d.x || 0, z: d.z || 0,
+          r: d.r || 2.4,
+          damage: d.damage != null ? d.damage : 3,
+          cd: 0,          // 掉血节流：被吐回去的那一瞬间不该连着掉
+          cdMax: d.cd != null ? d.cd : 1.2,
+        };
+        // 井里是真的黑（井水不反光，s10 原话「黑得像一块没有内容物的屏幕」）
+        const disc = new THREE.Mesh(geoDisc, new THREE.MeshBasicMaterial({
+          color: 0x04080a, transparent: true, opacity: 0.96, depthWrite: false,
+        }));
+        disc.scale.setScalar(w.r);
+        disc.position.set(w.x, 0.02, w.z);
+        // 井沿：一圈石头，看得见边界才敢贴着走
+        const rim = new THREE.Mesh(geoRim, new THREE.MeshBasicMaterial({
+          color: 0x8a9aa4, transparent: true, opacity: 0.55, depthWrite: false, side: THREE.DoubleSide,
+        }));
+        rim.scale.setScalar(w.r * 1.08);
+        rim.position.set(w.x, 0.03, w.z);
+        scene.add(disc, rim);
+        w.disc = disc; w.rim = rim;
+        wells.push(w);
+        continue;
+      }
       if (d.kind === 'drip') {
         // ---- 滴水落点：固定点(d.x,d.z) 或 随机落在 (cx,cz) 周围 spread 内 ----
         const dd = {
@@ -156,7 +191,9 @@ export function createHazards({ scene, fx, playerPos, playerRadius = 0.32, hurtP
   }
 
   function update(dt, extra = {}) {
-    if (!defs.length && !drips.length) return;   // 两种 hazard 都没有才跳过
+    // 第 107 块：第十关只有井（没有通电地板 / 滴水），井也算「有活儿」——
+    // 不然这个守卫把整个 update 拦死，井口的推开 / 掉血一帧都不会跑
+    if (!defs.length && !drips.length && !wells.length) return;
     clock += dt;
     const pp = extra.playerPos || playerPos;
     let onMe = false;
@@ -194,6 +231,38 @@ export function createHazards({ scene, fx, playerPos, playerRadius = 0.32, hurtP
           fx.burst({ x: pp.x, z: pp.z }, {
             color: 0x9ff4ff, count: 3, speed: 2.2, life: 0.22, size: 0.07, y: 0.25, up: 1.6,
           });
+        }
+      }
+    }
+
+    // ---- 第 107 块：井口 ----
+    // 掉进去 = 掉 damage 点血（无视防御，走 'hazard' 那条 damageTrue 通道）
+    // + 当场被吐回井沿。节流 cdMax 秒：不然贴着边走会每帧掉一次。
+    // ⚠️ 怪也会绕开井（enemy.js 的 moveToward 问 ctx.wellAt），所以井对玩家
+    // 不只是减益 —— 它是场上唯一的**实体掩体**，可以拿来把追兵甩到对面。
+    for (const w of wells) {
+      if (w.cd > 0) w.cd -= dt;
+      const dx = pp.x - w.x, dz = pp.z - w.z;
+      const d = Math.hypot(dx, dz);
+      if (d >= w.r) continue;
+      // 吐回井沿（沿「井心 → 玩家」方向推到 r 外一点点）
+      const k = d > 0.001 ? (w.r + 0.18) / d : 0;
+      if (k > 0) {
+        pp.x = w.x + dx * k;
+        pp.z = w.z + dz * k;
+      } else {
+        pp.x = w.x + w.r + 0.18;
+        pp.z = w.z;
+      }
+      if (w.cd <= 0) {
+        w.cd = w.cdMax;
+        // ⚠️ 掉井是「瞬间一下」，不能走底下 onMe 那条 0.6 秒 tick —— 人第一帧
+        // 就被吐回井沿了，onMe 立刻变 false，tick 一辈子攒不满 0.6 秒。
+        // 所以这里直接结算（'hazard' 通道无视无敌帧 / 无视防御，和漏电地板同待遇）。
+        hurtPlayer?.(w.damage, 'hazard');
+        if (fx) {
+          fx.ring({ x: w.x, z: w.z }, { from: w.r * 0.5, to: w.r * 1.15, color: 0x6fd8e8, life: 0.4, opacity: 0.7, y: 0.06 });
+          fx.text({ x: w.x, z: w.z }, '掉进去了', { color: '#9fe8ff', y: 1.2, size: 0.7 });
         }
       }
     }
@@ -262,6 +331,9 @@ export function createHazards({ scene, fx, playerPos, playerRadius = 0.32, hurtP
 
   return {
     build, update, clear, isPowered,
+    // 第 107 块：怪要绕开井口 —— 给 enemy.js 的 moveToward 问（和 depositHub 一个用法）
+    wellAt: () => (wells.length ? { x: wells[0].x, z: wells[0].z, r: wells[0].r } : null),
+    get wells() { return wells.map((w) => ({ x: w.x, z: w.z, r: w.r, damage: w.damage })); },
     get count() { return defs.length; },
     get onPlayer() { return currentOn; },
     get defs() { return defs.map((d) => ({ ...d })); },

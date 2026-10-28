@@ -1271,7 +1271,7 @@ export const STORY_CHAPTERS = [
   },
 
   {
-    id: 's10', no: 10, act: 2, levelId: null, atRound: null,
+    id: 's10', no: 10, act: 2, levelId: 10, atRound: 2,   // 第 107 块：接第十关「塔顶井台」
     icon: '💧', title: '井水照见的东西', who: '阿井', place: '骨塔顶层的井',
     story:
       '骨塔顶层也有一口井。\n'

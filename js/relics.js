@@ -16,12 +16,12 @@
 // 与环剑（自动索敌、消耗制）和炮台（固定点位）互补；价格定在
 // 商店里「买得起但要攒一攒」的档，让 9/12/15/18 回合的商店有取舍。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=121';
-import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=121';
-import { withV } from './assetUrl.js?v=121';   // 第 80 块：glb 带版本号，SW 才走缓存优先
-import { distance2D } from './stats.js?v=121';
-import { TAG_BASE, TAG_SEAL } from './deposit.js?v=121';   // 第 84 块：掉牌概率的真相源
-import audio from './audio.js?v=121';
+import * as THREE from '../lib/three.module.js?v=122';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=122';
+import { withV } from './assetUrl.js?v=122';   // 第 80 块：glb 带版本号，SW 才走缓存优先
+import { distance2D } from './stats.js?v=122';
+import { TAG_BASE, TAG_SEAL } from './deposit.js?v=122';   // 第 84 块：掉牌概率的真相源
+import audio from './audio.js?v=122';
 
 // 百分比文案（概率表里存的是 0.5 这种小数）
 const pct = (v) => `${Math.round(v * 100)}%`;
@@ -144,11 +144,29 @@ export const RELIC_DEFS = {
       `掉牌概率压到 ${pct(TAG_SEAL[3])} · 铃一响，牌子基本进不去`,
     ],
   },
+  // ---------------- 第十关新增（第 107 块）：傀儡术 ----------------
+  // 用户定案（原话）：「拥有之后技能 UI 多一个，有冷却时间，点击之后游戏暂停，
+  // 要求选择卡片铁傀儡或雪傀儡，铁傀儡不拉仇恨，但是会攻击，雪傀儡拉仇恨，
+  // 优先级高于主角，攻击会击退怪物，但是不会伤害」。同时只能站一只（传说卡
+  // 「上限 +1」后两只），死了等冷却再召。本文件只管「买没买 / 几级」，
+  // 傀儡本体与战斗在 golem.js，技能按钮在 skills.js。
+  // 等级成长：傀儡生命 ×[1/1.3/1.6]，铁傀儡攻击 ×[1/1.25/1.5]。
+  puppet: {
+    name: '傀儡术',
+    maxLevel: 3,
+    hpMul: [1, 1.3, 1.6],
+    atkMul: [1, 1.25, 1.5],
+    desc: [
+      '学会召傀：技能栏多一颗「傀儡术」，按下真暂停、在铁 / 雪傀儡里选一只召出。铁的不拉仇恨但一拳很疼；雪的被怪围殴、雪球击退不伤人。冷却 40 秒，死了可再召',
+      '傀儡更结实：生命 ×1.3、铁傀儡攻击 ×1.25',
+      '傀儡完全体：生命 ×1.6、铁傀儡攻击 ×1.5 —— 一拳 ≈ 你攻击的 2.25 倍',
+    ],
+  },
 };
 
 export function createRelicSystem({ scene, fx, enemies, onLanternReveal }) {
-  const levels = { spikes: 0, frost: 0, bell: 0, thorns: 0, stove: 0, lantern: 0, insulator: 0, woodfish: 0, seal: 0 };
-  const cds = { spikes: 0, frost: 0, bell: 0, thorns: 0, stove: 0, lantern: 0, insulator: 0, woodfish: 0, seal: 0 };
+  const levels = { spikes: 0, frost: 0, bell: 0, thorns: 0, stove: 0, lantern: 0, insulator: 0, woodfish: 0, seal: 0, puppet: 0 };
+  const cds = { spikes: 0, frost: 0, bell: 0, thorns: 0, stove: 0, lantern: 0, insulator: 0, woodfish: 0, seal: 0, puppet: 0 };
 
   // ---------------- 视觉 ----------------
   // 地刺（第 24 块）：KayKit「尖刺地板」里只取尖刺部分（CC0，带手绘贴图），
@@ -337,6 +355,34 @@ export function createRelicSystem({ scene, fx, enemies, onLanternReveal }) {
   scene.add(sealGroup);
   let sealSwing = 0;       // 摆动相位
 
+  // ---------------- 傀儡术（第 107 块）----------------
+  // 左肩上飘着的一只小木偶挂件（程序化：木色方块小人 + 头顶提线板 + 两根提线）。
+  // 它只是「你学会了召傀」的随身标志 —— 真正的傀儡由 golem.js 召到场上。
+  // 零厚度平面侧身会变一条线（老规矩），提线用薄 Box。
+  const puppetGroup = new THREE.Group();
+  {
+    const woodMat = new THREE.MeshLambertMaterial({ color: 0xa8834f });
+    const woodDark = new THREE.MeshLambertMaterial({ color: 0x6b5330 });
+    const head = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.09, 0.09), woodMat);
+    head.position.y = 0.155;
+    const body = new THREE.Mesh(new THREE.BoxGeometry(0.075, 0.12, 0.055), woodMat);
+    const armL = new THREE.Mesh(new THREE.BoxGeometry(0.028, 0.10, 0.028), woodDark);
+    const armR = armL.clone();
+    armL.position.set(-0.065, 0.02, 0); armR.position.set(0.065, 0.02, 0);
+    const legL = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.10, 0.03), woodDark);
+    const legR = legL.clone();
+    legL.position.set(-0.026, -0.10, 0); legR.position.set(0.026, -0.10, 0);
+    const bar = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.014, 0.014), woodDark);
+    bar.position.y = 0.30;
+    const strL = new THREE.Mesh(new THREE.BoxGeometry(0.008, 0.20, 0.008), woodDark);
+    const strR = strL.clone();
+    strL.position.set(-0.05, 0.20, 0); strR.position.set(0.05, 0.20, 0);
+    puppetGroup.add(head, body, armL, armR, legL, legR, bar, strL, strR);
+    puppetGroup.userData.limbs = [armL, armR, legL, legR];
+  }
+  puppetGroup.visible = false;
+  scene.add(puppetGroup);
+
   function buy(kind) {
     const def = RELIC_DEFS[kind];
     if (!def || levels[kind] >= def.maxLevel) return levels[kind] || 0;
@@ -354,6 +400,8 @@ export function createRelicSystem({ scene, fx, enemies, onLanternReveal }) {
       lanternRim.visible = true;
     }
     if (kind === 'seal') sealGroup.visible = true;
+    if (kind === 'puppet') puppetGroup.visible = true;
+
     return levels[kind];
   }
 
@@ -367,7 +415,7 @@ export function createRelicSystem({ scene, fx, enemies, onLanternReveal }) {
       && distance2D(at, e.pos) <= radius
     );
     for (const e of foes) {
-      enemies.takeDamage(e, dmg, false, { quiet: false });
+      enemies.takeDamage(e, dmg, false, { quiet: false, cls: 'phys' });
     }
     if (foes.length) audio.sfx('spikes');   // 第 25 块：破土闷响（打不到怪就不响，免得空转吵）
     // 视觉：尖刺从地里冒出来（主角周围一圈随机点位；有模型用尖刺丛，没加载好用石锥）
@@ -396,7 +444,7 @@ export function createRelicSystem({ scene, fx, enemies, onLanternReveal }) {
     for (const e of enemies.list) {
       if (e.state === 'dead' || e.state === 'spawn') continue;
       if (distance2D(at, e.pos) > radius) continue;
-      enemies.takeDamage(e, dmg, false, { dot: true });
+      enemies.takeDamage(e, dmg, false, { dot: true, cls: 'elem' });
       if (e.state !== 'dead') enemies.applySlow(e, { factor: def.slow[lv - 1], time: 0.7 });
     }
   }
@@ -458,7 +506,7 @@ export function createRelicSystem({ scene, fx, enemies, onLanternReveal }) {
     for (const e of enemies.list) {
       if (e.state === 'dead' || e.state === 'spawn') continue;
       if (distance2D(at, e.pos) > radius) continue;
-      enemies.takeDamage(e, dmg, false, { dot: true });
+      enemies.takeDamage(e, dmg, false, { dot: true, cls: 'elem' });
       n++;
     }
     if (n) {
@@ -489,7 +537,7 @@ export function createRelicSystem({ scene, fx, enemies, onLanternReveal }) {
       if (e.state === 'dead' || e.state === 'spawn') continue;
       if (distance2D(at, e.pos) > radius) continue;
       hit++;
-      enemies.takeDamage(e, dmg, false, { dot: true });
+      enemies.takeDamage(e, dmg, false, { dot: true, cls: 'elem' });
       if (e.state !== 'dead') enemies.applySlow(e, { factor: def.slow[lv - 1], time: 0.9 });
     }
     lanternPulse = 1;
@@ -519,7 +567,7 @@ export function createRelicSystem({ scene, fx, enemies, onLanternReveal }) {
     for (const e of enemies.list) {
       if (e.state === 'dead' || e.state === 'spawn') continue;
       if (distance2D(at, e.pos) > radius) continue;
-      enemies.takeDamage(e, dmg, false, { dot: true });
+      enemies.takeDamage(e, dmg, false, { dot: true, cls: 'elem' });
       n++;
     }
     if (n && fx) {
@@ -652,6 +700,17 @@ export function createRelicSystem({ scene, fx, enemies, onLanternReveal }) {
       sealGroup.rotation.z = Math.sin(sealSwing) * 0.20;
     }
 
+    // 傀儡术（第 107 块）：小木偶挂件飘在左肩上，四肢轻轻晃
+    if (levels.puppet > 0) {
+      const wob = Math.sin(performance.now() / 620) * 0.04;
+      puppetGroup.position.set(playerPos.x - 0.40, 1.02 + wob, playerPos.z + 0.14);
+      puppetGroup.rotation.z = wob * 0.8;
+      const limbs = puppetGroup.userData.limbs;
+      for (let i = 0; i < limbs.length; i++) {
+        limbs[i].rotation.x = Math.sin(performance.now() / 340 + i * 1.7) * 0.22;
+      }
+    }
+
     // 绝缘斗篷（第 63 块）：被动，只有踩在**通电**的地板上才发力
     const il = levels.insulator;
     if (il > 0 && hazards && hazards.isPowered && hazards.isPowered(playerPos.x, playerPos.z)) {
@@ -715,6 +774,7 @@ export function createRelicSystem({ scene, fx, enemies, onLanternReveal }) {
     levels.insulator = 0;
     levels.woodfish = 0;
     levels.seal = 0;
+    levels.puppet = 0;
     cds.spikes = 0;
     cds.frost = 0;
     cds.bell = 0;
@@ -738,6 +798,7 @@ export function createRelicSystem({ scene, fx, enemies, onLanternReveal }) {
     lanternPulse = 0;
     sealGroup.visible = false;
     sealSwing = 0;
+    puppetGroup.visible = false;
   }
 
   // 存档续玩（第 17 块）：按存档重放等级（buy 不扣钱，扣钱在外层）
@@ -750,6 +811,7 @@ export function createRelicSystem({ scene, fx, enemies, onLanternReveal }) {
     lanternGroup.visible = false;
     lanternRim.visible = false;
     sealGroup.visible = false;
+    puppetGroup.visible = false;
     let n = 0;
     for (const [k, lv] of Object.entries(saved || {})) {
       for (let i = 0; i < (lv | 0); i++) { buy(k); n++; }

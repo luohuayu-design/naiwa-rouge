@@ -34,15 +34,15 @@
 //       五种元素共用同一模型，克隆后改材质 color/emissive 染色区分；
 //       图标用 assets/weapons/icon-*.svg。加载失败时用双盒拼占位剑。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=121';
-import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=121';
-import { withV } from './assetUrl.js?v=121';   // 第 80 块：glb 带版本号，SW 才走缓存优先
-import { SWORD_KINDS, KIND_ORDER } from './swordKinds.js?v=121';
-import { rollSwordDamage } from './weaponStats.js?v=121';
-import audio from './audio.js?v=121';
+import * as THREE from '../lib/three.module.js?v=122';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=122';
+import { withV } from './assetUrl.js?v=122';   // 第 80 块：glb 带版本号，SW 才走缓存优先
+import { SWORD_KINDS, KIND_ORDER } from './swordKinds.js?v=122';
+import { rollSwordDamage } from './weaponStats.js?v=122';
+import audio from './audio.js?v=122';
 // 第 106 块：环剑命中数 / 累计伤害两条成就的记账。
 // profile.js 不反向依赖 weapon.js，这里加导入不会成环。
-import { bumpStat } from './profile.js?v=121';
+import { bumpStat } from './profile.js?v=122';
 
 // 轨道半径（世界单位）：贴着主角攻击范围环内侧转，视觉上「护体剑气」
 const ORBIT_R = 1.7;
@@ -332,7 +332,7 @@ export function createWeaponSystem({ scene, stats, wstats, fx, enemies }) {
       let vis = 0;
       for (const tgt of targets) {
         const cd = dmg * ratio;
-        enemies.takeDamage(tgt, cd, false, { quiet: true });
+        enemies.takeDamage(tgt, cd, false, { quiet: true, cls: 'elem' });
         enemies.hitBubbles(tgt.pos.x, tgt.pos.z, 0.9, cd);   // 第 82 块：雷也能打到泡
         if (vis < MAX_BOLT_VIS) { bolt(e.pos, tgt.pos); vis++; }
       }
@@ -350,7 +350,7 @@ export function createWeaponSystem({ scene, stats, wstats, fx, enemies }) {
     let totalDmg = dmg;                       // 血剑按「这一剑打出的总伤害」回血
     for (const o of around) {
       if (o === e) continue;
-      enemies.takeDamage(o, splash, false, { quiet: true });
+      enemies.takeDamage(o, splash, false, { quiet: true, cls: 'elem' });
       totalDmg += splash;
     }
     // 第 82 块：元素波及**（这一圈也扫得到泡）** —— 判定半径 R 和 aroundPoint
@@ -395,7 +395,7 @@ export function createWeaponSystem({ scene, stats, wstats, fx, enemies }) {
   function hitEnemy(e, at, kind) {
     const roll = rollSwordDamage(wstats, { targetArmor: e.cfg.armor });
     const dmg = roll.damage;
-    enemies.takeDamage(e, dmg, roll.crit);
+    enemies.takeDamage(e, dmg, roll.crit, { cls: 'phys' });
     // 第 106 块：环剑命中数 + 累计伤害（成就 sword_5000 / dmg_*）。
     // 只记**直接命中**这一次，元素溅射不重复计 —— 不然「命中 5000 次」
     // 会被毒/冰那圈溅射灌水，和玩家体感的「挥了多少剑」对不上。

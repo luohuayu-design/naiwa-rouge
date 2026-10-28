@@ -13,13 +13,13 @@
 // （击杀 / 弹事件卡 / 选升级卡）。
 // ============================================================
 
-import { ENEMY_TYPES } from './enemy.js?v=121';
-import { SWORD_KINDS } from './swordKinds.js?v=121';
-import { RELIC_DEFS } from './relics.js?v=121';
-import { UPGRADES } from './upgrade.js?v=121';
-import { ALL_EVENTS } from './events.js?v=121';
-import { RARITIES } from './rarity.js?v=121';
-import { codexAll, codexCount } from './profile.js?v=121';
+import { ENEMY_TYPES } from './enemy.js?v=122';
+import { SWORD_KINDS } from './swordKinds.js?v=122';
+import { RELIC_DEFS } from './relics.js?v=122';
+import { UPGRADES } from './upgrade.js?v=122';
+import { ALL_EVENTS } from './events.js?v=122';
+import { RARITIES } from './rarity.js?v=122';
+import { codexAll, codexCount } from './profile.js?v=122';
 
 export const CODEX_TABS = [
   { id: 'enemies', name: '怪物' },
@@ -58,6 +58,30 @@ function enemySub(cfg) {
   if (cfg.weigh) {
     return statLine([['生命', cfg.hp], ['伤害', cfg.damage], ['速度', cfg.speed]])
       + ` · 每 ${cfg.weigh.every} 秒上称一次`;
+  }
+  // ---- 第十关四只（第 107 块）----
+  // 照影：数值行写的不是固定值 —— 它是照着玩家抄的，写固定值会骗人。
+  if (cfg.mirror) {
+    const m = cfg.mirror;
+    return `生命 你上限的 ${Math.round(m.hpRatio * 100)}% · 伤害 你攻击的 ${Math.round(m.dmgRatio * 100)}%`
+      + ` · 每 ${m.every} 秒重照一次 · 移速照抄`;
+  }
+  // 收件人：它不打人，数值行要把「多久填一个 / 免多久」写出来。
+  if (cfg.fill) {
+    return statLine([['生命', cfg.hp], ['伤害', 0], ['速度', cfg.speed]])
+      + ` · 每 ${cfg.fill.every} 秒填一个名字 · 免疫 ${cfg.fill.time} 秒`;
+  }
+  // 等的那个：等待期速度是 0，写 0 会让人以为它不动 —— 把「醒后」也写上。
+  if (cfg.wait) {
+    const r = cfg.rage;
+    return statLine([['生命', cfg.hp], ['伤害', cfg.damage], ['速度', 0]])
+      + ` · 等 ${cfg.wait.time} 秒 · 醒后 速度 ${r.speed} 伤害 ×${r.dmgMul}`;
+  }
+  // 回声：它站得远、只负责照，数值行要写周期。
+  if (cfg.echo) {
+    const c = cfg.echo;
+    return statLine([['生命', cfg.hp], ['伤害', cfg.damage], ['速度', cfg.speed]])
+      + ` · 每 ${c.every} 秒照回一只（半血，最多 ${c.cap} 只）`;
   }
   const line = statLine([['生命', cfg.hp], ['伤害', cfg.damage], ['速度', cfg.speed]]);
   // 并联体（第 80 块）：真正伤人的是电弧，不从这条线上说清楚，玩家会拿它当普通近战
@@ -102,6 +126,41 @@ function enemyDesc(cfg) {
   if (cfg.weigh) {
     const p = cfg.weigh.per;
     return `记账压力：它自己几乎不打人，活儿是给全场叠层 —— 每 ${cfg.weigh.every} 秒翻一次簿子，场上所有存活的怪一起加：移速 +${Math.round(p.speed * 100)}%、伤害 +${Math.round(p.damage * 100)}%、减伤 +${Math.round(p.armor * 100)}%，最多 ${cfg.weigh.cap} 层（被记名的怪脚下会长出一只金环，层数越大环越大）。拖着不管，同一批骷髅会每九秒换一副更凶的面孔；砍掉它，所有层当场清零。所以它躲得比谁都远，也只在你够不到它的时候最快活 —— 它翻开簿子站定那 ${cfg.attackDuration} 秒，就是这一关的输出窗口`;
+  }
+  // ---- 第十关四只（第 107 块）----
+  // ⚠️ desc 走 textContent：**不能写 HTML、不能写 ** 加粗**，写了玩家看到的就是字面符号。
+  if (cfg.mirror) {
+    const m = cfg.mirror;
+    return `养成压力：它是井水照出来的那个你 —— 生成时把你此刻的攻击、移速、暴击率抄一份，`
+      + `血是你生命上限的 ${Math.round(m.hpRatio * 100)}%（夹在 ${m.hpFloor} 到 ${m.hpCap} 之间）。`
+      + `你堆得越高，它打得越疼；每 ${m.every} 秒重照一次，中途吃了三选一变强，它也跟着变强。`
+      + `移速是照抄的，所以跑是跑不掉的 —— 只能靠定身、击退，或者干脆别堆那么高。`
+      + `它是这一关唯一一只「你的养成会反过来打你」的怪：阿井说的「别拼命变强了」，机制版就是它`;
+  }
+  if (cfg.fill) {
+    const f = cfg.fill;
+    return `换手压力：它自己一下都不打人，飘在后面给人填名字 —— 每 ${f.every} 秒给离你最近的一只怪填上名字，`
+      + `那只怪接下来 ${f.time} 秒免疫你环上占多数的那一类伤害（头上会挂一圈白框）。`
+      + `环上铁剑多就是免物理（近战、环剑、箭雨、炮台、地刺全打不动），`
+      + `元素剑多就是免元素（溅射、雷链、毒全打不动）。`
+      + `两个解法：换一类武器打，或者先把它拆了 —— 它只有 ${cfg.hp} 血，而且是躲着你走的`;
+  }
+  if (cfg.wait) {
+    const w = cfg.wait;
+    const r = cfg.rage;
+    return `取舍压力：井壁上刻着「第 70 层，等」。它从上场起站着不动，头上那圈金环一直在缩 —— `
+      + `缩没了它就活过来：血回满、移速 ${r.speed}、伤害 ×${r.dmgMul}。`
+      + `它 ${cfg.hp} 血、站着不动，是全场最好打的目标；问题只是你愿不愿意现在花这个时间。`
+      + `${(w.callAt || []).join(' / ')} 秒它会各动一下提醒你。`
+      + `所以这一关每一波都要做一个判断：先拆它，还是抢在它醒前把这一波清完`;
+  }
+  if (cfg.echo) {
+    const c = cfg.echo;
+    return `滚雪球压力：井水照出过去的东西 —— 它每 ${c.every} 秒从这一局已经死掉的怪里随机挑一种，`
+      + `在脚边照出一只半血版（带着当前回合的倍率，不是第 1 回合的小兵）。`
+      + `只要它活着就一直照，场上最多同时 ${c.cap} 只。`
+      + `和重启体的区别：重启体是自己躺下再起来、最多一次；回声是把别人的捡回来，而且不限次数。`
+      + `它只有 ${cfg.hp} 血，但站得极远（${cfg.keepDistance} 格外）—— 越晚拆它，场上的旧面孔越多`;
   }
   if (cfg.erase) return '损失压力：它从不还手，读条 4.5 秒后把你环上的一把剑「擦掉」，然后转身往场地外跑 —— 跑出去那把剑这一局就没了。冰剑冻住 / 震剑击退 / 冲过去砍死它，都行';
   if (cfg.reboot) return '耐心压力：打死不算完 —— 躺 4 秒后原地半血重启，而且比上一次更快（最多重启 2 次）。地上那圈红光就是倒计时，守着它补刀';
