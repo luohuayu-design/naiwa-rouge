@@ -25,15 +25,15 @@
 // 第四关三只（wraith/leaper/mender，第 35 块，第 52 块换模型），
 // 各自在下面 ENEMY_TYPES 里有详细注释。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=129';
-import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=129';
-import { clone as cloneSkinned } from '../lib/jsm/utils/SkeletonUtils.js?v=129';
-import { distance2D } from './stats.js?v=129';
-import { createRangeRing } from './rangeRing.js?v=129';
-import { withV } from './assetUrl.js?v=129';
+import * as THREE from '../lib/three.module.js?v=130';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=130';
+import { clone as cloneSkinned } from '../lib/jsm/utils/SkeletonUtils.js?v=130';
+import { distance2D } from './stats.js?v=130';
+import { createRangeRing } from './rangeRing.js?v=130';
+import { withV } from './assetUrl.js?v=130';
 // 第 114 块：誊录员落笔 / 收账人翻账簿的提示音（以前这个文件不放音效，
 // 忘了 import 会在落笔那一帧抛 ReferenceError，整帧 AI 全断 —— 别省这一行）
-import audio from './audio.js?v=129';
+import audio from './audio.js?v=130';
 
 // KayKit 模型正面朝 +Z；如果哪天换模型发现怪倒着走，把这里改成 Math.PI
 export const ENEMY_MODEL_YAW = 0;
@@ -2646,6 +2646,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
       ring,
       auraRing,
       guard: opts.guard || null,   // 霜牢卫队：{ master, angle, radius }（第 28 块）
+      elite: opts.elite || null,   // 第 115 块：精英光环配置（elite.js 的 AURA_DEFS 条目，null=普通怪）
       // 第 107 块：这一只**出生时**的回合倍率，存下来给「回声」照抄。
       // ⚠️ 第 83 块踩过一次：寄存处看守是**召唤**出来的，召唤时漏传倍率，
       // 第 15 回合走出来的看守还是 20 点血（一关的成长全没吃到）。

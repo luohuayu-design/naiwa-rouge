@@ -5,43 +5,43 @@
 // 目标是把三件事调顺：摇杆输入 → 角色速度/朝向 → 相机跟随。
 // 后续叠战斗时，只需要在 tick() 里加敌人更新与自动攻击，不用动输入层。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=129';
-import { buildNightScene } from './scene.js?v=129';
-import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=129';
+import * as THREE from '../lib/three.module.js?v=130';
+import { buildNightScene } from './scene.js?v=130';
+import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=130';
 // 第 80 块：给 glb 拼上版本号 → SW 缓存优先（详见 assetUrl.js）
-import { withV } from './assetUrl.js?v=129';
-import { createInput } from './input.js?v=129';
-import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=129';
-import { createStatView } from './statView.js?v=129';
-import { createWeaponStats } from './weaponStats.js?v=129';
-import { createFx } from './fx.js?v=129';
-import { createEnemySystem, ENEMY_TYPES } from './enemy.js?v=129';
+import { withV } from './assetUrl.js?v=130';
+import { createInput } from './input.js?v=130';
+import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=130';
+import { createStatView } from './statView.js?v=130';
+import { createWeaponStats } from './weaponStats.js?v=130';
+import { createFx } from './fx.js?v=130';
+import { createEnemySystem, ENEMY_TYPES } from './enemy.js?v=130';
 import {
   createLevel, LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVEL_5, LEVEL_6, LEVEL_7, LEVEL_8, LEVEL_9, LEVEL_10, LEVEL_11, LEVELS_BY_ID, DIFFS, setDifficulty, getDifficulty, roundScale, levelStats, levelTypes,
-} from './wave.js?v=129';
-import { createRangeRing } from './rangeRing.js?v=129';
-import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=129';
-import { createWeaponSystem } from './weapon.js?v=129';
-import { createArrowRainSystem } from './arrowRain.js?v=129';
-import { SWORD_KINDS } from './swordKinds.js?v=129';
-import { createGoldSystem } from './gold.js?v=129';
-import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW, SHOP_PINNED } from './shop.js?v=129';
-import { createTurretSystem, TURRET } from './turret.js?v=129';
-import { createRelicSystem, RELIC_DEFS } from './relics.js?v=129';
-import { createGolemSystem } from './golem.js?v=129';   // 第 107 块：法器「傀儡术」的铁 / 雪傀儡
-import { createHazards } from './hazards.js?v=129';
-import { createFogSystem } from './fog.js?v=129';    // 第 114 块：第十一关的雾
-import { createMineSystem } from './mine.js?v=129';  // 第 114 块：第 11 件法器「墨丸」
-import { createDeposit, tagChance } from './deposit.js?v=129';   // 第 81 块：寄存柜；第 84 块：掉牌概率
-import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=129';
-import audio from './audio.js?v=129';
-import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=129';
+} from './wave.js?v=130';
+import { createRangeRing } from './rangeRing.js?v=130';
+import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=130';
+import { createWeaponSystem } from './weapon.js?v=130';
+import { createArrowRainSystem } from './arrowRain.js?v=130';
+import { SWORD_KINDS } from './swordKinds.js?v=130';
+import { createGoldSystem } from './gold.js?v=130';
+import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW, SHOP_PINNED } from './shop.js?v=130';
+import { createTurretSystem, TURRET } from './turret.js?v=130';
+import { createRelicSystem, RELIC_DEFS } from './relics.js?v=130';
+import { createGolemSystem } from './golem.js?v=130';   // 第 107 块：法器「傀儡术」的铁 / 雪傀儡
+import { createHazards } from './hazards.js?v=130';
+import { createFogSystem } from './fog.js?v=130';    // 第 114 块：第十一关的雾
+import { createMineSystem } from './mine.js?v=130';  // 第 114 块：第 11 件法器「墨丸」
+import { createDeposit, tagChance } from './deposit.js?v=130';   // 第 81 块：寄存柜；第 84 块：掉牌概率
+import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=130';
+import audio from './audio.js?v=130';
+import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=130';
 // 第 62 块：回血技能（第四关通关后永久解锁，回 5 点 / CD 25 秒）
-import { createHealSkill, HEAL_AMOUNT, HEAL_CD } from './healSkill.js?v=129';
+import { createHealSkill, HEAL_AMOUNT, HEAL_CD } from './healSkill.js?v=130';
 // 第 62 块：民心专属事件（升档走良性池、掉档走恶性池）
-import { repPoolForTier, REP_GOOD, REP_BAD } from './repEvents.js?v=129';
+import { repPoolForTier, REP_GOOD, REP_BAD } from './repEvents.js?v=130';
 // 第 62 块：攻略面板（战败提示上的「查看攻略」，手风琴三组）
-import { renderGuide, GUIDE_SECTIONS } from './guide.js?v=129';
+import { renderGuide, GUIDE_SECTIONS } from './guide.js?v=130';
 import {
   settings as readSettings, setSetting, save as saveProfile, profile,
   bumpStat, setStatMax, codexAdd, codexCount, countCard, unlockAch, hasAch, addBones, bones, resetAll,
@@ -56,32 +56,32 @@ import {
   hintSeen, markHintSeen,                  // 第 65 块：一次性提示卡
   markLevelClear, levelCleared, clearCount, // 第 94 块：通关过哪些关（成就用）
   getStatAdmin, setStatAdmin, resetStatAdmin, // 第 95 / 98 块：管理员模式二（手改最终值 → 存追加项，基础值不动）
-} from './profile.js?v=129';
+} from './profile.js?v=130';
 // 第 44 块：礼包兑换（码表只有哈希，明细在 gift.js 顶部注释）
-import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=129';
+import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=130';
 // 第 46 块：音效包（抽象奶蛙音效包 —— 4 段奶蛙叫声，通关第一关解锁）
-import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=129';
-import * as runSave from './runSave.js?v=129';
+import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=130';
+import * as runSave from './runSave.js?v=130';
 // 第 78 块：存档导出 / 导入。数据逻辑全在这个模块里（不碰 DOM），这里只接按钮
-import * as saveIO from './saveIO.js?v=129';
+import * as saveIO from './saveIO.js?v=130';
 import {
   CAMPFIRE, CAMP_STEP, campBuy, campOwned, campLevel,
   campCost, campApply, bonesFor, diffBoneMul, levelBoneMul, coinBones, BONE,
-} from './campfire.js?v=129';
+} from './campfire.js?v=130';
 // 第 23 块：永夜火种（通关白给的 3 次永久三选一）
 import {
   BOONS, BOON_BY_ID, BOON_PICKS, boonOwned, boonStacks, boonPending, boonTotalStacks,
   grantBoons, rollBoons, takeBoon, applyBoons, boonStackText,
-} from './boons.js?v=129';
+} from './boons.js?v=130';
 // 第 21 块：夜行诅咒（自选 debuff 换骨币倍率）
-import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=129';
+import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=130';
 // 第 22 块：种子与每日挑战
 import {
   DAILY_RULES, dayKey, dayText, dailySeed, seedCode, pickDailyCurses,
   seedFromText, pickSeedRules, loadSeedRecords, saveSeedRecord, pruneSeeds,
   dailyRecord, saveDailyRecord, pruneDaily, makeRng,
-} from './seed.js?v=129';
-import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=129';
+} from './seed.js?v=130';
+import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=130';
 // 第 58 块：局外商店 · 宝箱（花骨币买，开箱随机给永久属性 / 永久法器 / 技能CD缩短）
 import {
   BOXES, BOX_BY_ID, buyBox, rollBox, metaApplyStats, applyMeta,
@@ -91,36 +91,46 @@ import {
   boxPoolEntries,
   // 第 105 块：属性幅度统一系数（UI 显示的「强度 ×」必须和实际算法同源）
   boxMag,
-} from './metaShop.js?v=129';
+} from './metaShop.js?v=130';
 // 第 59 块：每日签到（以周为单位，周一 00:00 重置）
 // 第 105 块：固定 +20 改成每天随机 0~100；里程碑 3/5/7 天 → 100 / 150 骨币 + 一次永夜火种
 import {
   SIGN_BONES_MIN, SIGN_BONES_MAX, weekCells, signSummary, signToday, signedToday,
-} from './signin.js?v=129';
+} from './signin.js?v=130';
 // 第 94 块：成就（八类 × 三档骨币奖励）
 // 第 94-2 块：骨币改成**手动领取**（achPending / achClaim），老用户补发走 achMigrate
 import {
   ACHS, ACH_CATS, ACH_TIERS, ACH_COUNT, achById, achsByCat, achTier,
   achPending, achPendingBones, achClaim, achClaimAll, achClaimed, achMigrate,
-} from './achievements.js?v=129';
+} from './achievements.js?v=130';
 // 第 94 块：通用手风琴（盲盒奖池与成就面板共用，不复制第三份引擎）
-import { renderAccordion } from './accordion.js?v=129';
+import { renderAccordion } from './accordion.js?v=130';
 // 第 94 块：每日任务（简单 3 + 中等 1 + 困难 1，每天 0 点刷新）
 import {
   DQ_TIERS, DQ_BONES, dqTasks, dqPump, dqSave, dqClaim, dqClaimAll,
   dqPending, dqGained, dqMsLeft, dayKeyOf, dqTier, dqTaskName,
   dqState, dqForceReroll, dqReset,   // 调试口：跨天重掷 / 整条重置
-} from './dailyQuest.js?v=129';
+} from './dailyQuest.js?v=130';
 import {
   EVENTS, ALL_EVENTS, getEventById, pickEvent, effectLines,
   choiceHint, canAfford, costShort, REP_MIN, REP_MAX, REP_START,
   isTalk, eventChoices, resolveRoll, mergeEffects,
-} from './events.js?v=129';
+} from './events.js?v=130';
 // 第 32 块：主线《笑不出来的那一夜》（18 夜，一夜一关，前 3 夜已有关卡）
 import {
   STORY_ARC, STORY_CHAPTERS, STORY_ENDINGS, MARK_INFO,
   storyChapterAt, storyChapterById, storyEndingKey,
-} from './story.js?v=129';
+} from './story.js?v=130';
+// 第 115 块：九套玩法系统引擎（合成台 / 元素反应 / 精英怪 / 天气 / 音乐盒 / 手感四件套）
+import { createCraftingSystem } from './crafting.js?v=130';
+import { createReactionSystem } from './elementReaction.js?v=130';
+import { createEliteSystem } from './elite.js?v=130';
+import { createWeatherSystem } from './weather.js?v=130';
+import { createMusicboxSystem } from './musicbox.js?v=130';
+import { createSwordReverse } from './swordReverse.js?v=130';
+import { createDash } from './dash.js?v=130';
+import { createHeat } from './heat.js?v=130';
+import { pickLastWords, winLine } from './lastwords.js?v=130';
 
 // 标记模块已经跑起来了：index.html 的兜底自检靠它判断
 // 「模块根本没执行」还是「执行了但加载慢」。
@@ -790,6 +800,10 @@ async function boot() {
       // ⚠️ 只占**一行**：这一段是另一组（合成台）要动的地方，把逻辑收进
       // onKillExtra114() 里，冲突面就只有这一次调用。
       onKillExtra114(e);
+      // 第 115 块：合成台残片掉落（精英额外加成）+ 热度条连杀 + 精英词条掉落
+      crafting.onKill(!!e.cfg.elite);
+      heat.onKill();
+      if (e.cfg.elite) elite.dropMod();
       // 第 94 块：每日任务的击杀计数（每天 0 点自己清零）
       dqToast(dqPump({ kills: 1, [`kT:${e.type}`]: 1 }));
       // 第 84 块（用户定案）：掉牌改成**概率** —— 约一半的怪会留下牌子，不是每只都掉。
@@ -862,7 +876,12 @@ async function boot() {
 
   // ---------------- 武器：环剑 ----------------
   // 模型很小（~20KB），跟着怪物一起在加载段拿；失败时 weapon.preload 内部会占位降级
-  const weapon = createWeaponSystem({ scene, stats, wstats, fx, enemies });
+  const weapon = createWeaponSystem({
+    scene, stats, wstats, fx, enemies,
+    // 第 115 块：元素反应（元素剑命中挂印记）+ 剑阵反向（方向系数）
+    onElementHit: (kind, e) => reaction.apply(e, kind),
+    orbitSpeedMul: () => swordRev.dir * swordRev.speedMul(),
+  });
 
   // ---------------- 武器：箭雨（第 47 块） ----------------
   // 第二关起随环剑一并解锁；伤害吃 wstats（剑油/磨剑石同样强化它）
@@ -968,6 +987,141 @@ async function boot() {
   const deposit = createDeposit({
     scene, fx, playerPos: pos, playerRadius: BODY_R, hurtPlayer,
   });
+
+  // ============================================================
+  // 第 115 块：九套玩法系统引擎（接线）
+  // 全部零 import 业务模块，这里统一创建 + 注入回调。
+  // ============================================================
+
+  // —— 合成台：残片掉落 + 盲合成 ——
+  const crafting = createCraftingSystem({
+    rng: () => rngOf('crafting')(),
+    onShardDrop: (id) => {
+      const def = crafting.DEFS.SHARD_DEFS[id];
+      if (def) { showToast('捡到残片', `「${def.name}」—— ${def.theme}的碎片`); audio.sfx('card'); }
+    },
+    onCraftResult: (rec) => { /* UI 弹结果在 craft 调用处处理 */ },
+  });
+
+  // —— 元素反应：印记 + 四组反应 ——
+  const reaction = createReactionSystem({
+    rng: () => rngOf('reaction')(),
+    ctx: {
+      freeze: (e, sec) => enemies.applyFreeze(e, { time: sec }),
+      damage: (e, mul, opts) => { if (e && enemies.hittable(e)) enemies.takeDamage(e, Math.max(1, Math.round(wstats.get('damage') * mul)), false, opts); },
+      chain: (e, ratio) => {
+        const targets = enemies.chainTargets(e, 3, 5);
+        for (const t of targets) enemies.takeDamage(t, Math.max(1, Math.round(wstats.get('damage') * ratio)), false, { quiet: true, cls: 'elem' });
+      },
+      dot: (e, dot) => enemies.applyDot(e, dot),
+      heal: (amt) => { stats.heal(amt); renderHud(); },
+      knock: (e, dist) => enemies.knockback(e, pos.x, pos.z, dist),
+      zone: (e, r, dmg) => {
+        const around = enemies.list.filter((o) => o !== e && enemies.hittable(o) && Math.hypot(o.pos.x - e.pos.x, o.pos.z - e.pos.z) <= r);
+        for (const o of around) enemies.takeDamage(o, Math.max(1, Math.round(wstats.get('damage') * dmg)), false, { quiet: true, cls: 'elem' });
+        if (fx) fx.ring(e.pos, { from: 0.3, to: r, color: 0xb08cff, life: 0.3, opacity: 0.6, y: 0.06 });
+      },
+    },
+  });
+
+  // —— 精英怪：光环 + 词条 ——
+  const elite = createEliteSystem({
+    rng: () => rngOf('elite')(),
+    onElite: (el) => { /* 精英刷出，标记在 wave 层处理 */ },
+    onModDrop: (id) => { const def = elite.DEFS.MOD_DEFS[id]; if (def) showToast('精英掉落', `「${def.name}」—— ${def.desc}`); },
+  });
+
+  // —— 天气：每关 roll ——
+  const weather = createWeatherSystem({ rng: () => rngOf('weather')() });
+
+  // —— 音乐盒：跨局收集 ——
+  const musicbox = createMusicboxSystem({
+    onUnlock: (track) => { showToast('解锁曲目', `《${track.name}》已收录进音乐盒`); audio.sfx('upgrade'); },
+  });
+  // 从 profile 恢复收集进度
+  musicbox.restore({ collected: profile().musicbox.collected || [] });
+
+  // —— 剑阵反向：方向切换 ——
+  const swordRev = createSwordReverse({
+    onFlip: (dir) => { if (dir < 0) audio.sfx('card'); },
+  });
+
+  // —— 冲刺斩：双推位移 ——
+  const dash = createDash({
+    onDash: (dir) => { audio.sfx('swordHit'); },
+  });
+
+  // —— 热度条：连杀 ——
+  const heat = createHeat({
+    onChange: (h) => { renderHeatBar(h); },
+  });
+
+  // 热度条 UI 渲染（复用 HUD，简洁一行提示）
+  let heatBarEl = document.getElementById('heatBar');
+  let heatChipEl = document.getElementById('heatChip');
+  function renderHeatBar(h) {
+    if (!heatBarEl) heatBarEl = document.getElementById('heatBar');
+    if (!heatChipEl) heatChipEl = document.getElementById('heatChip');
+    if (!heatBarEl) return;
+    heatBarEl.style.width = (heat.ratio * 100).toFixed(0) + '%';
+    // 热度条 + 容器：有热度才显示，0 热度整体隐藏
+    const show = h > 0;
+    if (heatChipEl) heatChipEl.style.display = show ? 'flex' : 'none';
+    heatBarEl.style.display = show ? 'block' : 'none';
+  }
+
+  // —— 第 115 块：音乐盒音符（关卡里撒金色小音符，走近拾取）——
+  const musicNotes = [];   // { noteId, mesh }
+  function scatterMusicNotes() {
+    // 先清掉上一关的
+    for (const n of musicNotes) { if (n.mesh) scene.remove(n.mesh); }
+    musicNotes.length = 0;
+    // 每关撒 2~3 个音符（曲目音符池，已收集的跳过）
+    const allNotes = musicbox.DEFS.TRACKS.flatMap((t) => t.notes);
+    const remaining = allNotes.filter((n) => !musicbox.hasNote(n));
+    if (!remaining.length) return;
+    const count = Math.min(2, remaining.length);
+    for (let i = 0; i < count; i++) {
+      const noteId = remaining[Math.floor(Math.random() * remaining.length)];
+      // 音符位置：场地内随机（避开中心玩家出生点）
+      const ang = Math.random() * Math.PI * 2;
+      const r = 3 + Math.random() * (ARENA_R - 4);
+      const mesh = makeNoteMesh();
+      mesh.position.set(Math.cos(ang) * r, 1.2, Math.sin(ang) * r);
+      scene.add(mesh);
+      musicNotes.push({ noteId, mesh });
+    }
+  }
+  function makeNoteMesh() {
+    const g = new THREE.OctahedronGeometry(0.32, 0);
+    const m = new THREE.MeshBasicMaterial({ color: 0xffcc44 });
+    const mesh = new THREE.Mesh(g, m);
+    mesh.userData.isNote = true;
+    return mesh;
+  }
+  function updateMusicNotes(dt) {
+    if (!musicNotes.length) return;
+    for (let i = musicNotes.length - 1; i >= 0; i--) {
+      const n = musicNotes[i];
+      // 漂浮动画
+      n.mesh.position.y = 1.2 + Math.sin(performance.now() / 400 + i) * 0.2;
+      n.mesh.rotation.y += dt * 1.5;
+      // 拾取判定：主角走近 < 1.2
+      const dx = n.mesh.position.x - pos.x;
+      const dz = n.mesh.position.z - pos.z;
+      if (dx * dx + dz * dz < 1.2 * 1.2) {
+        const track = musicbox.collect(n.noteId);
+        if (track) showToast('解锁曲目', `《${track.name}》已收录进音乐盒`);
+        else audio.sfx('card');
+        // 持久化到 profile（跨局保留）
+        profile().musicbox.collected = Array.from(musicbox.DEFS.TRACKS.flatMap((t) => t.notes).filter((id) => musicbox.hasNote(id)));
+        saveProfile();
+        scene.remove(n.mesh);
+        musicNotes.splice(i, 1);
+      }
+    }
+  }
+
 
   // ============================================================
   // 第八关「寄存柜 · 取牌」：四位数字小游戏（第 83 块）
@@ -2438,6 +2592,12 @@ async function boot() {
     golems.reset();          // 第 107 块：场上傀儡与冷却 / 卡片加成也不带过去（法器等级随 relics 归零）
     mines.reset();           // 第 114 块：地上的墨丸 / 卡片加成 / 商店买断同样一局一清
     clearSteal();            // 第 114 块：收账人没收完的东西不带进新局（属性 mod 必须当场摘掉）
+    // 第 115 块：九套玩法系统的本局状态一局一清（音乐盒是局外档案，不在这里 reset）
+    crafting.reset();
+    elite.reset();
+    dash.reset();
+    heat.reset();
+    renderHeatBar(0);
 
     // ③ 局内计数与背包（时长 elapsed 不在这里归零 —— startPlay 里那一处负责，
     //    读档续算的路径也不会被误清）
@@ -3869,7 +4029,8 @@ async function boot() {
   // 面板/结算/标题页开着时先排队，等它们关掉再弹（别叠在商店上面）
   function wtBlocked() {
     return gameState === 'shop' || gameState === 'upgrade' || gameState === 'event'
-      || gameState === 'weapon' || gameState === 'title' || gameState === 'over';
+      || gameState === 'weapon' || gameState === 'title' || gameState === 'over'
+      || gameState === 'craft';
   }
 
   // 获得武器时调用：没教过的才排队；教过就直接接续 next（回合链不能断）
@@ -4514,6 +4675,48 @@ async function boot() {
     // 每日任务「一局里 2 个回合不掉血」）。回合开始而不是结束才归零，
     // 因为「结束」那一刻本回合的伤害已经全记完了。
     roundDmgTaken = 0;
+
+    // 第 115 块：精英怪 roll（20%）。中了就在本回合额外刷一只「精英」——
+    // 从本回合刷怪表里数量最多的近战怪里挑一种，体型 ×1.3 + 金描边 + 光环，
+    // 打死必掉一件本局词条。第一回合不刷（新手别一上来就被精英骑脸）。
+    if (roundNo > 1) {
+      const el = elite.rollElite();
+      if (el) {
+        spawnElite(roundNo, el);
+        showToast('精英现身', `一只「${el.def.name}」精英混进了这一波 —— 打死它掉词条`);
+      }
+    }
+  }
+
+  // 精英怪实际 spawn：挑本回合数量最多的怪型，带到场地边缘随机位置。
+  function spawnElite(roundNo, eliteCfg) {
+    const cfg = level.level.rounds[roundNo - 1] || {};
+    // 本回合数量最多的怪型（排除 gap/tip 这种非怪字段）
+    const EXCLUDE = new Set(['gap', 'tip']);
+    let bestType = 'warrior', bestN = -1;
+    for (const [k, v] of Object.entries(cfg)) {
+      if (EXCLUDE.has(k)) continue;
+      if (typeof v === 'number' && v > bestN) { bestN = v; bestType = k; }
+    }
+    if (!ENEMY_TYPES[bestType]) bestType = 'warrior';
+    // 出生：场地边缘随机角度（离玩家远一点）
+    const ang = Math.random() * Math.PI * 2;
+    const r = ARENA_R * 0.82;
+    const sc = roundScale(roundNo, level.level);
+    const e = enemies.spawn(bestType, { x: Math.cos(ang) * r, z: Math.sin(ang) * r }, {
+      scale: 1.3,
+      elite: eliteCfg.def,          // 挂光环配置（enemy.js 里 e.elite）
+      hpScale: sc.hp * 1.5,          // 精英更肉
+      damageScale: sc.damage,
+      speedScale: sc.speed,
+      hasteScale: sc.haste,
+    });
+    if (e) {
+      // 金描边：给精英怪所有材质加一圈金色 emissive（体感「这是精英」）
+      for (const m of e.mats) {
+        if (m.emissive) m.emissive.setHex(0xcc9900);
+      }
+    }
   }
 
   // ============================================================
@@ -4574,6 +4777,135 @@ async function boot() {
   }
   document.getElementById('shClose').addEventListener('click', closeShop);
   shopEl.addEventListener('click', (e) => { if (e.target === shopEl) closeShop(); });
+
+  // ============================================================
+  // 第 115 块：合成台（残片盲合成）
+  // 极简交互：打开弹窗 → 看残片库存 → 点「尝试合成」→ 系统自动用
+  // 「现有残片 + 已拥有武器/法器」匹配第一个能满足的配方，出结果（好坏随机）。
+  // 配方对玩家隐藏，赌的成分就是乐趣。
+  // ============================================================
+  const craftPanelEl = document.getElementById('craftPanel');
+  const craftListEl = document.getElementById('craftList');
+  const craftSubEl = document.getElementById('craftSub');
+  const craftFootEl = document.getElementById('craftFoot');
+  let craftOpen = false;
+
+  function renderCraft() {
+    const snap = crafting.shardSnapshot();
+    const ids = crafting.DEFS.SHARD_DEFS;
+    // 残片库存行
+    let html = '<div class="cr-section"><b>夜行残片</b><div class="cr-shards">';
+    for (const id of Object.keys(ids)) {
+      const n = snap[id] || 0;
+      html += `<span class="cr-shard${n > 0 ? ' has' : ''}">${ids[id].name} ×${n}</span>`;
+    }
+    html += '</div></div>';
+    // 武器 / 法器库存
+    const swords = weapon.owned;
+    const swordNames = [...new Set(swords)].map((k) => (SWORD_KINDS[k] ? SWORD_KINDS[k].name : k));
+    const relicLv = relics.levels();
+    const relicNames = Object.entries(relicLv).filter(([, v]) => v > 0).map(([k]) => (RELIC_DEFS[k] ? RELIC_DEFS[k].name : k));
+    html += `<div class="cr-section"><b>可用的剑</b><div class="cr-shards">${swordNames.length ? swordNames.join('、') : '（没有剑）'}</div></div>`;
+    html += `<div class="cr-section"><b>可用的法器</b><div class="cr-shards">${relicNames.length ? relicNames.join('、') : '（没有法器）'}</div></div>`;
+    // 合成按钮
+    html += `<button class="cr-btn" id="crDo" type="button">尝试合成</button>`;
+    craftListEl.innerHTML = html;
+    const btn = document.getElementById('crDo');
+    if (btn) btn.addEventListener('click', doCraft);
+  }
+
+  function doCraft() {
+    const snap = crafting.shardSnapshot();
+    const swords = weapon.owned;
+    const relicLv = relics.levels();
+    const ownedRelics = Object.keys(relicLv).filter((k) => relicLv[k] > 0);
+    // 遍历配方，找第一个「残片够 + 武器/法器满足」的
+    for (const r of crafting.DEFS.RECIPES) {
+      const m = r.match;
+      // 残片够不够
+      let okShards = true;
+      for (const [id, n] of Object.entries(m.shards)) { if ((snap[id] || 0) < n) { okShards = false; break; } }
+      if (!okShards) continue;
+      // 武器要求
+      if (m.weapon === null) { if (!swords.length) continue; }
+      else if (m.weapon) { if (!swords.includes(m.weapon)) continue; }
+      // 法器要求
+      if (m.relic === null) { if (!ownedRelics.length) continue; }
+      else if (m.relic !== undefined) { if (!ownedRelics.includes(m.relic)) continue; }
+      // 满足！合成
+      const rec = crafting.craft({ shards: m.shards, weapon: m.weapon === null ? swords[0] : m.weapon, relic: m.relic === null ? ownedRelics[0] : m.relic });
+      if (rec.outcome === 'accident') {
+        // 炸炉：全场怪受伤 + 玩家掉血
+        for (const e of enemies.list) if (enemies.hittable(e)) enemies.takeDamage(e, 3, false, { quiet: true });
+        hurtPlayer(1, 'craft');
+        craftSubEl.textContent = `炸炉！全场震荡，你也掉血了`;
+      } else if (rec.outcome === 'master') {
+        craftSubEl.textContent = `杰作！${rec.result.name} —— ${rec.result.desc}`;
+        audio.sfx('upgrade');
+      } else if (rec.outcome === 'normal') {
+        craftSubEl.textContent = `合成成功：${rec.result.name} —— ${rec.result.desc}`;
+        audio.sfx('upgrade');
+      } else {
+        craftSubEl.textContent = `赌输了：${rec.result.name} —— ${rec.result.desc}`;
+      }
+      // 应用结果（武器 / 法器）
+      applyCraftResult(rec);
+      renderCraft();
+      return;
+    }
+    // 没有配方能匹配
+    craftSubEl.textContent = '原料凑不出任何配方，再打点残片吧';
+    audio.sfx('deny');
+  }
+
+  function applyCraftResult(rec) {
+    const res = rec.result;
+    if (!res) return;
+    if (res.kind === 'sword') {
+      // 合成出新剑：加入环
+      weapon.addSword(res.sword);
+    } else if (res.kind === 'relic_buff') {
+      // 法器强化：等级 +1（buy 是 relics 对外唯一的加等级入口）
+      if (relics.buy) relics.buy(res.relic);
+    }
+    // junk 类（锈剑/无名剑/霉环）是负面结果：简化处理为「直接丢弃」，不进库存。
+  }
+
+  function openCraft() {
+    craftOpen = true;
+    craftPanelEl.classList.add('on');
+    craftPanelEl.setAttribute('aria-hidden', 'false');
+    gameState = 'craft';
+    input.joystick.release();
+    vel.set(0, 0, 0);
+    craftSubEl.textContent = '残片配武器法器，赌一把';
+    renderCraft();
+    audio.sfx('card');
+  }
+
+  function closeCraft() {
+    if (!craftOpen) return;
+    craftOpen = false;
+    craftPanelEl.classList.remove('on');
+    craftPanelEl.setAttribute('aria-hidden', 'true');
+    gameState = 'playing';
+  }
+
+  document.getElementById('craftClose').addEventListener('click', closeCraft);
+  craftPanelEl.addEventListener('click', (e) => { if (e.target === craftPanelEl) closeCraft(); });
+  const craftBtn = document.getElementById('craftBtn');
+  craftBtn.addEventListener('click', () => {
+    if (gameState === 'playing') openCraft();
+  });
+
+  // 第 115 块：剑阵反向按钮（环剑反向转 + 加速，冷却中点了没反应）
+  const revBtn = document.getElementById('revBtn');
+  revBtn.addEventListener('click', () => {
+    if (gameState !== 'playing') return;
+    if (swordRev.flip()) audio.sfx('card');
+  });
+
+
 
   function renderShop() {
     shGold.textContent = String(coins);
@@ -4949,6 +5281,11 @@ async function boot() {
     // 第 84 块：柜子是新建的，镇牌铃得按当前等级重新挂上去
     // （build 每次都造新柜子，新柜子的铃默认藏着）
     deposit.setSeal(relics.sealLevel());
+    // 第 115 块：每关 roll 一种天气（气氛 + 轻微数值微调，见 weather.js）
+    const wId = weather.roll();
+    if (wId !== 'clear') showToast('天气', weather.def().effect.visual);
+    // 第 115 块：音乐盒音符（每关撒几个，走近拾取）
+    scatterMusicNotes();
     // 右上角：第几关 + 地区名（"第五关 · 草甸路口" → "第五关" / "草甸路口"）
     const nm = String(level.level.name || '').split('·');
     if (whLevelEl) whLevelEl.textContent = (nm[0] || `第 ${curLevelId} 关`).trim();
@@ -7672,14 +8009,16 @@ async function boot() {
         : level.level.name);
     rsTitle.textContent = isWin ? '通 关' : '倒 下';
     rsTitle.classList.toggle('fail', !isWin);
-    rsSub.textContent = isWin
-      ? (curLevelId === 2
-        ? '骨塔里的三顶尖帽都倒了，庭院第一次安静下来'
-        : '夜色里的骷髅被清干净了，草地重新安静下来')
-      : (curLevelId === 2
-        ? '奶蛙被留在了骨塔的院子里……下次先切后排'
-        : '奶蛙被骷髅拖进了草丛……下一局记得边打边退');
-    rsGrid.textContent = '';
+    // 第 115 块：遗言系统 —— 失败时按本局收集生成遗言，通关时用统一通关文案。
+    let lastWords = isWin ? winLine() : pickLastWords({
+      swordKinds: new Set(weapon.owned).size,
+      relicCount: Object.values(relics.levels()).reduce((a, b) => a + (b || 0), 0),
+      shards: Object.values(crafting.shardSnapshot()).reduce((a, b) => a + b, 0),
+      coins,
+      round: level.roundNo,
+      kills,
+    });
+    rsSub.textContent = lastWords;
 
     const roundShown = Math.min(level.totals.rounds, Math.max(1, level.roundNo));
     // 首通判定（第 27 块）：永夜火种只有**本关首次通关**才发 —— 必须在
@@ -9008,6 +9347,25 @@ async function boot() {
       })),
       getYaw: () => yaw,
       getState: () => gameState,
+      // 第 115 块：九套玩法系统调试口（自动化测试用）
+      dbg115: {
+        shards: () => crafting.shardSnapshot(),
+        craft: (input) => crafting.craft(input),
+        heat: () => heat.heat,
+        heatRatio: () => +heat.ratio.toFixed(3),
+        heatSpeedMul: () => +heat.speedMul().toFixed(3),
+        weather: () => weather.get(),
+        weatherEffect: () => weather.effect(),
+        swordDir: () => swordRev.dir,
+        swordSpeedMul: () => swordRev.speedMul(),
+        dashDashing: () => dash.dashing,
+        dashCd: () => +dash.cd.toFixed(2),
+        eliteMods: () => elite.modSnapshot(),
+        musicNotes: () => profile().musicbox.collected || [],
+        musicUnlocked: () => musicbox.unlockedTracks().map((t) => t.id),
+        craftFromTest: (shards, weapon, relic) => crafting.craft({ shards, weapon, relic }),
+        spawnElite: (roundNo) => spawnElite(roundNo, { def: { name: '测试精英', aura: 'attackSpeed', value: 0.3 } }),
+      },
       getKills: () => kills,
       getElapsed: () => elapsed,
       getShots: () => enemies.shotCount(),
@@ -9679,13 +10037,26 @@ async function boot() {
       //    移速取属性面板里的实时值：升级加成就立刻跑得更快
       // 被咒面图腾的咒打中时移速打折（第 20 块）；第 82 块：被木鱼灵的泡罩住时直接钉死
       // 第 112 块：咒面图腾的短减速 + 盖章人的「持续到盖章人死亡」封步，两者取更慢的乘积
-      const moveSpeed = stats.get('moveSpeed') * moveDebuffMul() * (rootT > 0 ? 0 : 1);
+      // 第 115 块：热度条移速加成 × 天气移速系数
+      const moveSpeed = stats.get('moveSpeed') * moveDebuffMul() * (rootT > 0 ? 0 : 1)
+        * heat.speedMul() * weather.playerMult('move');
       const dir = input.read();
+      // 第 115 块：冲刺斩 —— 喂摇杆输入（双推触发），走表拿本帧冲刺位移
+      dash.push(dir.x, dir.y);
+      const dashMove = dash.step(dt);
+      heat.tick(dt);           // 热度条走表（断连掉热度）
+      swordRev.tick(dt);       // 剑阵反向走表（反向倒计时/冷却）
+      updateMusicNotes(dt);    // 音乐盒音符漂浮 + 拾取判定
       const targetVX = dir.x * moveSpeed;
       const targetVZ = dir.y * moveSpeed;
       const k = 1 - Math.exp(-ACCEL * dt);
       vel.x += (targetVX - vel.x) * k;
       vel.z += (targetVZ - vel.z) * k;
+      // 冲刺位移叠加（冲刺时额外位移，突破正常移速上限）
+      if (dashMove) {
+        vel.x = dashMove.x / dt;
+        vel.z = dashMove.z / dt;
+      }
 
       // 2) 位移 + 边界约束（圆形场地，撞边只丢掉向外那部分速度）
       pos.x += vel.x * dt;

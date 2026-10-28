@@ -2450,3 +2450,37 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
 .cp-foot{font-size:9.5px;line-height:1.5;text-align:center;color:rgba(226,200,166,.58)}
 .code-panel.bad .cp-foot{color:#ffb0a0}
 .code-panel.good .cp-foot{color:#a8f0d0}
+
+/* ---------------- 第 115 块：合成台 / 剑阵反向 / 热度条 / 音乐盒 ---------------- */
+/* 热度条：连杀时左下角一条橙红进度（满格移速/攻速加成）。默认隐藏，有热度才显示 */
+.heat-chip{margin-top:10px;display:none;align-items:center;gap:6px;
+  padding:4px 10px;border-radius:999px;
+  border:1px solid rgba(255,150,80,.3);background:rgba(30,14,6,.55);
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;pointer-events:none}
+.heat-chip .hc-mark{font-size:11px;font-weight:700;color:#ffb08a;letter-spacing:.04em}
+.heat-bar{width:56px;height:7px;border-radius:999px;background:rgba(255,255,255,.12);overflow:hidden}
+.heat-bar i{display:block;height:100%;width:0;border-radius:999px;
+  background:linear-gradient(90deg,#ff9a4a,#ff5a5a);transition:width .18s}
+
+/* 合成台 / 剑阵反向 按钮：HUD 右侧小圆钮（和声音开关同高） */
+.craft-btn{margin-top:10px;margin-left:6px;display:inline-flex;align-items:center;justify-content:center;
+  width:auto;min-width:40px;height:34px;padding:0 10px;border-radius:999px;
+  border:1px solid rgba(220,190,140,.4);background:rgba(24,16,6,.6);
+  color:#e8d5b0;font-size:12px;font-weight:700;letter-spacing:.05em;cursor:pointer;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;pointer-events:auto}
+.craft-btn:active{background:rgba(60,40,14,.8)}
+.craft-btn.sword-rev-btn{border-color:rgba(150,210,255,.4);background:rgba(8,20,32,.6);color:#b8dcff}
+
+/* 合成台面板内的元素 */
+.cr-section{margin:10px 0;padding:0 4px}
+.cr-section b{display:block;font-size:12px;color:#e8d5b0;letter-spacing:.05em;margin-bottom:6px}
+.cr-shards{display:flex;flex-wrap:wrap;gap:6px;font-size:11.5px;color:rgba(226,200,166,.8);
+  line-height:1.5}
+.cr-shard{display:inline-block;padding:3px 9px;border-radius:999px;
+  border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04)}
+.cr-shard.has{border-color:rgba(255,200,120,.5);background:rgba(50,32,8,.6);color:#ffd9a0}
+.cr-btn{display:block;width:100%;margin-top:12px;padding:11px;border-radius:12px;
+  border:1px solid rgba(255,210,130,.5);background:linear-gradient(180deg,#ffe0a0,#d8a34e);
+  color:#221606;font-size:14px;font-weight:800;letter-spacing:.08em;cursor:pointer;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.cr-btn:active{background:linear-gradient(180deg,#e8c880,#c08a3e)}

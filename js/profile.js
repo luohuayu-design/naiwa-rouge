@@ -124,6 +124,9 @@ const DEFAULT_PROFILE = {
   // 追加项也不参与百分比乘法，所以之后加的成只会乘原始 base。
   // 键不存在 / 值为 0 = 没改；删掉键 = 恢复默认。
   statAdmin: {},
+  // 音乐盒收集（第 115 块）：跨局收集的音符 id 数组（集齐一组解锁 BGM）。
+  //   局外口径（同图鉴 / 成就），存 profile 不存 runSave。
+  musicbox: { collected: [] },
 };
 
 let cache = null;

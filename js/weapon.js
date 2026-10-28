@@ -34,15 +34,15 @@
 //       五种元素共用同一模型，克隆后改材质 color/emissive 染色区分；
 //       图标用 assets/weapons/icon-*.svg。加载失败时用双盒拼占位剑。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=129';
-import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=129';
-import { withV } from './assetUrl.js?v=129';   // 第 80 块：glb 带版本号，SW 才走缓存优先
-import { SWORD_KINDS, KIND_ORDER } from './swordKinds.js?v=129';
-import { rollSwordDamage } from './weaponStats.js?v=129';
-import audio from './audio.js?v=129';
+import * as THREE from '../lib/three.module.js?v=130';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=130';
+import { withV } from './assetUrl.js?v=130';   // 第 80 块：glb 带版本号，SW 才走缓存优先
+import { SWORD_KINDS, KIND_ORDER } from './swordKinds.js?v=130';
+import { rollSwordDamage } from './weaponStats.js?v=130';
+import audio from './audio.js?v=130';
 // 第 106 块：环剑命中数 / 累计伤害两条成就的记账。
 // profile.js 不反向依赖 weapon.js，这里加导入不会成环。
-import { bumpStat } from './profile.js?v=129';
+import { bumpStat } from './profile.js?v=130';
 
 // 轨道半径（世界单位）：贴着主角攻击范围环内侧转，视觉上「护体剑气」
 const ORBIT_R = 1.7;
@@ -76,7 +76,7 @@ export function pickMissingKind(owned, ringKinds, rng = Math.random) {
   return pool[Math.min(pool.length - 1, (rng() * pool.length) | 0)];
 }
 
-export function createWeaponSystem({ scene, stats, wstats, fx, enemies }) {
+export function createWeaponSystem({ scene, stats, wstats, fx, enemies, onElementHit, orbitSpeedMul }) {
   let granted = false;         // 是否已获得（第 5 回合 grant；第 56 块起后续关卡开局也送）
   let owned = [];              // 拥有的剑（kind 字符串数组，按获得顺序）
   let regenT = 0;              // 恢复计时器（按 swordRefill 总时长推进）
@@ -322,6 +322,9 @@ export function createWeaponSystem({ scene, stats, wstats, fx, enemies }) {
   function applyKind(kind, e, dmg) {
     if (!e || kind === 'iron' || !SWORD_KINDS[kind]) return;
 
+    // 第 115 块：元素反应钩子 —— 直接命中的这只怪挂元素印记（main.js 注入）。
+    if (onElementHit) onElementHit(kind, e);
+
     if (kind === 'thunder') {
       // 雷剑（第 56 块重做，用户定案）：连锁到**场上所有怪**（不再限只数/距离），
       // 每道闪电的伤害比例走 chainRatio（第 64 块 45% 起，可升级）。怪越密越是清场技。
@@ -483,7 +486,9 @@ export function createWeaponSystem({ scene, stats, wstats, fx, enemies }) {
     if (orbitHold > 0) {
       orbitHold = Math.max(0, orbitHold - dt);
     } else {
-      orbitAngle += Math.PI * 2 * Math.max(0.05, wstats.get('swordOrbit')) * dt;
+      // 第 115 块：剑阵反向 —— orbitSpeedMul() 返回「方向 × 倍率」（反转时 −1.5）。
+      const dirMul = orbitSpeedMul ? orbitSpeedMul() : 1;
+      orbitAngle += dirMul * Math.PI * 2 * Math.max(0.05, wstats.get('swordOrbit')) * dt;
     }
     for (let i = orbiting.length - 1; i >= 0; i--) {
       const s = orbiting[i];
