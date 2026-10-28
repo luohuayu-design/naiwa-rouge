@@ -3034,8 +3034,10 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     if (nodes.length < 2) return;
     const gap = nodes[0].cfg.arc.minGap || 16.0;
     const maxStep = ARC_PUSH_MAX * Math.min(dt, 0.05);
-    // 4 轮：三只挤成一坨时，一轮推完会互相抵消；夹回边界之后也得再审一遍
-    for (let pass = 0; pass < 4; pass++) {
+    // 第 115 块：4 轮 → 2 轮（无损）。并联体同屏最多 4 只，第一轮就把重叠
+    // 基本推开了，第二轮补夹边界；4 轮里有 2 轮是在做「已经很接近、几乎不
+    // 再动」的微调，省掉这 2 轮视觉无差别，但每帧少一半的两两距离计算。
+    for (let pass = 0; pass < 2; pass++) {
       let moved = false;
       for (let i = 0; i < nodes.length; i++) {
         const a = nodes[i];
@@ -4285,7 +4287,23 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     if (e.attackCd <= 0 && dist <= tg.range) extendTongue(e, ctx);
   }
   function updateOne(e, dt, ctx) {
-    e.mixer.update(dt);
+    // ---- 第 115 块：动画 LOD（无损性能优化）----
+    // 后期怪一多就卡，主因是每只怪一个 AnimationMixer、每帧在 CPU 上算蒙皮。
+    // 屏幕外 / 远处的怪动画降频肉眼完全无差别（本来就看不清细节），
+    // 所以按「到主角的距离」分档：近处每帧更新，远处隔 2~3 帧更新一次。
+    // 关键：降频**累积 dt**（e.animAcc），到该更新的那一帧一次性 mixer.update(累计)，
+    //       否则动画会变慢、看起来像卡顿。
+    const ppos = ctx.playerPos;
+    const d2 = ppos
+      ? (e.pos.x - ppos.x) * (e.pos.x - ppos.x) + (e.pos.z - ppos.z) * (e.pos.z - ppos.z)
+      : 0;
+    const skip = d2 > 12 * 12 ? 3 : (d2 > 6 * 6 ? 2 : 1);   // 距离档：>12隔3帧 / >6隔2帧 / 近每帧
+    e.animAcc = (e.animAcc || 0) + dt;
+    e.animSkip = (e.animSkip == null ? 0 : e.animSkip + 1) % skip;
+    if (e.animSkip === 0) {
+      e.mixer.update(e.animAcc);   // 该更新了：一次性喂累计 dt，动画时钟不漂
+      e.animAcc = 0;
+    }
     e.t += dt;
 
     // ---- 并联体（第六关，第 75 块；第 80 块改运动） ----
