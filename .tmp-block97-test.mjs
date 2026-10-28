@@ -40,8 +40,8 @@ eq(CG.file, 'assets/monsters/ledger-king.glb', '模型换成了 ledger-king.glb�
 ok(existsSync(new URL('./' + CG.file, import.meta.url)), '新模型文件真实存在');
 ok(statSync(new URL('./' + CG.file, import.meta.url)).size > 100000,
   '模型不是空壳', statSync(new URL('./' + CG.file, import.meta.url)).size + ' B');
-eq(CG.hp, 12, '血量 16 → 12（用户定案：温和）');
-ok(CG.hp < ENEMY_TYPES.eraser.hp * 4, `12 不至于把它变成一块血豆腐（擦名者 ${ENEMY_TYPES.eraser.hp}）`);
+eq(CG.hp, 8, '血量 12 → 8（第 112 块：叠层无上限，得让它更容易被拆）');
+ok(CG.hp < ENEMY_TYPES.eraser.hp * 4, `8 不至于把它变成一块血豆腐（擦名者 ${ENEMY_TYPES.eraser.hp}）`);
 eq(CG.animFamily, 'royal', '换了 royal 动画族（King 没有 Punch / Weapon）');
 ok(CG.clipOverrides === undefined, '不再需要 clipOverrides 兜旧骨架');
 // 复用的反面证据：21 只怪 21 个模型文件
@@ -79,9 +79,9 @@ sec('②-b 方印参数');
 const S = SP.seal;
 ok(!!S, 'seal 参数存在（这是它和紫阵、木牌雨的区别所在）');
 for (const k of ['radius', 'color', 'slow', 'time']) ok(S && S[k] != null, `seal.${k} = ${S && S[k]}`);
-ok(S.radius > 1 && S.radius < 2.5, `方印半宽 ${S.radius}：比一个身位宽一点，走两步能出去`);
+ok(S.radius === 6.2, `方印半宽 ${S.radius}：第 112 块边长 ×4，走两步已经出不去`);
 ok(S.slow > 0.3 && S.slow < 0.8, `封步系数 ${S.slow}：砍半但不至于钉死（钉死 = 必吃一发上称）`);
-ok(S.time >= 2 && S.time <= 4, `封步 ${S.time} 秒：够它准备好下一次抬手，又不至于让人一直瘸`);
+ok(S.time === Infinity, `封步 ${S.time} 秒：第 112 块起不再自然结束，持续到盖章人死亡`);
 
 sec('②-c 印章模型（程序化，零资产）');
 ok(/kind === 'stamp'/.test(enemySrc), "attachTag 里有独立的 'stamp' 分支（不是 else 兜底）");
@@ -101,8 +101,9 @@ ok(/Math\.max\(Math\.abs\([a-z]+\), Math\.abs\([a-z]+\)\)/.test(enemySrc),
   '方印判定用切比雪夫距离（画的是方，判的也必须是方）');
 ok(/'seal'/.test(enemySrc) && /ZONE_PALETTES[\s\S]{0,400}seal/.test(enemySrc), 'ZONE_PALETTES 有 seal 配色');
 ok(/handleStamper/.test(enemySrc), '有独立的 handleStamper（三档走位）');
-ok(/cursePlayer\(\s*\{\s*factor:\s*v\.seal\.slow/.test(enemySrc.replace(/\n/g, ' ')) ||
-  /factor:\s*v\.seal\.slow/.test(enemySrc), '封步走 cursePlayer（和紫阵共用减速通道，不另开一套）');
+ok(/sealPlayer\(\s*src\.id/.test(enemySrc.replace(/\n/g, ' ')) ||
+  /sealPlayer\(\s*src\.id,\s*v\.seal\.slow\)/.test(enemySrc.replace(/\n/g, ' ')),
+  '封步走 sealPlayer（第 112 块：按盖章人 id 记账，盖章人死亡才解除）');
 
 // ============================================================
 sec('④ 第六 ~ 九关：砍杂兵 + 压间隔');

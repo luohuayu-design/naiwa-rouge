@@ -26,9 +26,9 @@
 // 第 11 块：每件货都带 rarity（0 普通 ~ 4 传说），店里按品质加权抽取 ——
 // 幸运越高，摆出来的货越往金/红那一头走（见 rarity.js）。
 // ============================================================
-import { rarityWeight } from './rarity.js?v=125';
-import { TURRET } from './turret.js?v=125';
-import { RELIC_DEFS } from './relics.js?v=125';
+import { rarityWeight } from './rarity.js?v=127';
+import { TURRET } from './turret.js?v=127';
+import { RELIC_DEFS } from './relics.js?v=127';
 
 export const SHOP_ITEMS = [
   // ---------------- 生命药水（第 13 块起：买进背包，作战中随时用） ----------------
@@ -187,8 +187,10 @@ export const SHOP_ITEMS = [
     desc: '每几秒点亮一圈：圈里的雾鬼被迫显形、所有怪减速。全游戏唯一的反隐手段 —— 雾鬼隐身时能咬你，你却打不着它。再买可升级（最多 3 级）。',
   },
   // ---------------- 第六关新增（第 63 块）：绝缘斗篷 ----------------
+  // 第 111 块：绝缘斗篷只对第六关的漏电地板有用，别的关摆了也只是一件薄披风
+  // —— 所以它不能「第六关起都能抽到」，而是**只在第六关出售**（onlyLevel）。
   {
-    id: 'buyInsulator', type: 'relic', relic: 'insulator', price: 32, needRound: 8, needLevel: 6,
+    id: 'buyInsulator', type: 'relic', relic: 'insulator', price: 32, needRound: 8, needLevel: 6, onlyLevel: 6,
     rarity: 3,
     glyph: '🧥', name: '绝缘斗篷',
     desc: '站在漏电地板上不掉血，反而把电导给身边的怪（每 0.5 秒结算一次）。第六关的地板本来是惩罚，穿上它就是武器。再买可升级（最多 3 级）。',
@@ -203,8 +205,9 @@ export const SHOP_ITEMS = [
   // ---------------- 第八关新增（第 84 块）：镇牌铃 ----------------
   // 用户定案：第 9 / 12 回合的商店**常驻**摆它（不参与抽签，见 SHOP_PINNED）。
   // 它不打架，只把寄存柜收牌的概率往下压 —— 属于「花钱买平安」那种法器。
+  // 第 111 块：没有寄存柜的关卡里它什么也不做 → **只在第八关出售**（onlyLevel）。
   {
-    id: 'buySeal', type: 'relic', relic: 'seal', price: 26, needRound: 9, needLevel: 8,
+    id: 'buySeal', type: 'relic', relic: 'seal', price: 26, needRound: 9, needLevel: 8, onlyLevel: 8,
     rarity: 3,
     glyph: '🔕', name: '镇牌铃',
     desc: `挂在寄存柜门上的铜铃：掉牌概率从 ${Math.round(RELIC_DEFS.seal.tagChance[0] * 100)}% 压到 ${Math.round(RELIC_DEFS.seal.tagChance[1] * 100)}%，再买还能更低 —— 柜子攒得慢，寄存处看守就来得晚。挡回去的牌子每 ${RELIC_DEFS.seal.coinPer} 块化一枚骨币。`,
@@ -233,10 +236,15 @@ export const SHOP_ITEMS = [
 
 // 商店里买不到 / 已卖光时给出原因（渲染禁用态用）
 // ctx: hasWeapon / round（当前回合）/ level（第几关）/ turretCount / relicLevels
-// needLevel（第 63 块）：只在某几关起出现的货（路口灯、绝缘斗篷）。
+// needLevel（第 63 块）：只在某几关起出现的货（路口灯、木鱼、傀儡术）。
 //   缺省 99 = 不限制，老调用与老测试不用动。
+// onlyLevel（第 111 块）：**只在某一关出现**的关卡专属货（绝缘斗篷 = 6、镇牌铃 = 8）。
+//   needLevel 是「从第 N 关起都能抽到」，对这两件是错的 —— 它们离开本关就完全没用。
 export function itemLocked(item, ctx = {}) {
   if (item.needWeapon && !ctx.hasWeapon) return '第 5 回合获得环剑后解锁';
+  if (item.onlyLevel != null && (ctx.level == null ? 99 : Number(ctx.level)) !== item.onlyLevel) {
+    return `只在第 ${item.onlyLevel} 关出售`;
+  }
   if (item.needLevel != null && (ctx.level ?? 99) < item.needLevel) {
     return `第 ${item.needLevel} 关起才会出现`;
   }
@@ -275,6 +283,7 @@ export function rollShopItems(rng = Math.random, {
 } = {}) {
   const usable = SHOP_ITEMS.filter((it) => {
     if (it.needWeapon && !hasWeapon) return false;
+    if (it.onlyLevel != null && Number(level) !== it.onlyLevel) return false;   // 第 111 块：关卡专属货只在那一关出现
     if (it.needLevel != null && level < it.needLevel) return false;
     if (it.needRound != null && round < it.needRound) return false;
     if (it.type === 'turret' && turretCount >= TURRET.MAX_COUNT) return false;

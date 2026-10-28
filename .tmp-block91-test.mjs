@@ -53,15 +53,16 @@ ok(Object.keys(roundScale(1)).sort().join(',') === 'damage,haste,hp,speed',
 
 for (const i of IDS) {
   const r1 = roundScale(1, L[i]);
-  ok(near(r1.haste, 1), `第 ${i} 关 R1 攻速 = 1.00（第一回合不加码）`, r1.haste.toFixed(4));
+  // 第 112 块：普通难度不再是 1.00 —— R1 的攻速就是难度倍率本身
+  ok(near(r1.haste, DIFFS.normal.haste), `第 ${i} 关 R1 攻速 = 难度倍率（第一回合不加成长）`, r1.haste.toFixed(4));
   // 单调
   let mono = true;
   for (let r = 2; r <= 20; r++) {
     if (roundScale(r, L[i]).haste <= roundScale(r - 1, L[i]).haste) mono = false;
   }
   ok(mono, `第 ${i} 关 haste 逐回合严格递增`);
-  const r20 = roundScale(20, L[i]).haste;
-  ok(r20 >= 1.40 && r20 <= 1.58, `第 ${i} 关 R20 攻速落在 1.40~1.58`, r20.toFixed(3));
+  const r20 = roundScale(20, L[i]).haste / DIFFS.normal.haste;
+  ok(r20 >= 1.40 && r20 <= 1.58, `第 ${i} 关 R20 攻速落在 1.40~1.58（扣掉难度倍率后）`, r20.toFixed(3));
 }
 
 // 平方曲线：同样 5 回合的跨度，后段涨得比前段多得多
@@ -74,23 +75,23 @@ for (const i of IDS) {
   const mid = h(11) - h(6);
   ok(late > mid * 1.8, '后期（R15→R20）比中段（R6→R11）也陡得多',
     `${mid.toFixed(3)} → ${late.toFixed(3)}`);
-  ok(h(5) < 1.06, '前五回合几乎感觉不到（< ×1.06）', h(5).toFixed(3));
+  ok(h(5) / h(1) < 1.06, '前五回合几乎感觉不到（< ×1.06，扣掉难度基数）', (h(5) / h(1)).toFixed(3));
 }
 
 // 血量 / 伤害**绝不**吃平方曲线 —— 它们本来就已经很陡
 for (const i of IDS) {
   const s = L[i].scale;
   const r20 = roundScale(20, L[i]);
-  ok(near(r20.hp, (1 + s.hp * 19) * (s.hpMul || 1)),
+  ok(near(r20.hp, (1 + s.hp * 19) * (s.hpMul || 1) * DIFFS.normal.hp),
     `第 ${i} 关 R20 血量仍是纯线性（没被 curve 波及）`, r20.hp.toFixed(3));
-  ok(near(r20.damage, (1 + s.damage * 19) * (s.dmgMul || 1)),
+  ok(near(r20.damage, (1 + s.damage * 19) * (s.dmgMul || 1) * DIFFS.normal.damage),
     `第 ${i} 关 R20 伤害仍是纯线性`, r20.damage.toFixed(3));
-  ok(near(r20.speed, 1 + 0.045 * 19),
-    `第 ${i} 关 R20 移速 = 1 + 0.045×19（线性，不加 curve）`, r20.speed.toFixed(3));
+  ok(near(r20.speed, (1 + 0.045 * 19) * DIFFS.normal.speed),
+    `第 ${i} 关 R20 移速 = (1 + 0.045×19) × 难度（线性，不加 curve）`, r20.speed.toFixed(3));
 }
 
 // 难度也要作用于攻速
-ok(DIFFS.normal.haste === 1 && DIFFS.nightmare.haste > 1 && DIFFS.hell.haste > DIFFS.nightmare.haste,
+ok(DIFFS.normal.haste > 0 && DIFFS.nightmare.haste > DIFFS.normal.haste && DIFFS.hell.haste > DIFFS.nightmare.haste,
   '三个难度都有 haste 字段且逐级升高',
   `${DIFFS.normal.haste} / ${DIFFS.nightmare.haste} / ${DIFFS.hell.haste}`);
 setDifficulty('hell');
@@ -99,8 +100,8 @@ ok(near(roundScale(20, L[1]).haste, roundScale(20, L[1]).haste * 1),
 const hellHaste = roundScale(20, L[1]).haste;
 setDifficulty('normal');
 const normalHaste = roundScale(20, L[1]).haste;
-ok(near(hellHaste / normalHaste, DIFFS.hell.haste),
-  '地狱 R20 攻速 = 普通 × 1.10', (hellHaste / normalHaste).toFixed(3));
+ok(near(hellHaste / normalHaste, DIFFS.hell.haste / DIFFS.normal.haste),
+  '地狱 R20 攻速 = 普通 × 地狱/普通倍率', (hellHaste / normalHaste).toFixed(3));
 setDifficulty('normal');
 
 // ============================================================
@@ -191,12 +192,13 @@ sec('六、换算：R20 的实际手感（一关 · 小兵）');
   const s1 = roundScale(1, L[1]);
   const s20 = roundScale(20, L[1]);
   const minionSpeed = 2.30;   // enemy.js 的 minion.speed
-  ok(near(minionSpeed * s1.speed, 2.30), 'R1 小兵移速 2.30（没被动过）');
+  ok(near(minionSpeed * s1.speed, 2.30 * DIFFS.normal.speed), 'R1 小兵移速 = 基础 × 难度（没被动过）');
   const sp20 = minionSpeed * s20.speed;
-  ok(sp20 > 4.1 && sp20 < 4.35, 'R20 小兵移速 4.2 左右（主角 4.4，后期咬脚后跟）', sp20.toFixed(2));
+  ok(sp20 / DIFFS.normal.speed > 4.1 && sp20 / DIFFS.normal.speed < 4.35,
+    'R20 小兵移速 4.2 左右（扣掉难度后，主角 4.4，后期咬脚后跟）', (sp20 / DIFFS.normal.speed).toFixed(2));
   // 出手间隔：warrior attackInterval 1.7
   const iv = 1.7;
-  ok(near(iv / s1.haste, iv), 'R1 出手间隔 = 原来的 1.7 秒');
+  ok(near(iv / s1.haste, iv / DIFFS.normal.haste), 'R1 出手间隔 = 基础间隔 ÷ 难度攻速');
   const iv20 = iv / s20.haste;
   ok(iv20 / iv < 0.72, 'R20 出手间隔缩到原来的 7 成以下', iv20.toFixed(3));
 }

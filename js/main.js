@@ -5,41 +5,41 @@
 // 目标是把三件事调顺：摇杆输入 → 角色速度/朝向 → 相机跟随。
 // 后续叠战斗时，只需要在 tick() 里加敌人更新与自动攻击，不用动输入层。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=125';
-import { buildNightScene } from './scene.js?v=125';
-import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=125';
+import * as THREE from '../lib/three.module.js?v=127';
+import { buildNightScene } from './scene.js?v=127';
+import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=127';
 // 第 80 块：给 glb 拼上版本号 → SW 缓存优先（详见 assetUrl.js）
-import { withV } from './assetUrl.js?v=125';
-import { createInput } from './input.js?v=125';
-import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=125';
-import { createStatView } from './statView.js?v=125';
-import { createWeaponStats } from './weaponStats.js?v=125';
-import { createFx } from './fx.js?v=125';
-import { createEnemySystem, ENEMY_TYPES } from './enemy.js?v=125';
+import { withV } from './assetUrl.js?v=127';
+import { createInput } from './input.js?v=127';
+import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=127';
+import { createStatView } from './statView.js?v=127';
+import { createWeaponStats } from './weaponStats.js?v=127';
+import { createFx } from './fx.js?v=127';
+import { createEnemySystem, ENEMY_TYPES } from './enemy.js?v=127';
 import {
   createLevel, LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVEL_5, LEVEL_6, LEVEL_7, LEVEL_8, LEVEL_9, LEVEL_10, LEVELS_BY_ID, DIFFS, setDifficulty, getDifficulty, roundScale, levelStats, levelTypes,
-} from './wave.js?v=125';
-import { createRangeRing } from './rangeRing.js?v=125';
-import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=125';
-import { createWeaponSystem } from './weapon.js?v=125';
-import { createArrowRainSystem } from './arrowRain.js?v=125';
-import { SWORD_KINDS } from './swordKinds.js?v=125';
-import { createGoldSystem } from './gold.js?v=125';
-import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW, SHOP_PINNED } from './shop.js?v=125';
-import { createTurretSystem, TURRET } from './turret.js?v=125';
-import { createRelicSystem, RELIC_DEFS } from './relics.js?v=125';
-import { createGolemSystem } from './golem.js?v=125';   // 第 107 块：法器「傀儡术」的铁 / 雪傀儡
-import { createHazards } from './hazards.js?v=125';
-import { createDeposit, tagChance } from './deposit.js?v=125';   // 第 81 块：寄存柜；第 84 块：掉牌概率
-import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=125';
-import audio from './audio.js?v=125';
-import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=125';
+} from './wave.js?v=127';
+import { createRangeRing } from './rangeRing.js?v=127';
+import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=127';
+import { createWeaponSystem } from './weapon.js?v=127';
+import { createArrowRainSystem } from './arrowRain.js?v=127';
+import { SWORD_KINDS } from './swordKinds.js?v=127';
+import { createGoldSystem } from './gold.js?v=127';
+import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW, SHOP_PINNED } from './shop.js?v=127';
+import { createTurretSystem, TURRET } from './turret.js?v=127';
+import { createRelicSystem, RELIC_DEFS } from './relics.js?v=127';
+import { createGolemSystem } from './golem.js?v=127';   // 第 107 块：法器「傀儡术」的铁 / 雪傀儡
+import { createHazards } from './hazards.js?v=127';
+import { createDeposit, tagChance } from './deposit.js?v=127';   // 第 81 块：寄存柜；第 84 块：掉牌概率
+import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=127';
+import audio from './audio.js?v=127';
+import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=127';
 // 第 62 块：回血技能（第四关通关后永久解锁，回 5 点 / CD 25 秒）
-import { createHealSkill, HEAL_AMOUNT, HEAL_CD } from './healSkill.js?v=125';
+import { createHealSkill, HEAL_AMOUNT, HEAL_CD } from './healSkill.js?v=127';
 // 第 62 块：民心专属事件（升档走良性池、掉档走恶性池）
-import { repPoolForTier, REP_GOOD, REP_BAD } from './repEvents.js?v=125';
+import { repPoolForTier, REP_GOOD, REP_BAD } from './repEvents.js?v=127';
 // 第 62 块：攻略面板（战败提示上的「查看攻略」，手风琴三组）
-import { renderGuide, GUIDE_SECTIONS } from './guide.js?v=125';
+import { renderGuide, GUIDE_SECTIONS } from './guide.js?v=127';
 import {
   settings as readSettings, setSetting, save as saveProfile, profile,
   bumpStat, setStatMax, codexAdd, codexCount, countCard, unlockAch, hasAch, addBones, bones, resetAll,
@@ -54,32 +54,32 @@ import {
   hintSeen, markHintSeen,                  // 第 65 块：一次性提示卡
   markLevelClear, levelCleared, clearCount, // 第 94 块：通关过哪些关（成就用）
   getStatAdmin, setStatAdmin, resetStatAdmin, // 第 95 / 98 块：管理员模式二（手改最终值 → 存追加项，基础值不动）
-} from './profile.js?v=125';
+} from './profile.js?v=127';
 // 第 44 块：礼包兑换（码表只有哈希，明细在 gift.js 顶部注释）
-import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=125';
+import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=127';
 // 第 46 块：音效包（抽象奶蛙音效包 —— 4 段奶蛙叫声，通关第一关解锁）
-import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=125';
-import * as runSave from './runSave.js?v=125';
+import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=127';
+import * as runSave from './runSave.js?v=127';
 // 第 78 块：存档导出 / 导入。数据逻辑全在这个模块里（不碰 DOM），这里只接按钮
-import * as saveIO from './saveIO.js?v=125';
+import * as saveIO from './saveIO.js?v=127';
 import {
   CAMPFIRE, CAMP_STEP, campBuy, campOwned, campLevel,
   campCost, campApply, bonesFor, diffBoneMul, levelBoneMul, coinBones, BONE,
-} from './campfire.js?v=125';
+} from './campfire.js?v=127';
 // 第 23 块：永夜火种（通关白给的 3 次永久三选一）
 import {
   BOONS, BOON_BY_ID, BOON_PICKS, boonOwned, boonStacks, boonPending, boonTotalStacks,
   grantBoons, rollBoons, takeBoon, applyBoons, boonStackText,
-} from './boons.js?v=125';
+} from './boons.js?v=127';
 // 第 21 块：夜行诅咒（自选 debuff 换骨币倍率）
-import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=125';
+import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=127';
 // 第 22 块：种子与每日挑战
 import {
   DAILY_RULES, dayKey, dayText, dailySeed, seedCode, pickDailyCurses,
   seedFromText, pickSeedRules, loadSeedRecords, saveSeedRecord, pruneSeeds,
   dailyRecord, saveDailyRecord, pruneDaily, makeRng,
-} from './seed.js?v=125';
-import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=125';
+} from './seed.js?v=127';
+import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=127';
 // 第 58 块：局外商店 · 宝箱（花骨币买，开箱随机给永久属性 / 永久法器 / 技能CD缩短）
 import {
   BOXES, BOX_BY_ID, buyBox, rollBox, metaApplyStats, applyMeta,
@@ -89,36 +89,36 @@ import {
   boxPoolEntries,
   // 第 105 块：属性幅度统一系数（UI 显示的「强度 ×」必须和实际算法同源）
   boxMag,
-} from './metaShop.js?v=125';
+} from './metaShop.js?v=127';
 // 第 59 块：每日签到（以周为单位，周一 00:00 重置）
 // 第 105 块：固定 +20 改成每天随机 0~100；里程碑 3/5/7 天 → 100 / 150 骨币 + 一次永夜火种
 import {
   SIGN_BONES_MIN, SIGN_BONES_MAX, weekCells, signSummary, signToday, signedToday,
-} from './signin.js?v=125';
+} from './signin.js?v=127';
 // 第 94 块：成就（八类 × 三档骨币奖励）
 // 第 94-2 块：骨币改成**手动领取**（achPending / achClaim），老用户补发走 achMigrate
 import {
   ACHS, ACH_CATS, ACH_TIERS, ACH_COUNT, achById, achsByCat, achTier,
   achPending, achPendingBones, achClaim, achClaimAll, achClaimed, achMigrate,
-} from './achievements.js?v=125';
+} from './achievements.js?v=127';
 // 第 94 块：通用手风琴（盲盒奖池与成就面板共用，不复制第三份引擎）
-import { renderAccordion } from './accordion.js?v=125';
+import { renderAccordion } from './accordion.js?v=127';
 // 第 94 块：每日任务（简单 3 + 中等 1 + 困难 1，每天 0 点刷新）
 import {
   DQ_TIERS, DQ_BONES, dqTasks, dqPump, dqSave, dqClaim, dqClaimAll,
   dqPending, dqGained, dqMsLeft, dayKeyOf, dqTier, dqTaskName,
   dqState, dqForceReroll, dqReset,   // 调试口：跨天重掷 / 整条重置
-} from './dailyQuest.js?v=125';
+} from './dailyQuest.js?v=127';
 import {
   EVENTS, ALL_EVENTS, getEventById, pickEvent, effectLines,
   choiceHint, canAfford, costShort, REP_MIN, REP_MAX, REP_START,
   isTalk, eventChoices, resolveRoll, mergeEffects,
-} from './events.js?v=125';
+} from './events.js?v=127';
 // 第 32 块：主线《笑不出来的那一夜》（18 夜，一夜一关，前 3 夜已有关卡）
 import {
   STORY_ARC, STORY_CHAPTERS, STORY_ENDINGS, MARK_INFO,
   storyChapterAt, storyChapterById, storyEndingKey,
-} from './story.js?v=125';
+} from './story.js?v=127';
 
 // 标记模块已经跑起来了：index.html 的兜底自检靠它判断
 // 「模块根本没执行」还是「执行了但加载慢」。
@@ -423,15 +423,26 @@ async function boot() {
   let curseLastTxt = '';
   let curseT = 0;          // 诅咒剩余时间（秒）
   let curseFactor = 1;     // 当前移速倍率
+  // 第 112 块：盖章人的「封步」不再按秒结束，而是挂在盖章人身上（id → 倍率）。
+  // 多只同时盖：取最慢的那个；对应盖章人一死，只撤它那一份。
+  const sealBySource = new Map();
+  function sealMoveMul() {
+    let f = 1;
+    for (const v of sealBySource.values()) f = Math.min(f, v);
+    return f;
+  }
+  function moveDebuffMul() {
+    return (curseT > 0 ? curseFactor : 1) * sealMoveMul();
+  }
   function renderCurse() {
-    const on = curseT > 0;
+    const on = curseT > 0 || sealBySource.size > 0;
     if (on !== curseShown) {
       curseShown = on;
       curseChip.classList.toggle('on', on);
       curseChip.setAttribute('aria-hidden', on ? 'false' : 'true');
     }
     if (!on) return;
-    const txt = `移速 ${Math.round(curseFactor * 100)}%`;
+    const txt = `移速 ${Math.round(moveDebuffMul() * 100)}%`;
     if (txt !== curseLastTxt) { curseLastTxt = txt; curseNum.textContent = txt; }
   }
   const apPanel = document.getElementById('attrPanel');
@@ -726,6 +737,8 @@ async function boot() {
     onSpawn: (e) => onMeetSpawn(e),
     onDeath: (e) => {
       kills++;
+      // 第 112 块：盖章人死了，它盖在你身上的封步立刻撤掉（多只盖章人各撤各的）
+      if (e.cfg.seal) unsealPlayer(e.id);
       codexAdd('enemies', e.type);      // 图鉴：击倒计数
       tryAch('first_blood');
       // 第三关的新怪各有一条里程碑（第 29 块）
@@ -4520,6 +4533,7 @@ async function boot() {
     const locked = itemLocked(item, {
       hasWeapon: weapon.granted,
       round: shopRound,
+      level: curLevelId,          // 第 111 块：买这一下也要带关卡，关卡专属货不能绕过货架筛选
       turretCount: turrets.count(),
       relicLevels: relics.levels(),
       quiver: arrowRain.hasQuiver(),   // 第 108 块：箭袋买断标记
@@ -7094,7 +7108,8 @@ async function boot() {
       const name = document.createElement('span');
       name.textContent = c.name;
       const mul = document.createElement('em');
-      mul.textContent = `+${Math.round(c.mul * 100)}%`;
+      // 第 112 块：诅咒倍率减半后会出现 12.5% / 7.5%，保留一位小数
+      mul.textContent = `+${Math.round(c.mul * 1000) / 10}%`;
       row.append(icon, name, mul);
       const eff = document.createElement('small');
       eff.className = 'rc-eff';
@@ -7947,7 +7962,7 @@ async function boot() {
       ensureLevelAssets: (id) => ensureLevelAssets(id),
       levelTypes: (id) => levelTypes(LEVELS_BY_ID[id] || LEVEL_1),
       // 第 20 块：巫师的诅咒 / 法术现场（测试要能直接看）
-      curse: () => ({ t: +curseT.toFixed(2), factor: curseFactor }),
+      curse: () => ({ t: +curseT.toFixed(2), factor: curseFactor, seals: sealBySource.size, move: +moveDebuffMul().toFixed(2) }),
       bless: (o) => { cursePlayer(o); return { t: +curseT.toFixed(2), factor: curseFactor }; },
       zones: () => enemies.zones(),
       // 第 21 块：夜行诅咒（选中的 id / 骨币倍率 / 受伤加重）
@@ -9124,6 +9139,7 @@ async function boot() {
   function clearCurse() {
     curseT = 0;
     curseFactor = 1;
+    sealBySource.clear();     // 第 112 块：换关 / 重开时盖章人的封步也一起清
     renderCurse();
   }
   // 第 82 块：换关 / 重开时把定身也清掉（上一局被泡罩着退出的话，下一局不该还钉着）
@@ -9132,12 +9148,22 @@ async function boot() {
     if (rootShell) rootShell.visible = false;
   }
   function cursePlayer({ factor = 0.62, duration = 2.6 } = {}) {
-    const wasClean = curseT <= 0;    // 已经被咒着时不再叠音（紫圈会叠）
+    const wasClean = curseT <= 0 && sealBySource.size === 0;   // 已经被减速时不再叠音
     if (curseT <= 0) curseFactor = factor;
     else curseFactor = Math.min(curseFactor, factor);   // 叠两次取更慢的那个
     curseT = Math.max(curseT, duration);
     if (wasClean) audio.sfx('curse');   // 第 25 块：被拖慢的下行扫弦
     renderCurse();
+  }
+  // 第 112 块：盖章人的封步 —— 没有自然时长，靠 unsealPlayer 在它死亡时解除。
+  function sealPlayer(id, factor = 0.5) {
+    const wasClean = curseT <= 0 && sealBySource.size === 0;
+    sealBySource.set(id, Math.max(0.05, Math.min(1, factor)));
+    if (wasClean) audio.sfx('curse');
+    renderCurse();
+  }
+  function unsealPlayer(id) {
+    if (sealBySource.delete(id)) renderCurse();
   }
   function updateCurse(dt) {
     if (curseT <= 0) return;
@@ -9210,6 +9236,8 @@ async function boot() {
     get arenaRadius() { return ARENA_R; },   // 随关卡变（第三关 19，第 33 块）
     hurtPlayer,
     cursePlayer,
+    sealPlayer,                                // 第 112 块：盖章人的封步（持续到盖章人死亡）
+    unsealPlayer,
     // 第 82 块：木鱼灵的泡要问「主角现在是不是无敌」—— 无敌帧里被泡擦过去
     // 不该被定住（那一瞬间主角是「刚好闪过去了」，定住会让人觉得判定有问题）。
     isInvincible: () => iframe > 0,
@@ -9330,7 +9358,8 @@ async function boot() {
       // 1) 输入 → 目标速度（屏幕 y 向下 = 世界 +Z，相机在 +Z 方向看向场景）
       //    移速取属性面板里的实时值：升级加成就立刻跑得更快
       // 被咒面图腾的咒打中时移速打折（第 20 块）；第 82 块：被木鱼灵的泡罩住时直接钉死
-      const moveSpeed = stats.get('moveSpeed') * (curseT > 0 ? curseFactor : 1) * (rootT > 0 ? 0 : 1);
+      // 第 112 块：咒面图腾的短减速 + 盖章人的「持续到盖章人死亡」封步，两者取更慢的乘积
+      const moveSpeed = stats.get('moveSpeed') * moveDebuffMul() * (rootT > 0 ? 0 : 1);
       const dir = input.read();
       const targetVX = dir.x * moveSpeed;
       const targetVZ = dir.y * moveSpeed;

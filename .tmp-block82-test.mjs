@@ -107,7 +107,7 @@ ok(/enemies\.hitBubbles\(tgt\.pos\.x, tgt\.pos\.z, 0\.9, cd\)/.test(weaponSrc), 
 // 主角侧的定住
 ok(/let rootT = 0;/.test(mainSrc) && /function rootPlayer\(sec\)/.test(mainSrc), '主角侧有 rootT / rootPlayer');
 ok(/function updateRoot\(dt\)/.test(mainSrc) && /updateRoot\(dt\);/.test(mainSrc), '每帧推进定住倒计时');
-ok(/stats\.get\('moveSpeed'\) \* \(curseT > 0 \? curseFactor : 1\) \* \(rootT > 0 \? 0 : 1\)/.test(mainSrc),
+ok(/const moveSpeed = stats\.get\('moveSpeed'\) \* moveDebuffMul\(\) \* \(rootT > 0 \? 0 : 1\);/.test(mainSrc),
   '定住期间移速归零（和减速是两条分支）');
 ok(/isInvincible: \(\) => iframe > 0/.test(mainSrc), 'combatCtx 暴露 isInvincible（泡要问）');
 ok(/clearRoot\(\);/.test(mainSrc), '换关 / 读档 / 结算都清掉定住');
@@ -141,20 +141,21 @@ ok(L9 && L9.scale.hpMul <= 1.30 && L9.scale.dmgMul <= 1.60,
 const w = ENEMY_TYPES.weigher;
 ok(!!w, 'ENEMY_TYPES 里有 weigher');
 ok(w && w.name === '称量官', '中文名是称量官', w && w.name);
-ok(w && w.weigh && w.weigh.cap >= 3, `有 cap（${w && w.weigh.cap} 层封顶）`);
+ok(w && w.weigh && w.weigh.cap === Infinity, `没有层数上限（第 112 块从 ${w && w.weigh.cap} 改成不封顶）`);
 ok(w && w.weigh.per.speed > 0 && w.weigh.per.damage > 0 && w.weigh.per.armor > 0,
   '三种加成都写了（移速 / 伤害 / 减伤）');
 ok(w && w.keepDistance >= 6, `站得远（keepDistance ${w && w.keepDistance}）—— 必须够得到才能玩`);
 ok(w && w.attackDuration > w.windup, 'attackDuration > windup（第 69 块的坑）',
   w && `${w.attackDuration}/${w.windup}`);
-ok(w && w.hp >= 12, `血量够厚（${w && w.hp}）—— 它是压力来源，不能一刀切掉`);
+ok(w && w.hp === 8, `血量降到 8（第 112 块）—— 无上限叠层必须靠「能尽快拆掉它」兜底`);
 ok(w && w.tag === 'ledger', '抱着台账（程序化 prop，零新资产）');
 // 实现
 ok(/let weighTier = 0;/.test(enemySrc), '有全局层数字段 weighTier');
 ok(/function dressWeigh\(e\)/.test(enemySrc), 'dressWeigh：把层数落到实例（伤害/减伤/金环）');
-ok(/if \(e\.dmg0 != null\) e\.damage = e\.dmg0 \* \(1 \+ cfg\.per\.damage \* t\);/.test(enemySrc),
+ok(/if \(e\.dmg0 != null\) e\.damage = e\.dmg0 \* \(1 \+ \(cfg\.per\.damage \|\| 0\) \* t\);/.test(enemySrc),
   '伤害叠在**原始值**上（不会越叠越离谱）');
-ok(/e\.namedArmor = cfg\.per\.armor \* t;/.test(enemySrc), '减伤写进 namedArmor');
+ok(/e\.namedArmor = 1 - Math\.pow\(1 - \(cfg\.per\.armor \|\| 0\), t\);/.test(enemySrc),
+  '减伤写进 namedArmor（乘法叠加，不会十层免疫）');
 ok(/\+ \(e\.namedArmor \|\| 0\)/.test(enemySrc), 'takeDamage 的减伤里真的读了 namedArmor');
 ok(/const namedBoost = 1 \+ \(e\.named \|\| 0\) \* \(\(WEIGH\(\) && WEIGH\(\)\.per\.speed\) \|\| 0\);/.test(enemySrc)
   && /\* namedBoost/.test(enemySrc), 'moveToward 里真的乘了移速加成');
@@ -167,7 +168,8 @@ ok(/if \(weighTier > 0\) dressWeigh\(e\);/.test(enemySrc), '后上场的怪也�
 ok(/weighTier = 0;\s*\/\/ 第 82 块/.test(enemySrc), 'reset 里把层数字段清了');
 ok(/function updateNamedRing\(e\)/.test(enemySrc) && /if \(e\.namedRing\) e\.namedRing\.update\(dt\);/.test(enemySrc),
   '每只被记名的怪有常驻金环（且每帧呼吸）');
-ok(/const want = 0\.60 \+ t \* 0\.18;/.test(enemySrc), '环随层数长大（看得出现在第几层）');
+ok(/const want = Math\.min\(4\.5, 0\.60 \+ t \* 0\.18\);/.test(enemySrc),
+  '环随层数长大、到 4.5 封顶（第 112 块层数无上限，不能把场地刷成金色）');
 ok(/weighTier: \(\) => weighTier/.test(enemySrc) && /namedCount: \(\) =>/.test(enemySrc),
   '暴露观测口 weighTier / namedCount');
 // 接线

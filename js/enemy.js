@@ -25,12 +25,12 @@
 // 第四关三只（wraith/leaper/mender，第 35 块，第 52 块换模型），
 // 各自在下面 ENEMY_TYPES 里有详细注释。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=125';
-import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=125';
-import { clone as cloneSkinned } from '../lib/jsm/utils/SkeletonUtils.js?v=125';
-import { distance2D } from './stats.js?v=125';
-import { createRangeRing } from './rangeRing.js?v=125';
-import { withV } from './assetUrl.js?v=125';
+import * as THREE from '../lib/three.module.js?v=127';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=127';
+import { clone as cloneSkinned } from '../lib/jsm/utils/SkeletonUtils.js?v=127';
+import { distance2D } from './stats.js?v=127';
+import { createRangeRing } from './rangeRing.js?v=127';
+import { withV } from './assetUrl.js?v=127';
 
 // KayKit 模型正面朝 +Z；如果哪天换模型发现怪倒着走，把这里改成 Math.PI
 export const ENEMY_MODEL_YAW = 0;
@@ -1091,10 +1091,10 @@ export const ENEMY_TYPES = {
   // 而是**全场一起变凶**：称量官每隔一阵把簿子翻开一次，把那种台的个数叠一层。
   //
   // 【机制·一句话】它自己几乎不打人（它的职责不是输出），活儿是**给全场记账**：
-  //   每完成一次「上称」，场上**所有**存活的怪都加一层「记名」——
-  //   移速 +7% / 伤害 +9% / 减伤 +5%，最多 5 层。
-  // 也就是说：它每活着念一次簿子，整关的难度就往上抬一格；它念到第 5 次，
-  // 场上就是一群快三分之一、疼一半还多、还更耐打的骷髅。
+  //   每 8 秒完成一次「上称」，场上**所有**存活的怪都加一层「记名」——
+  //   生命上限 / 当前血、伤害、移速、攻速各 +10%，减伤按乘法叠（剩余伤害 ×0.9）。
+  // 第 112 块（用户定案）：**没有层数上限**，直到称量官被杀才一起掉光 ——
+  // 它活着越久，整关越失控，唯一的解法就是先拆它。
   //
   // 【怎么破】只有一条路 —— **把它先拆了**。它一倒，场上所有层立刻掉光
   // （脚下的金环一起碎掉），整关立刻回到原难度。所以它站得很靠后
@@ -1119,24 +1119,26 @@ export const ENEMY_TYPES = {
     footY: 0.0,            // 实测落地面就在原点
     height: 2.15,          // 比擦名者（1.95）高一头：它站在正厅的台阶上，该有个仰望的姿势
     radius: 0.55,
-    hp: 12,                // 第 97 块（用户）：16 → 12。它每 9 秒叠一层全场记名，太肉等于机制被拖成磨血
+    hp: 8,                 // 第 112 块（用户）：12 → 8。无上限叠层必须靠「能尽快拆掉它」兜底
     armor: 0,
     speed: 1.25,           // 比擦名者慢一点点（它也躲，但躲不利索 —— 毕竟抱着一本簿子）
     attackRange: 10.0,     // 够得到就念（它没有近距离的概念，离多远都一样念）
     keepDistance: 7.0,
     damage: 1,             // 它自己几乎不打人：这个值只在贴脸近战的那一下才用
-    attackInterval: 9.0,   // 上称节奏：放任四五次，场上就全是强化版的骷髅了
+    attackInterval: 8.0,   // 第 112 块：9 → 8 秒，节奏更急
     windup: 1.6,           // 翻开簿子的前摇 —— 这一秒半就是信号
     attackDuration: 2.2,   // 必须 > windup（第 69 块的教训），否则读条中被提前切回 chase
     weigh: {
-      cap: 5,              // 最多叠五层
-      every: 9.0,
+      cap: Infinity,       // 第 112 块：无层数上限，直到称量官死
+      every: 8.0,
       radius: Infinity,    // 全场：不看距离，场另一头的骷髅也躲不掉
       color: 0xffd86b,
       per: {
-        speed: 0.07,       // 每层：移速 +7%
-        damage: 0.09,      // 每层：伤害 +9%
-        armor: 0.05,       // 每层：减伤 +5%（乘法叠加，见 takeDamage）
+        hp: 0.10,          // 每层：生命上限与当前血 +10%
+        damage: 0.10,      // 每层：伤害 +10%
+        speed: 0.10,       // 每层：移速 +10%
+        haste: 0.10,       // 每层：攻速 +10%
+        armor: 0.10,       // 每层：减伤 10%（剩余伤害 ×0.9，乘法叠，见 takeDamage）
       },
     },
     tag: 'ledger',         // 手里的台账（程序化贴图，零资产）
@@ -1161,16 +1163,16 @@ export const ENEMY_TYPES = {
   // 盖章人是这一关第一个**不靠伤害、靠限制你走位**的怪。
   //
   // 【机制·一句话】它是登记庭里负责「核销」的小吏：抬印 → 在你**当时的脚下**
-  // 盖下一枚方印（1.15 秒预警，方框从大收到小）→ 落印时你还站在框里，
-  // 就被「封步」3 秒：移速砍一半，人像被钉在案上。
-  // 它自己不疼（伤害只有 0.9），可它每 3 秒就来一次 —— 站着输出就会一直被盖。
+  // 盖下一枚方印（1.0 秒预警，方框从大收到小）→ 落印时你还站在框里，
+  // 就被「封步」：移速砍一半，**一直持续到盖你的这只盖章人死亡**。
+  // 它自己不疼（伤害只有 0.9），可它每 2.4 秒就来一次 —— 站着输出就会一直被盖。
   //
   // 【和紫阵（第六关咒面图腾）的区别】紫阵是**铺在地上等你踩**，
   // 盖章人是**追着你此刻站的地方盖**：落点跟着你走，方框、红印、更短的引信，
   // 逼你一直保持「移动中输出」；紫阵可以绕开，它绕不开 —— 只能走。
   //
-  // 【怎么破】它血只有 2.6：顺手拍两下就没了。它真正的作用是让你
-  // **没法站在称量官面前安心打那 2.2 秒** —— 你只要停手，印就落下来。
+  // 【怎么破】它血只有 2.6：顺手拍两下就没了。第 112 块起印章边长 ×4、
+  // 封步不再自然结束 —— 不先拆掉盖章人，减速就会一直挂着。
   // 于是这一关的节奏变成「边跑边打」，而不是「站桩输出」。
   //
   // 模型：Quaternius 的哥布林（CC0，poly.pizza，7 段 EnemyArmature 动画，
@@ -1189,15 +1191,15 @@ export const ENEMY_TYPES = {
     attackRange: 6.6,
     keepDistance: 4.4,     // 贴太近就退 —— 它要的是「看得见你站哪」
     damage: 0.9,           // 落印命中的伤害（真正疼的是封步）
-    attackInterval: 3.4,
-    windup: 1.15,          // 抬印 → 落印：1.15 秒够你走三步
-    attackDuration: 1.65,  // 必须 > windup
+    attackInterval: 2.4,   // 第 112 块：3.4 → 2.4，盖得更勤
+    windup: 1.0,           // 抬印 → 落印：1.0 秒，够侧移一步
+    attackDuration: 1.5,   // 必须 > windup
     // 落印（方框）参数：见 spawnSeal
     seal: {
-      radius: 1.55,        // 方框半宽（判定用「切比雪夫距离」，所以这是个方）
+      radius: 6.2,         // 第 112 块：半宽 1.55 → 6.2（边长 ×4）
       color: 0xd8553f,
       slow: 0.5,           // 封步：移速砍半
-      time: 3.0,           // 封步持续
+      time: Infinity,      // 第 112 块：不再自然结束，改由「盖章人死亡」解除（见 main.js sealPlayer）
     },
     tag: 'stamp',          // 手里的印章（程序化，零资产）
     spawnTime: 0.9,
@@ -2403,6 +2405,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
       pos: root.position,
       hp: maxHp,
       maxHp,
+      hp0: maxHp,        // 第 112 块：记名层的生命成长以出生上限为底，来回叠不会滚雪球
       damage,
       dmg0: damage,      // 第 82 块：伤害的**原始值**（称量官的记名层要在这里叠，不能叠在自己身上）
       named: 0,          // 第 82 块：被记过几层（0 = 无名）
@@ -2410,6 +2413,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
       namedRing: null,
       speed,
       haste,             // 第 91 块：本只怪的出手频率倍率（见 cdOf）
+      haste0: haste,     // 第 112 块：记名层的攻速成长以出生攻速为底
       state: 'spawn',
       t: 0,
       attackCd: 0.4 + Math.random() * 0.5,
@@ -3489,14 +3493,16 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
 
   // 盖章人（第 97 块）：在你**此刻脚下**盖一枚方印。
   // ⚠️ 和巫师那套「读完条才钉圈」不一样：这里**起手就钉**，圈的引信本来就是
-  // cfg.windup —— 于是从抬印到落印只有 1.15 秒，看得见、也来得及走开，
+  // cfg.windup —— 于是从抬印到落印只有 1 秒，看得见、也来得及走开，
   // 但站着打输出就一定会被盖。判定用「切比雪夫距离」，所以它是个方框不是圆。
+  // 第 112 块：记下 source —— 封步持续到这只盖章人死亡，它提前死了这印就白盖。
   function spawnSeal(e, ctx) {
     const se = e.cfg.seal;
     makeZone('seal', e, ctx, se.radius, {
       square: true,
       color: se.color,
       seal: se,
+      source: e,
     });
   }
 
@@ -3779,22 +3785,25 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
       }
 
       // 方印（第 97 块）：判定是**方框**（切比雪夫距离），不是你站在圆心附近。
-      // 命中 → 伤害 + 封步（移速砍半，走 cursePlayer 那套，和紫阵共用一个减速槽，
-      // 但红印落在脚下、还会弹一个「封印」字样，和老远飘过来的紫圈一眼分得开）。
+      // 命中 → 伤害 + 封步（移速砍半；第 112 块起由盖章人存活与否控制时长，
+      // 红印落在脚下、还会弹一个「封印」字样，和老远飘过来的紫圈一眼分得开）。
       if (v.kind === 'seal') {
         const qx = ctx.playerPos.x - v.x, qz = ctx.playerPos.z - v.z;
         const sq = Math.max(Math.abs(qx), Math.abs(qz));
-        if (sq <= v.r) {
+        const src = v.source;
+        const srcAlive = !src || (src.state !== 'dead' && src.state !== 'down');
+        if (sq <= v.r && srcAlive) {
           ctx.hurtPlayer(v.dmg, null);
-          if (ctx.cursePlayer) ctx.cursePlayer({ factor: v.seal.slow, duration: v.seal.time });
+          // 第 112 块：封步挂在这只盖章人身上，持续到它死亡（由 main.js 的 onDeath 解除）
+          if (ctx.sealPlayer && src) ctx.sealPlayer(src.id, v.seal.slow);
           if (fx) {
             fx.ring({ x: v.x, z: v.z }, { from: 0.2, to: v.r * 1.15, color: 0xd8553f, life: 0.34, opacity: 0.85, y: 0.07 });
             fx.burst({ x: v.x, z: v.z }, { color: 0xff6a4a, count: 18, speed: 3.4, life: 0.55, size: 0.13, y: 0.28, up: 1.5, gravity: 4 });
             fx.text({ x: v.x, z: v.z }, '封印', { color: '#ff8a6a', y: 1.5, size: 0.62 });
           }
-          // 音效不用在这儿放：cursePlayer 第一次上减速时自己会播（main.js）
+          // 音效不用在这儿放：sealPlayer 第一次上减速时自己会播（main.js）
         } else if (fx) {
-          // 走开了也给个「印盖空」的反馈，玩家才知道这一步躲对了
+          // 走开了、或盖章人已经倒下 → 给个「印盖空」的反馈
           fx.ring({ x: v.x, z: v.z }, { from: 0.2, to: v.r, color: 0xa8503e, life: 0.26, opacity: 0.35, y: 0.06 });
         }
         continue;
@@ -4929,18 +4938,28 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
   const WEIGH = () => (ENEMY_TYPES.weigher && ENEMY_TYPES.weigher.weigh) || null;
   let weighTier = 0;
 
-  // 给一只怪套上「当前层数」的账（伤害/减伤落到实例上，移速在 moveToward 里实时读）
+  // 给一只怪套上「当前层数」的账（伤害/减伤/血/攻速落到实例上，移速在 moveToward 里实时读）
+  // 第 112 块：生命与攻速都按**出生值 × (1 + 10% × 层数)** 计算，来回叠不会滚雪球；
+  // 减伤用乘法（1 - 0.9^层），避免十层以后直接免疫。
   function dressWeigh(e) {
     const cfg = WEIGH();
     if (!cfg) return;
-    const t = Math.min(cfg.cap, weighTier);
+    const t = weighTier;
     e.named = t;
-    e.namedArmor = cfg.per.armor * t;
-    if (e.dmg0 != null) e.damage = e.dmg0 * (1 + cfg.per.damage * t);
+    e.namedArmor = 1 - Math.pow(1 - (cfg.per.armor || 0), t);
+    if (e.dmg0 != null) e.damage = e.dmg0 * (1 + (cfg.per.damage || 0) * t);
+    if (e.haste0 != null) e.haste = e.haste0 * (1 + (cfg.per.haste || 0) * t);
+    if (cfg.per.hp && e.hp0 != null) {
+      const ratio = e.maxHp > 0 ? e.hp / e.maxHp : 1;
+      e.maxHp = e.hp0 * (1 + cfg.per.hp * t);
+      e.hp = e.maxHp * ratio;
+      if (e.bar) e.bar.draw(e.hp / e.maxHp, e.hp, e.maxHp);
+    }
     updateNamedRing(e);
   }
 
-  // 每只「记过名」的怪脚下一只金环（半径随层数长大：第 5 层的环几乎有两人宽）
+  // 每只「记过名」的怪脚下一只金环（半径随层数长大；第 112 块起层数无上限，
+  // 环到 4.5 就封顶，否则高叠层会把整个场地刷成金色 —— 层数文字仍然照实显示）
   function updateNamedRing(e) {
     const cfg = WEIGH();
     if (!cfg) return;
@@ -4949,7 +4968,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
       if (e.namedRing) { e.root.remove(e.namedRing.mesh); e.namedRing.dispose(); e.namedRing = null; }
       return;
     }
-    const want = 0.60 + t * 0.18;
+    const want = Math.min(4.5, 0.60 + t * 0.18);
     if (e.namedRing) {
       e.namedRing.setRadius(want);
       e.namedRing.baseR = want;
@@ -4967,7 +4986,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
   function performWeigh(e) {
     const cfg = WEIGH();
     if (!cfg) return;
-    weighTier = Math.min(cfg.cap, weighTier + 1);
+    weighTier += 1;                 // 第 112 块：无上限
     for (const o of list) {
       if (o.state === 'dead' || o.state === 'down') continue;
       dressWeigh(o);
@@ -4993,9 +5012,16 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     weighTier = 0;
     for (const o of list) {
       if (!o.named) continue;
+      const ratio = o.maxHp > 0 ? o.hp / o.maxHp : 1;
       o.named = 0;
       o.namedArmor = 0;
       if (o.dmg0 != null) o.damage = o.dmg0;
+      if (o.haste0 != null) o.haste = o.haste0;
+      if (o.hp0 != null) {
+        o.maxHp = o.hp0;
+        o.hp = o.maxHp * ratio;
+        if (o.bar) o.bar.draw(o.hp / o.maxHp, o.hp, o.maxHp);
+      }
       if (o.namedRing) {
         if (fx) {
           fx.burst(o.pos, {

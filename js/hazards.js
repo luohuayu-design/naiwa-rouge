@@ -22,7 +22,7 @@
 //   drip 走的是和漏电地板完全独立的一条分支，互不影响：
 //   `isPowered` 仍然只服务于漏电地板（绝缘斗篷的判定照旧）。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=125';
+import * as THREE from '../lib/three.module.js?v=127';
 
 export function createHazards({ scene, fx, playerPos, playerRadius = 0.32, hurtPlayer }) {
   // 漏电地板 def: { x, z, r, cycle, on, warm, damage }

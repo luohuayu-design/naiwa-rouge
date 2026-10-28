@@ -13,13 +13,13 @@
 // （击杀 / 弹事件卡 / 选升级卡）。
 // ============================================================
 
-import { ENEMY_TYPES } from './enemy.js?v=125';
-import { SWORD_KINDS } from './swordKinds.js?v=125';
-import { RELIC_DEFS } from './relics.js?v=125';
-import { UPGRADES } from './upgrade.js?v=125';
-import { ALL_EVENTS } from './events.js?v=125';
-import { RARITIES } from './rarity.js?v=125';
-import { codexAll, codexCount } from './profile.js?v=125';
+import { ENEMY_TYPES } from './enemy.js?v=127';
+import { SWORD_KINDS } from './swordKinds.js?v=127';
+import { RELIC_DEFS } from './relics.js?v=127';
+import { UPGRADES } from './upgrade.js?v=127';
+import { ALL_EVENTS } from './events.js?v=127';
+import { RARITIES } from './rarity.js?v=127';
+import { codexAll, codexCount } from './profile.js?v=127';
 
 export const CODEX_TABS = [
   { id: 'enemies', name: '怪物' },
@@ -51,7 +51,7 @@ function enemySub(cfg) {
   // 它的生命/伤害都不吓人，吓人的是频率。
   if (cfg.seal) {
     return statLine([['生命', cfg.hp], ['伤害', cfg.damage], ['速度', cfg.speed]])
-      + ` · 每 ${cfg.attackInterval} 秒盖一次印 · 封印 ${cfg.seal.time} 秒`;
+      + ` · 每 ${cfg.attackInterval} 秒盖一次印 · 封步持续到它死亡`;
   }
   // 称量官（第 82 块）：它自己的数值不重要，重要的是「它叠的那一层」。
   // 写穿上称间隔和三层加成 —— 玩家得先知道「为什么突然都变快了」。
@@ -115,8 +115,8 @@ function enemyDesc(cfg) {
   if (cfg.seal) {
     const se = cfg.seal;
     return `走位压力：它只干一件事 —— 在你此刻站的脚下盖一枚红方印，${cfg.windup} 秒后落。`
-      + `落印时人还在框里，就掉 ${cfg.damage} 点血并被「封印」${se.time} 秒：移速只剩 ${Math.round(se.slow * 100)}%，`
-      + `想跑也跑不快。它自己很脆（${cfg.hp} 血，两下就没），但每 ${cfg.attackInterval} 秒就盖一枚 —— `
+      + `落印时人还在框里，就掉 ${cfg.damage} 点血并被「封步」：移速只剩 ${Math.round(se.slow * 100)}%，`
+      + `而且这次封步会一直挂到盖章人死亡才解除。它自己很脆（${cfg.hp} 血，两下就没），但每 ${cfg.attackInterval} 秒就盖一枚 —— `
       + `站着输出会被连着盖，边打边挪它才盖不中。`
       + `和紫阵的区别：紫阵铺在地上等你踩，可以绕；方印钉的是你此刻的位置，绕不开，只能一直动。`
       + `所以第九关真正的节奏是「别在称量官面前站桩」—— 你一停手，印就落下来`;
@@ -125,7 +125,7 @@ function enemyDesc(cfg) {
   // 它自己几乎不打人，玩家第一反应一定是「先打围上来的」，那就正好踩进机制里。
   if (cfg.weigh) {
     const p = cfg.weigh.per;
-    return `记账压力：它自己几乎不打人，活儿是给全场叠层 —— 每 ${cfg.weigh.every} 秒翻一次簿子，场上所有存活的怪一起加：移速 +${Math.round(p.speed * 100)}%、伤害 +${Math.round(p.damage * 100)}%、减伤 +${Math.round(p.armor * 100)}%，最多 ${cfg.weigh.cap} 层（被记名的怪脚下会长出一只金环，层数越大环越大）。拖着不管，同一批骷髅会每九秒换一副更凶的面孔；砍掉它，所有层当场清零。所以它躲得比谁都远，也只在你够不到它的时候最快活 —— 它翻开簿子站定那 ${cfg.attackDuration} 秒，就是这一关的输出窗口`;
+    return `记账压力：它自己几乎不打人，活儿是给全场叠层 —— 每 ${cfg.weigh.every} 秒翻一次簿子，场上所有存活的怪一起加：生命上限与当前血 +${Math.round(p.hp * 100)}%、伤害 +${Math.round(p.damage * 100)}%、移速 +${Math.round(p.speed * 100)}%、攻速 +${Math.round(p.haste * 100)}%、减伤按剩余伤害 ×${(1 - p.armor).toFixed(1)} 连乘，没有层数上限（被记名的怪脚下会长出一只金环，层数越大环越大）。拖着不管，同一批骷髅会每八秒换一副更凶的面孔；砍掉它，所有层当场清零。所以它躲得比谁都远，也只在你够不到它的时候最快活 —— 它翻开簿子站定那 ${cfg.attackDuration} 秒，就是这一关的输出窗口`;
   }
   // ---- 第十关四只（第 107 块）----
   // ⚠️ desc 走 textContent：**不能写 HTML、不能写 ** 加粗**，写了玩家看到的就是字面符号。

@@ -749,12 +749,15 @@ export const LEVELS_BY_ID = {
 };
 
 // 第 roundNo 回合（从 1 开始）的怪物属性倍率
-// 难度（第 18 块）：乘在每回合的成长倍率上。普通 = 原版数值，一局一选，
-// 不进设置面板（难度是「这一局玩多狠」的选择，不是机器偏好）。
+// 难度（第 18 块）：乘在每回合的成长倍率上。一局一选，不进设置面板
+// （难度是「这一局玩多狠」的选择，不是机器偏好）。
+// 第 112 块（用户定案）：整体抬一档 —— 新普通 = 旧地狱，新增简单（骨币也少），
+// 噩梦 / 地狱在旧地狱之上继续加码。四档顺序即 UI 显示顺序。
 export const DIFFS = {
-  normal: { name: '普通', hp: 1, damage: 1, speed: 1, haste: 1, desc: '原汁原味的荒草地' },
-  nightmare: { name: '噩梦', hp: 1.35, damage: 1.25, speed: 1.04, haste: 1.04, desc: '怪更硬更疼，脚程和出手都快一点' },
-  hell: { name: '地狱', hp: 1.8, damage: 1.55, speed: 1.08, haste: 1.10, desc: '一步走错就倒下，给头铁的蛙' },
+  easy:      { name: '简单', hp: 0.90, damage: 0.75, speed: 0.95, haste: 0.95, desc: '怪更软更慢，骨币也少一些 —— 先活着走出荒草地' },
+  normal:    { name: '普通', hp: 1.80, damage: 1.55, speed: 1.08, haste: 1.10, desc: '原地狱档：一步走错就倒下' },
+  nightmare: { name: '噩梦', hp: 2.30, damage: 1.90, speed: 1.14, haste: 1.16, desc: '在旧地狱之上再抬一档，硬吃一下就可能归零' },
+  hell:      { name: '地狱', hp: 2.90, damage: 2.30, speed: 1.20, haste: 1.22, desc: '给头铁到极点的蛙：容错只剩走位' },
 };
 let diff = DIFFS.normal;
 export function setDifficulty(key) {

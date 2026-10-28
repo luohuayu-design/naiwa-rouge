@@ -67,17 +67,20 @@ const s5r1 = wave.roundScale(1, L5);
 const s5r20 = wave.roundScale(20, L5);
 const s6r20 = wave.roundScale(20, L6);
 const s4r20 = wave.roundScale(20, L4);
-// 第五关 R20 伤害 = (1 + 0.16*19) * 1 * 1.35
-ok(Math.abs(s5r20.damage - (1 + 0.16 * 19) * 1.35) < 1e-9,
-  '第五关 R20 伤害 = 基础 × 1.35（精确）', s5r20.damage.toFixed(4));
-ok(Math.abs(s5r20.hp - (1 + 0.28 * 19) * 1.15) < 1e-9, '第五关 R20 血量 = 基础 × 1.15');
-ok(Math.abs(s6r20.damage - (1 + 0.17 * 19) * 1.35) < 1e-9, '第六关 R20 伤害 = 基础 × 1.35');
-ok(s5r1.damage > 1.3 && s5r1.damage < 1.4, '第五关 R1 伤害也 ×1.35（整关一起乘）', s5r1.damage.toFixed(3));
+// 第 112 块：难度倍率（普通 hp 1.80 / damage 1.55 / speed 1.08）现在乘在成长表上，
+// 这里把倍率提出来做基准 —— 断言的是「关与关之间的相对关系」，而不是绝对数字。
+const DN = wave.DIFFS.normal;
+// 第五关 R20 伤害 = (1 + 0.16*19) * 1 * 1.35 * 难度
+ok(Math.abs(s5r20.damage - (1 + 0.16 * 19) * 1.35 * DN.damage) < 1e-9,
+  '第五关 R20 伤害 = 基础 × 1.35 × 难度（精确）', s5r20.damage.toFixed(4));
+ok(Math.abs(s5r20.hp - (1 + 0.28 * 19) * 1.15 * DN.hp) < 1e-9, '第五关 R20 血量 = 基础 × 1.15 × 难度');
+ok(Math.abs(s6r20.damage - (1 + 0.17 * 19) * 1.35 * DN.damage) < 1e-9, '第六关 R20 伤害 = 基础 × 1.35 × 难度');
+ok(Math.abs(s5r1.damage - 1.35 * DN.damage) < 1e-9, '第五关 R1 伤害也 ×1.35（整关一起乘）', s5r1.damage.toFixed(3));
 ok(s5r20.damage / s4r20.damage > 1.3, '第五关比第四关明显更疼', (s5r20.damage / s4r20.damage).toFixed(3));
 // 第 91 块：速度斜率从 0.035 提到 0.045（用户「移动更快」），这里改判新值
-ok(Math.abs(s5r20.speed - (1 + 0.045 * 19)) < 1e-9, '速度是第 91 块的新斜率 0.045（不再是 0.035）');
+ok(Math.abs(s5r20.speed - (1 + 0.045 * 19) * DN.speed) < 1e-9, '速度是第 91 块的新斜率 0.045（不再是 0.035）');
 // 第四关不含 mul 时行为完全老样
-ok(Math.abs(s4r20.damage - (1 + 0.15 * 19)) < 1e-9, '第四关数值与老版本一致（回归）');
+ok(Math.abs(s4r20.damage - (1 + 0.15 * 19) * DN.damage) < 1e-9, '第四关数值与老版本一致（回归）');
 wave.setDifficulty('normal');
 
 // ============================================================

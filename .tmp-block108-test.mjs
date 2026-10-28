@@ -207,7 +207,7 @@ console.log('[§8] 文案不写死单值');
 // ============================================================ §9 版本号
 console.log('[§9] 版本号');
 {
-  ok(VER === '125', 'index.html 版本 = 125', `实际 ${VER}`);
+  ok(Number(VER) >= 125, 'index.html 版本 ≥ 125（不写死）', `实际 ${VER}`);
   const stale = ['main.js', 'upgrade.js', 'golem.js', 'arrowRain.js', 'shop.js', 'skills.js']
     .filter((f) => !src(f).includes(`?v=${VER}`));
   ok(stale.length === 0, '七个改动文件的 import 全部带新版本号', stale.join(','));

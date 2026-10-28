@@ -3,8 +3,11 @@
 //
 // 三层结构：
 //   基础值 base  —— 初始属性（这里就是调平衡的唯一入口）
-//   加成 mods    —— 升级/道具/技能带来的加成，分 flat（加法）与 pct（百分比）
-//   最终值 get() —— (base + Σflat) × (1 + Σpct)
+//   加成 mods    —— 升级/道具/技能带来的加成，分 flat（加法）、pct（百分比）与 mul（最终乘）
+//   最终值 get() —— (base + Σflat) × (1 + Σpct) × Πmul
+//
+// 第 112 块：新增 mul（最终乘算）。诅咒这类「必须在所有加成之后再结算」的效果走它，
+// 例如脆骨症直接乘最终生命上限 0.66 —— 局中 +3 上限实际只 +1.98，不会被后续加成冲淡。
 //
 // ⚠️ 第 6 块起**主角与武器是两套完全独立的属性表**：
 //   · STAT_DEFS（这个文件）            = 奶蛙自己的生命/近战/机动/经济
@@ -127,15 +130,15 @@ export function mitigate(raw, armor, floorPct = 0) {
 // defs 可以换成武器自己的属性表（weaponStats.js），逻辑完全一样。
 // adminFlat（可选）：{ key: 数值 }，一个**追加到最终值末尾**的常数项 ——
 //   属性面板「管理员模式二」手改的数值走这里（第 98 块）。
-//   ⚠️ 它**不是**基础值、也**不参与**百分比乘法：
-//     final = (base + Σflat) × (1 + Σpct) + adminFlat
-//   所以填进去多少，面板上就是多少；之后再抽到升级卡 / 篝火 / 火种，
+//   ⚠️ 它**不是**基础值、也**不参与**百分比 / 最终乘算：
+//     final = (base + Σflat) × (1 + Σpct) × Πmul + adminFlat
+//   所以填进去多少，面板上就多多少；之后再抽到升级卡 / 篝火 / 火种，
 //   加成都只乘**原始 base**（"改后最终值 + 改动率 × 基础值"），不会把改动一起放大。
 //   第 95 块那种「反解 base」的写法会把基础值改掉，用户明确否掉了。
 export function createStats(defs = STAT_DEFS, adminFlat) {
   const base = {};
   const adj = {};           // key -> 手改追加项（0 = 没改）
-  const mods = new Map();   // key -> [{ flat, pct, src }]
+  const mods = new Map();   // key -> [{ flat, pct, mul, src }]
   const numOr = (v, d) => (v != null && Number.isFinite(Number(v))) ? Number(v) : d;
   for (const d of defs) {
     base[d.key] = d.base;
@@ -143,27 +146,29 @@ export function createStats(defs = STAT_DEFS, adminFlat) {
     mods.set(d.key, []);
   }
 
-  // 最终值：(base + Σflat) × (1 + Σpct) + 手改追加项，下限 0（移速等不能为负）
+  // 最终值：(base + Σflat) × (1 + Σpct) × Πmul + 手改追加项，下限 0（移速等不能为负）
   function get(key) {
     const b = base[key] ?? 0;
-    let flat = 0, p = 0;
+    let flat = 0, p = 0, mm = 1;
     for (const m of mods.get(key) || []) {
       flat += m.flat || 0;
       p += m.pct || 0;
+      mm *= m.mul == null ? 1 : m.mul;
     }
-    const v = (b + flat) * (1 + p) + (adj[key] || 0);
+    const v = (b + flat) * (1 + p) * mm + (adj[key] || 0);
     return v < 0 ? 0 : v;
   }
 
   // 不含手改项的「自然最终值」：面板要用它把输入值换算成追加项
   function natural(key) {
     const b = base[key] ?? 0;
-    let flat = 0, p = 0;
+    let flat = 0, p = 0, mm = 1;
     for (const m of mods.get(key) || []) {
       flat += m.flat || 0;
       p += m.pct || 0;
+      mm *= m.mul == null ? 1 : m.mul;
     }
-    return (b + flat) * (1 + p);
+    return (b + flat) * (1 + p) * mm;
   }
 
   // 加成合计（第 95 块）：要把 flat / pct 两项拆出来做展示与换算。
@@ -176,24 +181,26 @@ export function createStats(defs = STAT_DEFS, adminFlat) {
     return { flat, pct: p };
   }
 
-  // 加成：stat 属性 key，flat 加法，pct 百分比（0.1 = +10%），src 来源标识（便于整批撤销）
+  // 加成：stat 属性 key，flat 加法，pct 百分比（0.1 = +10%），
+  //       mul 最终乘算（0.85 = 最终值 ×0.85，第 112 块给诅咒用），src 来源标识（便于整批撤销）
   // ⚠️ 百分比是「乘在 (base + flat) 上」的，所以 base 为 0 的属性（暴击率、吸血、防御…）
   //    用 pct 不会生效 —— 这类属性一律用 flat 加绝对值。
-  function addMod({ stat, flat = 0, pct: p = 0, src = '' }) {
+  function addMod({ stat, flat = 0, pct: p = 0, mul, src = '' }) {
     if (!mods.has(stat)) return;
-    mods.get(stat).push({ flat, pct: p, src });
+    mods.get(stat).push({ flat, pct: p, mul: mul == null ? 1 : Number(mul), src });
   }
 
   // 预演一个加成「如果加上去会变成多少」，不改任何状态。
   // 公式与 get() 完全一致，所以三选一面板上显示的数字就是选完的真实数字。
-  function preview(key, { flat = 0, pct: p = 0 } = {}) {
+  function preview(key, { flat = 0, pct: p = 0, mul = 1 } = {}) {
     const b = base[key] ?? 0;
-    let f = 0, pp = 0;
+    let f = 0, pp = 0, mm = 1;
     for (const m of mods.get(key) || []) {
       f += m.flat || 0;
       pp += m.pct || 0;
+      mm *= m.mul == null ? 1 : m.mul;
     }
-    const v = (b + f + flat) * (1 + pp + p) + (adj[key] || 0);
+    const v = (b + f + flat) * (1 + pp + p) * mm * mul + (adj[key] || 0);
     return v < 0 ? 0 : v;
   }
 
@@ -265,7 +272,11 @@ export function createStats(defs = STAT_DEFS, adminFlat) {
   function dumpMods() {
     const out = [];
     for (const [key, list] of mods) {
-      for (const m of list) out.push({ stat: key, flat: m.flat || 0, pct: m.pct || 0, src: m.src || '' });
+      for (const m of list) {
+        const o = { stat: key, flat: m.flat || 0, pct: m.pct || 0, src: m.src || '' };
+        if (m.mul != null && m.mul !== 1) o.mul = m.mul;   // 第 112 块：老存档没有这一项 → 默认 1
+        out.push(o);
+      }
     }
     return out;
   }
