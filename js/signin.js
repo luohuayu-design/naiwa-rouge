@@ -19,8 +19,8 @@
 // 老档的 got3 会在 signState 里一次性迁移进 got['3']（3 天 +100 这一档语义没变）。
 // 所有奖励只在 signToday() 里发，重复调用当天第二次直接返回 signed。
 // ============================================================
-import { profile, save, addBones, bones } from './profile.js?v=127';
-import { grantBoons } from './boons.js?v=127';
+import { profile, save, addBones, bones } from './profile.js?v=128';
+import { grantBoons } from './boons.js?v=128';
 
 export const SIGN_BONES_MIN = 0;    // 每天签到的最少骨币（真的可能是 0）
 export const SIGN_BONES_MAX = 100;  // 每天签到的最多骨币

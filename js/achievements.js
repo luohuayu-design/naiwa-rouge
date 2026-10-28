@@ -31,7 +31,7 @@
 //    · tier 决定骨币，**别手写骨币数字**（改档位只改 ACH_TIERS 一处）。
 // ============================================================
 
-import { profile, hasAch, achGot, markAchGot, addBones, save } from './profile.js?v=127';
+import { profile, hasAch, achGot, markAchGot, addBones, save } from './profile.js?v=128';
 
 // ---------------- 八类别 ----------------
 // icon 全部来自 game-icons.net（CC BY 3.0），和背包图标同源；
@@ -195,7 +195,7 @@ export const ACHS = [
 
   // ========== 挑战 ==========
   { id: 'win_fast', cat: 'challenge', tier: 1, icon: '⚡', name: '快刀', desc: '10 分钟内通关' },
-  { id: 'win_faster', cat: 'challenge', tier: 2, icon: '🕛', name: '电光石火', desc: '5 分钟内通关' },
+  // ⚠️ 「电光石火」（5 分钟内通关）已删除 —— 用户反馈太难完成，正常流程几乎不可能压进 5 分钟。
   { id: 'win_no_sword', cat: 'challenge', tier: 2, icon: '✊', name: '赤手空拳', desc: '不拿环剑通关（真的有人这么干？）' },
   { id: 'hell_win', cat: 'challenge', tier: 2, icon: '🔥', name: '地狱归来', desc: '在「地狱」难度下通关' },
   { id: 'curse_3', cat: 'challenge', tier: 1, icon: '🕸️', name: '三咒缠身', desc: '带着至少三条诅咒通关' },

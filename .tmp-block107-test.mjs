@@ -246,7 +246,7 @@ console.log('[§11] 剧情 / 成就 / 版本');
 {
   const s10 = STORY_CHAPTERS.find((c) => c.id === 's10');
   ok(s10 && s10.levelId === 10 && s10.atRound === 2, 's10 绑第十关第 2 回合');
-  ok(ACHS.length === 111, '成就 111 条', String(ACHS.length));
+  ok(ACHS.length === 110, '成就 110 条', String(ACHS.length));
   for (const id of ['clear_10', 'mirror_10', 'addressee_10', 'waiter_5', 'echo_10']) {
     const a = achById(id);
     ok(!!a, `成就 ${id} 存在`);
