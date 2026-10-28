@@ -285,7 +285,11 @@ dqReset();
   const base = dqTasks(d);
   const killTask = base.find((t) => t.def.metric === 'kills');
   const maxTask = base.find((t) => t.def.metric === 'roundMax');
-  ok(!!killTask || !!maxTask, '这一天的池子里有可测的计数器');
+  // 第 109 块池子扩到 39 后，这一天抽到的组合不保证含 kills / roundMax ——
+  // 放宽成「五条里至少一条的 metric 有 AGG 语义」（kT: 开头的按 sum 算）
+  const hasCounter = base.some((t) => t.def.metric.startsWith('kT:')
+    || /:\s*'(sum|max)'/.test(dqSrc.match(new RegExp(`\\b${t.def.metric.replace(':', '\\:')}:\\s*'(sum|max)'`))?.[0] || ''));
+  ok(!!killTask || !!maxTask || hasCounter, '这一天的池子里有可测的计数器');
 
   // sum：一天内累计（杀两波各 1 只 = 2）
   dqPump({ kills: 1 }, d);

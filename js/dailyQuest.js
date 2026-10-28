@@ -25,7 +25,7 @@
 //    关掉网页回来会发现“明明做完了却没算”。
 // ============================================================
 
-import { profile, save, addBones, bones } from './profile.js?v=123';
+import { profile, save, addBones, bones } from './profile.js?v=124';
 
 // ---------------- 三档难度 ----------------
 // 第 94 块定案用**克制档**：木匣首价 30、金匣 280。一天全清 320 骨币 ≈
@@ -46,6 +46,15 @@ const AGG = {
   events: 'sum', shopBuys: 'sum', curseWins: 'sum', hellWins: 'sum', fast7: 'sum',
   roundMax: 'max', killRunMax: 'max', coinMax: 'max', cardsMax: 'max',
   swordMax: 'max', clearLv: 'max', hellRoundMax: 'max', flawlessRunMax: 'max',
+  // 第 109 块：池子扩容 24 → 39 的新计数器（休闲友好 + 新内容联动 + 高难挑战）
+  deaths: 'sum',            // 倒下也算任务（休闲友好）
+  nightmareWins: 'sum',     // 噩梦 / 地狱难度通关（地狱玩家不算被排除）
+  curse3Wins: 'sum',        // 带 ≥3 条诅咒通关
+  fast5: 'sum',             // 5 分钟内通关（比 fast7 更紧）
+  critRunMax: 'max',        // 单局暴击次数（runCrits 现成，结算时喂）
+  arrowCasts: 'sum',        // 箭雨累计施放（pressSkill 收口埋点）
+  arrowRunMax: 'max',       // 单局箭雨施放（结算时喂）
+  golemSummons: 'sum',      // 傀儡累计召唤（hintChoiceCb 埋点）
 };
 // 按怪种分别记的击杀（键形如 'kT:minion'），一律 sum
 const KILL_KIND = (type) => `kT:${type}`;
@@ -53,6 +62,15 @@ const KILL_KIND = (type) => `kT:${type}`;
 // ---------------- 任务池 ----------------
 // 常驻那条每天都出，不进随机池（否则玩家可能一整天都拿不到「通关」）。
 export const DQ_PINNED = ['dq_clear_any'];
+
+// 第 109 块：可选的 avail(p) —— 玩家档案不具备条件时，这条任务**不进抽签池**
+//（见 rollTasks，用「日期哈希 × 当前档案状态」当种子：同一天 + 同状态 = 同一批，
+// 确定性不破坏）。档案状态当天变了（买了傀儡术 / 解锁了箭雨）也不重掷 ——
+// picked 已落盘，第二天自然轮换。
+// 箭雨只查 rainGot（旧档「records≥2」的推断只在 main 里做，这里故意不镜像：
+// 极老档看不到箭雨任务，损失只是一条任务，不会卡死任何奖励链）。
+const arrowAvail = (p) => !!p.rainGot;
+const puppetAvail = (p) => (Number(p.relics && p.relics.puppet) || 0) > 0;
 
 export const DQ_POOL = [
   // ===== 简单 =====
@@ -82,6 +100,19 @@ export const DQ_POOL = [
     name: '环上同时挂 6 把剑', desc: '商店里的剑可以一直买，环没有上限' },
   { id: 'dq_kill_run_80', tier: 'easy', metric: 'killRunMax', need: 80,
     name: '单局击倒 80 只', desc: '一局之内，别中途存档退出' },
+  // ---- 第 109 块：休闲友好类 ----
+  { id: 'dq_death_2', tier: 'easy', metric: 'deaths', need: 2,
+    name: '倒下 2 次', desc: '倒下也算努力，躺着把钱挣了' },
+  { id: 'dq_shop_6', tier: 'easy', metric: 'shopBuys', need: 6,
+    name: '在商店买 6 件东西', desc: '囤药水也行，买满六件就达标' },
+  { id: 'dq_potion_5', tier: 'easy', metric: 'potions', need: 5,
+    name: '喝 5 瓶药水', desc: '血不满也可以喝，别留着过年' },
+  { id: 'dq_runs_4', tier: 'easy', metric: 'runs', need: 4,
+    name: '打完 4 局', desc: '倒下也算，凑局数就好' },
+  { id: 'dq_arrow_20', tier: 'easy', metric: 'arrowCasts', need: 20, avail: arrowAvail,
+    name: '累计施放 20 次箭雨', desc: '几局加起来算，冷却好了就扔' },
+  { id: 'dq_kill_100', tier: 'easy', metric: 'kills', need: 100,
+    name: '累计击倒 100 只骷髅', desc: '一天打两三局就满了' },
 
   // ===== 中等 =====
   { id: 'dq_m_lv2', tier: 'mid', metric: 'clearLv', need: 2,
@@ -96,6 +127,17 @@ export const DQ_POOL = [
     name: '带至少一条诅咒通关', desc: '开局选诅咒，骨币倍率还能更高' },
   { id: 'dq_m_flawless2', tier: 'mid', metric: 'flawlessRunMax', need: 2,
     name: '一局里 2 个回合不掉血', desc: '两个回合，一次都别被碰到' },
+  // ---- 第 109 块：新内容联动 + 硬一点的中等 ----
+  { id: 'dq_m_arrow8', tier: 'mid', metric: 'arrowRunMax', need: 8, avail: arrowAvail,
+    name: '单局施放 8 次箭雨', desc: '一局之内扔满 8 次，冷却刚好够' },
+  { id: 'dq_m_golem2', tier: 'mid', metric: 'golemSummons', need: 2, avail: puppetAvail,
+    name: '一天召唤 2 只傀儡', desc: '先在商店买「傀儡术」，铁雪都算' },
+  { id: 'dq_m_crit60', tier: 'mid', metric: 'critRunMax', need: 60,
+    name: '单局暴击 60 次', desc: '暴击率不够就拿暴击卡凑' },
+  { id: 'dq_m_flawless5', tier: 'mid', metric: 'flawlessRunMax', need: 5,
+    name: '一局里 5 个回合不掉血', desc: '五个干净回合，走位要更讲究' },
+  { id: 'dq_m_kill200', tier: 'mid', metric: 'kills', need: 200,
+    name: '累计击倒 200 只骷髅', desc: '一天认真打个三四局' },
 
   // ===== 困难 =====
   { id: 'dq_h_win2', tier: 'hard', metric: 'wins', need: 2,
@@ -108,6 +150,15 @@ export const DQ_POOL = [
     name: '在「地狱」难度下通关', desc: '最高难度，整关通关' },
   { id: 'dq_h_fast7', tier: 'hard', metric: 'fast7', need: 1,
     name: '7 分钟内通关', desc: '打得快比打得稳难' },
+  // ---- 第 109 块：高难挑战类 ----
+  { id: 'dq_h_nightmare', tier: 'hard', metric: 'nightmareWins', need: 1,
+    name: '在噩梦或更高难度下通关', desc: '怪物更硬更疼，地狱也满足' },
+  { id: 'dq_h_curse3', tier: 'hard', metric: 'curse3Wins', need: 1,
+    name: '带 3 条诅咒通关', desc: '诅咒拉满还能赢，倍率也最高' },
+  { id: 'dq_h_round20', tier: 'hard', metric: 'roundMax', need: 20,
+    name: '单局打到第 20 回合', desc: '最后一波都见了，才算到底' },
+  { id: 'dq_h_fast5', tier: 'hard', metric: 'fast5', need: 1,
+    name: '5 分钟内通关', desc: '比 7 分钟那条更紧，速通流派的家常便饭' },
 ];
 
 const BY_ID = Object.fromEntries(DQ_POOL.map((t) => [t.id, t]));
@@ -139,11 +190,14 @@ function mulberry32(a) {
 
 // ---------------- 抽签 ----------------
 // 简单抽 2 条（常驻那条不参与）+ 中等 1 条 + 困难 1 条。
-// 池子必须够大：简单池抽完常驻还剩 12 条，抽 2 条不会重复。
+// 池子必须够大：简单池抽完常驻还剩 18 条（第 109 块），抽 2 条不会重复。
 function rollTasks(day) {
+  const p = profile();
   const rng = mulberry32(daySeed(day));
   const pick = (tier, n) => {
-    const pool = DQ_POOL.filter((t) => t.tier === tier && !DQ_PINNED.includes(t.id));
+    // avail 不满足的不进池（第 109 块）——否则新玩家某天会只抽到 4 条任务
+    const pool = DQ_POOL.filter((t) => t.tier === tier && !DQ_PINNED.includes(t.id)
+      && (!t.avail || t.avail(p)));
     const out = [];
     const idx = pool.map((_, i) => i);
     for (let k = 0; k < n && idx.length; k++) {
@@ -173,8 +227,12 @@ export function dqState(now = new Date()) {
     s.got = {};
     save();
   }
-  // 防御：池子里删掉过的任务 id 会从老档里漏出来，直接剔除
-  s.picked = s.picked.filter((id) => BY_ID[id]);
+  // 防御：池子里删掉过的任务 id 会从老档里漏出来，直接剔除；
+  // avail 兼作兜底（正常情况下 rollTasks 已经排除了，这里挡手工改档 / 老档）。
+  s.picked = s.picked.filter((id) => {
+    const t = BY_ID[id];
+    return t && (!t.avail || t.avail(p));
+  });
   return s;
 }
 
