@@ -1479,7 +1479,7 @@ export const STORY_CHAPTERS = [
   },
 
   {
-    id: 's12', no: 12, act: 2, levelId: null, atRound: null,
+    id: 's12', no: 12, act: 2, levelId: 12, atRound: 2,   // 第 116 块：接第十二关「三幻神驿站」
     icon: '🦘', title: '黄色三幻神', who: '袋鼠', place: '焦土公路服务区',
     story:
       '焦土公路边有个服务区，招牌上写着：三幻神驿站 · 24 小时 · 免费充电。\n'

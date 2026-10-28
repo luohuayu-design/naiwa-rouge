@@ -44,14 +44,14 @@ eq(CG.hp, 8, '血量 12 → 8（第 112 块：叠层无上限，得让它更容�
 ok(CG.hp < ENEMY_TYPES.eraser.hp * 4, `8 不至于把它变成一块血豆腐（擦名者 ${ENEMY_TYPES.eraser.hp}）`);
 eq(CG.animFamily, 'royal', '换了 royal 动画族（King 没有 Punch / Weapon）');
 ok(CG.clipOverrides === undefined, '不再需要 clipOverrides 兜旧骨架');
-// 复用的反面证据：有 glb 的怪，一只一个文件
+// 复用
 // ⚠️ 第 114 块：`addressee` / `clerk` / `collector` 是程序化模型（`proc:`），没有 `file`。
-// 第 107 块这里没过滤，第 114 块加了两只 proc 怪后两个 `undefined` 会撞在一起 → 假红。
+// 第 116 块：`kangaroo` 也是程序化模型。
 const glbTypes = Object.values(ENEMY_TYPES).filter((t) => !t.planned && t.file);
 const allFiles = glbTypes.map((t) => t.file);
 eq(new Set(allFiles).size, allFiles.length, `零复用：${glbTypes.length} 只有模型的怪 / ${new Set(allFiles).size} 个文件`);
-ok(Object.values(ENEMY_TYPES).filter((t) => !t.planned && t.proc).length === 3,
-  '三只程序化怪（收件人 / 誊录员 / 收账人）不占 glb',
+ok(Object.values(ENEMY_TYPES).filter((t) => !t.planned && t.proc).length === 4,
+  '四只程序化怪（收件人 / 誊录员 / 收账人 / 袋鼠）不占 glb',
   Object.values(ENEMY_TYPES).filter((t) => t.proc).map((t) => t.proc).join(','));
 ok(ENEMY_TYPES['eraser'].file !== CG.file, '擦名者与称量官不再是同一个 glb');
 

@@ -13,13 +13,13 @@
 // （击杀 / 弹事件卡 / 选升级卡）。
 // ============================================================
 
-import { ENEMY_TYPES } from './enemy.js?v=130';
-import { SWORD_KINDS } from './swordKinds.js?v=130';
-import { RELIC_DEFS } from './relics.js?v=130';
-import { UPGRADES } from './upgrade.js?v=130';
-import { ALL_EVENTS } from './events.js?v=130';
-import { RARITIES } from './rarity.js?v=130';
-import { codexAll, codexCount } from './profile.js?v=130';
+import { ENEMY_TYPES } from './enemy.js?v=131';
+import { SWORD_KINDS } from './swordKinds.js?v=131';
+import { RELIC_DEFS } from './relics.js?v=131';
+import { UPGRADES } from './upgrade.js?v=131';
+import { ALL_EVENTS } from './events.js?v=131';
+import { RARITIES } from './rarity.js?v=131';
+import { codexAll, codexCount } from './profile.js?v=131';
 
 export const CODEX_TABS = [
   { id: 'enemies', name: '怪物' },
@@ -196,6 +196,16 @@ function enemyDesc(cfg) {
       + `收完它转身就退场，${c.cd} 秒后再来。打断很简单：走出 ${Math.round(c.range * 1.35)} 格外，或者砍它一刀 —— `
       + `它只有 ${cfg.hp} 血，全场最脆的怪之一。`
       + `所以它考的不是手，是判断：你正在打的那一群和它，先处理哪个`;
+  }
+  // ---- 第十二关 · 加急袋鼠（第 116 块）----
+  // 它不打人，压力在被它「加急」的那一群上：拖着不管，同一批怪突然变快变凶。
+  if (cfg.rush) {
+    const r = cfg.rush;
+    return `优先目标：它自己一下都不打你，活儿是给队友「加急」—— 站在中距离外读条 ${cfg.windup} 秒，`
+      + `读满给离你最近的那只怪挂上（头上会浮一个「加急」黄标），接下来 ${r.time} 秒那只怪`
+      + `移速 ×${r.speedMul.toFixed(2)}、出手频率 ×${r.hasteMul.toFixed(1)}。`
+      + `它只有 ${cfg.hp} 血、躲在中距离（${cfg.keepDistance} 格外不肯靠近），杀掉会掉一杯短咖啡（给你一点移速）。`
+      + `所以它是这一关的「优先击杀」：要么打断它的读条、要么先点掉它，别让整群怪一起被加急`;
   }
   if (cfg.erase) return '损失压力：它从不还手，读条 4.5 秒后把你环上的一把剑「擦掉」，然后转身往场地外跑 —— 跑出去那把剑这一局就没了。冰剑冻住 / 震剑击退 / 冲过去砍死它，都行';  if (cfg.reboot) return '耐心压力：打死不算完 —— 躺 4 秒后原地半血重启，而且比上一次更快（最多重启 2 次）。地上那圈红光就是倒计时，守着它补刀';
   if (cfg.charge) return '机动压力：地上一道直线就是它的冲锋路线 —— 横向侧移能躲，撞完它会僵一下（那就是输出窗口）';

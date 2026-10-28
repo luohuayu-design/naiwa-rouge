@@ -25,15 +25,15 @@
 // 第四关三只（wraith/leaper/mender，第 35 块，第 52 块换模型），
 // 各自在下面 ENEMY_TYPES 里有详细注释。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=130';
-import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=130';
-import { clone as cloneSkinned } from '../lib/jsm/utils/SkeletonUtils.js?v=130';
-import { distance2D } from './stats.js?v=130';
-import { createRangeRing } from './rangeRing.js?v=130';
-import { withV } from './assetUrl.js?v=130';
+import * as THREE from '../lib/three.module.js?v=131';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=131';
+import { clone as cloneSkinned } from '../lib/jsm/utils/SkeletonUtils.js?v=131';
+import { distance2D } from './stats.js?v=131';
+import { createRangeRing } from './rangeRing.js?v=131';
+import { withV } from './assetUrl.js?v=131';
 // 第 114 块：誊录员落笔 / 收账人翻账簿的提示音（以前这个文件不放音效，
 // 忘了 import 会在落笔那一帧抛 ReferenceError，整帧 AI 全断 —— 别省这一行）
-import audio from './audio.js?v=130';
+import audio from './audio.js?v=131';
 
 // KayKit 模型正面朝 +Z；如果哪天换模型发现怪倒着走，把这里改成 Math.PI
 export const ENEMY_MODEL_YAW = 0;
@@ -1478,6 +1478,51 @@ export const ENEMY_TYPES = {
     glow: { color: 0x4a3410, intensity: 0.5 },
     anim: { walk: 'idle', idle: 'idle', cast: 'attack', death: 'death', spawn: 'spawn' },
   },
+
+  // ============================================================
+  // 第十二关「三幻神驿站」（第 116 块）一只
+  // ============================================================
+  // 加急袋鼠：从 s12「黄色三幻神」里那只穿黄外套的袋鼠长出来。
+  // 它不是又一只纯血牛，而是「优先击杀目标」：
+  //   —— 站在中距离外，读条后给另一只怪挂「加急」（移速 + 出手频率提升 ~6 秒）；
+  //   —— 它自己很脆，杀掉掉一杯短暂咖啡（加移速），打断 / 点掉它都是正解。
+  // 压力不在它身上、在被它加急的那一群上：拖着不管，同一批怪会突然变快变凶。
+  kangaroo: {
+    name: '加急袋鼠',
+    // 零资产：程序化拼一只黄外套袋鼠（见 buildKangarooModel）。
+    // 不找 glb 的原因和誊录员 / 收账人一样：现实里没有「会挂单的袋鼠」这种生物。
+    proc: 'kangaroo',
+    sourceHeight: 1.55,    // 模型按 1.55 世界单位造 → 缩放 1
+    footY: 0.0,
+    height: 1.55,
+    hover: 0.0,
+    radius: 0.55,
+    hp: 4.5,               // 中等偏脆：它的价值是「加急」，不是扛
+    armor: 0.10,
+    speed: 1.55,           // 本身不算慢，但也不追着人咬 —— 它躲在中距离
+    attackRange: 7.0,      // 足够远就能给队友挂单
+    keepDistance: 4.5,     // 和中距离保持距离：逼你花位移去够它
+    damage: 0,             // 它自己一下都不打人
+    attackInterval: 5.5,
+    windup: 1.2,           // 读条（挂单动作），够你打断
+    attackDuration: 1.7,   // 必须 > windup
+    // 「加急」：读条满后给离玩家最近的另一只怪挂上，持续 time 秒内
+    // 移速 ×speedMul、出手频率 ×hasteMul。被加急的怪头上挂一圈黄标。
+    rush: {
+      time: 6.0,
+      hasteMul: 1.5,       // 出手频率 ×1.5
+      speedMul: 1.30,      // 移速 ×1.3
+      color: 0xf2c14e,
+      ringColor: 0xffd35a,
+    },
+    spawnTime: 0.8,
+    deathTime: 1.2,
+    selfDestruct: false,
+    color: 0xf2c14e,       // 黄外套
+    tint: 0xffe28a,
+    glow: { color: 0x6a4a10, intensity: 0.6 },
+    anim: { walk: 'idle', idle: 'idle', cast: 'attack', death: 'death', spawn: 'spawn' },
+  },
 };
 
 // ------------------------------------------------------------
@@ -2044,12 +2089,116 @@ export function buildBookModel() {
   return g;
 }
 
+// ============================================================
+// 第 116 块：加急袋鼠（零资产程序化模型）
+// ============================================================
+// 造型要点（俯视角要一眼认出「这是一只黄外套袋鼠」）：
+//   · 大脚 + 粗尾巴（袋鼠的剪影特征，也是它「能站着挂单」的支点）；
+//   · 胸前一块黄色外套 + 一顶小帽（呼应剧情里「穿黄外套的袋鼠」）；
+//   · 怀里抱一张小白单（它就是来「加急」别人的）。
+// 没有骨骼、没有动画 —— 「活着」靠 updateOne 里 proc 分支的摆动。
+export function buildKangarooModel() {
+  if (typeof document === 'undefined') return new THREE.Group();
+  const g = new THREE.Group();
+
+  const furMat = new THREE.MeshStandardMaterial({ color: 0xc79a62, roughness: 0.85, metalness: 0.0 });
+  const coatMat = new THREE.MeshStandardMaterial({ color: 0xf2c14e, roughness: 0.7, metalness: 0.05 });
+  const darkMat = new THREE.MeshStandardMaterial({ color: 0x3a2c1e, roughness: 0.75, metalness: 0.05 });
+  const slipMat = new THREE.MeshStandardMaterial({ color: 0xf3e6c0, roughness: 0.95, metalness: 0.0 });
+
+  // 身体（微前倾的椭球，袋鼠挺着肚子站）
+  const body = new THREE.Mesh(new THREE.SphereGeometry(0.42, 16, 12), furMat);
+  body.scale.set(0.9, 1.15, 0.72);
+  body.position.set(0, 0.78, 0.04);
+  body.castShadow = true;
+  g.add(body);
+
+  // 黄外套：罩住身体下半（胸前一块）
+  const coat = new THREE.Mesh(new THREE.SphereGeometry(0.40, 16, 10), coatMat);
+  coat.scale.set(0.92, 0.62, 0.76);
+  coat.position.set(0, 0.62, 0.16);
+  coat.castShadow = true;
+  g.add(coat);
+
+  // 头（小，往前探）
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.24, 14, 10), furMat);
+  head.scale.set(1, 0.9, 0.9);
+  head.position.set(0, 1.30, 0.12);
+  head.castShadow = true;
+  g.add(head);
+
+  // 两只长耳朵
+  for (const sgn of [-1, 1]) {
+    const ear = new THREE.Mesh(new THREE.ConeGeometry(0.075, 0.34, 8), furMat);
+    ear.position.set(sgn * 0.11, 1.52, 0.06);
+    ear.rotation.z = sgn * 0.18;
+    ear.castShadow = true;
+    g.add(ear);
+  }
+
+  // 吻部（浅色，袋鼠的长脸）
+  const snout = new THREE.Mesh(new THREE.SphereGeometry(0.11, 10, 8), slipMat);
+  snout.scale.set(0.8, 0.7, 1.2);
+  snout.position.set(0, 1.26, 0.34);
+  g.add(snout);
+
+  // 小帽子（黄外套配套）
+  const hat = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.19, 0.10, 12), coatMat);
+  hat.position.set(0, 1.44, 0.10);
+  hat.castShadow = true;
+  g.add(hat);
+  const brim = new THREE.Mesh(new THREE.CylinderGeometry(0.23, 0.23, 0.03, 12), coatMat);
+  brim.position.set(0, 1.39, 0.10);
+  g.add(brim);
+
+  // 两条后腿（大脚，粗）
+  for (const sgn of [-1, 1]) {
+    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.10, 0.12, 0.55, 10), furMat);
+    leg.position.set(sgn * 0.15, 0.42, 0.02);
+    leg.castShadow = true;
+    g.add(leg);
+    // 大脚掌（袋鼠的剪影）
+    const foot = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.09, 0.36), darkMat);
+    foot.position.set(sgn * 0.15, 0.10, 0.16);
+    foot.castShadow = true;
+    g.add(foot);
+  }
+
+  // 粗尾巴（向后下方拖，支住身体）
+  const tail = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.55, 10), furMat);
+  tail.position.set(0, 0.34, -0.34);
+  tail.rotation.x = -1.15;
+  tail.castShadow = true;
+  g.add(tail);
+
+  // 两条短前臂（抱着单子）
+  for (const sgn of [-1, 1]) {
+    const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.05, 0.34, 8), furMat);
+    arm.position.set(sgn * 0.24, 0.92, 0.30);
+    arm.rotation.x = -0.5;
+    arm.rotation.z = sgn * 0.3;
+    arm.castShadow = true;
+    g.add(arm);
+  }
+
+  // 怀里那张「加急单」（小白片，和收件人的单子同色系，一眼「是来挂单的」）
+  const slip = new THREE.Mesh(new THREE.BoxGeometry(0.30, 0.20, 0.03), slipMat);
+  slip.position.set(0, 0.95, 0.36);
+  slip.rotation.x = -0.25;
+  slip.castShadow = true;
+  g.add(slip);
+
+  g.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.frustumCulled = false; } });
+  return g;
+}
+
 // proc 种类 → 模型。**唯一入口**：loadType / buildPreviewModel / 图鉴都走这里，
 // 免得和收件人那次一样「一个分支改了、另一个没改」。
 export function buildProcModel(kind) {
   if (kind === 'quill') return buildQuillModel();
   if (kind === 'book') return buildBookModel();
   if (kind === 'slip') return buildSlipModel();
+  if (kind === 'kangaroo') return buildKangarooModel();
   return new THREE.Group();
 }
 
@@ -2658,6 +2807,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
       },
       filled: null,       // 收件人填的名：{ cls: 'phys'|'elem', t }（t = 剩余秒数）
       filledRing: null,   // 被填名的怪头上那个空白框（程序化）
+      hasted: null,       // 袋鼠挂的「加急」：{ t, hasteMul, speedMul }（t = 剩余秒数）
       mirrorT: 0,         // 照影：下一次「重照」的倒计时
       waitT: null,        // 等的那个：还剩多少秒活过来
       waitCalls: 0,       // 等的那个：已经报过几次时
@@ -2762,6 +2912,16 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
       e.waitRing = createRangeRing({
         radius: cfg.collect.range, color: cfg.collect.color,
         opacity: 0.55, pulse: 0.0, y: cfg.hover + cfg.height + 0.3,
+      });
+      e.waitRing.setOnTop(true);
+      root.add(e.waitRing.mesh);
+      e.waitRing.setVisible(false);
+    }
+    // 第 116 块：加急袋鼠 —— 头顶一圈读条环（平时藏着，读条挂单时才出现）。
+    if (cfg.rush) {
+      e.waitRing = createRangeRing({
+        radius: 1.5, color: cfg.rush.color,
+        opacity: 0.55, pulse: 0.0, y: cfg.hover + cfg.height + 0.32,
       });
       e.waitRing.setOnTop(true);
       root.add(e.waitRing.mesh);
@@ -4347,6 +4507,14 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
       }
     }
 
+    // ---- 第 116 块：袋鼠挂的「加急」倒计时 ----
+    // 加急不改字段本身（移速 / 出手频率都在别处被 weigh 等重写），
+    // 而是折进 moveToward 与 cdOf 的乘数里 —— 到期把乘数摘掉即可。
+    if (e.hasted) {
+      e.hasted.t -= dt;
+      if (e.hasted.t <= 0) e.hasted = null;
+    }
+
     // ---- 冰缓：减速倒计时（移速在 moveToward 里按 slowT 折算） ----
     if (e.slowT > 0) e.slowT -= dt;
 
@@ -4560,6 +4728,11 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     // （它压根不打人），誊录员则会贴上来近战，两种都完全跑偏。
     if (e.cfg.ink) { handleClerk(e, dt, ctx, dx, dz, dist); return; }
     if (e.cfg.collect) { handleCollector(e, dt, ctx, dx, dz, dist); return; }
+
+    // ---- 第十二关 · 加急袋鼠（第 116 块）----
+    // 和收账人同一性质：damage 是 0（不打人），必须排在通用近战之前，
+    // 否则掉进通用分支会贴脸近战。它躲在中距离给队友挂「加急」。
+    if (e.cfg.rush) { handleKangaroo(e, dt, ctx, dx, dz, dist); return; }
 
     // ---- 雾鬼：隐身 / 显形循环（第 35 块；第 61 块改规则）----
     // 隐身时不可被索敌、打不着；**但贴脸不再强制显形**，只能等它自己露头。
@@ -5632,6 +5805,91 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     }
   }
 
+  // ============================================================
+  // 第十二关 · 加急袋鼠（第 116 块）：不打你，它给队友「加急」
+  // ============================================================
+  // 逼近到中距离（attackRange 内、keepDistance 外）→ 读条 1.2 秒
+  // → 读满给离玩家最近的另一只怪挂「加急」（移速 ×1.3、出手频率 ×1.5，持续 6 秒）
+  // → 5.5 秒后再来。它自己不打人（damage 0），脆但躲在中距离外。
+  // 打断方式：走出攻击范围 / 把它打死 —— 读条立刻断。杀它掉一杯短咖啡（移速加成，见 main.js）。
+  function performRush(e, ctx) {
+    const r = e.cfg.rush;
+    // 从活着的、还没被加急的怪里挑一只（不挂自己，也不重复挂）
+    const pool = list.filter((o) => o !== e && hittable(o) && !o.hasted && !o.cfg.boss);
+    if (!pool.length) {
+      if (fx) fx.ring(e.pos, { from: 0.3, to: 1.1, color: r.color, life: 0.35, opacity: 0.4, y: 0.06 });
+      return null;
+    }
+    // 挑离玩家最近的那只 —— 玩家正要打谁，就让谁变凶
+    let best = pool[0], bd = Infinity;
+    for (const o of pool) {
+      const d = Math.hypot(ctx.playerPos.x - o.pos.x, ctx.playerPos.z - o.pos.z);
+      if (d < bd) { bd = d; best = o; }
+    }
+    best.hasted = { t: r.time, hasteMul: r.hasteMul, speedMul: r.speedMul };
+    if (fx) {
+      fx.ring(best.pos, { from: 0.3, to: 1.7, color: r.ringColor, life: 0.45, opacity: 0.7, y: 0.05 });
+      fx.text({ x: best.pos.x, z: best.pos.z }, '加急', { color: '#ffd35a', y: best.height * 1.15, size: 0.56 });
+    }
+    return best;
+  }
+
+  function handleKangaroo(e, dt, ctx, dx, dz, dist) {
+    const r = e.cfg.rush;
+    if (e.state === 'attack') {
+      // 读条环（和收账人一个思路）：从大缩到小，玩家一眼知道「快挂上了」
+      if (e.waitRing) {
+        const k = Math.min(1, e.t / Math.max(0.01, e.cfg.windup));
+        e.waitRing.setRadius(1.5 * (0.35 + 0.65 * (1 - k)));
+        e.waitRing.setVisible(true);
+      }
+      if (!e.hitDone && e.t >= e.cfg.windup) {
+        e.hitDone = true;
+        performRush(e, ctx);
+        if (e.waitRing) e.waitRing.setVisible(false);
+      }
+      if (e.t >= e.cfg.attackDuration) {
+        e.state = 'chase';
+        e.t = 0;
+        e.attackCd = cdOf(e, e.cfg.attackInterval, 1.0, true);
+      }
+      return;
+    }
+    // 躲着玩家走（它不打人，被贴脸就跑）
+    if (dist < e.cfg.keepDistance) {
+      moveToward(e, -dx, -dz, dist, dt, ctx);
+      if (e.currentAnim !== e.cfg.anim.walk) {
+        e.currentAnim = e.cfg.anim.walk;
+        e.play(e.cfg.anim.walk, { fade: 0.2 });
+      }
+      return;
+    }
+    if (dist > e.cfg.attackRange) {
+      moveToward(e, dx, dz, dist, dt, ctx);
+      if (e.currentAnim !== e.cfg.anim.walk) {
+        e.currentAnim = e.cfg.anim.walk;
+        e.play(e.cfg.anim.walk, { fade: 0.2 });
+      }
+      return;
+    }
+    e.attackCd -= dt;
+    if (e.attackCd <= 0) {
+      e.state = 'attack';
+      e.t = 0;
+      e.hitDone = false;
+      e.currentAnim = e.cfg.anim.cast;
+      e.play(e.cfg.anim.cast, { once: true, fade: 0.1, duration: e.cfg.attackDuration });
+      if (e.waitRing) e.waitRing.setVisible(true);
+      if (fx) fx.ring(e.pos, { from: 0.2, to: 1.5, color: r.color, life: 0.32, opacity: 0.6, y: 1.3 });
+      audio.sfx('curse', { vol: 0.2 });
+      return;
+    }
+    if (e.currentAnim !== e.cfg.anim.idle) {
+      e.currentAnim = e.cfg.anim.idle;
+      e.play(e.cfg.anim.idle, { fade: 0.2 });
+    }
+  }
+
   function handleWeigher(e, dt, ctx, dx, dz, dist) {
     const cfg = e.cfg.weigh;
     // 第 91 块：它的上称节奏只吃**一半**的攻速成长（开方）。
@@ -6592,7 +6850,8 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
   // ⚠️ 前摇（cfg.windup）、红圈预警、弹道飞行时间**一律不在这里**。
   // 用户要的是「攻击更快」，不是「更没法躲」—— 后者会把走位游戏变成猜谜。
   function cdOf(e, base, floor = 0.2, withAura = false) {
-    const hs = (e.haste || 1) * (withAura ? 1 + (e.auraHaste || 0) : 1);
+    // 第 116 块：袋鼠的「加急」给出手频率（独立乘数，到期在 updateOne 摘掉）
+    const hs = (e.haste || 1) * (withAura ? 1 + (e.auraHaste || 0) : 1) * ((e.hasted && e.hasted.hasteMul) || 1);
     return Math.max(floor, base / hs);
   }
 
@@ -6624,7 +6883,9 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     // 冰缓：被冰剑命中后移速打折（slowFactor = 减速比例）
     // 第 82 块：第九关「记名」叠层也给移速（每层 per.speed，见 cfg.weigh）
     const namedBoost = 1 + (e.named || 0) * ((WEIGH() && WEIGH().per.speed) || 0);
-    const sp = e.speed * (e.slowT > 0 ? (1 - Math.min(0.9, e.slowFactor || 0)) : 1) * namedBoost;
+    // 第 116 块：袋鼠的「加急」给移速（独立乘数，到期在 updateOne 摘掉）
+    const hasteBoost = (e.hasted && e.hasted.speedMul) || 1;
+    const sp = e.speed * (e.slowT > 0 ? (1 - Math.min(0.9, e.slowFactor || 0)) : 1) * namedBoost * hasteBoost;
     const step = sp * dt;
 
     // 曲线接近：把「指向玩家」的方向绕竖轴旋转一个随时间摆动的角度，

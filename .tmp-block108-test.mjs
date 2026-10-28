@@ -44,7 +44,7 @@ const { SHOP_ITEMS, itemLocked } = await import(`./js/shop.js?v=${VER}`);
 // ============================================================ §1 卡池
 console.log('[§1] 卡池与 12 张新卡');
 {
-  ok(UPGRADES.length === 93, '卡池 93 张（75 + 4 傀儡 + 8 箭雨 + 6 墨丸）', `实际 ${UPGRADES.length}`);
+  ok(UPGRADES.length === 99, '卡池 99 张（75 + 4 傀儡 + 8 箭雨 + 6 墨丸 + 6 拿铁）', `实际 ${UPGRADES.length}`);
   const byId = Object.fromEntries(UPGRADES.map((u) => [u.id, u]));
   const NEW = ['golemCd', 'golemIronSpd', 'golemSnowKnock', 'golemSnowSlow',
     'arrowCountS', 'arrowCountL', 'arrowDmgS', 'arrowDmgL', 'arrowZoneS', 'arrowZoneL', 'arrowCdS', 'arrowCdL'];

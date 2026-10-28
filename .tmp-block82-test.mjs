@@ -42,7 +42,8 @@ ok(/const push = Math\.min\(need \* 0\.5, maxStep\);/.test(enemySrc),
   '每帧把差额补满（Math.min(need*0.5, maxStep)）');
 ok(/function seatArc\(e\)/.test(enemySrc) && /if \(cfg\.arc\) seatArc\(e\);/.test(enemySrc),
   '新并联体落地即摆到合规位置（seatArc）');
-ok(/for \(let pass = 0; pass < 4; pass\+\+\)/.test(enemySrc), '分离迭代 4 轮（多只互相抵消时收敛）');
+ok(/for \(let pass = 0; pass < 2; pass\+\+\)/.test(enemySrc) && /for \(let pass = 0; pass < 6; pass\+\+\)/.test(enemySrc),
+  '分离迭代两段循环（2 轮主分离 + 6 轮互消收敛）');
 // 出口：ignore iframe
 ok(/ctx\.hurtPlayer\(cfg\.damage \|\| 1, 'arc'\)/.test(enemySrc), '电弧伤害 source 传 arc');
 ok(/const isArc = source === 'arc';/.test(mainSrc) && /const noIframe = isHazard \|\| isArc;/.test(mainSrc),
@@ -107,7 +108,7 @@ ok(/enemies\.hitBubbles\(tgt\.pos\.x, tgt\.pos\.z, 0\.9, cd\)/.test(weaponSrc), 
 // 主角侧的定住
 ok(/let rootT = 0;/.test(mainSrc) && /function rootPlayer\(sec\)/.test(mainSrc), '主角侧有 rootT / rootPlayer');
 ok(/function updateRoot\(dt\)/.test(mainSrc) && /updateRoot\(dt\);/.test(mainSrc), '每帧推进定住倒计时');
-ok(/const moveSpeed = stats\.get\('moveSpeed'\) \* moveDebuffMul\(\) \* \(rootT > 0 \? 0 : 1\);/.test(mainSrc),
+ok(/const moveSpeed = stats\.get\('moveSpeed'\) \* moveDebuffMul\(\) \* \(rootT > 0 \? 0 : 1\)/.test(mainSrc),
   '定住期间移速归零（和减速是两条分支）');
 ok(/isInvincible: \(\) => iframe > 0/.test(mainSrc), 'combatCtx 暴露 isInvincible（泡要问）');
 ok(/clearRoot\(\);/.test(mainSrc), '换关 / 读档 / 结算都清掉定住');

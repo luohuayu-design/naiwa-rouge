@@ -26,9 +26,9 @@
 // 第 11 块：每件货都带 rarity（0 普通 ~ 4 传说），店里按品质加权抽取 ——
 // 幸运越高，摆出来的货越往金/红那一头走（见 rarity.js）。
 // ============================================================
-import { rarityWeight } from './rarity.js?v=130';
-import { TURRET } from './turret.js?v=130';
-import { RELIC_DEFS } from './relics.js?v=130';
+import { rarityWeight } from './rarity.js?v=131';
+import { TURRET } from './turret.js?v=131';
+import { RELIC_DEFS } from './relics.js?v=131';
 
 export const SHOP_ITEMS = [
   // ---------------- 生命药水（第 13 块起：买进背包，作战中随时用） ----------------
@@ -257,6 +257,29 @@ export const SHOP_ITEMS = [
     glyph: '🪣', name: '浓墨',
     desc: '墨丸炸得更开：半径 +0.5 格、冷却 −1.5 秒（一局只能买一次）。雾里看不清脚下时，大一圈就是多一条命。',
   },
+  // ---------------- 第十二关新增（第 116 块）：苔藓拿铁 ----------------
+  // 用户定案：「配套 2 件一次性商店强化」。和墨丸同一个套路（relic + 两件买断）。
+  // 第 12 回合的商店常驻摆它（SHOP_PINNED）—— 这是本关的头号新玩具。
+  {
+    id: 'buyLatte', type: 'relic', relic: 'latte', price: 32, needRound: 8, needLevel: 12,
+    rarity: 3,
+    glyph: '☕', name: '苔藓拿铁',
+    desc: '牛给你调一杯：技能栏多一颗「拿铁」。按下在脚下放一杯咖啡，圈里你加攻速 / 移速、怪被减速，'
+      + '持续 5 秒、冷却 30 秒、同屏最多 1 杯。在车道边放一杯，把怪留在危险区，再借车收割。再买可升级（最多 3 级）。',
+  },
+  // 拿铁的两件买断强化（和「强化箭袋」「墨囊」同一个套路：一局各一次，与三选一的卡互不冲突）
+  {
+    id: 'buyLatteFoam', type: 'latte', latte: 'foam', price: 24, needRound: 5, needLevel: 12,
+    rarity: 2,
+    glyph: '🥛', name: '奶泡',
+    desc: '拿铁持续 +2 秒、减速 +8%（一局只能买一次）。三选一的拿铁卡不受影响，可以继续叠。',
+  },
+  {
+    id: 'buyLatteThermos', type: 'latte', latte: 'thermos', price: 24, needRound: 9, needLevel: 12,
+    rarity: 2,
+    glyph: '🫙', name: '保温杯',
+    desc: '拿铁同屏 +1 杯、冷却 −4 秒（一局只能买一次）。多一杯，就能同时守住两条车道。',
+  },
 ];
 
 // 商店里买不到 / 已卖光时给出原因（渲染禁用态用）
@@ -291,6 +314,12 @@ export function itemLocked(item, ctx = {}) {
     if (item.ink === 'sac' && ctx.inkSac) return '这一局已经买过了';
     if (item.ink === 'thick' && ctx.inkThick) return '这一局已经买过了';
   }
+  // 第 116 块：拿铁的两件买断货 —— 没学会拿铁之前摆了也没用
+  if (item.type === 'latte') {
+    if (!ctx.latteLevel) return '要先拥有「苔藓拿铁」';
+    if (item.latte === 'foam' && ctx.latteFoam) return '这一局已经买过了';
+    if (item.latte === 'thermos' && ctx.latteThermos) return '这一局已经买过了';
+  }
   return null;
 }
 
@@ -304,7 +333,7 @@ export const SHOP_SHOW = 4;
 // 第 114 块：第 9 回合也钉上「墨丸」—— 第八关的镇牌铃和第十一关的墨丸
 // 都挂在 9 这一格，靠 onlyLevel / needLevel 各自过滤，同一格互不干扰
 // （第 8 关只摆铃、第 11 关只摆墨丸、第 10 关两件都被滤掉）。
-export const SHOP_PINNED = { 9: ['buySeal', 'buyMine'], 12: ['buySeal', 'buyPuppet'] };
+export const SHOP_PINNED = { 9: ['buySeal', 'buyMine', 'buyLatte'], 12: ['buySeal', 'buyPuppet'] };
 
 // 抽本次商店的货物：返回一个**不含重复**的物品数组（默认 4 件）。
 // hasWeapon = 已拿到环剑（没有时剑类买了也用不了，先不进池）

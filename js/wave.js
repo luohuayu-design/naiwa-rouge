@@ -821,10 +821,93 @@ export const LEVEL_11 = {
   ],
 };
 
+// ============================================================
+// 第十二关「三幻神驿站」（第 116 块）
+// ============================================================
+// 剧情接 s12「黄色三幻神」：焦土公路边的服务区，招牌写着「三幻神驿站 · 24 小时 · 免费充电」。
+// 门口停着一辆黄色大车，一只穿黄外套的袋鼠在数单子，一头穿黄 T 恤的牛在打奶泡。
+//
+// **这一关的场地机制是「躲车 + 借车撞怪」**（用户 2026-10-28 定案）：
+//   两条平行车道横穿场地，配送车经过前 2.2 秒整条车道亮起方向箭头与路面预警，
+//   不从屏幕外突然冲进来吓人。车撞到玩家 = 少量真实伤害 + 击退（绝不秒杀）；
+//   车撞到敌人 = 高额伤害 + 击退，但同一目标有受击间隔、精英减伤，防止无脑清屏。
+//   前八回合单车轮换，后期（doubleFrom 起）才出现错时双车；始终保留安全区域。
+//   配合冲锋 / 击退 / 减速等现有能力，形成「把怪送进车道」的主动打法。
+//
+// 它和前面关卡的关系：第四关是「浓雾 + 听声辨位」，第五关是「四条路刷怪」，
+// 第六关是「固定地板不许站」，第十关是「中间有个洞」，第十一关是「看不见」。
+// 这一关把压力从「脚底」和「眼睛」搬到了「位置判断」—— 车是可见的、可预判的，
+// 难在你要在车流和怪群之间，选对站的位置、以及把怪往车道上赶。
+//
+// 数值：用户定案「血量与十一关持平、伤害略降」—— hpMul 1.55 / dmgMul 1.85
+// （第十一关 1.55 / 1.95）。难点放在位置判断，不再单纯抬数值。
+export const LEVEL_12 = {
+  id: 12,
+  name: '第十二关 · 三幻神驿站',
+  theme: 'highway',         // 夜里的公路：沥青深灰 + 路缘暖黄（scene.js 的 THEMES）
+  arena: 19,                // 比十一关大一圈：两条车道横穿，需要更多横移空间
+  order: [
+    ['minion', 1], ['warrior', 1.6], ['charger', 1.9],
+    ['archer', 2.0], ['bowman', 2.2], ['leaper', 2.2],
+    ['wraith', 2.4], ['shielder', 2.4], ['brood', 2.6],
+    ['mender', 2.6], ['reboot', 2.8], ['hexer', 3.0],
+    ['addressee', 3.2], ['clerk', 3.4], ['kangaroo', 3.6],
+  ],
+  spawnRadius: 16.8,
+  spawnJitter: 0.5,
+  minPlayerDistance: 7.6,
+  minSpawnGap: 2.4,
+  gapScale: 1.12,
+  gap: 2.6,
+  upgradeAfter: [1, 2, 3, 4, 5, 8, 10, 12, 15, 17, 19, 20],
+  shopAfter: [3, 6, 9, 12, 15, 18],
+  weaponAt: 4,
+  scale: { hp: 0.34, damage: 0.20, speed: 0.045, haste: 0.0110, curve: 0.28, hpMul: 1.55, dmgMul: 1.85 },
+  // 车流：见 js/traffic.js。arena 要跟着本关场地半径走；车道是两条平行的横线。
+  traffic: {
+    lanes: [-4.5, 4.5],
+    width: 2.4,
+    warn: 2.2,
+    speed: 18.0,
+    gap: 10.5,
+    first: 4.0,
+    damage: 2.0,
+    enemyPct: 0.36,
+    doubleFrom: 13,
+  },
+  rounds: [
+    // ---- 第一幕（R1~R4）：先学会「躲车」+「袋鼠」----
+    { minion: 4, warrior: 1, charger: 0, archer: 0, bowman: 0, leaper: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, reboot: 0, hexer: 0, addressee: 0, clerk: 0, kangaroo: 0, gap: 0.86, tip: '服务区的公路上有配送车来回跑。车道亮起箭头的时候，别站在线上' },
+    { minion: 4, warrior: 2, charger: 0, archer: 0, bowman: 0, leaper: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, reboot: 0, hexer: 0, addressee: 0, clerk: 0, kangaroo: 1, gap: 0.80, tip: '新面孔·加急袋鼠：它不打你，它给别的怪「加急」—— 被挂上的那只突然变快变凶' },
+    { minion: 5, warrior: 2, charger: 0, archer: 1, bowman: 0, leaper: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, reboot: 0, hexer: 0, addressee: 0, clerk: 0, kangaroo: 1, gap: 0.76, tip: '车也能撞怪：把怪赶到车道上，让它替你挨这一下 —— 击退、减速、冲锋都行' },
+    { minion: 5, warrior: 2, charger: 1, archer: 1, bowman: 1, leaper: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, reboot: 0, hexer: 0, addressee: 0, clerk: 0, kangaroo: 1, gap: 0.72, tip: '冲锋蛮牛回来了：它自己会往你冲，正好可以把它引到车道上' },
+    // ---- 第二幕（R5~R8）：旧怪组合进场 ----
+    { minion: 5, warrior: 3, charger: 1, archer: 1, bowman: 1, leaper: 1, wraith: 1, shielder: 0, brood: 0, mender: 0, reboot: 0, hexer: 0, addressee: 1, clerk: 0, kangaroo: 1, gap: 0.70, tip: '收件人回来了：头上有白框的那只免疫你某一类伤害 —— 换一类武器，或者先拆单子' },
+    { minion: 6, warrior: 3, charger: 1, archer: 2, bowman: 1, leaper: 1, wraith: 1, shielder: 1, brood: 0, mender: 0, reboot: 0, hexer: 0, addressee: 1, clerk: 0, kangaroo: 1, gap: 0.68, tip: '誊录员也来了：它划的墨线会横切车道 —— 站在墨上会掉血，别和车撞到一起' },
+    { minion: 6, warrior: 3, charger: 2, archer: 2, bowman: 1, leaper: 1, wraith: 1, shielder: 1, brood: 1, mender: 0, reboot: 0, hexer: 0, addressee: 1, clerk: 1, kangaroo: 1, gap: 0.66, tip: '袋鼠的加急是 6 秒：被加急的怪头上会有个黄标 —— 先打断袋鼠的读条，或者先点掉它' },
+    { minion: 6, warrior: 4, charger: 2, archer: 2, bowman: 2, leaper: 1, wraith: 2, shielder: 1, brood: 1, mender: 0, reboot: 0, hexer: 0, addressee: 1, clerk: 1, kangaroo: 2, gap: 0.64, tip: '车撞怪伤害很高，但同一只怪有受击间隔 —— 别指望一辆车清光一片，还是得自己动手' },
+    // ---- 第三幕（R9~R12）：墨线封路 ----
+    { minion: 6, warrior: 4, charger: 2, archer: 2, bowman: 2, leaper: 2, wraith: 2, shielder: 1, brood: 1, mender: 1, reboot: 0, hexer: 0, addressee: 1, clerk: 2, kangaroo: 2, gap: 0.62, tip: '两条墨线会把车道切成几段 —— 提前想好往哪边走，别被墨和车夹在中间' },
+    { minion: 7, warrior: 4, charger: 2, archer: 2, bowman: 2, leaper: 2, wraith: 2, shielder: 1, brood: 1, mender: 1, reboot: 0, hexer: 0, addressee: 2, clerk: 2, kangaroo: 2, gap: 0.60, tip: '在车道边放一杯拿铁，把怪留在危险区，再借车收割 —— 这是这关的正解' },
+    { minion: 7, warrior: 4, charger: 3, archer: 3, bowman: 2, leaper: 2, wraith: 2, shielder: 1, brood: 1, mender: 1, reboot: 1, hexer: 0, addressee: 2, clerk: 2, kangaroo: 2, gap: 0.58, tip: '三只蛮牛一起蓄力：地上的直线预警是躲的窗口，横向侧移，别后退' },
+    { minion: 7, warrior: 5, charger: 3, archer: 3, bowman: 3, leaper: 2, wraith: 2, shielder: 2, brood: 1, mender: 1, reboot: 1, hexer: 1, addressee: 2, clerk: 2, kangaroo: 2, gap: 0.56, tip: '第 12 回合：招牌上的「24 小时」闪了一下，是充电桩跳闸了' },
+    // ---- 第四幕（R13~R16）：错时双车 ----
+    { minion: 8, warrior: 5, charger: 3, archer: 3, bowman: 3, leaper: 3, wraith: 2, shielder: 2, brood: 2, mender: 1, reboot: 1, hexer: 1, addressee: 2, clerk: 2, kangaroo: 3, gap: 0.54, tip: '双车来了：两条车道可能同时来车，而且错开时间 —— 看清楚再动' },
+    { minion: 8, warrior: 5, charger: 3, archer: 3, bowman: 3, leaper: 3, wraith: 3, shielder: 2, brood: 2, mender: 2, reboot: 1, hexer: 1, addressee: 2, clerk: 3, kangaroo: 3, gap: 0.52, tip: '墨线 + 双车 = 场地被切碎。安全区一直在，但你要在车和墨之间算好路径' },
+    { minion: 9, warrior: 6, charger: 3, archer: 4, bowman: 3, leaper: 3, wraith: 3, shielder: 2, brood: 2, mender: 2, reboot: 2, hexer: 1, addressee: 3, clerk: 3, kangaroo: 3, gap: 0.50, tip: '三只袋鼠：它们会轮流给怪加急 —— 优先拆袋鼠，别让整群一起变凶' },
+    { minion: 9, warrior: 6, charger: 4, archer: 4, bowman: 4, leaper: 4, wraith: 3, shielder: 3, brood: 2, mender: 2, reboot: 2, hexer: 2, addressee: 3, clerk: 3, kangaroo: 3, gap: 0.48, tip: '第 16 回合：那头黄牛抬头看了一眼，又低头继续打奶泡' },
+    // ---- 第五幕（R17~R20）：门前 ----
+    { minion: 10, warrior: 6, charger: 4, archer: 4, bowman: 4, leaper: 4, wraith: 4, shielder: 3, brood: 2, mender: 2, reboot: 2, hexer: 2, addressee: 3, clerk: 4, kangaroo: 3, gap: 0.46, tip: '四支笔：墨线会盖住大半车道 —— 先把誊录员清掉，地上的墨就不再加了' },
+    { minion: 10, warrior: 7, charger: 4, archer: 5, bowman: 4, leaper: 4, wraith: 4, shielder: 3, brood: 2, mender: 2, reboot: 2, hexer: 2, addressee: 3, clerk: 4, kangaroo: 4, gap: 0.44, tip: '四只袋鼠 + 双车：场面最乱的时候，别慌 —— 车是有预警的，看清楚线' },
+    { minion: 11, warrior: 7, charger: 4, archer: 5, bowman: 5, leaper: 5, wraith: 4, shielder: 3, brood: 2, mender: 2, reboot: 3, hexer: 2, addressee: 4, clerk: 4, kangaroo: 4, gap: 0.42, tip: '倒数第二波：把怪赶到车道上，让最后一班配送车替你清场' },
+    { minion: 11, warrior: 8, charger: 5, archer: 5, bowman: 5, leaper: 5, wraith: 5, shielder: 4, brood: 2, mender: 2, reboot: 3, hexer: 2, addressee: 4, clerk: 4, kangaroo: 4, gap: 0.40, tip: '最后一波：配送车 24 小时不停，你也该下班了' },
+  ],
+};
+
 // 关卡号 → 关卡表（主流程 / 选关 / 测试都从这里取）
 export const LEVELS_BY_ID = {
   1: LEVEL_1, 2: LEVEL_2, 3: LEVEL_3, 4: LEVEL_4, 5: LEVEL_5, 6: LEVEL_6, 7: LEVEL_7, 8: LEVEL_8,
-  9: LEVEL_9, 10: LEVEL_10, 11: LEVEL_11,
+  9: LEVEL_9, 10: LEVEL_10, 11: LEVEL_11, 12: LEVEL_12,
 };
 
 // 第 roundNo 回合（从 1 开始）的怪物属性倍率

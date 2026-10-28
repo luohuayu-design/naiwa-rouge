@@ -1,7 +1,7 @@
 # 蛙步 · 夜行 —— 交接文档
 
 > 新对话从这里开始读，不要先翻聊天记录。**先读 §0，再按需查后面章节。**
-> 最后更新：2026-10-28 · 线上 **v=129** · 第 114 块（第十一关「钟楼雾原」+ 雾 + 墨丸 + 两怪）。
+> 最后更新：2026-10-28 · 线上 **v=131** · 第 116 块（第十二关「三幻神驿站」+ 车流 + 加急袋鼠 + 法器「苔藓拿铁」）。
 > 本文件只记**结论与坑**；逐块实现细节看代码注释与 `git log` / `git show`。
 
 ---
@@ -14,7 +14,7 @@
 | --- | --- |
 | **另一组（合成台）** | `js/crafting.js`（**文件名已被占用**）、`DESIGN.md`、`.tmp-crafting-test.mjs` |
 | 另一组之后会碰 | `main.js` 的 **`onDeath` 区域** 与 **暂停 / 弹窗（`.modal`）区域** |
-| 本侧（第 114 块） | `js/fog.js`、`js/mine.js` 为新增；`main.js` 已把击杀记账压成 `onDeath` 里**唯一一行** `onKillExtra114(e);` |
+| 本侧（第 116 块） | `js/traffic.js`、`js/latte.js` 为**另一组已写好、本侧接线**；`main.js` 已把击杀记账压成 `onDeath` 里**唯一一行** `onKillExtra114(e);` |
 
 - 本侧已主动把冲突面收到最小：`onDeath` 里只多这一行调用（函数定义在 `createMineSystem` 之后），另一组改这段时**绕开这一行**即可。
 - 谁 push 完**要通知对方 pull**：本侧 push 后会立刻告知；收到「另一组已 push」的通知后再 `git pull --rebase`，不要盲目 `pull` 冲突文件。
@@ -23,21 +23,20 @@
 
 ## 0. 给新对话的话
 
-### 0.1 当前基线：v=129（第 114 块「第十一关 · 钟楼雾原」，59 套 Node 测试 + 2 套新 CDP 全绿）
+### 0.1 当前基线：v=131（第 116 块「第十二关 · 三幻神驿站」，60 套 Node 测试全绿）
 
-剧情底座是 `story.js` 的 s11「空白的账簿」——账簿被刮白，钟楼起雾。所以这一关的新压力**不是伤害，而是「看不见」**，与前十关全部机制正交。
+剧情底座是 `story.js` 的 s12。第十二关把「看不见」换成「躲车流」——两条平行车道 + 中距放风筝的新怪 + 一个区域增益法器，与前十一关机制正交。
 
-1. **雾（`js/fog.js`）**：`LEVEL_11.fog = {arena:18,max:4,gap:12,life:8,warn:1.6,drift:0.35,radiusMin:4.4,radiusMax:6.5}`。最多 4 片、每片两层平面（`1.35 / 2.05` 半径倍率），**1.6 秒前预警环 → 0.55s 淡入 → 8s 寿命 → 1.8s 淡出**，缓慢漂移。`densityAt(x,z)` 是查询入口（0~1），`inside()` 给布尔。雾在**局内移动时**才抖镜头（`shakeOn`）。
-2. **遮挡靠渲染顺序，不靠深度缓冲**（关键）：雾层 `depthTest:false` + `renderOrder:700`；需要穿雾的东西全部排在它**上面**（数值越大越靠上）—— 墨线开笔预警 850 → 雾预警环 860 → 主角微光 880 → 主角判定环 900；墨丸 720/721 也在雾之上（自己的墨要看得见）。
-3. **主角在雾里只剩三样**：判定环（`rangeRing.setOnTop(true)`，且改 `NormalBlending`，否则叠加混合在雾上炸成一条白带）、极淡轮廓微光（`halo.material.opacity = 0.10 + 0.30*d`）、以及所有**前摇预警**。
-4. **誊录员（`clerk`，程序化模型 `proc:'quill'`）**：隔 13 格画一道墨线（`half 0.62 / dmg 1.1 / bandLife 7 / bandDps 0.55 / slow 0.86`），最多 5 条。墨线本体在雾下（`renderOrder 6`），**开笔前摇的读圈穿雾（850）**——铁律「前摇永不被遮蔽」。
-5. **收账人（`collector`，`proc:'book'`）**：**不造成任何伤害**（`damage:0`），`windup 2.2` / `attackDuration 3.4` / `cd 9`，贴到 2.8 格开始记账，成功则**偷走玩家一项「真实拥有」的属性或技能**（普攻 / 暴击 / 剑 / 任一已解锁技能），持续 8 秒后自动归还；同时只能偷一样；被偷的技能按钮 `.sk.stolen` 变灰（`.sk-art` 灰化 + 角标）。偷的是 `stats.addMod` 的临时 pct（独立 src），不走永久属性。
-6. **法器「墨丸」（`js/mine.js`，11 号）**：解锁技能栏第 5 键，按一次放一颗，怪踩上（`TRIGGER_R 0.9`）瞬间炸 `RADIUS 2.6 × DMG_MUL 2.5`。三条成长通道：**3 级法器**（`max / radius / dmg / cd`）+ **6 张升级卡**（`applyCard` 四通道 `dmgPct/max/radius/cdCut`）+ **2 个一次性商店物品**（`buySac` 加伤 / `buyThick` 加厚）。上限 `MAX_MINE 3`（`MAX_CAP 8`）、冷却 `8.0 → 3.0`（`CD_HARD_CAP 24`）。
-7. **难度**：`hpMul 1.55 / dmgMul 1.95`，略高于第十关。
-8. **数量位移**（改老套件的清单）：关卡 10→11、怪物 25→27、升级卡 87→93、商店 28→31、法器 10→11、成就 111→114（`clear_11 / clerk_10 / collector_5 / fog_20`，全清 **7980**；`clear_all` 文案改「十一关皆通」）。
+1. **车流（`js/traffic.js`）**：`LEVEL_12.traffic = {lanes:[-4.5,4.5],width:2.4,warn:2.2,speed:18,damage:2.0,enemyPct:0.36,doubleFrom:13}`。两条平行车道，配送车**2.2 秒预警后驶过**（预警圈走 `rangeRing` 体系）；**撞玩家掉 2 血（不秒杀）**、**撞怪高额伤害 = max(10 + round×1.5, 血×0.36)**（撞死算玩家击杀，喂成就）。前八回合单车、**第 13 回合起错时双车**。接口：`build(next, arena) / update(dt, {playerPos, playerRadius, roundNo}) / clear() / spawn() / list() / config()`，**零 import 业务模块**，只靠注入回调（`hurtPlayer / onEnemyHit / onPlayerHit`）。
+2. **新怪「加急袋鼠」（`kangaroo`，程序化模型 `proc:'kangaroo'`）**：**不打人（`damage:0`）**，中距离 `keepDistance 4.5` 放风筝；读条 `rush.time 6` 秒给**另一只怪挂「加急」**（`e.hasted = {t, hasteMul 1.5, speedMul 1.3}`，持续约 6 秒：移速 ×1.3、出手频率 ×1.5，在 `moveToward` / `cdOf` 里乘算、`updateOne` 里递减）。**击杀掉咖啡增益**（`onPickup`），是优先击杀目标。读条环复用 `collector` 的 `e.waitRing` 字段。
+3. **新法器「苔藓拿铁」（`js/latte.js`，12 号）**：解锁技能栏**第 6 键**，主动放一块区域增益 `LATTE_BASE = {cd 30, cdMin 14, radius 3.2, duration 5, haste 0.2, move 0.15, slow 0.28, cap 1, capMax 3}`——**攻速 +20% / 移速 +15% / 敌人减速 28%**。三条成长：**3 级法器**（`setRelicLevel`）+ **6 张升级卡**（`applyCard` 六通道 `duration/radius/haste/slow/cd/cap`）+ **2 件一次性商店货**（`buyFoam` 奶泡 +2 秒 & +8% 减速、`buyThermos` 保温杯 +1 杯 & −4 秒）。`snapshot()/restore()` 进存档。
+4. **回归旧怪三选**：收件人（`addressee`）、誊录员（`clerk`）、蛮牛（`charger`）—— 铁律「新关卡至少带 2~3 只旧怪」。
+5. **节奏**：hpMul 1.55 / dmgMul 1.85；R1-4 学习（少怪）、R5-8 旧怪、R9-12 墨线封路、R13-20 双车高压。
+6. **数量位移**（改老套件的清单）：关卡 11→12、怪物 27→28、升级卡 93→99、商店 31→34、法器 11→12、技能键 5→6、程序化怪 3→4、成就 114→118（`clear_12 / kangaroo_10 / traffic_50 / traffic_run_20`，全清 **8280**；`clear_all` 文案改「十二关皆通」）。
 
 ### 0.2 最近几块（细节见 §2 与 git log）
 
+- **116 · v=131**：第十二关「三幻神驿站」+ 车流系统（另一组写引擎、本侧接线）+ 加急袋鼠（hasted buff）+ 法器「苔藓拿铁」（独立升级卡与商店货）；成就 118。
 - **114 · v=129**：第十一关「钟楼雾原」+ 雾系统 + 誊录员 / 收账人 + 法器墨丸（独立升级卡与商店物品）；成就 114。
 - **113 · v=128**：删除成就「电光石火」（5 分钟内通关太难完成）及其埋点；成就 111 → 110（挑战 15 → 14、罕见 30 → 29），全清骨币 7800 → 7680。
 - **112 · v=127**：整体提难度（四档重排、称量官无上限叠层、盖章人封步到死、诅咒改最终乘算），详见 git log。
@@ -72,11 +71,14 @@
 20. **同一个闭包里同名函数会静默互相覆盖**（第 114 块 `distToSeg`）：两个都用 6 参版本 → 后声明的赢，前一个调用点拿到 NaN，一路传到 `x:null` 才在 CDP 里露头。新写的几何工具函数一律带用途前缀（`distToInk`），别指望「参数个数不同」能重载。
 21. **「淡出 / 清理 / 关闭」要分三个动词**（第 114 块 `fog.clear` vs `clearPatches`）：调试只想抹掉场上那几片，结果把整个系统关了，后面所有断言都跟着错。凡是生命周期里有「暂时清场」和「彻底关闭」两种语义的，一进函数就拆成两个 API。
 22. **纯数据接口别回对象**（第 114 块 `collectCast`）：CDP 的 `returnByValue` 会把 Three 的循环引用整个序列化，轻则卡死、重则 `Object reference chain is too long`。调试口一律回 `{ progress }` / 数字 / 扁平数组。
+23. **「另一组写引擎、我接线」的并行模式**（第 116 块）：`traffic.js` / `latte.js` 是另一组写好的零 import 引擎文件，**完全别碰它们**，只 import 导出接口、在 `main.js` 里做依赖注入 + 回调。这样两个对话各改各的文件，冲突面最小。
+24. **增益类 buff 挂 `e.hasted` 字段、收口在两处乘算**（第 116 块袋鼠）：给别的怪挂「加急」不用改敌人 AI 主流程，只要在 `moveToward`（移速）和 `cdOf`（出手频率）两个收口点乘 `hasted` 系数，`updateOne` 里递减计时即可 —— 和 `filled` 递减并排放。
+25. **商店「买断型」法器强化走 `itemLocked` 门控**（第 116 块）：奶泡 / 保温杯这种「一局一次」的货，`itemLocked` 看 `ctx.latte.hasFoam()` / `hasThermos()` 返回 true 就锁死，别让玩家重复买。
 
 ### 0.4 发版与测试
 
 - 推送：`git -c http.proxy=http://127.0.0.1:7897 ...`（本机 Clash 代理；代理没开时 push 会失败，让用户开代理，别改 git 配置）。
-- 回归：`.tmp-block114-test.mjs` 等 **59 套 Node** 全绿；CDP 按需单套串行（一次只跑一套，套间 `node .tmp-cdp-clean.js`）。
+- 回归：`.tmp-block114-test.mjs` 等 **60 套 Node** 全绿；CDP 按需单套串行（一次只跑一套，套间 `node .tmp-cdp-clean.js`）。
 - 已知黄账（别浪费时间）：`block63-cdp` 4 个通电地板、`block54-cdp` 签到浮层 z-index（35/1）、`camp-test` / `boon-test` / `eventui-test` / `block18` / `start-test` / `block30-cdp` / `ui-test` 等老套件本身过期。
 - 用户规则：**全中文**；有疑问先问；README 与实况同步；美术优先 GitHub 现成 CC0；不做多角色；局外对局内影响要小。
 
@@ -108,6 +110,7 @@ Three.js r160 的单摇杆幸存者肉鸽《蛙步 · 夜行》，纯静态站�
 
 | 块 | 版本 | 核心内容 |
 | --- | --- | --- |
+| **116** | **v=131** | **第十二关「三幻神驿站」**：车流系统（两条车道、2.2s 预警、撞怪高额伤害）+ 加急袋鼠（中距放风筝、给怪挂「加急」hasted buff）+ 法器「苔藓拿铁」（第 6 键区域增益，3 级 + 6 卡 + 2 商店货）+ 回归旧怪收件人/誊录员/蛮牛；成就 114→118（全清 8280）；卡池 93→99、商店 31→34、怪 27→28、法器 11→12、程序化怪 3→4 |
 | **114** | **v=129** | **第十一关「钟楼雾原」**：雾系统（最多 4 片、预警 1.6s、寿命 8s、漂移、`densityAt`）+ 两怪（誊录员画墨线 / 收账人偷属性技能 8s）+ 法器「墨丸」（3 级 + 6 卡 + 2 商店物）；成就 111→114；**遮挡改渲染顺序（`depthTest:false` + `renderOrder 700`），穿雾层 850/860/880/900** |
 | 113 | v=128 | 删除成就「电光石火」（5 分钟内通关）及埋点；成就 110 条，全清 7680 骨币 |
 | 112 | v=127 | **整体提难度**：四档重排（普通=旧地狱）、骨币倍率 0.6/1/1.4/1.8；称量官 hp8 每 8s 一层无上限全场五项 +10%；盖章人方印 6.2 格 / 2.4s / 封步到死；诅咒改最终乘算（脆骨 66%）；诅咒骨币倍率减半（六条 ×1.65） |
@@ -177,16 +180,18 @@ Three.js r160 的单摇杆幸存者肉鸽《蛙步 · 夜行》，纯静态站�
 | `main.js`（~10000 行） | 主循环 + 所有 UI 面板 + 各系统接线 + `__game` 钩子。**改之前先 grep 定位** |
 | `wave.js` | 20 回合编排、`roundScale`、`DIFFS`、`startAt`、升级 / 商店节点 |
 | `stats.js` | 属性引擎（`createStats`）：主角 14 项 / 武器 12 项；本轮新增最终乘算 `mul` |
-| `enemy.js` | **27 只怪**（24 个 glb；`addressee` / `clerk` / `collector` 程序化）、`CLIP_FAMILIES`、血条、冰冻 / 定身、`attachTag`、木鱼灵追踪泡、并联体分离、称量官叠层（`weighTier / dressWeigh / performWeigh / clearWeigh`）、盖章人（`spawnSeal` / `sealBySource`）、看守五招、`hittable`、**墨线（`startInkCast / spawnInkBand / updateInks / distToInk`）** |
+| `enemy.js` | **28 只怪**（24 个 glb；`addressee` / `clerk` / `collector` / `kangaroo` 程序化）、`CLIP_FAMILIES`、血条、冰冻 / 定身、`attachTag`、木鱼灵追踪泡、并联体分离、称量官叠层（`weighTier / dressWeigh / performWeigh / clearWeigh`）、盖章人（`spawnSeal` / `sealBySource`）、看守五招、`hittable`、**墨线（`startInkCast / spawnInkBand / updateInks / distToInk`）**、**加急袋鼠（`handleKangaroo / performRush`，`e.hasted` 在 `moveToward` / `cdOf` 乘算、`updateOne` 递减）** |
+| `traffic.js` | **第 116 块新增**：第十二关的车流。`createTrafficSystem({scene,fx,enemies,hurtPlayer,onEnemyHit,onPlayerHit})` → `build / update / clear / spawn / list / config`；常量 `TRAFFIC_DEFAULTS {lanes:[-4.5,4.5],width:2.4,warn:2.2,speed:18,damage:2.0,enemyPct:0.36,doubleFrom:13}`；零 import 业务模块，纯注入 |
+| `latte.js` | **第 116 块新增**：法器「苔藓拿铁」（12 号）。`createLatteSystem({scene,fx,enemies,stats,onCast,onSlow,onPickup})` → `drop / dropPickup / update / reset / clearField / setRelicLevel / applyCard / buyFoam / buyThermos / snapshot / restore / setCdMul / bonuses`；`LATTE_BASE {cd 30, cdMin 14, radius 3.2, duration 5, haste 0.2, move 0.15, slow 0.28, cap 1, capMax 3}`；零 import，纯注入 |
 | `fog.js` | **第 114 块新增**：第十一关的雾。`createFogSystem({scene})` → `build / update / clear / clearPatches / inside / densityAt / on / count / spawn / heat / haloVisible / haloPos`；常量 `VIEW_K 0.862`（深度投影补偿）、`FOG_ORDER 700`；两层平面 `makeLayer(1.35,1.00,0.06)` + `makeLayer(2.05,0.82,-0.05)`，`depthTest:false` |
 | `mine.js` | **第 114 块新增**：法器「墨丸」（11 号）。`DMG_MUL 2.5 / MAX_MINE 3 / MAX_CAP 8 / RADIUS 2.6 / TRIGGER_R 0.9 / CD 8→3`；`drop / update / reset / clearField / applyCard / buySac / buyThick / setRelicLevel / snapshot / restore`；地雷 `renderOrder 721`、光环 720（穿雾） |
 | `deposit.js` | 寄存柜（第八关）：`build / update / reset / addTag / takeAll / clearTags / setSeal`；常量 `CAP 8 / LOCK_DELAY 5.0 / RANGE 3.6`；掉牌率唯一真相源 `TAG_BASE 0.50` / `TAG_SEAL [.50,.34,.22,.13]` |
 | `weapon.js` | 环剑、5 种元素剑、万剑齐发 CD 制；毒 / 冰 / 血 / 震 `aroundPoint()` 一圈（`elementRadius` 7.0、`elementRatio` 50%）；雷剑全场连锁 |
-| `turret.js` / `relics.js` | 弩炮台（上限 3）、**11 件法器**（地刺 / 霜环 / 震钟 / 棘甲 / 暖炉 / 路口灯 / 绝缘斗篷 / 木鱼 / 镇牌铃 / 傀儡术 / 墨丸），各 3 级 |
-| `upgrade.js` | **93 张升级卡**（22 族 × 3 档 + 21 张结构卡 + 6 张墨丸卡）；`up.golem` / `up.arrow` / `up.mine` 转交各自模块，changes 文案共用 `golemChange()` / `arrowChange()` / `mineChange()`；`weightOf` 看 `mineOwned` 收窄墨丸卡 |
+| `turret.js` / `relics.js` | 弩炮台（上限 3）、**12 件法器**（地刺 / 霜环 / 震钟 / 棘甲 / 暖炉 / 路口灯 / 绝缘斗篷 / 木鱼 / 镇牌铃 / 傀儡术 / 墨丸 / 苔藓拿铁），各 3 级 |
+| `upgrade.js` | **99 张升级卡**（22 族 × 3 档 + 21 张结构卡 + 6 张墨丸卡 + 6 张拿铁卡）；`up.golem` / `up.arrow` / `up.mine` / `up.latte` 转交各自模块，changes 文案共用 `golemChange()` / `arrowChange()` / `mineChange()` / `latteChange()`；`weightOf` 看 `mineOwned` / `latteOwned` 收窄法器卡 |
 | `golem.js` | 傀儡系统：铁傀儡（不拉仇恨 / 攻击=主角×1.5 / 主动追怪）+ 雪傀儡（拉仇恨 / 击退不伤害 / 站桩）；嘲讽收口在 `enemy.js moveToward` 顶部 |
 | `hazards.js` | 场地机关：漏电地板 / 井底滴水 `drip` / 井口 `well` |
-| `shop.js` | **31 件货**、按品质加权摆 4 件；`SHOP_PINNED` 常驻货；`onlyLevel` 精确关卡；墨丸（`buyMine` 32 骨币 / needRound 8 / needLevel 11）+ 两个一次性强化（`buyInkSac` / `buyInkThick`，走 `type:'ink'`） |
+| `shop.js` | **34 件货**、按品质加权摆 4 件；`SHOP_PINNED` 常驻货；`onlyLevel` 精确关卡；墨丸（`buyMine` 32 骨币 / needRound 8 / needLevel 11）+ 两个一次性强化（`buyInkSac` / `buyInkThick`，走 `type:'ink'`）；拿铁（`buyLatte` / needLevel 12）+ 两个一次性强化（`buyLatteFoam` / `buyLatteThermos`，走 `type:'latte'`） |
 | `events.js` + `eventsExtra.js` + `eventsSide.js` + `repEvents.js` | 99 随机 + 10 条主线番外 + 13 老连锁 + 9 民心事 = **131 事件**；`TEMP_SCALE` 放大临时数值 |
 | `campfire.js` | 篝火 / 骨币（九簇，无限级线性阶梯价）；`BONE.diffMul` 难度倍率 |
 | `boons.js` | 永夜火种（16 张永久卡 + 层数上限 + 品质抽签） |
@@ -200,13 +205,13 @@ Three.js r160 的单摇杆幸存者肉鸽《蛙步 · 夜行》，纯静态站�
 | `arrowRain.js` | 箭雨：`mods` 四通道（`arrows / dmgPct / zone / cdCut`）、`applyCard / applyQuiver` |
 | `statView.js` | 属性页 3D 展台（独立 canvas，开着才 update） |
 | `signin.js` | 签到（周一起算 7 天、随机 0~100、3/5/7 天档、跨周清零） |
-| `skills.js` | 技能注册表：`visible / ready / progress / press / cdText`；第 5 格 `mine`（墨丸，`relics.mine > 0` 才可见） |
-| `story.js` | 主线 18 夜 + 印记 / 结局；s01~s11 已绑关，剩 7 夜 `levelId:null` |
-| `achievements.js` | **114 条成就** + 八类 + 三档 + `achClaim` 手动领取（「电光石火」已删；本轮加 `clear_11 / clerk_10 / collector_5 / fog_20`） |
+| `skills.js` | 技能注册表：`visible / ready / progress / press / cdText`；第 5 格 `mine`（墨丸，`relics.mine > 0` 才可见）、第 6 格 `latte`（拿铁，`relics.latte > 0` 才可见） |
+| `story.js` | 主线 18 夜 + 印记 / 结局；s01~s12 已绑关，剩 6 夜 `levelId:null` |
+| `achievements.js` | **118 条成就** + 八类 + 三档 + `achClaim` 手动领取（「电光石火」已删；本轮加 `clear_12 / kangaroo_10 / traffic_50 / traffic_run_20`；`clear_all` 改名「十二关皆通」） |
 | `dailyQuest.js` | 每日任务（池 39：简 19 / 中 11 / 难 9，`avail` 抽签门控） |
 | `accordion.js` | 通用手风琴（懒构建 + 单组展开） |
 | `codex.js` / `audio.js` / `joystick.js` / `scene.js` / `frog.js` / `fx.js` / `gold.js` / `input.js` / `rangeRing.js` / `swordKinds.js` / `guide.js` | 图鉴数据 / 音频 / 摇杆 / 场景 / 角色 / 特效 / 金币 / 输入 / 范围环 / 剑种 / 攻略面板 |
-| `assets/` | `rigged.glb`（奶蛙）、`weapons/`、`monsters/`（24 个 glb）、`golems/`（MC 贴图）、`props/`、`codex/*.webp`（27 张缩略图）、`audio/` |
+| `assets/` | `rigged.glb`（奶蛙）、`weapons/`、`monsters/`（24 个 glb）、`golems/`（MC 贴图）、`props/`、`codex/*.webp`（28 张缩略图）、`audio/` |
 
 ---
 
@@ -259,6 +264,9 @@ __game.block114.mines{count,cap,list,snapshot,bonuses,reset,drop,blastCount} / g
 __game.block114.steal() / stealNow() / clearSteal()
 __game.enemies.inkCount() / inks() / inkCasts() / inkHit(x,z) / clearInks() / clerkCount() / collectorCount()
 __game.enemies.collectCast()          ← 只回 {progress}，别回敌人对象（CDP 序列化会卡死）
+__game.traffic.list() / config() / spawn()   ← 第 116 块：场上的车 / 车道配置 / 手动来一辆
+__game.latte.drop() / count / cap / ready / bonuses() / setRelicLevel()   ← 第 116 块：拿铁放增益 / 读数
+__game.enemies.kangarooCount() / hastedCount()   ← 第 116 块：袋鼠数 / 被挂「加急」的怪数
 ```
 
 > **第 114 块踩过的两个坑**：①`fog.clear()` 会整系统关掉，调试只想抹掉场上那几片要用 `clearPatches()`（`block114.fog.clear` 已指向后者）。②`block114.steal()` 是纯数据快照（`{stat, t, skills}`），不是取敌人。
@@ -269,11 +277,11 @@ __game.enemies.collectCast()          ← 只回 {progress}，别回敌人对象
 
 ## 6. 测试
 
-- **纯 Node（秒级）**：新增块各自 `.tmp-blockNN-test.mjs`。第 114 块为 `.tmp-block114-test.mjs`（**132 项**：雾的常量与生命周期 / 墨丸上下限与冷却 / 两种新怪的配置 / 收账人偷取与归还 / 图鉴成就数量 / 版本一致）。
+- **纯 Node（秒级）**：新增块各自 `.tmp-blockNN-test.mjs`。第 116 块为 `.tmp-block116-test.mjs`（**77 项**：关卡数据 / 车流参数 / 袋鼠 rush 配置 / 拿铁常量 / 法器与卡与商店货 / 成就与图鉴与剧情 / 版本一致）。
 - **实机 CDP（需先起 8124）**：`.tmp-blockNN-cdp.js` 或 `.tmp-NN-smoke.js`；启动参数带 `--num-raster-threads=2 --renderer-process-limit=1` 并关后台节流；**串行，一次只跑一套**，套间 `node .tmp-cdp-clean.js`；SwiftShader 慢，必须轮询等待不能固定 sleep；截图路径不能含中文。第 114 块为 `.tmp-114-cdp.js`（**56 项**：雾起散 / 判定环置顶 / 微光跟随 / 墨丸落地炸 / 墨痕掉血减速 / 收账人读条偷取与 8 秒归还）。
 - **CDP 里测「持续掉血」必须先钉住局面**（第 114 块真踩过）：主角只有 10 点血，一边等墨痕一边被近战砍，人一死 `hurtPlayer` 第一行就 `if (gameState !== 'playing') return`，断言全变假红且看不出原因。正确做法 = 清怪（只留被测伤害源）→ `stats.hp.cur = stats.hp.max` → `enemies.clearInks()` → 再读差值，并且补一条 `state === 'playing'` 的断言把「主角死了」变成显式失败。
 - 跑全量：`sh .tmp-94-runall.sh`（只报挂了的）。**改数值类断言记得回头改老套件**（版本号 / 怪数 / 关卡数 / 卡池数 / 成就数 / 码表数都有人写死过）。
-- 第 114 块回归结果：**59 套 Node 全绿**；block114-test 132 / 114-cdp 56。数量位移清单见 §0.1 第 8 条。
+- 第 116 块回归结果：**60 套 Node 全绿**（含修复 block82 / block85 两个既有黄账的正则断言——分离循环 `pass<2/pass<6`、`orbitHold` getter 写法）。数量位移清单见 §0.1 第 6 条。
 
 ---
 
@@ -281,9 +289,9 @@ __game.enemies.collectCast()          ← 只回 {progress}，别回敌人对象
 
 用户 2026-10-21 定：**不要多角色，其他都可以做，只要局外因素对局内影响不会过大**。
 
-- [x] 第 19~114 块全部完成并推送（见 §2）
+- [x] 第 19~116 块全部完成并推送（见 §2）
 - [ ] **主菜单 3D 背景**（场景和模型都在，只是没跑 render；用户 2026-10-28 明确「暂时不做了」）
-- [ ] **第十二关起**（`story.js` 还有 7 夜 `levelId:null` 等接；模板照 `LEVEL_11` 抄，带雾的关加 `fog` 字段、`FOG_LEVELS` 里登记）
-- [ ] 更多武器 / 技能（`skills.js` 的 SKILLS 表，技能栏还剩 4 格）
+- [ ] **第十三关起**（`story.js` 还有 6 夜 `levelId:null` 等接；模板照 `LEVEL_12` 抄，带车流的关加 `traffic` 字段、带雾的关加 `fog` 字段）
+- [ ] 更多武器 / 技能（`skills.js` 的 SKILLS 表，技能栏还剩 3 格）
 - [ ] 性能优化（怪物合批 / 假阴影 / 视锥剔除）—— **等用户点头再动**
 - [ ] 不做：主菜单排行榜（无后端）、商城 / 皮肤、广告位、多角色

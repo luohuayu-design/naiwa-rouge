@@ -34,9 +34,9 @@
 //   标了 scope:'weapon' 的项改的是武器表（剑系 / 元素系），其余改主角表。
 //   两块表都要传进来，没传 wstats 时武器项会退化到主角表（只为兼容老调用）。
 // ============================================================
-import { STAT_DEFS } from './stats.js?v=130';
-import { WEAPON_STAT_DEFS } from './weaponStats.js?v=130';
-import { RARITIES, rarityWeight, oddsOf } from './rarity.js?v=130';
+import { STAT_DEFS } from './stats.js?v=131';
+import { WEAPON_STAT_DEFS } from './weaponStats.js?v=131';
+import { RARITIES, rarityWeight, oddsOf } from './rarity.js?v=131';
 
 // 一张卡改的是哪块表
 function tableFor(scope, stats, wstats) {
@@ -500,6 +500,58 @@ const UNIQUE = [
     title: '半径 +0.5 · 伤害 +10% · 同屏 +1',
     desc: '传说：一次给三样 —— 墨的范围、浓度、份数一起来。拿到这张，墨丸就从「补刀」变成「清场」',
   },
+  // ---------------- 拿铁卡（第 116 块，用户定案「配套 6 张升级卡」） ----------------
+  // 买到「苔藓拿铁」后才会进池子（weightOf 里拦：opts.latteOwned）。
+  // 六个通道：持续 / 半径 / 攻速 / 减速 / 冷却 / 同屏。
+  // 和墨丸卡、傀儡卡一样**不走属性表**：up.latte 由 applyUpgrade 转交 latte.applyCard()。
+  {
+    id: 'latteDur', tag: 'def', glyph: '☕', name: '续杯',
+    rarity: 0,
+    w0: 0.60, gw: +0.015,
+    latte: { stat: 'duration', flat: 1.0 },
+    title: '拿铁持续 +1 秒',
+    desc: '咖啡多香一会儿（能重复拿）—— 圈撑得久，怪就在减速里泡得久',
+  },
+  {
+    id: 'latteRad', tag: 'atk', glyph: '🫧', name: '奶泡溢出',
+    rarity: 0,
+    w0: 0.60, gw: +0.015,
+    latte: { stat: 'radius', flat: 0.4 },
+    title: '拿铁半径 +0.4 格',
+    desc: '咖啡洒得更开（能重复拿）—— 圈大一圈，能留住的怪就多一圈',
+  },
+  {
+    id: 'latteHaste', tag: 'atk', glyph: '⚡', name: '一口提神',
+    rarity: 1,
+    w0: 0.55, gw: +0.015,
+    latte: { stat: 'haste', flat: 0.05 },
+    title: '拿铁攻速 +5%',
+    desc: '圈里出手更快（能重复拿）—— 站在咖啡里输出就是这关的打法',
+  },
+  {
+    id: 'latteSlow', tag: 'def', glyph: '🧊', name: '冰镇拿铁',
+    rarity: 1,
+    w0: 0.55, gw: +0.015,
+    latte: { stat: 'slow', flat: 0.06 },
+    title: '拿铁减速 +6%',
+    desc: '怪在圈里更挪不动（能重复拿，硬上限 65%）—— 更容易留在车道里挨车',
+  },
+  {
+    id: 'latteCd', tag: 'mov', glyph: '⏱', name: '再来一杯',
+    rarity: 2,
+    w0: 0.40, gw: +0.020,
+    latte: { stat: 'cd', flat: 3.0 },
+    title: '拿铁冷却 −3 秒',
+    desc: '放得更勤（能重复拿，最低 14 秒）—— 咖啡几乎不断档',
+  },
+  {
+    id: 'latteSet', tag: 'atk', glyph: '🍯', name: '招牌特调',
+    rarity: 4,
+    w0: 0.30, gw: +0.008,
+    latte: { stat: 'radius', flat: 0.5, extra: [{ stat: 'duration', flat: 1.5 }, { stat: 'slow', flat: 0.05 }] },
+    title: '半径 +0.5 · 持续 +1.5 秒 · 减速 +5%',
+    desc: '传说：一次给三样 —— 圈更大、更久、更黏。拿到这张，咖啡就从「补位」变成「阵地」',
+  },
 ];
 
 // 把「族 × 三档」摊平成一张张卡。小档沿用原来的 id（老存档 / 老测试照旧认得）。
@@ -558,6 +610,8 @@ export function weightOf(up, round = 1, opts = {}) {
   // 第 114 块：墨丸卡同理 —— 没买到墨丸之前它们一张都不该出现
   // （不然三选一里会弹出「墨丸伤害 +8%」，而你连墨丸都没有）
   if (up.mine && !opts.mineOwned) return 0;
+  // 第 116 块：拿铁卡同理 —— 没买到拿铁之前它们一张都不该出现
+  if (up.latte && !opts.latteOwned) return 0;
   if (up.needsWeapon && !opts.hasWeapon) return 0;
   const r = Math.max(1, round);
   return Math.max(0, (up.w0 ?? 1) + (up.gw ?? 0) * (r - 1));
@@ -606,7 +660,7 @@ export function rollChoices(rng = Math.random, opts = {}) {
 // wstats = 武器属性表：scope:'weapon' 的条目改它，其余改主角 stats。
 // weapon = 武器系统本身：只有「直接给一把剑」的卡（sword 字段）才需要它。
 // 返回 { src, changes }：changes 是精确的「选前 → 选后」（用于卡片/提示文案）。
-export function applyUpgrade(stats, up, serial = 0, wstats = null, weapon = null, golems = null, arrowRain = null, mines = null) {
+export function applyUpgrade(stats, up, serial = 0, wstats = null, weapon = null, golems = null, arrowRain = null, mines = null, latte = null) {
   // 第 107 块：傀儡卡不碰属性表，交给傀儡系统记账（golem.applyCard）
   if (up.golem) {
     const g = up.golem;
@@ -635,6 +689,16 @@ export function applyUpgrade(stats, up, serial = 0, wstats = null, weapon = null
     return {
       src: `upg:${up.id}:${serial}`,
       changes: [mineChange(m, before)],
+    };
+  }
+  // 第 116 块：拿铁卡交给拿铁系统记账（latte.applyCard）
+  if (up.latte) {
+    const l = up.latte;
+    const before = latte ? latte.bonuses() : null;
+    if (latte) latte.applyCard(l);
+    return {
+      src: `upg:${up.id}:${serial}`,
+      changes: [latteChange(l, before)],
     };
   }
   // 剑阵这类「直接加一把剑」的卡：不碰属性表，交给武器系统上环
@@ -794,7 +858,39 @@ function mineChange(m, b) {
   };
 }
 
-export function previewUpgrade(stats, up, wstats = null, weapon = null, golems = null, arrowRain = null, mines = null) {
+// ---- 第 116 块：拿铁卡的 changes 文案（apply 与 preview 共用）----
+// b = latte.bonuses()：{ duration, radius, haste, slow, cdMax, cap, ... }
+function latteChange(l, b) {
+  const sum = (stat) => (l.stat === stat ? l.flat : 0)
+    + (l.extra || []).reduce((a, e) => a + (e.stat === stat ? e.flat : 0), 0);
+  const b0 = b || { duration: 5.0, radius: 3.2, haste: 0.20, slow: 0.28, cdMax: 30.0, cap: 1 };
+  const meta = {
+    duration: { name: '拿铁持续', from: b0.duration, fmt: (v) => `${v.toFixed(1)} 秒` },
+    radius: { name: '拿铁半径', from: b0.radius, fmt: (v) => `${v.toFixed(1)} 格` },
+    haste: { name: '拿铁攻速', from: b0.haste, fmt: (v) => `+${Math.round(v * 100)}%` },
+    slow: { name: '拿铁减速', from: b0.slow, fmt: (v) => `${Math.round(v * 100)}%` },
+    cd: { name: '拿铁冷却', from: b0.cdMax, fmt: (v) => `${v.toFixed(1)} 秒` },
+    cap: { name: '拿铁同屏', from: b0.cap, fmt: (v) => `${v} 杯` },
+  };
+  const stat = meta[l.stat] ? l.stat : 'haste';
+  const mm = meta[stat];
+  const flat = sum(stat);
+  const to = stat === 'cd' ? Math.max(14.0, mm.from - flat) : mm.from + flat;
+  const extraNotes = (l.extra || []).map((e) => {
+    const x = meta[e.stat];
+    if (!x) return '';
+    const f = e.flat;
+    const t = e.stat === 'cd' ? Math.max(14.0, x.from - f) : x.from + f;
+    return `${x.name} ${x.fmt(x.from)} → ${x.fmt(t)}`;
+  }).filter(Boolean);
+  return {
+    key: `latte_${stat}`, scope: 'latte', name: mm.name,
+    from: mm.from, to, fromText: mm.fmt(mm.from), toText: mm.fmt(to),
+    text: `${mm.fmt(mm.from)} → ${mm.fmt(to)}` + (extraNotes.length ? ` · ${extraNotes.join(' · ')}` : ''),
+  };
+}
+
+export function previewUpgrade(stats, up, wstats = null, weapon = null, golems = null, arrowRain = null, mines = null, latte = null) {
   if (up.golem) {
     const g = up.golem;
     const b = golems ? golems.bonuses() : null;
@@ -810,6 +906,12 @@ export function previewUpgrade(stats, up, wstats = null, weapon = null, golems =
     const m = up.mine;
     const bb = mines ? mines.bonuses() : null;
     return [mineChange(m, bb)];
+  }
+  // 第 116 块：拿铁卡 —— 和 applyUpgrade 走同一个 latteChange，预览与实值永远一致
+  if (up.latte) {
+    const l = up.latte;
+    const bb = latte ? latte.bonuses() : null;
+    return [latteChange(l, bb)];
   }
   if (up.sword) {
     const n = weapon ? weapon.count : 0;

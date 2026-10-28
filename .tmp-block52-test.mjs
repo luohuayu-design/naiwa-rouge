@@ -58,12 +58,12 @@ const typeNames = TYPES.map(([k]) => k);
 // 第 107 块：第十关 +mirror / addressee / waiter / echo → 条目 25；
 //   收件人是**本作第一只没有 glb 的怪**（一张程序化的纸，enemy.js 的 cfg.proc 通道）
 //   → 有模型的 24 条，零复用不变。
-// 第 114 块：+誊录员 / 收账人（两只程序化怪）→ 27 条，有模型的 24 条
-sec('一、27 只怪 · 零复用（有模型的每条一个独立模型）');
-ok(TYPES.length === 27, `怪物条目 27 只（实际 ${TYPES.length}）`);   // 第 97 块 +stamper，第 107 块 +4，第 114 块 +2
+// 第 116 块：+加急袋鼠（程序化怪）→ 28 条，有模型的 24 条
+sec('一、28 只怪 · 零复用（有模型的每条一个独立模型）');
+ok(TYPES.length === 28, `怪物条目 28 只（实际 ${TYPES.length}）`);   // 第 97 块 +stamper，第 107 块 +4，第 114 块 +2，第 116 块 +1
 const noModel = TYPES.filter(([, t]) => !t.file);
-ok(noModel.length === 3 && noModel.map((x) => x[0]).sort().join() === 'addressee,clerk,collector',
-  '三只程序化怪：收件人（纸）/ 誊录员（羽笔）/ 收账人（账簿）', noModel.map((x) => x[0]).join(','));
+ok(noModel.length === 4 && noModel.map((x) => x[0]).sort().join() === 'addressee,clerk,collector,kangaroo',
+  '四只程序化怪：收件人（纸）/ 誊录员（羽笔）/ 收账人（账簿）/ 袋鼠（黄外套）', noModel.map((x) => x[0]).join(','));
 const files = TYPES.map(([, t]) => t.file).filter(Boolean);
 ok(files.every((f) => typeof f === 'string' && f.startsWith('assets/monsters/')), '有模型的都写了 assets/monsters/ 下的路径');
 const dupFiles = files.filter((f, i) => files.indexOf(f) !== i);

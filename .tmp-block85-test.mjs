@@ -69,12 +69,12 @@ sec('三、环剑停转');
 ok(B.orbitStop === 1.2, `泡命中会让环剑停转 ${B.orbitStop} 秒`, String(B.orbitStop));
 ok(/orbitStop: cfg\.orbitStop \?\? 1\.2,/.test(enemySrc), 'spawnBubble 把 orbitStop 带到每颗泡上');
 ok(/let orbitHold = 0;/.test(weaponSrc), 'weapon 有 orbitHold 状态');
-ok(/if \(orbitHold > 0\) \{\s*orbitHold = Math\.max\(0, orbitHold - dt\);\s*\} else \{\s*orbitAngle \+=/.test(weaponSrc),
+ok(/if \(orbitHold > 0\) \{[\s\S]*?orbitHold = Math\.max\(0, orbitHold - dt\);[\s\S]*?\} else \{[\s\S]*?orbitAngle \+=/.test(weaponSrc),
   '停转只冻 orbitAngle（补剑 / 飞剑 / 雷链照常跑）');
 ok(/function holdOrbit\(sec\)/.test(weaponSrc) && /orbitHold = Math\.max\(orbitHold, s\);/.test(weaponSrc),
   'holdOrbit 用 max 而不是相加（连着挨两颗不叠成 2.4 秒）');
 ok(/orbitHold = 0;\s*granted = false;/.test(weaponSrc), 'reset 清掉停转');
-ok(/holdOrbit,\s*get orbitHold\(\)/.test(weaponSrc), '导出 holdOrbit + orbitHold 读数（测试/调试用）');
+ok(/holdOrbit,/.test(weaponSrc) && /get orbitHold\(\) \{ return orbitHold; \}/.test(weaponSrc), '导出 holdOrbit + orbitHold 读数（测试/调试用）');
 // 停转 ≠ 停手：剑还在原处，照样碰伤怪
 ok(/const hit = findHit\(x, z, list\);/.test(weaponSrc), '停转期间环剑仍然参与命中判定');
 ok(/stopOrbit: \(sec\) => \{\s*weapon\.holdOrbit\(sec\);/.test(mainSrc), 'combatCtx.stopOrbit 接到 weapon.holdOrbit');

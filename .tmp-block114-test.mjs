@@ -67,7 +67,7 @@ sec('② 两只新怪');
 // ============================================================
 const clerk = E.ENEMY_TYPES.clerk;
 const col = E.ENEMY_TYPES.collector;
-ok(Object.keys(E.ENEMY_TYPES).length === 27, `怪种 27 只（25 + 2，实 ${Object.keys(E.ENEMY_TYPES).length}）`);
+ok(Object.keys(E.ENEMY_TYPES).length === 28, `怪种 28 只（25 + 2 + 1，实 ${Object.keys(E.ENEMY_TYPES).length}）`);
 ok(!!clerk && clerk.name === '誊录员', 'clerk = 誊录员');
 ok(!!col && col.name === '收账人', 'collector = 收账人');
 // 模型：两只都是程序化生成（不抢别人的 glb —— 第 97 块的教训）
@@ -190,7 +190,7 @@ const inkThick = S.SHOP_ITEMS.find((i) => i.id === 'buyInkThick');
 ok(!!buyMine && buyMine.type === 'relic' && buyMine.relic === 'mine', 'buyMine 是法器货');
 ok(buyMine.needLevel === 11, '墨丸只在第十一关起上架');
 ok(!!inkSac && !!inkThick && inkSac.type === 'ink' && inkThick.type === 'ink', '两件墨货 type = ink');
-ok(S.SHOP_ITEMS.length === 31, `商店货 31 件（28 + 3，实 ${S.SHOP_ITEMS.length}）`);
+ok(S.SHOP_ITEMS.length === 34, `商店货 34 件（28 + 3 + 3，实 ${S.SHOP_ITEMS.length}）`);
 ok(S.itemLocked(inkSac, {}) === '要先拥有「墨丸」', '没墨丸时墨货锁着');
 ok(S.itemLocked(inkSac, { mineLevel: 1, round: 9, level: 11 }) === null,
   '有墨丸 + 够了回合/关卡后解锁');
@@ -211,7 +211,7 @@ const pv = U.previewUpgrade(
 ok(Array.isArray(pv) && pv.length === 1 && pv[0].fromText && pv[0].toText,
   'previewUpgrade 能给出「原值 → 新值」（不会崩）',
   JSON.stringify(pv && pv[0]));
-ok(U.UPGRADES.length === 93, `卡池 93 张（87 + 6，实 ${U.UPGRADES.length}）`);
+ok(U.UPGRADES.length === 99, `卡池 99 张（87 + 6 + 6，实 ${U.UPGRADES.length}）`);
 
 // 技能栏
 const mineSkill = SK.SKILLS.find((s) => s.id === 'mine');
@@ -271,9 +271,9 @@ sec('⑥ 成就 / 图鉴 / 剧情 / 存档');
 for (const id of ['clear_11', 'clerk_10', 'collector_5', 'fog_20']) {
   ok(!!A.achById(id), `成就 ${id} 已注册`);
 }
-ok(A.achById('clear_all').name === '十一关皆通', 'clear_all 改名「十一关皆通」');
+ok(A.achById('clear_all').name === '十二关皆通', 'clear_all 改名「十二关皆通」');
 ok(A.achById('fog_20').prog && A.achById('fog_20').prog.key === 'fogKills', 'fog_20 读 fogKills');
-ok(A.ACH_COUNT === 114, `成就总数 114（实 ${A.ACH_COUNT}）`);
+ok(A.ACH_COUNT === 118, `成就总数 118（实 ${A.ACH_COUNT}）`);
 ok(/tryAch\('clear_11'\)/.test(mainSrc), '通关第十一关发 clear_11');
 
 const codexSrc = src('js/codex.js');
@@ -285,7 +285,7 @@ ok(/mines\.restore\(saved\.mines\)/.test(mainSrc), '读档还原墨丸');
 ok(/mines\.reset\(\)/.test(mainSrc), 'resetRunState 清场地上的墨丸');
 
 // 版本号一致性
-ok((indexHtml.match(/\?v=129/g) || []).length === 2, 'index.html 两处 ?v=129');
+ok((indexHtml.match(/\?v=131/g) || []).length === 2, 'index.html 两处 ?v=131');
 ok(!/\?v=128/.test(indexHtml) && !/\?v=128/.test(mainSrc), '没有残留的 ?v=128');
 const imports = [...mainSrc.matchAll(/from '\.\/[^']*\?v=(\d+)'/g)].map((m) => m[1]);
 ok(imports.length > 30 && imports.every((v) => v === VER), `main.js 的 ${imports.length} 条 import 全是 v=${VER}`);

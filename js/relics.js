@@ -16,12 +16,12 @@
 // 与环剑（自动索敌、消耗制）和炮台（固定点位）互补；价格定在
 // 商店里「买得起但要攒一攒」的档，让 9/12/15/18 回合的商店有取舍。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=130';
-import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=130';
-import { withV } from './assetUrl.js?v=130';   // 第 80 块：glb 带版本号，SW 才走缓存优先
-import { distance2D } from './stats.js?v=130';
-import { TAG_BASE, TAG_SEAL } from './deposit.js?v=130';   // 第 84 块：掉牌概率的真相源
-import audio from './audio.js?v=130';
+import * as THREE from '../lib/three.module.js?v=131';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=131';
+import { withV } from './assetUrl.js?v=131';   // 第 80 块：glb 带版本号，SW 才走缓存优先
+import { distance2D } from './stats.js?v=131';
+import { TAG_BASE, TAG_SEAL } from './deposit.js?v=131';   // 第 84 块：掉牌概率的真相源
+import audio from './audio.js?v=131';
 
 // 百分比文案（概率表里存的是 0.5 这种小数）
 const pct = (v) => `${Math.round(v * 100)}%`;
@@ -178,11 +178,28 @@ export const RELIC_DEFS = {
       '墨丸完全体：同屏 5 枚、伤害 ×1.5 —— 雾里提前布好，让它们自己走过来',
     ],
   },
+  // ---------------- 第十二关新增（第 116 块）：苔藓拿铁 ----------------
+  // 用户定案：「在当前位置放下一杯拿铁，形成持续约 5 秒的区域。玩家在区域内
+  // 获得攻速、移速提升；敌人进入则被减速」+「配套 3 级法器成长、6 张升级卡、
+  // 2 件一次性商店强化」。本文件只管「买没买 / 几级」；咖啡本体、增益、减速、
+  // 卡片加成全在 latte.js。
+  // 等级成长：攻速 ×[1/1.2/1.4]、移速 ×[1/1.15/1.3]（latte.js 里按 relicLv 查表）。
+  latte: {
+    name: '苔藓拿铁',
+    maxLevel: 3,
+    cap: [1, 1, 1],        // 同屏份数由卡片 / 商店加（latte.js 的 capV），等级不直接加
+    atkMul: [1, 1, 1],     // 攻速 / 移速的等级成长在 latte.js 里查表
+    desc: [
+      '牛递给你一杯苔藓拿铁：技能栏多一颗「拿铁」。按下在脚下放一杯咖啡，圈里你加攻速 / 移速、怪被减速，持续 5 秒、冷却 30 秒',
+      '咖啡更香：圈里攻速 ×1.2、移速 ×1.15',
+      '招牌特调：圈里攻速 ×1.4、移速 ×1.3 —— 在车道边放一杯，把怪留在危险区',
+    ],
+  },
 };
 
 export function createRelicSystem({ scene, fx, enemies, onLanternReveal }) {
-  const levels = { spikes: 0, frost: 0, bell: 0, thorns: 0, stove: 0, lantern: 0, insulator: 0, woodfish: 0, seal: 0, puppet: 0, mine: 0 };
-  const cds = { spikes: 0, frost: 0, bell: 0, thorns: 0, stove: 0, lantern: 0, insulator: 0, woodfish: 0, seal: 0, puppet: 0, mine: 0 };
+  const levels = { spikes: 0, frost: 0, bell: 0, thorns: 0, stove: 0, lantern: 0, insulator: 0, woodfish: 0, seal: 0, puppet: 0, mine: 0, latte: 0 };
+  const cds = { spikes: 0, frost: 0, bell: 0, thorns: 0, stove: 0, lantern: 0, insulator: 0, woodfish: 0, seal: 0, puppet: 0, mine: 0, latte: 0 };
 
   // ---------------- 视觉 ----------------
   // 地刺（第 24 块）：KayKit「尖刺地板」里只取尖刺部分（CC0，带手绘贴图），
@@ -792,6 +809,7 @@ export function createRelicSystem({ scene, fx, enemies, onLanternReveal }) {
     levels.seal = 0;
     levels.puppet = 0;
     levels.mine = 0;
+    levels.latte = 0;
     cds.spikes = 0;
     cds.frost = 0;
     cds.bell = 0;

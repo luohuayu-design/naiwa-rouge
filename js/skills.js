@@ -32,7 +32,7 @@
 //
 // ctx 由 main.js 每帧拼好传进来：{ playing, weapon, playerPos, stats, coins }
 // ============================================================
-import audio from './audio.js?v=130';
+import audio from './audio.js?v=131';
 
 // 冷却数字统一两位小数（第 64 块用户需求：倒计时精确到两位小数）。
 // 不补零会跳字（3.4 → 3.35 期间宽度变化），toFixed(2) 宽度恒定。
@@ -229,6 +229,50 @@ export const SKILLS = [
     press(ctx) {
       if (!ctx.mines) return false;
       return ctx.mines.drop(ctx.playerPos);   // 冷却中 / 满场地：返回 false，不播音效
+    },
+  },
+
+  // ---- 第 12 件法器「苔藓拿铁」（第 116 块，用户定案） ----
+  // 用户定案：「在当前位置放下一杯拿铁，形成持续约 5 秒的区域。玩家在区域内
+  // 获得攻速、移速提升；敌人进入则被减速」。夜行商店买到拿铁后出现，
+  // 按下在脚下放一杯咖啡。持续 / 半径 / 攻速 / 减速 / 冷却 / 同屏各有独立通道，
+  // 三选一卡和商店两件货都往这几个通道里灌（见 latte.js）。
+  {
+    id: 'latte',
+    name: '苔藓拿铁',
+    // 内联 SVG：一杯咖啡 + 一圈奶泡 —— 和「墨丸」一样不用外链图
+    art: '<svg viewBox="0 0 40 40" aria-hidden="true">'
+      + '<path d="M12 14 h14 v7 a7 7 0 0 1 -14 0 z" fill="#6d4424"/>'
+      + '<ellipse cx="19" cy="14" rx="7" ry="2" fill="#9fc36a"/>'
+      + '<path d="M26 17 h4 a3 3 0 0 1 0 6 h-3" fill="none" stroke="#e8dcc2" stroke-width="2.4" stroke-linecap="round"/>'
+      + '<path d="M10 31 q8 -3 18 0" fill="none" stroke="#9fc36a" stroke-width="1.8" opacity=".6"/>'
+      + '</svg>',
+    ring: true,
+    hint: '在脚下放一杯咖啡：圈里你加攻速 / 移速、怪被减速。持续 5 秒、冷却 30 秒、同屏 1 杯',
+    key: '6',
+    cd: 30.0,
+    cdNow: (ctx) => (ctx.latte ? ctx.latte.cdMax : 30.0),
+    desc: '苔藓拿铁：按一下在脚下放一杯咖啡，形成一个圈 —— 你在圈里加攻速 / 移速，'
+      + '怪进圈被减速（移速打折）。持续 5 秒、冷却 30 秒、同屏最多 1 杯（卡 / 商店能加）。'
+      + '它和第十二关的车流是绝配：在车道边放一杯，把怪留在危险区，再借车收割。'
+      + '地上永远留一圈很淡的奶泡，所以你自己也不会忘了放在哪。',
+    unlockNote: '夜行商店买到「苔藓拿铁」（第十二关起上架）后拥有',
+    visible: (ctx) => ctx.playing && !!ctx.latte && ctx.latte.owned,
+    state: (ctx) => {
+      if (!ctx.latte || !ctx.latte.owned) return 'lock';
+      if (ctx.latte.count >= ctx.latte.cap) return 'full';
+      return ctx.latte.ready ? 'ready' : 'cd';
+    },
+    ready: (ctx) => !!ctx.latte && ctx.latte.owned && ctx.playing && ctx.latte.ready,
+    progress: (ctx) => (ctx.latte ? ctx.latte.progress : 0),
+    cdText: (ctx) => {
+      if (!ctx.latte || !ctx.latte.owned) return '';
+      if (ctx.latte.count >= ctx.latte.cap) return '满';
+      return ctx.latte.ready ? '' : fmtCd(ctx.latte.cdLeft);
+    },
+    press(ctx) {
+      if (!ctx.latte) return false;
+      return ctx.latte.drop(ctx.playerPos);   // 冷却中 / 满场地：返回 false，不播音效
     },
   },
 

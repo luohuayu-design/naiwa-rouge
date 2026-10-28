@@ -8,7 +8,7 @@
 // 两套配色集中在 THEMES 里，buildNightScene({ theme }) 建哪套，
 // 局中要换就调返回的 setTheme('crypt')（不改几何，只改颜色和贴图）。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=130';
+import * as THREE from '../lib/three.module.js?v=131';
 
 export const THEMES = {
   // 第一关 · 荒草地：冷月光 + 青绿边圈 + 萤火虫
@@ -178,6 +178,22 @@ export const THEMES = {
     tuft: 0x2a2e34, tuftVisible: false,     // 烧过的地，不长草
     fly: 0xc8d4dc, flyCount: 64,            // 飘着的是雾粒 / 灰烬
     ground: 'fogfield',
+  },
+  // 第十二关 · 三幻神驿站（第 116 块）：焦土公路边的服务区。
+  // 配色思路：整关压在「夜里的公路」上 —— 沥青的深灰 + 路缘的暖黄（路灯 /
+  // 车灯），再掺一点服务区咖啡的焦糖色。车流（traffic.js）自己画路面和虚线，
+  // 这里只负责底色与氛围：暖黄是这一关的「主角色」，和车、袋鼠、拿铁是同一套黄。
+  highway: {
+    bg: 0x0c0e10,
+    fog: 0x1e2326, fogDensity: 0.0126,
+    hemiSky: 0x8a949c, hemiGround: 0x1a160f, hemiIntensity: 1.28,
+    moon: 0xf2e6c0, moonIntensity: 3.05, moonBase: 2.85,
+    rim: 0x8a6a24, rimIntensity: 0.78,      // 路缘的暖黄
+    edge: 0xf2c14e, edgeOpacity: 0.30,      // 服务区招牌的黄
+    stone: 0x2e3236,
+    tuft: 0x3a362c, tuftVisible: true,      // 路边枯草还立着
+    fly: 0xffe08a, flyCount: 88,            // 飘着的车灯尘 / 飞蛾
+    ground: 'highway',
   },
 };
 
@@ -517,6 +533,7 @@ function makeGroundTexture(kind) {
   if (kind === 'registry') return makeRegistryTexture();
   if (kind === 'welltop') return makeWelltopTexture();
   if (kind === 'fogfield') return makeFogfieldTexture();
+  if (kind === 'highway') return makeHighwayTexture();
   return makeGrassTexture();
 }
 
@@ -586,6 +603,71 @@ function makeFogfieldTexture() {
       x + Math.cos(ang) * len, y + Math.sin(ang) * len,
     );
     g.stroke();
+  }
+
+  const tex = new THREE.CanvasTexture(cv);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(16, 16);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 8;
+  return tex;
+}
+
+// 三幻神驿站的地面（第 116 块）：公路服务区外头那片被车碾了几十年的柏油地。
+// 底色是压实的沥青（深灰近黑），细节分两层：
+//   ① 车辙 / 油渍：被轮胎磨亮的一道道浅痕 + 深色油斑；
+//   ② 路缘的反光：一点暖黄的路灯反光点（这一关的主色是黄，地面要呼应它）。
+function makeHighwayTexture() {
+  const S = 512;
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = S;
+  const g = cv.getContext('2d');
+
+  g.fillStyle = '#202326';
+  g.fillRect(0, 0, S, S);
+
+  let seed = 116116;
+  const rnd = () => {
+    seed = (seed * 1103515245 + 12345) % 2147483648;
+    return seed / 2147483648;
+  };
+
+  // ① 沥青颗粒：细密的灰点，让地面不是死黑一块
+  for (let i = 0; i < 2600; i++) {
+    const x = rnd() * S, y = rnd() * S;
+    g.fillStyle = `rgba(${44 + rnd() * 20 | 0},${46 + rnd() * 18 | 0},${50 + rnd() * 16 | 0},${0.06 + rnd() * 0.12})`;
+    g.beginPath(); g.arc(x, y, 0.3 + rnd() * 0.9, 0, Math.PI * 2); g.fill();
+  }
+
+  // ② 车辙：一条条磨亮的浅痕（方向散，长度长，像被反复碾过）
+  g.lineCap = 'round';
+  for (let i = 0; i < 60; i++) {
+    const x = rnd() * S, y = rnd() * S;
+    const len = 18 + rnd() * 70;
+    const ang = rnd() * Math.PI;
+    g.strokeStyle = `rgba(120,126,132,${0.03 + rnd() * 0.06})`;
+    g.lineWidth = 2 + rnd() * 5;
+    g.beginPath();
+    g.moveTo(x, y);
+    g.lineTo(x + Math.cos(ang) * len, y + Math.sin(ang) * len);
+    g.stroke();
+  }
+
+  // ③ 油渍：深色圆斑，边缘更黑（车漏的油渗进沥青）
+  for (let i = 0; i < 26; i++) {
+    const x = rnd() * S, y = rnd() * S, r = 10 + rnd() * 34;
+    const rad = g.createRadialGradient(x, y, 0, x, y, r);
+    rad.addColorStop(0, 'rgba(8,10,12,0.28)');
+    rad.addColorStop(1, 'rgba(8,10,12,0)');
+    g.fillStyle = rad;
+    g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+  }
+
+  // ④ 暖黄反光点：路灯 / 车灯在地面上的一点点暖色
+  for (let i = 0; i < 320; i++) {
+    const x = rnd() * S, y = rnd() * S;
+    g.fillStyle = `rgba(242,193,78,${0.03 + rnd() * 0.08})`;
+    g.beginPath(); g.arc(x, y, 0.5 + rnd() * 1.4, 0, Math.PI * 2); g.fill();
   }
 
   const tex = new THREE.CanvasTexture(cv);
