@@ -25,12 +25,12 @@
 // 第四关三只（wraith/leaper/mender，第 35 块，第 52 块换模型），
 // 各自在下面 ENEMY_TYPES 里有详细注释。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=124';
-import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=124';
-import { clone as cloneSkinned } from '../lib/jsm/utils/SkeletonUtils.js?v=124';
-import { distance2D } from './stats.js?v=124';
-import { createRangeRing } from './rangeRing.js?v=124';
-import { withV } from './assetUrl.js?v=124';
+import * as THREE from '../lib/three.module.js?v=125';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=125';
+import { clone as cloneSkinned } from '../lib/jsm/utils/SkeletonUtils.js?v=125';
+import { distance2D } from './stats.js?v=125';
+import { createRangeRing } from './rangeRing.js?v=125';
+import { withV } from './assetUrl.js?v=125';
 
 // KayKit 模型正面朝 +Z；如果哪天换模型发现怪倒着走，把这里改成 Math.PI
 export const ENEMY_MODEL_YAW = 0;
@@ -1021,7 +1021,7 @@ export const ENEMY_TYPES = {
     speed: 1.02,           // 慢 —— 它的威胁来自五套攻击，不是脚步
     damage: 0.95,          // 基础伤害（各招在上面的倍率里放大）
     attackRange: 12.0,
-    attackInterval: 2.4,   // 两次出手之间的间隔（狂暴后 ×0.72）
+    attackInterval: 2.4,   // （看守实际出手间隔走 warden.gap，这里是老字段，狂暴后 ×0.45）
     windup: 0.55,          // 必须 < attackDuration
     attackDuration: 1.0,
     boss: true,
@@ -1060,7 +1060,11 @@ export const ENEMY_TYPES = {
       gap: 2.0,            // 出手间隔（第 96 块：2.4 → 2.0，用户要「出手更密」）
       rageAt: 0.45,        // 血量低于这个比例进入狂暴
       rageSpeed: 1.40,
-      rageGap: 0.72,
+      // 第 110 块：rageGap 0.72 → 0.45（用户要「攻速大幅增加」）。
+      // 0.72 倍时间隔只从 2.0s → 1.44s，加上每招还有 1~1.7s 的动作时长，
+      // 体感几乎没变化；0.45 倍 → 0.9s（被 cdOf 的 floor 1.1 拉住），
+      // 配合下面的前摇/收招提速，整套出手频率约 1.6~1.8 倍，明显换了一个怪。
+      rageGap: 0.45,
       color: 0xffc76a,     // 预警圈 / 落点的统一色（暗金）
     },
     tag: 'board',
@@ -1222,8 +1226,8 @@ export const ENEMY_TYPES = {
     file: 'assets/monsters/reflect-frog.glb',
     sourceHeight: 1.30,    // 实测（Idle 渲染身高，.tmp-107-calib.js）
     footY: 0.0,
-    height: 1.55,          // 比主角矮一头：它是「照出来的」，不是真的那只
-    radius: 0.55,
+    height: 1.22,          // 第 110 块：1.55 → 1.22，用户反馈「模型放小一下」—— 水影比本体小一圈
+    radius: 0.44,          // 模型缩小同步收碰撞（原 0.55）
     hp: 8,                 // 只是兜底值 —— 真正的血在 spawn 时按玩家最大生命算
     armor: 0,
     speed: 2.2,            // 同上：只是兜底，抄完后用玩家的移速
@@ -1239,7 +1243,10 @@ export const ENEMY_TYPES = {
     // 血量只在生成时算（重照不回血也不扣血，否则「照一下就满血」太赖）。
     mirror: {
       every: 8.0,
-      hpRatio: 0.6, hpCap: 26, hpFloor: 6,     // 血 = 玩家最大生命 ×0.6，夹在 6~26
+      hpRatio: 0.6, hpCap: 60, hpFloor: 6,     // 血 = 玩家最大生命 ×0.6，夹在 6~60
+      // ⚠️ 第 110 块：hpCap 26 → 60。26 是按「早期玩家上限十几点」定的，
+      // 终盘玩家上限四五十点的话 0.6 倍就永远顶在 26 —— 「你越强它越疼」
+      // 到第十关反而成了空话。60 = 0.6 × 100，超过这个血量的玩家极少。
       dmgRatio: 0.8, dmgFloor: 2, dmgCap: 12,  // 攻击 = 玩家攻击 ×0.8
       speedRatio: 1.0,                          // 移速照抄 → 跑是跑不掉的，只能定住/击退
       copyCrit: true,                           // 暴击率也抄
@@ -5151,7 +5158,11 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
       e.mirrorSized = true;
       const want = Math.max(m.hpFloor, Math.min(m.hpCap, (st.maxHp || 10) * m.hpRatio));
       const ratio = e.maxHp > 0 ? e.hp / e.maxHp : 1;
-      e.maxHp = Math.max(1, Math.round(want * (e.spawnScale ? e.spawnScale.hp : 1)));
+      // ⚠️ 第 110 块：**不再乘 spawnScale.hp** —— 照影抄的是玩家此刻的面板，
+      // 再乘回合倍率的话，第十关高回合它的血能到玩家本尊的两三倍
+      //（玩家 40 上限 ×0.6 = 24，再 ×5 倍率 = 120 —— 「你的影子比你人还厚」）。
+      // 它的强度只跟玩家走：回合成长已经体现在「玩家变强 → 面板变强 → 影子变强」里了。
+      e.maxHp = Math.max(1, Math.round(want));
       e.hp = Math.max(1, Math.round(e.maxHp * ratio));
       e.bar.draw(e.hp / e.maxHp, e.hp, e.maxHp);
     }
@@ -5905,12 +5916,15 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     e.t = 0;
     e.hitDone = false;
     e.wdMove = move;
-    e.wdWindup = move === 'fan' ? cfg.fanWindup
-      : (move === 'cabinet' ? cfg.cabWindup : e.cfg.windup);
-    e.wdDur = move === 'slam' ? 1.55
+    // 第 110 块：狂暴不只是出手更密 —— 前摇和收招也整体提速 28%，
+    // 否则间隔压到 0.45 倍但每一招还慢悠悠 1 秒多，体感不到「攻速大增」。
+    const rageHaste = e.raged ? 0.72 : 1;
+    e.wdWindup = (move === 'fan' ? cfg.fanWindup
+      : (move === 'cabinet' ? cfg.cabWindup : e.cfg.windup)) * rageHaste;
+    e.wdDur = (move === 'slam' ? 1.55
       : (move === 'tag' ? 1.05
         : (move === 'fan' ? 1.30
-          : (move === 'cabinet' ? 1.70 : 1.0)));
+          : (move === 'cabinet' ? 1.70 : 1.0)))) * rageHaste;
     if (move === 'cabinet') e.wdCabinetCd = cfg.cabCd;
     e.currentAnim = e.cfg.anim.attack;
     e.play(e.cfg.anim.attack, { once: true, fade: 0.1, duration: e.wdDur });

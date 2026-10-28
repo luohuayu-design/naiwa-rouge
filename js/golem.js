@@ -30,9 +30,9 @@
 // 官方资源（iron_golem.png / snow_golem.png，版权归 Mojang）。这是用户明确
 // 要求的（「贴图就用MC的」），风险已知。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=124';
-import { distance2D } from './stats.js?v=124';
-import audio from './audio.js?v=124';
+import * as THREE from '../lib/three.module.js?v=125';
+import { distance2D } from './stats.js?v=125';
+import audio from './audio.js?v=125';
 
 // ---- 数值（用户定案 + 我的拍板，都写在这里方便改） ----
 const CD_TOTAL = 40;        // 技能冷却：召出（或傀儡阵亡）后要等这么久才能再召
@@ -41,6 +41,9 @@ const SNOW_BASE_HP = 10;    // 雪傀儡基础生命
 const IRON_ATK_RATIO = 1.5; // 铁傀儡一拳 = 主角此刻攻击 × 1.5（用户：主力级输出）
 const IRON_ATK_CD = 2.0;    // 两秒一拳
 const IRON_REACH = 2.1;     // 铁傀儡的胳膊够得着多远
+const IRON_SPEED = 1.65;    // 第 110 块：铁傀儡追怪的移速（比主角慢半档，追得上但甩得开）
+const IRON_LEASH = 7.5;     // 追击半径：最近的怪在这个距离内才去追（太远的不追，跟着主角走）
+const IRON_FOLLOW = 2.2;    // 没怪可打时，离主角超过这么远就走回去待命
 const SNOW_ATK_CD = 1.4;    // 雪傀儡扔雪球间隔
 const SNOW_REACH = 9.0;     // 雪傀儡的雪球射程
 const SNOW_KNOCK = 2.2;     // 雪球击退距离（格）
@@ -231,7 +234,9 @@ export function createGolemSystem({ scene, fx, enemies }) {
   }
 
   // ---- 每帧 ----
-  function update(dt, ctx) {
+  // anchor：{ x, z, r } 主角位置 + 当前场地半径（第 110 块传入 ——
+  // 铁傀儡没怪可打时要用它走回来、并夹在场地内；不传就站桩，行为同旧版）
+  function update(dt, anchor) {
     if (cd > 0) cd = Math.max(0, cd - dt);
     // 雪球飞行
     for (let i = snowballs.length - 1; i >= 0; i--) {
@@ -276,23 +281,61 @@ export function createGolemSystem({ scene, fx, enemies }) {
       }
       if (parts.head) parts.head.rotation.y = Math.sin(g.born * 3 + g.z) * 0.12;
 
-      // ---- 铁傀儡：不拉仇恨， nearest 敌人两秒一拳（主力级输出） ----
+      // ---- 铁傀儡：不拉仇恨，nearest 敌人两秒一拳（主力级输出）。
+      //      第 110 块修复「站着干等怪走近」：追击半径内有怪就**主动走过去**，
+      //      没怪可打就走回主角身边待命；甩臂动画期间站定不滑步。 ----
       if (g.kind === 'iron') {
         g.atkT -= dt;
-        let near = null, nd = IRON_REACH;
+        let near = null, nd = Infinity;
         for (const e of enemies.list) {
           if (!enemies.hittable(e)) continue;
           const d = distance2D(e.pos, g) - (e.cfg.radius || 0);
           if (d < nd) { nd = d; near = e; }
         }
-        if (near && g.atkT <= 0) {
+        const hunting = !!near && nd <= IRON_LEASH;   // 太远的怪不追（那是主角的事）
+        let dirX = 0, dirZ = 0, moved = false;
+        if (g.swing <= 0) {
+          if (hunting && nd > IRON_REACH * 0.85) {
+            // 朝目标走：到拳距的 85% 就停下出拳（贴太脸反而被怪群围住）
+            const d = Math.max(0.0001, Math.hypot(near.pos.x - g.x, near.pos.z - g.z));
+            const step = Math.min(IRON_SPEED * dt, d);
+            dirX = (near.pos.x - g.x) / d; dirZ = (near.pos.z - g.z) / d;
+            g.x += dirX * step; g.z += dirZ * step;
+            moved = true;
+          } else if (!hunting && anchor) {
+            // 没怪可打：回到主角身边待命（跟紧一点，下一波怪刷出来就近）
+            const da = Math.max(0.0001, Math.hypot(anchor.x - g.x, anchor.z - g.z));
+            if (da > IRON_FOLLOW) {
+              const step = Math.min(IRON_SPEED * dt, da);
+              dirX = (anchor.x - g.x) / da; dirZ = (anchor.z - g.z) / da;
+              g.x += dirX * step; g.z += dirZ * step;
+              moved = true;
+            }
+          }
+          if (moved) {
+            // 夹回场地（追怪别追出界；井口对傀儡无害，不用绕）
+            if (anchor && anchor.r) {
+              const lim = anchor.r - 0.7;
+              const dc = Math.hypot(g.x, g.z);
+              if (dc > lim) { g.x = (g.x / dc) * lim; g.z = (g.z / dc) * lim; }
+            }
+            g.root.position.set(g.x, 0, g.z);
+          }
+          // 朝向（项目约定 rotY = atan2(dx, dz)）：走哪看哪；站定有怪就面向怪
+          if (hunting) g.root.rotation.y = Math.atan2(near.pos.x - g.x, near.pos.z - g.z);
+          else if (moved) g.root.rotation.y = Math.atan2(dirX, dirZ);
+        } else if (near) {
+          g.root.rotation.y = Math.atan2(near.pos.x - g.x, near.pos.z - g.z);
+        }
+        if (near && nd <= IRON_REACH && g.atkT <= 0) {
           g.atkT = Math.max(IRON_ATK_CD_MIN, IRON_ATK_CD * (1 - ironSpdPct));
           g.swing = 1;
           const dmg = Math.max(1, Math.round(IRON_ATK_RATIO * playerAttack() * RELIC_ATK_MUL[(relicLv || 1) - 1] * (1 + atkBonus)));
           enemies.takeDamage(near, dmg, false, { cls: 'phys' });
         }
       } else {
-        // ---- 雪傀儡：拉仇恨（走路重定向在 enemy.js）+ 雪球纯击退 ----
+        // ---- 雪傀儡：拉仇恨（走路重定向在 enemy.js）+ 雪球纯击退。
+        //      它**站桩不挪窝** —— 仇恨锚点挪来挪去会把拉怪的阵型搅乱（第 110 块）。 ----
         g.atkT -= dt;
         let near = null, nd = SNOW_REACH;
         for (const e of enemies.list) {

@@ -89,10 +89,10 @@ function cdOfLike(base, haste, floor = 0.2) { return Math.max(floor, base / hast
 ok(cdOfLike(2.0, 1.0) === 2.0, '无 haste 时 2.0 → 2.0');
 ok(Math.abs(cdOfLike(2.0, 1.15) - 1.739) < 0.01,
   `haste 1.15 时 2.0 → ${cdOfLike(2.0, 1.15).toFixed(2)}（回合越后越密，这是第 91 块的本意）`);
-ok(Math.abs(cdOfLike(2.0 * 0.72, 1.15, 1.1) - 1.252) < 0.01,
-  `暴怒 + haste 1.15 → ${cdOfLike(2.0 * 0.72, 1.15, 1.1).toFixed(2)} 秒（还没到 floor）`);
-ok(cdOfLike(2.0 * 0.72, 1.6, 1.1) === 1.1,
-  `再密也被 floor 夹在 ${cdOfLike(2.0 * 0.72, 1.6, 1.1)} 秒 —— 永远留得出一条走位缝隙`);
+ok(Math.abs(cdOfLike(2.0 * 0.45, 1.15, 1.1) - 1.1) < 0.01,
+  `暴怒 + haste 1.15 → ${cdOfLike(2.0 * 0.45, 1.15, 1.1).toFixed(2)} 秒（第 110 块 rageGap 0.45，已贴 floor）`);
+ok(cdOfLike(2.0 * 0.45, 1.6, 1.1) === 1.1,
+  `再密也被 floor 夹在 ${cdOfLike(2.0 * 0.45, 1.6, 1.1)} 秒 —— 永远留得出一条走位缝隙`);
 
 // ---------------------------------------------------------------- ④ 扇面角度一致性
 sec('④ 扇面角度：画面上和判定上必须同源');

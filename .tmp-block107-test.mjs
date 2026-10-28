@@ -227,7 +227,7 @@ console.log('[§10] main.js 接线');
   ok(/import \{ createGolemSystem \} from '\.\/golem\.js\?v=\d+'/.test(mainSrc), 'import golem.js');
   ok(/const golems = createGolemSystem\(\{ scene, fx, enemies \}\)/.test(mainSrc), '创建傀儡系统');
   ok(/golems\.reset\(\)/.test(mainSrc), 'resetRunState 里清傀儡（上一局不带过去）');
-  ok(/golems\.setRelicLevel\(relics\.levels\(\)\.puppet\);\n      golems\.update\(dt\)/.test(mainSrc), '主循环：每帧对账 + 更新');
+  ok(/golems\.setRelicLevel\(relics\.levels\(\)\.puppet\);\n      \/\/ 第 110 块[^\n]*\n      golems\.update\(dt, \{ x: pos\.x, z: pos\.z, r: ARENA_R \}\)/.test(mainSrc), '主循环：每帧对账 + 更新（第 110 块起喂 anchor）');
   ok(/golems\.setPlayerAttack/.test(mainSrc), '铁傀儡读主角此刻攻击');
   ok(/queueHint\('puppet'\)/.test(mainSrc), '第一次买到弹教程卡');
   ok(/puppet: \{/.test(mainSrc), 'HINTS 里有 puppet 教程');
