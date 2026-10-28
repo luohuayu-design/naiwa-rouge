@@ -25,12 +25,15 @@
 // 第四关三只（wraith/leaper/mender，第 35 块，第 52 块换模型），
 // 各自在下面 ENEMY_TYPES 里有详细注释。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=128';
-import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=128';
-import { clone as cloneSkinned } from '../lib/jsm/utils/SkeletonUtils.js?v=128';
-import { distance2D } from './stats.js?v=128';
-import { createRangeRing } from './rangeRing.js?v=128';
-import { withV } from './assetUrl.js?v=128';
+import * as THREE from '../lib/three.module.js?v=129';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=129';
+import { clone as cloneSkinned } from '../lib/jsm/utils/SkeletonUtils.js?v=129';
+import { distance2D } from './stats.js?v=129';
+import { createRangeRing } from './rangeRing.js?v=129';
+import { withV } from './assetUrl.js?v=129';
+// 第 114 块：誊录员落笔 / 收账人翻账簿的提示音（以前这个文件不放音效，
+// 忘了 import 会在落笔那一帧抛 ReferenceError，整帧 AI 全断 —— 别省这一行）
+import audio from './audio.js?v=129';
 
 // KayKit 模型正面朝 +Z；如果哪天换模型发现怪倒着走，把这里改成 Math.PI
 export const ENEMY_MODEL_YAW = 0;
@@ -1387,6 +1390,94 @@ export const ENEMY_TYPES = {
       death: 'death', spawn: 'spawn',
     },
   },
+
+  // ============================================================
+  // 第十一关「钟楼外 · 雾原」（第 114 块）两只
+  // ============================================================
+  // 从 s11「空白的账簿」里长出来，而且刻意**不去碰前九关已有的压力类型**
+  // （近战围 / 投掷 / 冲锋 / 结队 / 电网 / 定身泡 / 读条擦名 / 全局叠层 /
+  //  盖章封步 / 复制面板 / 填名免疫 / 等待激活 / 复活死怪）：
+  //   誊录员 —— 「每一页左边是一样东西的名字，右边是一个日期」：它在你身上
+  //             **划一条直线**，落笔那一下就伤，划过的地留一道七秒的墨。
+  //             这是全书第一个「方向性直线攻击」：不是圈、不能贴边躲，
+  //             只能横着走。
+  //   收账人 —— 「我这里有三万七千条记录」+「然后它们就安全了」：它不打你，
+  //             它来**收**。贴到 2.8 格内翻开账簿读条 2.2 秒，读满就从你身上
+  //             收走一样东西（属性 / 一个技能），收完就退场。
+  //             全书唯一一个「不造成伤害但你必须回头处理」的怪。
+  // ------------------------------------------------------------
+  clerk: {
+    name: '誊录员',
+    // 零资产：一枝竖着的巨大羽毛笔（见 buildQuillModel）。
+    // 它没有 glb、没有骨架 —— 这也正好，现实里没有「会写字的笔」这种生物。
+    proc: 'quill',
+    sourceHeight: 1.75,    // 模型就是按 1.75 世界单位造的 → 缩放 1
+    footY: 0.0,
+    height: 1.75,
+    hover: 0.18,           // 笔尖悬在地面上方一点点：它要「写」，不能插进土里
+    radius: 0.46,
+    hp: 5.5,               // 中等偏脆：它的价值是划得远，不是扛
+    armor: 0.15,
+    speed: 1.45,
+    attackRange: 10.5,     // 全场都能划到（场地 17 半径，视野内基本够）
+    keepDistance: 7.0,     // 它站得远：逼你花位移去够它
+    damage: 1.1,           // 落笔那一下
+    attackInterval: 4.4,   // 划得不算勤，但每一道都在地上留七秒
+    windup: 1.15,          // 抬笔 → 落笔：够横着走一格
+    attackDuration: 1.9,   // 必须 > windup
+    // 墨线参数（见 spawnInkLine / updateInks）
+    ink: {
+      len: 13.0,           // 这一道划多长（从笔尖朝你的方向量）
+      half: 0.62,          // 半宽：判定 = 到你到这根线段的距离 ≤ half
+      dmg: 1.1,            // 落笔命中的伤害
+      color: 0x2a1f3d,     // 墨色（暗紫黑：和焦土的橙褐分得开）
+      bandLife: 7.0,       // 划痕在地上留多久
+      bandDps: 0.55,       // 站在划痕上每秒掉多少（0.5 秒一跳）
+      slow: 0.86,          // 站在划痕上移速乘这个
+      maxBands: 5,         // 同屏最多几道（多了会铺满，玩家无处可走）
+    },
+    spawnTime: 0.8,
+    deathTime: 1.1,
+    selfDestruct: false,
+    color: 0x8f7cf0,
+    glow: { color: 0x2a1f45, intensity: 0.55 },
+    // 程序化模型没有 action，这些键只为让 handler 里的 play() 调用统一（会静默 no-op）
+    anim: { walk: 'idle', idle: 'idle', cast: 'attack', death: 'death', spawn: 'spawn' },
+  },
+
+  collector: {
+    name: '收账人',
+    // 零资产：一本摊开的厚账簿（见 buildBookModel）。浮空。
+    proc: 'book',
+    sourceHeight: 0.95,
+    footY: 0.0,
+    height: 1.30,          // 从 0.95 放大到 1.30，俯视角下才看得出是「一本摊开的书」
+    hover: 0.85,           // 浮在半空（它不是走路的，是飘的）
+    radius: 0.55,
+    hp: 3.4,               // 很脆：随手就能杀掉 —— 问题是你要不要现在花这个时间
+    armor: 0,
+    speed: 1.85,
+    attackRange: 2.8,      // 进入这个距离就停下来翻账簿
+    keepDistance: 2.2,
+    damage: 0,             // **它一次都不打你**（账上不记你的伤，只记你的东西）
+    attackInterval: 9.0,   // 两次收账之间的间隔（收完还要退场，见 collect.flee）
+    windup: 2.2,           // 翻账簿的读条：够你走过去打断
+    attackDuration: 3.4,   // 必须 > windup（含收完那一小段收势）
+    collect: {
+      range: 2.8,          // 超过这个距离读条直接断
+      cast: 2.2,           // 读条时长（= windup，写在这里更好读）
+      cd: 9.0,
+      flee: 2.6,           // 收完之后往远处飘多久
+      fleeSpeed: 2.6,      // 退场速度（比追你快，收完就找不到了）
+      color: 0xd8b25c,
+    },
+    spawnTime: 0.9,
+    deathTime: 1.2,
+    selfDestruct: false,
+    color: 0xd8b25c,
+    glow: { color: 0x4a3410, intensity: 0.5 },
+    anim: { walk: 'idle', idle: 'idle', cast: 'attack', death: 'death', spawn: 'spawn' },
+  },
 };
 
 // ------------------------------------------------------------
@@ -1848,6 +1939,120 @@ export function buildSlipModel() {
   return g;
 }
 
+// ============================================================
+// 第 114 块：两只程序化新怪（零资产）
+// ============================================================
+// 为什么不做 glb：第十一关的两只怪都是「账簿里的东西」，本体就是一枝笔 /
+// 一本账簿 —— 现实里没有这种生物，找 CC0 模型只会找到「抄写员」「法师」
+// 那一类人形，反而又要跟擦名者 / 称量官撞脸（用户第 97 块就是因为模型
+// 重复才让换的）。所以走第十关「收件人」那条老路：程序化 + 零版权风险，
+// 而且轮廓一眼就能分开 —— 一根竖着的笔 vs 一本摊开的书。
+//
+// ⚠️ 这两只都没有骨架、没有动画（loadType 里 `proc` 分支直接给空 clips），
+// 所以「活着」必须自己写：见 updateOne 里 `e.cfg.proc` 那一段的摆动。
+// ============================================================
+// 誊录员：一支竖着的巨大羽毛笔，笔尖朝下，笔杆顶上一撮羽。写字时整枝笔
+// 前后压一下（updateOne 里的 z/wobble）。墨迹是它的武器，所以笔尖永远是湿的。
+export function buildQuillModel() {
+  if (typeof document === 'undefined') return new THREE.Group();
+  const g = new THREE.Group();
+
+  // 笔尖（金属，朝下）：圆锥 + 一道缝
+  const nibMat = new THREE.MeshStandardMaterial({ color: 0x2b2430, roughness: 0.45, metalness: 0.7 });
+  const nib = new THREE.Mesh(new THREE.ConeGeometry(0.085, 0.34, 8), nibMat);
+  nib.rotation.x = Math.PI;              // 尖朝下
+  nib.position.y = 0.17;
+  g.add(nib);
+  // 笔尖上那一点没干的墨
+  const inkMat = new THREE.MeshBasicMaterial({ color: 0x14101c });
+  const inkTip = new THREE.Mesh(new THREE.SphereGeometry(0.055, 8, 6), inkMat);
+  inkTip.position.y = 0.03;
+  g.add(inkTip);
+
+  // 笔杆：象牙白，微微上粗下细
+  const shaftMat = new THREE.MeshStandardMaterial({ color: 0xe6ddc6, roughness: 0.75, metalness: 0.05 });
+  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.042, 1.22, 10), shaftMat);
+  shaft.position.y = 0.95;
+  g.add(shaft);
+  // 金属箍：把笔尖和笔杆分开，远看有个亮点
+  const bandMat = new THREE.MeshStandardMaterial({ color: 0xb08a3c, roughness: 0.35, metalness: 0.8 });
+  const band = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.075, 0.09, 10), bandMat);
+  band.position.y = 0.36;
+  g.add(band);
+
+  // 羽毛：两片压扁的锥体，转开一点角度 —— 俯视角下能看出「这是一枝羽笔」
+  const featherMat = new THREE.MeshStandardMaterial({
+    color: 0xd8cdb4, roughness: 0.85, metalness: 0.0, side: THREE.DoubleSide,
+  });
+  for (const [rot, tilt, sx] of [[0.34, 0.10, 1.0], [-0.42, -0.12, 0.86]]) {
+    const f = new THREE.Mesh(new THREE.ConeGeometry(0.19, 0.72, 5), featherMat);
+    f.scale.set(sx * 0.55, 1, sx);       // 压扁 → 像羽片而不是棍子
+    f.position.set(Math.sin(rot) * 0.10, 1.42, Math.cos(rot) * 0.06);
+    f.rotation.z = tilt;
+    f.rotation.y = rot;
+    g.add(f);
+  }
+  // 羽轴
+  const rachis = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, 0.62, 6), shaftMat);
+  rachis.position.y = 1.49;
+  rachis.rotation.z = 0.06;
+  g.add(rachis);
+
+  g.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.frustumCulled = false; } });
+  return g;
+}
+
+// 收账人：一本摊开的厚账簿，浮在半空，封面朝你、纸页朝上。
+// 「三万七千条记录」= 它自己就是那本账簿。
+export function buildBookModel() {
+  if (typeof document === 'undefined') return new THREE.Group();
+  const g = new THREE.Group();
+
+  const coverMat = new THREE.MeshStandardMaterial({ color: 0x3a2a20, roughness: 0.82, metalness: 0.05 });
+  const pageMat = new THREE.MeshStandardMaterial({ color: 0xe9e0c8, roughness: 0.95, metalness: 0.0 });
+  const spineMat = new THREE.MeshStandardMaterial({ color: 0x24190f, roughness: 0.7, metalness: 0.1 });
+
+  // 两片「摊开」的封面 + 纸页：绕 y 各转 22°，形成一本翻开的书
+  for (const sgn of [-1, 1]) {
+    const cover = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.80, 0.06), coverMat);
+    cover.position.set(sgn * 0.30, 0.42, -0.10);
+    cover.rotation.y = sgn * 0.38;
+    g.add(cover);
+
+    const pages = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.72, 0.09), pageMat);
+    pages.position.set(sgn * 0.29, 0.42, -0.03);
+    pages.rotation.y = sgn * 0.38;
+    g.add(pages);
+  }
+  // 书脊
+  const spine = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.82, 0.13), spineMat);
+  spine.position.set(0, 0.42, -0.16);
+  g.add(spine);
+  // 书签带：垂在下面，飘着的最有「账簿」味
+  const ribbonMat = new THREE.MeshStandardMaterial({ color: 0x9c3a34, roughness: 0.85, side: THREE.DoubleSide });
+  const ribbon = new THREE.Mesh(new THREE.BoxGeometry(0.055, 0.42, 0.012), ribbonMat);
+  ribbon.position.set(0.06, 0.02, -0.19);
+  ribbon.rotation.z = 0.08;
+  g.add(ribbon);
+  // 封面上那道箍（铜色）：远看像一本账
+  const claspMat = new THREE.MeshStandardMaterial({ color: 0x9a7a3e, roughness: 0.4, metalness: 0.7 });
+  const clasp = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.07, 0.05), claspMat);
+  clasp.position.set(0, 0.30, -0.14);
+  g.add(clasp);
+
+  g.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.frustumCulled = false; } });
+  return g;
+}
+
+// proc 种类 → 模型。**唯一入口**：loadType / buildPreviewModel / 图鉴都走这里，
+// 免得和收件人那次一样「一个分支改了、另一个没改」。
+export function buildProcModel(kind) {
+  if (kind === 'quill') return buildQuillModel();
+  if (kind === 'book') return buildBookModel();
+  if (kind === 'slip') return buildSlipModel();
+  return new THREE.Group();
+}
+
 // 把木牌挂到模型上。
 // ⚠️ 挂在 model 里要**反向缩放**：model.scale 是 (height/sourceHeight) ≈ 1.5，
 // 直接挂一块 0.38 的牌子会被放大成 0.57，而且位置也会跟着放大。
@@ -1946,9 +2151,8 @@ export async function buildPreviewModel(type) {
   if (!cfg) return null;
   let gltf = null;
   // 第 107 块：程序化模型（收件人 `proc:'slip'`）没有 file，直接走局内同一套构建。
-  const model = cfg.proc
-    ? (cfg.proc === 'slip' ? buildSlipModel() : new THREE.Group())
-    : await (async () => {
+  // 第 114 块：羽毛笔 / 账簿也走同一条路（buildProcModel 是唯一入口）。
+  const model = cfg.proc ? buildProcModel(cfg.proc) : await (async () => {
         gltf = previewGltf.get(cfg.file);
         if (!gltf) {
           gltf = await new GLTFLoader().loadAsync(withV(cfg.file));
@@ -2136,12 +2340,12 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
   async function loadType(type) {
     if (assets.has(type)) return assets.get(type);
     const cfg = ENEMY_TYPES[type];
-    // 第 107 块：**程序化怪没有 glb**（目前只有第十关的「收件人」一张单子）。
+    // 第 107 块：**程序化怪没有 glb**（收件人一张单子 / 第 114 块的羽毛笔、账簿）。
     // 它不进网络、没有动画，直接造一个 Group 当模型 —— 后面 spawn / 预载 /
     // 图鉴走的都是同一条路，所以唯一要打标记的就是 `proc: true`（clone 时
     // 不能用 SkeletonUtils，它没有骨架）。
     if (cfg.proc) {
-      const built = cfg.proc === 'slip' ? buildSlipModel() : new THREE.Group();
+      const built = buildProcModel(cfg.proc);
       const pd = { scene: built, clips: {}, aliases: {}, offset: null, proc: true };
       assets.set(type, pd);
       return pd;
@@ -2549,6 +2753,18 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
         opacity: 0.5, pulse: 0.06, y: 0.03,
       });
       root.add(e.waitRing.mesh);
+    }
+    // 第 114 块：收账人 —— 头顶一圈读条环（平时藏着，翻账簿时才出现）。
+    // 挂在 root 上、抬到 book 的高度，并且**置顶**（depthTest:false）：
+    // 雾里要能看见「有人在收你」，否则这一整只怪就是无声的。
+    if (cfg.collect) {
+      e.waitRing = createRangeRing({
+        radius: cfg.collect.range, color: cfg.collect.color,
+        opacity: 0.55, pulse: 0.0, y: cfg.hover + cfg.height + 0.3,
+      });
+      e.waitRing.setOnTop(true);
+      root.add(e.waitRing.mesh);
+      e.waitRing.setVisible(false);
     }
     // 第 55 块：新怪第一次上场时通报一声 —— main.js 据此冻结世界、弹「它怎么打人」的信息卡。
     // 放在 push 之后：回调里就看得见这只怪已经在场上了（测试也靠这点断言）。
@@ -3721,6 +3937,114 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     }
   }
 
+  // ============================================================
+  // 第 114 块：墨线 —— 誊录员的「划掉一行」
+  // ============================================================
+  // 两种形态，**故意一种穿雾一种不穿**：
+  //   · 预警（起手 1.15 秒）：一条细长的亮线，depthTest:false → 雾挡不住它。
+  //     老铁律：能被雾挡住的是「实体」，前摇必须看得见，否则就是看不见的偷袭。
+  //   · 划痕（落笔后 7 秒）：贴地的深墨带，**被雾挡住**是对的 ——
+  //     雾里摸黑踩上去，正是这一关想要的压力。
+  // 判定统一用「点到线段的距离」，画出来的宽度和判定的宽度是同一个数（half）。
+  const inks = [];
+  const inkGeo = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
+
+  // 长边对齐 dir：Three 里 rotation.y = a 把 +X 映射到 (cos a, 0, -sin a)
+  const inkYaw = (dx, dz) => Math.atan2(-dz, dx);
+
+  // ⚠️ 名字别和上面那个 distToSeg 撞：同一个闭包里重名会被后声明的整个盖掉，
+  // 上面 3213 行那条 6 参数的调用就会静默拿到 NaN（第 114 块真踩过这个坑）。
+  function distToInk(px, pz, x, z, dx, dz, len) {
+    const along = (px - x) * dx + (pz - z) * dz;
+    const t = Math.max(-len / 2, Math.min(len / 2, along));
+    return Math.hypot(px - (x + dx * t), pz - (z + dz * t));
+  }
+
+  function makeInkMesh(color, opacity, onTop) {
+    const mat = new THREE.MeshBasicMaterial({
+      color, transparent: true, opacity, depthWrite: false, side: THREE.DoubleSide,
+      depthTest: !onTop,
+      blending: onTop ? THREE.AdditiveBlending : THREE.NormalBlending,
+    });
+    const m = new THREE.Mesh(inkGeo, mat);
+    m.frustumCulled = false;
+    m.renderOrder = onTop ? 850 : 6;
+    return m;
+  }
+
+  // 起手：沿「笔 → 你」拉一条预警线（方向在这一刻就锁死，所以侧移就能躲开）
+  function startInkCast(e, ctx) {
+    const cfg = e.cfg.ink;
+    const dx0 = ctx.playerPos.x - e.pos.x;
+    const dz0 = ctx.playerPos.z - e.pos.z;
+    const d = Math.hypot(dx0, dz0) || 1;
+    const dx = dx0 / d, dz = dz0 / d;
+    const x = e.pos.x + dx * cfg.len * 0.5;
+    const z = e.pos.z + dz * cfg.len * 0.5;
+    const mesh = makeInkMesh(0xc9a6ff, 0.34, true);
+    mesh.position.set(x, 0.085, z);
+    mesh.scale.set(cfg.len, 1, cfg.half * 1.6);
+    mesh.rotation.y = inkYaw(dx, dz);
+    scene.add(mesh);
+    e.inkCast = { mesh, dx, dz, x, z };
+  }
+
+  function disposeInkCast(e) {
+    if (!e.inkCast) return;
+    scene.remove(e.inkCast.mesh);
+    e.inkCast.mesh.material.dispose();
+    e.inkCast = null;
+  }
+
+  function spawnInkBand(cfg, x, z, dx, dz) {
+    const mesh = makeInkMesh(cfg.color, 0.52, false);
+    mesh.position.set(x, 0.062, z);
+    mesh.scale.set(cfg.len, 1, cfg.half * 1.7);
+    mesh.rotation.y = inkYaw(dx, dz);
+    scene.add(mesh);
+    inks.push({
+      x, z, dx, dz, len: cfg.len, half: cfg.half, mesh, mat: mesh.material,
+      t: cfg.bandLife, life: cfg.bandLife, tick: 0,
+      dps: cfg.bandDps, slow: cfg.slow,
+    });
+    // 同屏上限：超出就把最早那道擦掉（旧墨干掉，新墨还在）
+    while (inks.length > (cfg.maxBands || 5)) {
+      const old = inks.shift();
+      scene.remove(old.mesh);
+      old.mat.dispose();
+    }
+  }
+
+  function removeInk(k) {
+    scene.remove(k.mesh);
+    k.mat.dispose();
+  }
+
+  function updateInks(dt, ctx) {
+    for (let i = inks.length - 1; i >= 0; i--) {
+      const k = inks[i];
+      k.t -= dt;
+      // 最后 1.2 秒淡出：玩家能看出「这道要没了」
+      const fade = Math.min(1, Math.max(0, k.t / 1.2));
+      k.mat.opacity = 0.52 * (0.25 + 0.75 * fade);
+      if (k.t <= 0) { removeInk(k); inks.splice(i, 1); continue; }
+      const on = distToInk(ctx.playerPos.x, ctx.playerPos.z, k.x, k.z, k.dx, k.dz, k.len)
+        <= k.half + (ctx.playerRadius || 0.32);
+      if (!on) { k.tick = 0; continue; }
+      // 站在墨上：移速打折（走 cursePlayer 那条现成的减速通道，0.55 秒续一次）
+      if (ctx.cursePlayer) ctx.cursePlayer({ factor: k.slow, duration: 0.55 });
+      k.tick -= dt;
+      if (k.tick <= 0) {
+        k.tick += 0.5;
+        ctx.hurtPlayer(Math.max(0.25, k.dps * 0.5), 'hazard');
+        if (fx) {
+          fx.burst({ x: ctx.playerPos.x, z: ctx.playerPos.z },
+            { color: 0x6a5ac0, count: 3, speed: 1.4, life: 0.26, size: 0.07, y: 0.2, up: 1.1 });
+        }
+      }
+    }
+  }
+
   function updateZones(dt, ctx) {
     for (let i = zones.length - 1; i >= 0; i--) {
       const v = zones[i];
@@ -3988,7 +4312,9 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
       // ⚠️ 只转 z（纸面翻），不转 y：y 是朝向，root 已经朝玩家转好了。
       if (e.cfg.proc) {
         const rig = e.modelPivot || e.model;
-        rig.rotation.z = Math.sin(e.t * 1.4 + e.driftPhase) * 0.16;
+        // 第 114 块：誊录员的笔杆由 handler 自己管（起手时往前压）—— 别在这里抢，
+        // 抢了就是每帧把 rotation.z 覆盖成呼吸值，写字动作永远看不出来。
+        if (e.cfg.proc !== 'quill') rig.rotation.z = Math.sin(e.t * 1.4 + e.driftPhase) * 0.16;
       }
     }
 
@@ -4149,6 +4475,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     }
 
     if (e.state === 'dead') {
+      disposeInkCast(e);         // 第 114 块：举着笔被打死 → 预警线也得跟着消失
       e.deathT += dt;
       const fadeStart = Math.max(0.1, e.cfg.deathTime - 0.45);
       if (e.cfg.selfDestruct) {
@@ -4207,6 +4534,13 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     if (e.cfg.fill) { handleAddressee(e, dt, ctx, dx, dz, dist); return; }
     if (e.cfg.wait) { handleWaiter(e, dt, ctx, dx, dz, dist); return; }
     if (e.cfg.echo) { handleEcho(e, dt, ctx, dx, dz, dist); return; }
+
+    // ---- 第十一关 · 两只（第 114 块）----
+    // 同样必须排在通用近战 / 施法者之前：誊录员和收账人都没有 spell/projectile，
+    // 掉进下面的通用分支就会按 cfg.damage 贴脸打人 —— 收账人 damage 是 0
+    // （它压根不打人），誊录员则会贴上来近战，两种都完全跑偏。
+    if (e.cfg.ink) { handleClerk(e, dt, ctx, dx, dz, dist); return; }
+    if (e.cfg.collect) { handleCollector(e, dt, ctx, dx, dz, dist); return; }
 
     // ---- 雾鬼：隐身 / 显形循环（第 35 块；第 61 块改规则）----
     // 隐身时不可被索敌、打不着；**但贴脸不再强制显形**，只能等它自己露头。
@@ -5093,6 +5427,189 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     if (e.currentAnim !== e.cfg.anim.idle) {
       e.currentAnim = e.cfg.anim.idle;
       e.play(e.cfg.anim.idle, { fade: 0.2 });
+    }
+  }
+
+  // ============================================================
+  // 第十一关 · 誊录员（第 114 块）：站远一点，划一道线
+  // ============================================================
+  // 节奏：进 7~10.5 格这个环带 → 抬笔（1.15 秒前摇，锁定方向）→ 落笔
+  // （判定 + 留 7 秒墨痕）→ 冷却 4.4 秒。太近它会后退，太远它会走近。
+  // 玩家能做的：横着走（线是直的，侧移一步就出判定）—— 这是本关「怎么躲」
+  // 与前面所有关都不一样的地方。
+  function handleClerk(e, dt, ctx, dx, dz, dist) {
+    const cfg = e.cfg.ink;
+    if (e.state === 'attack') {
+      // 前摇期间预警线一直呼吸闪烁（雾里也看得见）
+      if (e.inkCast) {
+        e.inkCast.mesh.material.opacity = 0.26 + 0.26 * (0.5 + 0.5 * Math.sin(e.t * 16));
+        // 笔杆往前压一点，看着像在写
+        const rig = e.modelPivot || e.model;
+        rig.rotation.z = -0.22 * Math.min(1, e.t / Math.max(0.01, e.cfg.windup));
+      }
+      if (!e.hitDone && e.t >= e.cfg.windup) {
+        e.hitDone = true;
+        fireInk(e, ctx);
+      }
+      if (e.t >= e.cfg.attackDuration) {
+        const rig = e.modelPivot || e.model;
+        rig.rotation.z = 0;
+        e.state = 'chase';
+        e.t = 0;
+        e.attackCd = cdOf(e, e.cfg.attackInterval, 1.0, true);
+        e.currentAnim = e.cfg.anim.walk;
+        e.play(e.cfg.anim.walk, { fade: 0.16 });
+      }
+      return;
+    }
+
+    if (dist < e.cfg.keepDistance) {
+      moveToward(e, -dx, -dz, dist, dt, ctx);
+      if (e.currentAnim !== e.cfg.anim.walk) {
+        e.currentAnim = e.cfg.anim.walk;
+        e.play(e.cfg.anim.walk, { fade: 0.2 });
+      }
+      return;
+    }
+    if (dist > e.cfg.attackRange) {
+      moveToward(e, dx, dz, dist, dt, ctx);
+      if (e.currentAnim !== e.cfg.anim.walk) {
+        e.currentAnim = e.cfg.anim.walk;
+        e.play(e.cfg.anim.walk, { fade: 0.2 });
+      }
+      return;
+    }
+
+    e.attackCd -= dt;
+    if (e.attackCd <= 0) {
+      e.state = 'attack';
+      e.t = 0;
+      e.hitDone = false;
+      e.currentAnim = e.cfg.anim.cast;
+      e.play(e.cfg.anim.cast, { once: true, fade: 0.1, duration: e.cfg.attackDuration });
+      startInkCast(e, ctx);
+      return;
+    }
+    if (e.currentAnim !== e.cfg.anim.idle) {
+      e.currentAnim = e.cfg.anim.idle;
+      e.play(e.cfg.anim.idle, { fade: 0.2 });
+    }
+  }
+
+  // 落笔：判定 + 留痕。方向是起手那一刻锁的（e.inkCast），不是现在朝哪。
+  function fireInk(e, ctx) {
+    const c = e.inkCast;
+    if (!c) return;
+    const cfg = e.cfg.ink;
+    disposeInkCast(e);
+    // 命中：人到你离这根线段的距离 ≤ 半宽 + 身体半径
+    const hit = distToInk(ctx.playerPos.x, ctx.playerPos.z, c.x, c.z, c.dx, c.dz, cfg.len)
+      <= cfg.half + (ctx.playerRadius || 0.32);
+    if (hit) ctx.hurtPlayer(cfg.dmg, null);
+    spawnInkBand(cfg, c.x, c.z, c.dx, c.dz);
+    if (fx) {
+      const ex = c.x + c.dx * cfg.len * 0.5;
+      const ez = c.z + c.dz * cfg.len * 0.5;
+      fx.ring({ x: c.x, z: c.z }, { from: 0.3, to: cfg.half * 2.2, color: 0x9a86ff, life: 0.3, opacity: 0.7, y: 0.07 });
+      for (let i = 0; i < 5; i++) {
+        const k = (i / 4 - 0.5) * 2;
+        fx.burst({ x: c.x + c.dx * cfg.len * 0.5 * k, z: c.z + c.dz * cfg.len * 0.5 * k },
+          { color: 0x7a5ac0, count: 3, speed: 1.8, life: 0.3, size: 0.08, y: 0.2, up: 1.2 });
+      }
+      if (hit) fx.text({ x: ex, z: ez }, '划掉', { color: '#bda6ff', y: 1.3, size: 0.6 });
+    }
+    audio.sfx('swordHit', { vol: 0.35 });
+  }
+
+  // ============================================================
+  // 第十一关 · 收账人（第 114 块）：不打你，它来收
+  // ============================================================
+  // 逼近到 2.8 格 → 翻开账簿读条 2.2 秒（头顶一圈金环在缩，穿雾可见）
+  // → 读满「收走」你身上的一样东西（main.js 的 stealFromPlayer 决定收什么）
+  // → 退场 2.6 秒（比追你快），9 秒后再来。
+  // 打断方式：走出 2.8×1.35 格 / 把它打死 —— 读条立刻清空。
+  // 它自己是全场最脆的怪之一（3.4 血），所以「要不要现在回头」才是它的价值。
+  function handleCollector(e, dt, ctx, dx, dz, dist) {
+    const cl = e.cfg.collect;
+
+    // ---- 读条中 ----
+    if (e.state === 'attack') {
+      if (dist > cl.range * 1.35) { cancelCollect(e, 'walked'); return; }
+      if (e.waitRing) {
+        const k = Math.min(1, e.t / Math.max(0.01, e.cfg.windup));
+        e.waitRing.setRadius(cl.range * (0.35 + 0.65 * (1 - k)));
+        e.waitRing.setVisible(true);
+      }
+      if (!e.hitDone && e.t >= e.cfg.windup) {
+        e.hitDone = true;
+        const got = ctx.stealFromPlayer ? ctx.stealFromPlayer(e) : null;
+        if (got && fx) {
+          fx.text({ x: e.pos.x, z: e.pos.z }, got.label || '收了', { color: '#f0c46a', y: 1.7, size: 0.62 });
+        }
+        // 收完立刻退场：它不恋战，也不给你补刀的机会
+        if (e.waitRing) e.waitRing.setVisible(false);
+      }
+      if (e.t >= e.cfg.attackDuration) {
+        e.state = 'retreat';
+        e.t = 0;
+        e.speedSave = e.speed;
+        e.speed = e.speed * (cl.fleeSpeed / Math.max(0.01, e.cfg.speed));
+      }
+      return;
+    }
+
+    // ---- 退场中（去「归档」）----
+    if (e.state === 'retreat') {
+      if (e.t >= cl.flee) {
+        e.state = 'chase';
+        e.t = 0;
+        e.speed = e.speedSave || e.speed;
+        e.attackCd = cdOf(e, cl.cd, 1.0, true);
+      } else {
+        moveToward(e, -dx, -dz, dist, dt, ctx);
+      }
+      return;
+    }
+
+    // ---- 接近 / 停住 ----
+    if (dist > cl.range) {
+      moveToward(e, dx, dz, dist, dt, ctx);
+      if (e.currentAnim !== e.cfg.anim.walk) {
+        e.currentAnim = e.cfg.anim.walk;
+        e.play(e.cfg.anim.walk, { fade: 0.2 });
+      }
+      return;
+    }
+    if (dist < e.cfg.keepDistance * 0.7) {
+      moveToward(e, -dx, -dz, dist, dt, ctx);
+      return;
+    }
+    e.attackCd -= dt;
+    if (e.attackCd <= 0) {
+      e.state = 'attack';
+      e.t = 0;
+      e.hitDone = false;
+      e.currentAnim = e.cfg.anim.cast;
+      e.play(e.cfg.anim.cast, { once: true, fade: 0.1, duration: e.cfg.attackDuration });
+      if (e.waitRing) e.waitRing.setVisible(true);
+      if (fx) fx.ring({ x: e.pos.x, z: e.pos.z }, { from: 0.2, to: 1.4, color: 0xd8b25c, life: 0.32, opacity: 0.6, y: 1.2 });
+      audio.sfx('curse', { vol: 0.25 });
+      return;
+    }
+    if (e.currentAnim !== e.cfg.anim.idle) {
+      e.currentAnim = e.cfg.anim.idle;
+      e.play(e.cfg.anim.idle, { fade: 0.2 });
+    }
+  }
+
+  // 读条被打断：清环、回到追击（不讲情面，但也别立刻重读 —— 给 1.4 秒缓冲）
+  function cancelCollect(e, why) {
+    if (e.waitRing) e.waitRing.setVisible(false);
+    e.state = 'chase';
+    e.t = 0;
+    e.attackCd = Math.max(e.attackCd, 1.4);
+    if (why === 'walked' && fx) {
+      fx.text({ x: e.pos.x, z: e.pos.z }, '没收成', { color: '#d8b25c', y: 1.6, size: 0.5 });
     }
   }
 
@@ -6168,6 +6685,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     updateShots(dt, ctx);
     updateBubbles(dt, ctx);   // 第 82 块：木鱼灵吐的追踪泡（会自己拐弯追人）
     updateZones(dt, ctx);
+    updateInks(dt, ctx);        // 第 114 块：誊录员的墨线（掉血 / 减速 / 收尾）
     updateArrows(dt, ctx);
     updateSpikes(dt, ctx);
     updateArcNet(dt, ctx);      // 第 75 块：并联体的电弧网
@@ -6344,6 +6862,10 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     zones.length = 0;
     for (const b of bubbles) { scene.remove(b.mesh); b.mat.dispose(); }   // 第 82 块：追踪泡
     bubbles.length = 0;
+    // 第 114 块：墨线（连举着的预警线一起收，不然换关后场上会留一条亮线）
+    for (const e of list) disposeInkCast(e);
+    for (const k of inks) removeInk(k);
+    inks.length = 0;
     for (const a of arrows) scene.remove(a.mesh);
     arrows.length = 0;
     spikesQ.length = 0;
@@ -6372,6 +6894,52 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     applyDot, applySlow, applyFreeze, chainTargets,
     shotCount: () => shots.length,
     zoneCount: () => zones.length,      // 场上正在倒计时的圈（三种法术都算）
+    // ---- 第 114 块：第十一关的观测口 ----
+    clerkCount: () => list.filter((e) => e.cfg.ink && e.state !== 'dead').length,
+    collectorCount: () => list.filter((e) => e.cfg.collect && e.state !== 'dead').length,
+    //   墨线：几道划痕还在地上 / 每条的位置与剩余时间
+    inkCount: () => inks.length,
+    inks: () => inks.map((k) => ({
+      x: +k.x.toFixed(2), z: +k.z.toFixed(2),
+      dx: +k.dx.toFixed(3), dz: +k.dz.toFixed(3),
+      len: k.len, half: k.half, half2: k.half * 2,
+      t: +k.t.toFixed(2), life: k.life,
+    })),
+    //   正在举笔待落的那几道预警线（穿雾可见的那种）
+    inkCasts: () => list.filter((e) => e.inkCast).map((e) => ({
+      x: +e.inkCast.x.toFixed(2), z: +e.inkCast.z.toFixed(2),
+      dx: +e.inkCast.dx.toFixed(3), dz: +e.inkCast.dz.toFixed(3),
+      p: +Math.min(1, e.t / Math.max(0.01, e.cfg.windup)).toFixed(2),
+    })),
+    //   距离最近的一道墨痕有多远（null = 场上没有墨）。判定和视觉同源，
+    //   测试拿它当「玩家到底站没站在墨上」的真相源（别自己再算一遍几何）。
+    inkHit: (x, z) => {
+      let best = Infinity;
+      for (const k of inks) {
+        const d = distToInk(x, z, k.x, k.z, k.dx, k.dz, k.len);
+        if (d < best) best = d;
+      }
+      return best === Infinity ? null : +best.toFixed(3);
+    },
+    //   清场用：把所有墨痕一起抹掉（测试要「只留一个变量」时用；正常流程靠寿命自然消失）
+    clearInks: () => {
+      for (const k of inks) removeInk(k);
+      inks.length = 0;
+      for (const e of list) if (e.inkCast) { disposeInkCast(e); e.inkCast = null; }
+      return 0;
+    },
+    //   收账人的读条进度（0~1，没有人在读就是 null）
+    //   ⚠️ 别把敌人对象本身塞进来：CDP 的 returnByValue 会把它整个序列化
+    //   （里面有 THREE 的循环引用），测试读一次能把浏览器拖死。
+    collectCast: () => {
+      let best = 0;
+      for (const e of list) {
+        if (!e.cfg.collect || e.state !== 'attack') continue;
+        const p = Math.max(0, Math.min(1, e.t / Math.max(0.01, e.cfg.windup)));
+        if (p >= best) best = p;
+      }
+      return best > 0 ? { progress: best } : null;
+    },
     // 第 82 块：木鱼灵吐的追踪泡 —— 几颗在飞、每颗在哪还有多少血。
     // 打爆一颗的上报走 hitBubbles()，由主角近战 / 环剑 / 连锁调用。
     bubbleCount: () => bubbles.length,

@@ -13,13 +13,13 @@
 // （击杀 / 弹事件卡 / 选升级卡）。
 // ============================================================
 
-import { ENEMY_TYPES } from './enemy.js?v=128';
-import { SWORD_KINDS } from './swordKinds.js?v=128';
-import { RELIC_DEFS } from './relics.js?v=128';
-import { UPGRADES } from './upgrade.js?v=128';
-import { ALL_EVENTS } from './events.js?v=128';
-import { RARITIES } from './rarity.js?v=128';
-import { codexAll, codexCount } from './profile.js?v=128';
+import { ENEMY_TYPES } from './enemy.js?v=129';
+import { SWORD_KINDS } from './swordKinds.js?v=129';
+import { RELIC_DEFS } from './relics.js?v=129';
+import { UPGRADES } from './upgrade.js?v=129';
+import { ALL_EVENTS } from './events.js?v=129';
+import { RARITIES } from './rarity.js?v=129';
+import { codexAll, codexCount } from './profile.js?v=129';
 
 export const CODEX_TABS = [
   { id: 'enemies', name: '怪物' },
@@ -82,6 +82,19 @@ function enemySub(cfg) {
     const c = cfg.echo;
     return statLine([['生命', cfg.hp], ['伤害', cfg.damage], ['速度', cfg.speed]])
       + ` · 每 ${c.every} 秒照回一只（半血，最多 ${c.cap} 只）`;
+  }
+  // ---- 第十一关两只（第 114 块）----
+  // 誊录员：它真正的威胁是「频率 × 留痕」，所以数值行必须把这两件事写出来。
+  if (cfg.ink) {
+    const k = cfg.ink;
+    return statLine([['生命', cfg.hp], ['伤害', cfg.damage], ['速度', cfg.speed]])
+      + ` · 每 ${cfg.attackInterval} 秒划一道 ${k.len} 格长的线 · 墨痕留 ${k.bandLife} 秒`;
+  }
+  // 收账人：它一次都不打人（伤害恒 0），写「伤害 0」会像漏填，所以整行重写。
+  if (cfg.collect) {
+    const c = cfg.collect;
+    return `生命 ${cfg.hp} · 速度 ${cfg.speed} · 从不还手`
+      + ` · 每 ${c.cd} 秒来收一次 · 读条 ${c.cast} 秒`;
   }
   const line = statLine([['生命', cfg.hp], ['伤害', cfg.damage], ['速度', cfg.speed]]);
   // 并联体（第 80 块）：真正伤人的是电弧，不从这条线上说清楚，玩家会拿它当普通近战
@@ -162,8 +175,29 @@ function enemyDesc(cfg) {
       + `和重启体的区别：重启体是自己躺下再起来、最多一次；回声是把别人的捡回来，而且不限次数。`
       + `它只有 ${cfg.hp} 血，但站得极远（${cfg.keepDistance} 格外）—— 越晚拆它，场上的旧面孔越多`;
   }
-  if (cfg.erase) return '损失压力：它从不还手，读条 4.5 秒后把你环上的一把剑「擦掉」，然后转身往场地外跑 —— 跑出去那把剑这一局就没了。冰剑冻住 / 震剑击退 / 冲过去砍死它，都行';
-  if (cfg.reboot) return '耐心压力：打死不算完 —— 躺 4 秒后原地半血重启，而且比上一次更快（最多重启 2 次）。地上那圈红光就是倒计时，守着它补刀';
+  // ---- 第十一关两只（第 114 块）----
+  // 誊录员：本作第一个**方向性直线**攻击。文案的重点不是伤害，而是
+  // 「线是直的、只能横着躲」+「它划过的地会留七秒」，这两件事决定打法。
+  if (cfg.ink) {
+    const k = cfg.ink;
+    return `方向压力：它站着不动，抬笔 ${cfg.windup} 秒，然后朝你此刻的方向划一道 ${k.len} 格长的直线。`
+      + `落笔那一下站在线上就掉 ${cfg.damage} 点血，随后那道墨痕会在地上留 ${k.bandLife} 秒 —— `
+      + `站在墨上每秒掉 ${k.bandDps} 点，移速只有 ${Math.round(k.slow * 100)}%。同屏最多 ${k.maxBands} 道，旧墨会先干掉。`
+      + `关键：它是**直线**，不是圈 —— 横着走一步就出判定，所以别往后退、也别沿着线的方向跑。`
+      + `它站在 ${cfg.keepDistance} 格外不肯靠近，你得主动过去把它拆了（${cfg.hp} 血，不算耐打）`;
+  }
+  // 收账人：全书唯一一只「不造成伤害」的怪 —— 它的压力在资源上。
+  // 文案要把「怎么打断」写死，否则玩家只会觉得莫名变弱。
+  if (cfg.collect) {
+    const c = cfg.collect;
+    return `资源压力：它一次都不打你，活儿是从你身上「收」走一样东西 —— `
+      + `贴到 ${c.range} 格内就翻开账簿读条 ${c.cast} 秒（头顶那圈金环在缩），`
+      + `读满就随机收走你身上的一样：一项属性（一段时间内打折）或者一个技能（这段时间按不动）。`
+      + `收完它转身就退场，${c.cd} 秒后再来。打断很简单：走出 ${Math.round(c.range * 1.35)} 格外，或者砍它一刀 —— `
+      + `它只有 ${cfg.hp} 血，全场最脆的怪之一。`
+      + `所以它考的不是手，是判断：你正在打的那一群和它，先处理哪个`;
+  }
+  if (cfg.erase) return '损失压力：它从不还手，读条 4.5 秒后把你环上的一把剑「擦掉」，然后转身往场地外跑 —— 跑出去那把剑这一局就没了。冰剑冻住 / 震剑击退 / 冲过去砍死它，都行';  if (cfg.reboot) return '耐心压力：打死不算完 —— 躺 4 秒后原地半血重启，而且比上一次更快（最多重启 2 次）。地上那圈红光就是倒计时，守着它补刀';
   if (cfg.charge) return '机动压力：地上一道直线就是它的冲锋路线 —— 横向侧移能躲，撞完它会僵一下（那就是输出窗口）';
   if (cfg.leap) return '空间压力：蓄力后跳向你「当时」站的那个点，地上的红圈就是落点 —— 离开那个点，它在僵直里等你打';
   if (cfg.ghost) return '信息压力：显形 3 秒、隐身 2.5 秒轮着来；隐身时打不着它，但它照样能咬你（第 61 块取消了「贴脸逼它现形」）—— 只能等它自己露头';

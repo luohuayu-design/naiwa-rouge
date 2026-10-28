@@ -12,8 +12,8 @@
 //   yaw      —— 朝向组（rotation.y = 面朝方向，模型正面是 +Z）
 //   update(dt, speed01) —— speed01 = 当前速度 / 最大速度，0 待机、1 全速
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=128';
-import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=128';
+import * as THREE from '../lib/three.module.js?v=129';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=129';
 
 // 切分点与蛙步 dancer.js 的 SPLIT 保持一致（换模型时对照这里调）
 const RIG = {
@@ -107,11 +107,16 @@ export function loadFrog(url, onProgress) {
         catch (err) { reject(err); }
       },
       (ev) => {
-        if (!onProgress || !ev || !ev.loaded) return;
+        if (!onProgress || !ev) return;
         // 手机浏览器 / 部分代理拿不到 Content-Length（total 为 0），
-        // 这里按 rigged.glb 的实际大小估个进度，免得进度条一直停在 0%。
+        // 按 rigged.glb 的实际大小估个进度，免得进度条一直停在 0%。
+        // 第一遍加载（尤其无 Content-Length / 代理 / 缓存未命中）时 ev.loaded 可能是 0，
+        // 不能因为它是 0 就 return —— 否则进度条永远停在 0%，玩家以为卡死了。
         const total = ev.total > 0 ? ev.total : 740000;
-        onProgress(Math.min(1, ev.loaded / total));
+        // 乐观推进：就算这一帧 loaded=0，也给一个极小的正向反馈，让条动起来。
+        // （真加载完会由 onLoad 直接 resolve，这里的乐观值不会越过真实进度太多。）
+        const p = ev.loaded > 0 ? ev.loaded / total : 0.005;
+        onProgress(Math.min(1, Math.max(0.005, p)));
       },
       (err) => reject(err)
     );

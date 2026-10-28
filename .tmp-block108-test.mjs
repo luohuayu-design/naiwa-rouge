@@ -44,7 +44,7 @@ const { SHOP_ITEMS, itemLocked } = await import(`./js/shop.js?v=${VER}`);
 // ============================================================ §1 卡池
 console.log('[§1] 卡池与 12 张新卡');
 {
-  ok(UPGRADES.length === 87, '卡池 87 张（75 + 4 傀儡 + 8 箭雨）', `实际 ${UPGRADES.length}`);
+  ok(UPGRADES.length === 93, '卡池 93 张（75 + 4 傀儡 + 8 箭雨 + 6 墨丸）', `实际 ${UPGRADES.length}`);
   const byId = Object.fromEntries(UPGRADES.map((u) => [u.id, u]));
   const NEW = ['golemCd', 'golemIronSpd', 'golemSnowKnock', 'golemSnowSlow',
     'arrowCountS', 'arrowCountL', 'arrowDmgS', 'arrowDmgL', 'arrowZoneS', 'arrowZoneL', 'arrowCdS', 'arrowCdL'];
@@ -191,8 +191,9 @@ console.log('[§6] 商店「强化箭袋」');
 // ============================================================ §7 main.js 接线
 console.log('[§7] main.js 接线');
 {
-  ok(/previewUpgrade\(stats, up, wstats, weapon, golems, arrowRain\)/.test(mainSrc), '卡片预览把 arrowRain 递给 previewUpgrade');
-  ok(/applyUpgrade\(stats, up, upSerial, wstats, weapon, golems, arrowRain\)/.test(mainSrc), '选卡把 arrowRain 递给 applyUpgrade');
+  // 第 114 块起尾部还接了 mines，别写死收尾的 )
+  ok(/previewUpgrade\(stats, up, wstats, weapon, golems, arrowRain[^)]*\)/.test(mainSrc), '卡片预览把 arrowRain 递给 previewUpgrade');
+  ok(/applyUpgrade\(stats, up, upSerial, wstats, weapon, golems, arrowRain[^)]*\)/.test(mainSrc), '选卡把 arrowRain 递给 applyUpgrade');
   ok(/quiver: arrowRain\.hasQuiver\(\)/.test(mainSrc), 'shopCtx / buyItem 都带箭袋标记');
   ok(/item\.type === 'quiver'/.test(mainSrc) && /arrowRain\.applyQuiver\(\)/.test(mainSrc), 'quiver 购买分支调 applyQuiver');
 }

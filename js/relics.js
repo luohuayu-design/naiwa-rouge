@@ -16,12 +16,12 @@
 // 与环剑（自动索敌、消耗制）和炮台（固定点位）互补；价格定在
 // 商店里「买得起但要攒一攒」的档，让 9/12/15/18 回合的商店有取舍。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=128';
-import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=128';
-import { withV } from './assetUrl.js?v=128';   // 第 80 块：glb 带版本号，SW 才走缓存优先
-import { distance2D } from './stats.js?v=128';
-import { TAG_BASE, TAG_SEAL } from './deposit.js?v=128';   // 第 84 块：掉牌概率的真相源
-import audio from './audio.js?v=128';
+import * as THREE from '../lib/three.module.js?v=129';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=129';
+import { withV } from './assetUrl.js?v=129';   // 第 80 块：glb 带版本号，SW 才走缓存优先
+import { distance2D } from './stats.js?v=129';
+import { TAG_BASE, TAG_SEAL } from './deposit.js?v=129';   // 第 84 块：掉牌概率的真相源
+import audio from './audio.js?v=129';
 
 // 百分比文案（概率表里存的是 0.5 这种小数）
 const pct = (v) => `${Math.round(v * 100)}%`;
@@ -162,11 +162,27 @@ export const RELIC_DEFS = {
       '傀儡完全体：生命 ×1.6、铁傀儡攻击 ×1.5 —— 一拳 ≈ 你攻击的 2.25 倍',
     ],
   },
+  // ---------------- 第十一关新增（第 114 块）：墨丸 ----------------
+  // 用户原话：「我想到一个放地雷，获得之后解锁技能按钮，按下一次就放下一个
+  // 地雷，被怪物踩到瞬间触发范围伤害」+「有自己独立的升级卡和商店物品，要多样」。
+  // 本文件只管「买没买 / 几级」；雷本体、爆炸、卡片加成全在 mine.js。
+  // 等级成长：同屏上限 [3/4/5]，伤害 ×[1/1.25/1.5]。
+  mine: {
+    name: '墨丸',
+    maxLevel: 3,
+    cap: [3, 4, 5],
+    atkMul: [1, 1.25, 1.5],
+    desc: [
+      '捡到空白的墨：技能栏多一颗「墨丸」。按下在脚下留一枚墨丸，怪踩上去就炸开一片（半径 2.6），同屏最多 3 枚、冷却 8 秒',
+      '墨更浓：同屏上限 4 枚、伤害 ×1.25',
+      '墨丸完全体：同屏 5 枚、伤害 ×1.5 —— 雾里提前布好，让它们自己走过来',
+    ],
+  },
 };
 
 export function createRelicSystem({ scene, fx, enemies, onLanternReveal }) {
-  const levels = { spikes: 0, frost: 0, bell: 0, thorns: 0, stove: 0, lantern: 0, insulator: 0, woodfish: 0, seal: 0, puppet: 0 };
-  const cds = { spikes: 0, frost: 0, bell: 0, thorns: 0, stove: 0, lantern: 0, insulator: 0, woodfish: 0, seal: 0, puppet: 0 };
+  const levels = { spikes: 0, frost: 0, bell: 0, thorns: 0, stove: 0, lantern: 0, insulator: 0, woodfish: 0, seal: 0, puppet: 0, mine: 0 };
+  const cds = { spikes: 0, frost: 0, bell: 0, thorns: 0, stove: 0, lantern: 0, insulator: 0, woodfish: 0, seal: 0, puppet: 0, mine: 0 };
 
   // ---------------- 视觉 ----------------
   // 地刺（第 24 块）：KayKit「尖刺地板」里只取尖刺部分（CC0，带手绘贴图），
@@ -775,6 +791,7 @@ export function createRelicSystem({ scene, fx, enemies, onLanternReveal }) {
     levels.woodfish = 0;
     levels.seal = 0;
     levels.puppet = 0;
+    levels.mine = 0;
     cds.spikes = 0;
     cds.frost = 0;
     cds.bell = 0;

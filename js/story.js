@@ -1370,7 +1370,7 @@ export const STORY_CHAPTERS = [
   },
 
   {
-    id: 's11', no: 11, act: 2, levelId: null, atRound: null,
+    id: 's11', no: 11, act: 2, levelId: 11, atRound: 2,   // 第 114 块：接第十一关「钟楼雾原」
     icon: '📓', title: '空白的账簿', who: '空白', place: '钟楼外的雾里',
     story:
       '第十一夜，空白第一次主动现身，不带雾，不吓人。\n'

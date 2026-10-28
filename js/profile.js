@@ -35,6 +35,7 @@ export const DEFAULT_SETTINGS = {
   joyHand: 'left',   // left | right
   shake: true,       // 屏幕震动 / 受击抖屏
   speedFov: true,    // 速度感：跑起来视野微微拉宽（第 36 块；晕的人可以关掉）
+  showPos: false,    // 第 115 块：左上角坐标 + 朝向（默认关，设置里开）
   admin: false,      // 历史遗留占位键（第 30 块）；实际开关已移到独立键 naiwa_rouge_admin_v1，见 main.js
 };
 

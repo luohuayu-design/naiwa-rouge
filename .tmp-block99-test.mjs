@@ -123,7 +123,8 @@ ok(prof.settings().speedFov === true, '全新档默认打开速度感');
 // —— 设置面板的「开/关」读的就是这个值
 const setRow = mainSrc.match(/\{ key: 'speedFov'[^}]*\}/);
 ok(!!setRow && /'on', '开'/.test(setRow[0]), '面板上「开」是第一个选项（默认高亮）');
-ok(/BOOL_SETTINGS = new Set\(\['shake', 'speedFov'\]\)/.test(mainSrc), 'speedFov 走布尔渲染');
+// 第 115 块：这个集合又多了 'showPos' —— 别写死整串，只钉「speedFov 在里面」
+ok(/BOOL_SETTINGS = new Set\(\[[^\]]*'speedFov'/.test(mainSrc), 'speedFov 走布尔渲染');
 ok(/speedFovOn = !!s\.speedFov;/.test(mainSrc), 'applySettings 会把值同步给相机');
 
 // ============================================================

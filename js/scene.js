@@ -8,7 +8,7 @@
 // 两套配色集中在 THEMES 里，buildNightScene({ theme }) 建哪套，
 // 局中要换就调返回的 setTheme('crypt')（不改几何，只改颜色和贴图）。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=128';
+import * as THREE from '../lib/three.module.js?v=129';
 
 export const THEMES = {
   // 第一关 · 荒草地：冷月光 + 青绿边圈 + 萤火虫
@@ -161,6 +161,23 @@ export const THEMES = {
     tuft: 0x27333f, tuftVisible: false,     // 塔顶是石头地，不长草
     fly: 0x9fe8ff, flyCount: 76,            // 飘着的是井里冒上来的水汽
     ground: 'welltop',
+  },
+  // 第十一关 · 钟楼雾原（第 114 块）：回到第三关那座焦土钟楼外面。
+  // 配色思路：整关压到几乎没有颜色 —— 冷灰的雾把一切饱和度都吃掉，
+  // 只留 rim 上一点焦土的橙，让「外面还有火在烧」这件事不至于断掉。
+  // 场景雾浓度是全作最高（0.0195）：远处本来就该看不清，和场上的雾团叠在一起，
+  // 玩家会有「四周全是雾」的包围感，而雾团只是其中更浓的那几块。
+  fogfield: {
+    bg: 0x0a0c10,
+    fog: 0x2a3038, fogDensity: 0.0195,
+    hemiSky: 0x8a9aa8, hemiGround: 0x12141a, hemiIntensity: 1.10,
+    moon: 0xd8e0e8, moonIntensity: 2.42, moonBase: 2.30,
+    rim: 0x8a4a24, rimIntensity: 0.62,      // 远处焦土的橙
+    edge: 0xa8b8c0, edgeOpacity: 0.26,      // 场地边一圈灰白（雾里的界限）
+    stone: 0x2a2e34,
+    tuft: 0x2a2e34, tuftVisible: false,     // 烧过的地，不长草
+    fly: 0xc8d4dc, flyCount: 64,            // 飘着的是雾粒 / 灰烬
+    ground: 'fogfield',
   },
 };
 
@@ -499,7 +516,84 @@ function makeGroundTexture(kind) {
   if (kind === 'ossuary') return makeOssuaryTexture();
   if (kind === 'registry') return makeRegistryTexture();
   if (kind === 'welltop') return makeWelltopTexture();
+  if (kind === 'fogfield') return makeFogfieldTexture();
   return makeGrassTexture();
+}
+
+// 钟楼外的雾原（第 114 块）：烧过一次、又被雾泡了几十年的焦土。
+// 三层就够：① 焦土底 + 明暗斑；② 雾落下来的白霜（这是这张图的性格）；
+// ③ 零星墨痕 —— 空白在这片地上翻账簿翻了很多年，地上有它写过又划掉的痕。
+function makeFogfieldTexture() {
+  const S = 512;
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = S;
+  const g = cv.getContext('2d');
+
+  g.fillStyle = '#26262a';
+  g.fillRect(0, 0, S, S);
+
+  let seed = 114114;
+  const rnd = () => {
+    seed = (seed * 1103515245 + 12345) % 2147483648;
+    return seed / 2147483648;
+  };
+
+  // ① 焦土：冷暖交替的大斑（烧过的地一块深一块浅）
+  for (let i = 0; i < 200; i++) {
+    const x = rnd() * S, y = rnd() * S, r = 24 + rnd() * 92;
+    const rad = g.createRadialGradient(x, y, 0, x, y, r);
+    const warm = rnd() > 0.55;
+    rad.addColorStop(0, warm ? 'rgba(62,44,32,0.34)' : 'rgba(12,14,18,0.40)');
+    rad.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = rad;
+    g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+  }
+
+  // ② 白霜：雾泡久了，地面泛一层灰白。成片的比点状更像「潮」。
+  for (let i = 0; i < 90; i++) {
+    const x = rnd() * S, y = rnd() * S, r = 12 + rnd() * 46;
+    const rad = g.createRadialGradient(x, y, 0, x, y, r);
+    rad.addColorStop(0, `rgba(196,206,212,${0.05 + rnd() * 0.09})`);
+    rad.addColorStop(1, 'rgba(196,206,212,0)');
+    g.fillStyle = rad;
+    g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+  }
+  for (let i = 0; i < 1800; i++) {
+    const x = rnd() * S, y = rnd() * S;
+    g.fillStyle = `rgba(206,214,218,${0.05 + rnd() * 0.16})`;
+    g.beginPath(); g.arc(x, y, 0.4 + rnd() * 1.2, 0, Math.PI * 2); g.fill();
+  }
+  // 极少数没烧透的红点：远处还有火在烧
+  for (let i = 0; i < 26; i++) {
+    const x = rnd() * S, y = rnd() * S;
+    g.fillStyle = `rgba(226,110,52,${0.10 + rnd() * 0.16})`;
+    g.beginPath(); g.arc(x, y, 0.7 + rnd() * 1.4, 0, Math.PI * 2); g.fill();
+  }
+
+  // ③ 墨痕：细长的深紫黑笔划，方向和长短都散（排整齐就成图案了）
+  g.lineCap = 'round';
+  for (let i = 0; i < 40; i++) {
+    const x = rnd() * S, y = rnd() * S;
+    const len = 10 + rnd() * 56;
+    const ang = rnd() * Math.PI * 2;
+    g.strokeStyle = `rgba(18,12,26,${0.12 + rnd() * 0.22})`;
+    g.lineWidth = 1 + rnd() * 2.4;
+    g.beginPath();
+    g.moveTo(x, y);
+    g.quadraticCurveTo(
+      x + Math.cos(ang) * len * 0.5 + (rnd() - 0.5) * 10,
+      y + Math.sin(ang) * len * 0.5 + (rnd() - 0.5) * 10,
+      x + Math.cos(ang) * len, y + Math.sin(ang) * len,
+    );
+    g.stroke();
+  }
+
+  const tex = new THREE.CanvasTexture(cv);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(16, 16);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 8;
+  return tex;
 }
 
 // 骨塔寄存层的地面（第 81 块）：压实的骨灰 + 碎骨渣 + 木牌压痕。

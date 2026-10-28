@@ -5,41 +5,43 @@
 // 目标是把三件事调顺：摇杆输入 → 角色速度/朝向 → 相机跟随。
 // 后续叠战斗时，只需要在 tick() 里加敌人更新与自动攻击，不用动输入层。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=128';
-import { buildNightScene } from './scene.js?v=128';
-import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=128';
+import * as THREE from '../lib/three.module.js?v=129';
+import { buildNightScene } from './scene.js?v=129';
+import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=129';
 // 第 80 块：给 glb 拼上版本号 → SW 缓存优先（详见 assetUrl.js）
-import { withV } from './assetUrl.js?v=128';
-import { createInput } from './input.js?v=128';
-import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=128';
-import { createStatView } from './statView.js?v=128';
-import { createWeaponStats } from './weaponStats.js?v=128';
-import { createFx } from './fx.js?v=128';
-import { createEnemySystem, ENEMY_TYPES } from './enemy.js?v=128';
+import { withV } from './assetUrl.js?v=129';
+import { createInput } from './input.js?v=129';
+import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=129';
+import { createStatView } from './statView.js?v=129';
+import { createWeaponStats } from './weaponStats.js?v=129';
+import { createFx } from './fx.js?v=129';
+import { createEnemySystem, ENEMY_TYPES } from './enemy.js?v=129';
 import {
-  createLevel, LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVEL_5, LEVEL_6, LEVEL_7, LEVEL_8, LEVEL_9, LEVEL_10, LEVELS_BY_ID, DIFFS, setDifficulty, getDifficulty, roundScale, levelStats, levelTypes,
-} from './wave.js?v=128';
-import { createRangeRing } from './rangeRing.js?v=128';
-import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=128';
-import { createWeaponSystem } from './weapon.js?v=128';
-import { createArrowRainSystem } from './arrowRain.js?v=128';
-import { SWORD_KINDS } from './swordKinds.js?v=128';
-import { createGoldSystem } from './gold.js?v=128';
-import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW, SHOP_PINNED } from './shop.js?v=128';
-import { createTurretSystem, TURRET } from './turret.js?v=128';
-import { createRelicSystem, RELIC_DEFS } from './relics.js?v=128';
-import { createGolemSystem } from './golem.js?v=128';   // 第 107 块：法器「傀儡术」的铁 / 雪傀儡
-import { createHazards } from './hazards.js?v=128';
-import { createDeposit, tagChance } from './deposit.js?v=128';   // 第 81 块：寄存柜；第 84 块：掉牌概率
-import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=128';
-import audio from './audio.js?v=128';
-import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=128';
+  createLevel, LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVEL_5, LEVEL_6, LEVEL_7, LEVEL_8, LEVEL_9, LEVEL_10, LEVEL_11, LEVELS_BY_ID, DIFFS, setDifficulty, getDifficulty, roundScale, levelStats, levelTypes,
+} from './wave.js?v=129';
+import { createRangeRing } from './rangeRing.js?v=129';
+import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=129';
+import { createWeaponSystem } from './weapon.js?v=129';
+import { createArrowRainSystem } from './arrowRain.js?v=129';
+import { SWORD_KINDS } from './swordKinds.js?v=129';
+import { createGoldSystem } from './gold.js?v=129';
+import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW, SHOP_PINNED } from './shop.js?v=129';
+import { createTurretSystem, TURRET } from './turret.js?v=129';
+import { createRelicSystem, RELIC_DEFS } from './relics.js?v=129';
+import { createGolemSystem } from './golem.js?v=129';   // 第 107 块：法器「傀儡术」的铁 / 雪傀儡
+import { createHazards } from './hazards.js?v=129';
+import { createFogSystem } from './fog.js?v=129';    // 第 114 块：第十一关的雾
+import { createMineSystem } from './mine.js?v=129';  // 第 114 块：第 11 件法器「墨丸」
+import { createDeposit, tagChance } from './deposit.js?v=129';   // 第 81 块：寄存柜；第 84 块：掉牌概率
+import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=129';
+import audio from './audio.js?v=129';
+import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=129';
 // 第 62 块：回血技能（第四关通关后永久解锁，回 5 点 / CD 25 秒）
-import { createHealSkill, HEAL_AMOUNT, HEAL_CD } from './healSkill.js?v=128';
+import { createHealSkill, HEAL_AMOUNT, HEAL_CD } from './healSkill.js?v=129';
 // 第 62 块：民心专属事件（升档走良性池、掉档走恶性池）
-import { repPoolForTier, REP_GOOD, REP_BAD } from './repEvents.js?v=128';
+import { repPoolForTier, REP_GOOD, REP_BAD } from './repEvents.js?v=129';
 // 第 62 块：攻略面板（战败提示上的「查看攻略」，手风琴三组）
-import { renderGuide, GUIDE_SECTIONS } from './guide.js?v=128';
+import { renderGuide, GUIDE_SECTIONS } from './guide.js?v=129';
 import {
   settings as readSettings, setSetting, save as saveProfile, profile,
   bumpStat, setStatMax, codexAdd, codexCount, countCard, unlockAch, hasAch, addBones, bones, resetAll,
@@ -54,32 +56,32 @@ import {
   hintSeen, markHintSeen,                  // 第 65 块：一次性提示卡
   markLevelClear, levelCleared, clearCount, // 第 94 块：通关过哪些关（成就用）
   getStatAdmin, setStatAdmin, resetStatAdmin, // 第 95 / 98 块：管理员模式二（手改最终值 → 存追加项，基础值不动）
-} from './profile.js?v=128';
+} from './profile.js?v=129';
 // 第 44 块：礼包兑换（码表只有哈希，明细在 gift.js 顶部注释）
-import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=128';
+import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=129';
 // 第 46 块：音效包（抽象奶蛙音效包 —— 4 段奶蛙叫声，通关第一关解锁）
-import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=128';
-import * as runSave from './runSave.js?v=128';
+import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=129';
+import * as runSave from './runSave.js?v=129';
 // 第 78 块：存档导出 / 导入。数据逻辑全在这个模块里（不碰 DOM），这里只接按钮
-import * as saveIO from './saveIO.js?v=128';
+import * as saveIO from './saveIO.js?v=129';
 import {
   CAMPFIRE, CAMP_STEP, campBuy, campOwned, campLevel,
   campCost, campApply, bonesFor, diffBoneMul, levelBoneMul, coinBones, BONE,
-} from './campfire.js?v=128';
+} from './campfire.js?v=129';
 // 第 23 块：永夜火种（通关白给的 3 次永久三选一）
 import {
   BOONS, BOON_BY_ID, BOON_PICKS, boonOwned, boonStacks, boonPending, boonTotalStacks,
   grantBoons, rollBoons, takeBoon, applyBoons, boonStackText,
-} from './boons.js?v=128';
+} from './boons.js?v=129';
 // 第 21 块：夜行诅咒（自选 debuff 换骨币倍率）
-import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=128';
+import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=129';
 // 第 22 块：种子与每日挑战
 import {
   DAILY_RULES, dayKey, dayText, dailySeed, seedCode, pickDailyCurses,
   seedFromText, pickSeedRules, loadSeedRecords, saveSeedRecord, pruneSeeds,
   dailyRecord, saveDailyRecord, pruneDaily, makeRng,
-} from './seed.js?v=128';
-import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=128';
+} from './seed.js?v=129';
+import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=129';
 // 第 58 块：局外商店 · 宝箱（花骨币买，开箱随机给永久属性 / 永久法器 / 技能CD缩短）
 import {
   BOXES, BOX_BY_ID, buyBox, rollBox, metaApplyStats, applyMeta,
@@ -89,36 +91,36 @@ import {
   boxPoolEntries,
   // 第 105 块：属性幅度统一系数（UI 显示的「强度 ×」必须和实际算法同源）
   boxMag,
-} from './metaShop.js?v=128';
+} from './metaShop.js?v=129';
 // 第 59 块：每日签到（以周为单位，周一 00:00 重置）
 // 第 105 块：固定 +20 改成每天随机 0~100；里程碑 3/5/7 天 → 100 / 150 骨币 + 一次永夜火种
 import {
   SIGN_BONES_MIN, SIGN_BONES_MAX, weekCells, signSummary, signToday, signedToday,
-} from './signin.js?v=128';
+} from './signin.js?v=129';
 // 第 94 块：成就（八类 × 三档骨币奖励）
 // 第 94-2 块：骨币改成**手动领取**（achPending / achClaim），老用户补发走 achMigrate
 import {
   ACHS, ACH_CATS, ACH_TIERS, ACH_COUNT, achById, achsByCat, achTier,
   achPending, achPendingBones, achClaim, achClaimAll, achClaimed, achMigrate,
-} from './achievements.js?v=128';
+} from './achievements.js?v=129';
 // 第 94 块：通用手风琴（盲盒奖池与成就面板共用，不复制第三份引擎）
-import { renderAccordion } from './accordion.js?v=128';
+import { renderAccordion } from './accordion.js?v=129';
 // 第 94 块：每日任务（简单 3 + 中等 1 + 困难 1，每天 0 点刷新）
 import {
   DQ_TIERS, DQ_BONES, dqTasks, dqPump, dqSave, dqClaim, dqClaimAll,
   dqPending, dqGained, dqMsLeft, dayKeyOf, dqTier, dqTaskName,
   dqState, dqForceReroll, dqReset,   // 调试口：跨天重掷 / 整条重置
-} from './dailyQuest.js?v=128';
+} from './dailyQuest.js?v=129';
 import {
   EVENTS, ALL_EVENTS, getEventById, pickEvent, effectLines,
   choiceHint, canAfford, costShort, REP_MIN, REP_MAX, REP_START,
   isTalk, eventChoices, resolveRoll, mergeEffects,
-} from './events.js?v=128';
+} from './events.js?v=129';
 // 第 32 块：主线《笑不出来的那一夜》（18 夜，一夜一关，前 3 夜已有关卡）
 import {
   STORY_ARC, STORY_CHAPTERS, STORY_ENDINGS, MARK_INFO,
   storyChapterAt, storyChapterById, storyEndingKey,
-} from './story.js?v=128';
+} from './story.js?v=129';
 
 // 标记模块已经跑起来了：index.html 的兜底自检靠它判断
 // 「模块根本没执行」还是「执行了但加载慢」。
@@ -203,6 +205,8 @@ async function boot() {
   const camFocus = new THREE.Vector3(0, 0, 0);
   let camFov = CAM_FOV_BASE;                 // 当前视野（每帧向目标值缓动）
   let speedFovOn = !!readSettings().speedFov;   // 设置项：速度感（applySettings 里同步）
+  let shakeOn = !!readSettings().shake;         // 第 114 块：屏幕震动开关（雾里镜头微晃也要听它的）
+  let showPosOn = !!readSettings().showPos;     // 第 115 块：左上角坐标 + 朝向（默认关）
 
   // 第 57 块：全屏浮层的真实高度（--app-h）。
   // 用户截图实证：WeChat / 安卓下 position:fixed + inset:0 按「布局视口」算，
@@ -323,9 +327,28 @@ async function boot() {
 
   function setProgress(p) {
     const pct = Math.max(0, Math.min(1, p || 0));
-    ldBar.style.width = (pct * 100).toFixed(0) + '%';
-    ldTxt.textContent = (pct * 100).toFixed(0) + '%';
+    // 不倒退：乐观推进已经把显示值抬到前面，真实进度晚一步到，别把条拽回去。
+    // 只有当真实进度真的更大（或首次初始化）时才更新显示值。
+    _progressShown = Math.max(_progressShown, pct);
+    ldBar.style.width = (_progressShown * 100).toFixed(0) + '%';
+    ldTxt.textContent = (_progressShown * 100).toFixed(0) + '%';
   }
+
+  // 乐观推进：第一遍加载时 GLB 进度回调可能迟迟不来（无 Content-Length / 代理 /
+  // 缓存未命中），如果进度条一直钉在 0%，玩家会以为卡死关页面。这里每 300ms
+  // 把显示值往「真实进度的前面一点」挪一格，但**永不越过真实进度**，也**永不倒退**：
+  //   · 真实进度追上来了 → 直接用真实值；
+  //   · 加载完成（1.0）→ 定时器自然失效，不再动。
+  let _progressShown = 0;
+  const _progressTimer = setInterval(() => {
+    if (_progressShown >= 0.98) return;             // 已到顶，别画蛇添足
+    const target = Math.min(0.97, _progressShown + 0.02);
+    if (target > _progressShown) {
+      _progressShown = target;
+      ldBar.style.width = (target * 100).toFixed(0) + '%';
+      ldTxt.textContent = (target * 100).toFixed(0) + '%';
+    }
+  }, 300);
 
   // ---------------- 加载页轮播介绍语（第 48 块） ----------------
   // 首条 = 首次加载慢的提示；之后每 1.78 秒换一句游戏介绍，淡出淡入。
@@ -763,6 +786,10 @@ async function boot() {
       if (e.type === 'addressee' && codexCount('enemies', 'addressee') >= 10) tryAch('addressee_10');
       if (e.type === 'waiter' && codexCount('enemies', 'waiter') >= 5) tryAch('waiter_5');
       if (e.type === 'echo' && codexCount('enemies', 'echo') >= 10) tryAch('echo_10');
+      // 第 114 块：第十一关的里程碑 + 「雾里击杀」。
+      // ⚠️ 只占**一行**：这一段是另一组（合成台）要动的地方，把逻辑收进
+      // onKillExtra114() 里，冲突面就只有这一次调用。
+      onKillExtra114(e);
       // 第 94 块：每日任务的击杀计数（每天 0 点自己清零）
       dqToast(dqPump({ kills: 1, [`kT:${e.type}`]: 1 }));
       // 第 84 块（用户定案）：掉牌改成**概率** —— 约一半的怪会留下牌子，不是每只都掉。
@@ -909,6 +936,30 @@ async function boot() {
   const hazards = createHazards({
     scene, fx, playerPos: pos, playerRadius: BODY_R, hurtPlayer,
   });
+
+  // ---------------- 第 114 块：第十一关的雾 ----------------
+  // 它不是「陷阱」也不是「特效」，是**遮挡**：几片半透明云挂在 1.35 / 2.05 高，
+  // 相机在上面 10.6 米俯视，于是它们真的挡在镜头和场地之间（靠深度缓冲，不是调透明度）。
+  // 关卡通过 level.fog 传参数，setLevel 里 build（别的关传 undefined = 关掉）。
+  // 玩家侧只有两件东西在雾上面看得见：脚下的判定环（rangeRing.setOnTop）+ 一点轮廓微光。
+  const fog = createFogSystem({ scene });
+
+  // ---------------- 第 114 块：第 11 件法器「墨丸」 ----------------
+  // 地上的雷：放下 → 怪踩到 → 范围爆炸。等级 / 卡片 / 商店货全在 mine.js。
+  const mines = createMineSystem({ scene, fx, enemies, wstats });
+
+  // 第 114 块：击杀时的第十一关专属记账。
+  // 从 onDeath 里抽出来是**为了避让**：另一组（合成台）要重写 onDeath 那一段，
+  // 主干上只留一行调用，谁改都不容易撞车。
+  // 雾里击杀按「倒下的那一刻它在不在雾里」算 —— 雾会飘，记出生位置一定错。
+  function onKillExtra114(e) {
+    if (e.type === 'clerk' && codexCount('enemies', 'clerk') >= 10) tryAch('clerk_10');
+    if (e.type === 'collector' && codexCount('enemies', 'collector') >= 5) tryAch('collector_5');
+    if (fog.on && fog.inside(e.pos.x, e.pos.z)) {
+      bumpStat('fogKills');
+      if (profile().stats.fogKills >= 20) tryAch('fog_20');
+    }
+  }
 
   // ---------------- 寄存柜（第 81 块立，第 83 块重做，第八关） ----------------
   // 它只做三件事：收牌子（任何怪死都 +1）、封柜倒数、到点把看守放出来。
@@ -1641,6 +1692,8 @@ async function boot() {
       // 第 107 块：买到傀儡术后傀儡卡才进池子；上限卡拿过一次就收摊
       puppetOwned: relics.levels().puppet > 0,
       golemCap: Math.max(0, golems.bonuses().cap - 1),
+      // 第 114 块：买到墨丸后墨丸卡才进池子（和傀儡卡同一口径）
+      mineOwned: relics.levels().mine > 0,
     });
 
     upTitle.textContent = `第 ${roundNo} 回合结束 · 三选一`;
@@ -1682,7 +1735,7 @@ async function boot() {
       // 精确的「原值 → 选后值」：用 stats.preview 算，和真选下去的数字完全一致
       const delta = document.createElement('div');
       delta.className = 'up-delta';
-      for (const c of previewUpgrade(stats, up, wstats, weapon, golems, arrowRain)) {
+      for (const c of previewUpgrade(stats, up, wstats, weapon, golems, arrowRain, mines)) {
         const row = document.createElement('span');
         row.className = 'up-chg';
         const label = document.createElement('i');
@@ -1723,7 +1776,7 @@ async function boot() {
 
     upSerial++;
     upgradesTaken++;
-    const res = applyUpgrade(stats, up, upSerial, wstats, weapon, golems, arrowRain);
+    const res = applyUpgrade(stats, up, upSerial, wstats, weapon, golems, arrowRain, mines);
     takenUpgrades.push(up);
     // 图鉴 / 战绩 / 成就（第 18 块）：拿到的卡记一笔，本局品质集合也记一笔
     const rIdx = up.rarity ?? 0;
@@ -1849,6 +1902,7 @@ async function boot() {
     // 第 107 块：golems 那层 facade —— owned 来自法器等级（局内买的），
     // 其余透传给技能键做冷却显示 / 状态判定。
     const lvPuppet = relics.levels().puppet;
+    const lvMine = relics.levels().mine;
     return {
       playing: gameState === 'playing' || gameState === 'wtut' || gameState === 'tutorial',
       weapon, arrowRain, heal: healSkill, playerPos: pos, stats, coins,
@@ -1861,6 +1915,21 @@ async function boot() {
         cdTotal: golems.cdTotal,
       } : null,
       openGolemPick,   // 第 107 块：技能键按下时叫开铁 / 雪二选一
+      // 第 114 块：墨丸（第 11 件法器）。owned 由 relics 的等级决定，
+      // 其余全交给 mine.js —— 技能栏只关心「能不能放 / 还差多久」。
+      mines: mines && lvMine > 0 ? {
+        owned: true,
+        count: mines.count,
+        cap: mines.cap,
+        ready: mines.ready,
+        cdLeft: mines.cdLeft,
+        cdMax: mines.cdMax,
+        progress: mines.progress,
+        drop: (p) => mines.drop(p || pos),
+      } : null,
+      // 第 114 块：被收账人收走的技能 —— skills.js 的 ready 不认识这个字段，
+      // 所以「按不动」收在 pressSkill 里，UI 的灰态收在 renderSkill 里（两处都要看一眼）。
+      stolenSkill: (id) => (stolenSkills.get(id) || 0) > 0,
     };
   }
 
@@ -1869,6 +1938,15 @@ async function boot() {
   // 教程里靠「补靶子」解决（见 ensureRainTargets），教程外至少给一句话。
   function pressSkill(sk) {
     const ctx = skillCtx();
+    // 第 114 块：被收账人收走的技能按不动。
+    // 和「冷却中」必须区分开：冷却中是不说话（玩家懂），被收走要明说是谁拿走了、
+    // 多久还 —— 否则玩家只会以为技能键坏了。
+    if (ctx.stolenSkill && ctx.stolenSkill(sk.id)) {
+      const left = stolenSkills.get(sk.id) || 0;
+      showToast('被收走了', `「${sk.name}」在收账人的账本里 —— ${Math.ceil(left)} 秒后还回来`);
+      audio.sfx('uiSwitch');
+      return false;
+    }
     if (!sk.ready(ctx)) return false;
     const okPressed = sk.press(ctx);
     // 第 109 块：每日任务的「箭雨施放」计数收口在这 —— 所有技能按键都走
@@ -1894,15 +1972,20 @@ async function boot() {
       btn.style.display = shown ? '' : 'none';
       if (!shown) continue;
       const ready = !!sk.ready(ctx);
-      btn.classList.toggle('ready', ready);
-      btn.classList.toggle('spent', !ready);
+      // 第 114 块：被收账人收走 → 灰态 + 数字区显示「还差几秒回来」，
+      // 让玩家看技能栏就知道「不是我按错了，是技能在别人手上」。
+      const stolen = !!(ctx.stolenSkill && ctx.stolenSkill(sk.id));
+      btn.classList.toggle('ready', ready && !stolen);
+      btn.classList.toggle('spent', !ready || stolen);
+      btn.classList.toggle('stolen', stolen);
       const p = sk.progress ? Math.max(0, Math.min(1, sk.progress(ctx) || 0)) : 0;
       cd.style.height = (p * 100).toFixed(1) + '%';
       // 外圈环（第 65 块）：p 是「已经充了多少」——环从空走到满。
       if (rec.ringEl) rec.ringEl.setAttribute('stroke-dashoffset', (163.36 * (1 - p)).toFixed(1));
       // 冷却倒计时数字（第 47 块）：ready 时藏起来，冷却中显示剩余秒数
       if (num) {
-        const txt = (!ready && sk.cdText) ? sk.cdText(ctx) : '';
+        let txt = (!ready && sk.cdText) ? sk.cdText(ctx) : '';
+        if (stolen) txt = String(Math.ceil(stolenSkills.get(sk.id) || 0));
         num.textContent = txt;
         num.style.display = txt ? '' : 'none';
       }
@@ -2044,6 +2127,19 @@ async function boot() {
           + '它扔雪球把怪<b>推开但不伤害</b>。它是替你挨打的那一个。',
         '同时只能站一只（传说卡「双傀合璧」后两只）；碎了要等 <b>40 秒</b>冷却才能再召。'
           + '注意：弓手、投手这类<b>站远处打你的怪不会被雪傀儡拉走</b> —— 它拉的是追着人跑的那批。',
+      ],
+    },
+    // 第 114 块：第一次买到「墨丸」后讲的教程卡（和傀儡术同一时机：买完回到场上）。
+    mine: {
+      kicker: '新法器 · 墨丸',
+      title: '技能栏多了一颗墨点按钮',
+      text: [
+        '按一下就在<b>脚下</b>留一枚墨丸：怪踩上去立刻炸开一圈墨，'
+          + '半径 2.6 格里的东西全吃一次 <b>武器攻击 ×2.5</b> 的伤害（吃暴击、吃护甲）。',
+        '它<b>不挑目标、不用瞄</b> —— 场上没有怪能打的时候按它一样有效。'
+          + '第十一关的雾里看不见怪，最稳的用法是<b>先把路口铺上</b>，让它们自己走过来。',
+        '同屏最多 <b>3 枚</b>，冷却 <b>8 秒</b>。地上的墨痕一直看得见（<b>穿雾</b>），'
+          + '所以你自己不会忘了布在哪。商人那儿还有「墨囊」「厚墨」两件货，三选一里也有墨丸的专属卡。',
       ],
     },
   };
@@ -2340,6 +2436,8 @@ async function boot() {
     turrets.reset();
     relics.reset();          // 局内买的法器不带过去（局外永久法器由 applyMeta 重放）
     golems.reset();          // 第 107 块：场上傀儡与冷却 / 卡片加成也不带过去（法器等级随 relics 归零）
+    mines.reset();           // 第 114 块：地上的墨丸 / 卡片加成 / 商店买断同样一局一清
+    clearSteal();            // 第 114 块：收账人没收完的东西不带进新局（属性 mod 必须当场摘掉）
 
     // ③ 局内计数与背包（时长 elapsed 不在这里归零 —— startPlay 里那一处负责，
     //    读档续算的路径也不会被误清）
@@ -2624,6 +2722,7 @@ async function boot() {
     { id: 8, name: LEVEL_8.name, playable: true },   // 第 81 块：第八关 · 骨塔寄存层
     { id: 9, name: LEVEL_9.name, playable: true },   // 第 82 块：第九关 · 骨塔登记庭
     { id: 10, name: LEVEL_10.name, playable: true },  // 第 107 块：第十关 · 塔顶井台
+    { id: 11, name: LEVEL_11.name, playable: true },  // 第 114 块：第十一关 · 钟楼雾原
   ];
   // 选关面板点了哪一关 —— beginGame 时按它切关卡（点的时候还没进战斗）
   let pendingLevelId = 1;
@@ -2935,11 +3034,12 @@ async function boot() {
     { key: 'joyHand', name: '摇杆位置', type: 'seg', hint: '按住哪半边出摇杆', opts: [['left', '左手'], ['right', '右手']] },
     { key: 'shake', name: '屏幕震动', type: 'seg', hint: '受击时抖一下', opts: [['on', '开'], ['off', '关']] },
     { key: 'speedFov', name: '速度感', type: 'seg', hint: '跑起来视野微微拉宽（晕的话关掉）', opts: [['on', '开'], ['off', '关']] },
+    { key: 'showPos', name: '坐标与朝向', type: 'seg', hint: '左上角显示坐标和朝向角度（默认关）', opts: [['on', '开'], ['off', '关']] },
     { key: 'admin', name: '管理员模式', type: 'admin', hint: '金币/骨币/生命无限 · 沙盒不记录 · 退出即还原' },
   ];
 
   // 布尔型设置项在面板上显示成「开/关」两段
-  const BOOL_SETTINGS = new Set(['shake', 'speedFov']);
+  const BOOL_SETTINGS = new Set(['shake', 'speedFov', 'showPos']);
 
   // 把设置真正作用到音频 / 渲染 / 摇杆 / 抖屏上
   function applySettings() {
@@ -2949,6 +3049,8 @@ async function boot() {
     audio.setPack(packState().id);     // 第 46 块：启动 / 改设置时把音效包推进引擎
     applyQuality(s.quality);
     speedFovOn = !!s.speedFov;
+    shakeOn = !!s.shake;
+    showPosOn = !!s.showPos;
     const pre = JOY_PRESET[s.joySize] || JOY_PRESET.mid;
     if (input.joystick && input.joystick.setOpts) input.joystick.setOpts({ radius: pre.radius, hand: s.joyHand });
     const stickEl = document.getElementById('stick');
@@ -3194,7 +3296,9 @@ async function boot() {
   //      （整份内容编在地址里，移交之后照样能存）。
   //    不管走哪条，点完都留一条能长按另存的链接兜底（#ioSaveRow）—— 各家 ROM 的
   //    下载管理器脾气不一样，给了兜底才不至于「点了什么都没有」。
-  const HANDOFF_UA = /MicroMessenger|MQQBrowser|\bQQ\/\d|X5\/|; wv\)/i;
+  // 放宽到手机 QQ / 微信 / X5 内核的各种 UA 变体（V1_AND_SQ_ 是手机 QQ 客户端
+  // 内嵌浏览器的常见标志，有的版本不写 MQQBrowser 也不写 QQ/）。
+  const HANDOFF_UA = /MicroMessenger|MQQBrowser|\bQQ\/\d|V1_AND_SQ_|X5\/|; wv\)|NetType\//i;
 
   function isHandoffUa() {
     try { return HANDOFF_UA.test(navigator.userAgent || ''); } catch (_) { return false; }
@@ -3221,9 +3325,15 @@ async function boot() {
     const snap = saveIO.snapshot();
     const name = asciiFileName();
     const json = saveIO.payloadJson(snap);
+
+    // ⚠️ 第 115 块（用户：「手机 QQ 打开网站点导出存档存不下来」）：
+    // 不再靠 UA 猜「是不是 QQ 内嵌内核」。QQ 各版本 / X5 内核的 UA 千奇百怪，
+    // 漏判一次就掉进 blob: 死链那条路（移交 QQ 浏览器后拉不到内容）。
+    // data: URL 是自包含的，任何内核 / 移交任何 App 都能存 —— 直接拿它当主路径，
+    // blob 只作兜底（个别桌面浏览器对超大 data: 有 URL 长度顾虑时再用）。
     let url = '';
     try {
-      url = makeHref(json, false);
+      url = makeHref(json, true);      // 一律 data:，最稳
       const a = document.createElement('a');
       a.href = url;
       a.download = name;
@@ -3232,8 +3342,20 @@ async function boot() {
       a.click();
       a.remove();
     } catch (_) {
-      if (url.startsWith('blob:')) URL.revokeObjectURL(url);
-      return false;
+      // data: 这条路被拦（极少见）→ 退回 blob
+      try {
+        url = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = name;
+        a.rel = 'noopener';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      } catch (_) {
+        if (url.startsWith('blob:')) URL.revokeObjectURL(url);
+        return false;
+      }
     }
     if (url.startsWith('blob:')) setTimeout(() => URL.revokeObjectURL(url), 4000);
 
@@ -4469,6 +4591,10 @@ async function boot() {
       turretCount: turrets.count(),
       relicLevels: relics.levels(),
       quiver: arrowRain.hasQuiver(),   // 第 108 块：箭袋买断标记
+      // 第 114 块：墨丸的「先有法器才能买强化」+ 两件一次性货物
+      mineLevel: relics.levels().mine,
+      inkSac: mines.hasSac(),
+      inkThick: mines.hasThick(),
     };
     for (const item of shopStock) {
       const rar = rarityInfo(item);
@@ -4537,6 +4663,9 @@ async function boot() {
       turretCount: turrets.count(),
       relicLevels: relics.levels(),
       quiver: arrowRain.hasQuiver(),   // 第 108 块：箭袋买断标记
+      mineLevel: relics.levels().mine,
+      inkSac: mines.hasSac(),
+      inkThick: mines.hasThick(),
     });
     if (locked) return;
     if (adminOn) coins = ADMIN_GOLD; else coins -= price;
@@ -4586,7 +4715,23 @@ async function boot() {
         golems.setRelicLevel(relics.levels().puppet);
         queueHint('puppet');
       }
+      // 第 114 块：墨丸同傀儡术 —— 买到立刻点亮技能栏（商店开着时主循环不跑），
+      // 第一次拥有排一张教程卡（只讲一次，档案 tut）。
+      if (item.relic === 'mine') {
+        mines.setRelicLevel(relics.levels().mine);
+        queueHint('mine');
+      }
       showToast(`${def.name} ${lv} 级`, def.desc[lv - 1] + (lv < def.maxLevel ? ' · 再买可升级' : ' · 已满级'));
+    } else if (item.type === 'ink') {
+      // 第 114 块：墨丸的两件一次性强化（买了就一局有效，itemLocked 已拦重复）
+      if (item.ink === 'sac') {
+        mines.buySac();
+        showToast('墨囊', `墨丸伤害 +15% · 现在的倍率 ×${mines.bonuses().dmgMul.toFixed(2)}`);
+      } else {
+        mines.buyThick();
+        showToast('厚墨', `墨丸范围 +0.5 格 · 冷却 −1.5 秒 · 现在 ${mines.radius().toFixed(1)} 格 / ${mines.cdMax.toFixed(1)} 秒`);
+      }
+      renderSkill();
     } else if (item.type === 'quiver') {
       // 第 108 块：强化箭袋 —— +5 箭 +15% 伤害（买断，itemLocked 已拦重复）
       arrowRain.applyQuiver();
@@ -4792,6 +4937,13 @@ async function boot() {
     setSceneTheme(level.level.theme || 'meadow');
     setArenaRadius(level.level.arena || 15);
     hazards.build(level.level.hazards || []);   // 第 63 块：只有第六关有漏电地板
+    // 第 114 块：雾（只有第十一关有）。别的关传 undefined → clear()，雾全散。
+    fog.build(level.level.fog || null);
+    // 换关时把场地上的墨丸清掉（等级与卡片加成是整局的，不清 —— 那是 reset 的事）
+    mines.clearField();
+    // 雾里只留判定环：把脚下那个环置顶（depthTest:false）。没雾的关卡要还原，
+    // 否则环会穿过井壁 / 柜子，看起来像画在空气里。
+    playerRing.setOnTop(!!level.level.fog);
     // 第 81 块：寄存柜（只有第八关有）。build 会先 reset 自己，别的关传 undefined 即清空。
     deposit.build(level.level.deposit || null);
     // 第 84 块：柜子是新建的，镇牌铃得按当前等级重新挂上去
@@ -4898,6 +5050,8 @@ async function boot() {
       heal: healSkill.snapshot(),        // 第 62 块：回血技能的冷却（解锁走档案，不进档）
       turrets: turrets.list(),
       relics: relics.levels(),
+      // 第 114 块：墨丸的卡片加成与两件商店买断跟着存档走（等级在 relics 里）
+      mines: mines.snapshot(),
       bag: { ...bag },
       diff: getDifficulty() === DIFFS.normal ? null : (profile().difficulty || 'normal'),
       rarities: [...runRarities],
@@ -5019,7 +5173,12 @@ async function boot() {
       const m = Math.max(0.3, ms.skillCdMul || 1);
       if (weapon.setCdMul) weapon.setCdMul(m);
       if (arrowRain.setCdMul) arrowRain.setCdMul(m);
+      if (mines.setCdMul) mines.setCdMul(m);
     }
+    // 第 114 块：墨丸的卡片加成与商店买断跟着存档回来；等级读 relics（含局外永久法器）。
+    // 放在上面那段之后 —— 局外法器会二次覆盖 relics，等级要以最终值为准。
+    mines.restore(saved.mines);
+    mines.setRelicLevel(relics.levels().mine);
     runRarities = new Set(saved.rarities || []);   // 本局品质集合一并恢复
     // 注意顺序：diffOverride 在下面几行才赋值，这里直接读存档里的 prevDiff
     if (saved.diff && DIFFS[saved.diff]) {
@@ -7548,6 +7707,7 @@ async function boot() {
       if (levelCleared(5)) tryAch('clear_5');
       if (levelCleared(9)) tryAch('clear_9');
       if (levelCleared(10)) tryAch('clear_10');   // 第 107 块：第十关「塔顶井台」
+      if (levelCleared(11)) tryAch('clear_11');   // 第 114 块：第十一关「钟楼雾原」
       // 九关全通：拿 LEVELS 里 playable 的关卡数当目标，以后加第十关不用改这里
       const need = LEVELS.filter((lv) => lv.playable).length;
       if (clearCount() >= need) tryAch('clear_all');
@@ -7965,6 +8125,61 @@ async function boot() {
       curse: () => ({ t: +curseT.toFixed(2), factor: curseFactor, seals: sealBySource.size, move: +moveDebuffMul().toFixed(2) }),
       bless: (o) => { cursePlayer(o); return { t: +curseT.toFixed(2), factor: curseFactor }; },
       zones: () => enemies.zones(),
+      // ============================================================
+      // 第 114 块：第十一关「钟楼雾原」的调试口
+      //   fog     雾（读团数 / 造一团 / 烧到满强度 / 主角在不在雾里）
+      //   mines   墨丸（等级 / 卡片加成 / 商店买断 / 地上的雷）
+      //   steal   收账人「收走」的现场
+      // ============================================================
+      block114: {
+        fog: {
+          on: () => !!fog.on,
+          count: () => fog.count,
+          max: () => fog.max,
+          list: () => fog.list(),
+          inside: (x, z) => !!fog.inside(x, z),
+          density: (x, z) => +fog.densityAt(x, z).toFixed(3),
+          halo: () => !!fog.haloVisible,
+          haloPos: () => fog.haloPos,
+          spawn: (force = true) => fog.spawn(force),
+          heat: (i = 0) => fog.heat(i),
+          // 只清场上的雾团 —— 别用 fog.clear()：那会把整关的雾关掉，
+          // 之后 spawn 出来的团永远不更新（看不见也没判定）。
+          clear: () => { fog.clearPatches(); return fog.count; },
+        },
+        mines: {
+          owned: () => !!mines.owned,
+          count: () => mines.count,
+          cap: () => mines.cap,
+          ready: () => !!mines.ready,
+          cdLeft: () => +mines.cdLeft.toFixed(2),
+          cdMax: () => +mines.cdMax.toFixed(2),
+          radius: () => +mines.radius().toFixed(2),
+          bonuses: () => mines.bonuses(),
+          list: () => mines.list(),
+          blasts: () => mines.blastCount(),
+          drop: (x, z) => !!mines.drop(x == null ? pos : { x, z }),
+          sac: () => mines.buySac(),
+          thick: () => mines.buyThick(),
+          reset: () => { mines.reset(); return mines.count; },
+        },
+        // 买到「墨丸」（走真链路 relics.buy，和商店一致）——测试不该手改等级：
+        // 主循环每帧按 relics 对账，手改会被下一帧盖回去。
+        grantMine: (lv = 1) => {
+          let n = 0;
+          while (relics.levels().mine < lv && n < 5) { relics.buy('mine'); n++; }
+          mines.setRelicLevel(relics.levels().mine);
+          return relics.levels().mine;
+        },
+        // 收账人「收走」的现场：stat 的 src / 剩余秒数 / 被收走的技能表
+        steal: () => {
+          const skills = {};
+          for (const [id, t] of stolenSkills) skills[id] = +t.toFixed(2);
+          return { stat: stealStatSrc || '', t: +stealStatT.toFixed(2), skills };
+        },
+        stealNow: () => stealFromPlayer(null) || null,
+        clearSteal: () => { clearSteal(); return 1; },
+      },
       // 第 21 块：夜行诅咒（选中的 id / 骨币倍率 / 受伤加重）
       runCurses: () => pendingCurses.slice(),
       setCurses: (ids) => {
@@ -8842,7 +9057,12 @@ async function boot() {
         show: (roundNo = level.roundNo, after = null) => showUpgrade(roundNo, after),
         choose: (up) => chooseUpgrade(up),
         // 第 22 块：走「本局随机流」，种子局里调试抽卡和实战抽卡是同一颗种子
-        roll: (luck) => rollChoices(rngOf('card'), { luck: luck ?? stats.get('luck'), hasWeapon: weapon.granted }),
+        roll: (luck) => rollChoices(rngOf('card'), {
+          round: level.roundNo, luck: luck ?? stats.get('luck'), hasWeapon: weapon.granted,
+          puppetOwned: relics.levels().puppet > 0,
+          golemCap: Math.max(0, golems.bonuses().cap - 1),
+          mineOwned: relics.levels().mine > 0,
+        }),
         odds: (roundNo = level.roundNo, luck) => rarityOdds(roundNo, {
           luck: luck ?? stats.get('luck'), hasWeapon: weapon.granted,
         }),
@@ -9172,6 +9392,102 @@ async function boot() {
     renderCurse();
   }
 
+  // ============================================================
+  // 第 114 块：收账人「收走你身上的一样东西」
+  // ============================================================
+  // 用户 2026-10-28 定案：不是偷金币，是「偷走玩家的某一属性（普攻 / 暴击 /
+  // 剑的技能 / 任一技能）」。
+  //
+  // 三条规矩：
+  //   ① **同一时刻只挂一条**：新的收走先把上一条清掉（不然连续三次就变成
+  //      「什么都干不了」，那不是压力，那是劝退）；
+  //   ② **只从你真正拥有的东西里抽**：没解锁的技能不进池子，暴击率是 0 也
+  //      不进（收到一个「没有的东西」等于这次读条白给，玩家只会觉得莫名其妙）；
+  //   ③ 属性走 stats.addMod 的**临时 pct**（src 独立，8 秒后 removeBySource），
+  //      技能走 stolenSkills 计时表 —— 两者都由 updateSteal 统一收尾。
+  const STEAL_TIME = 8.0;              // 被收走多久（属性和技能同一条时间）
+  const stolenSkills = new Map();      // 技能 id → 剩余秒数
+  let stealStatSrc = '';               // 当前属性被收走的 src（'' = 没有）
+  let stealStatT = 0;
+  let stealSerial = 0;
+  // 可被收走的属性：pct 是「乘多少」写成 mod 的百分比（负 = 削弱）
+  // when() 为 false 的不进池子（没有这项就没得收）
+  const STEAL_ATTRS = [
+    { key: 'attack', name: '攻击', pct: -0.30, when: () => stats.get('attack') > 0.2 },
+    { key: 'attackSpeed', name: '攻速', pct: -0.30, when: () => stats.get('attackSpeed') > 0.3 },
+    { key: 'moveSpeed', name: '移速', pct: -0.25, when: () => stats.get('moveSpeed') > 1 },
+    { key: 'critRate', name: '暴击', pct: -0.60, when: () => stats.get('critRate') >= 0.05 },
+    { key: 'armor', name: '防御', pct: -0.50, when: () => stats.get('armor') >= 0.5 },
+  ];
+  const STEAL_SKILL_NAMES = { arrowRain: '箭雨', heal: '回血', golem: '傀儡术', mine: '墨丸' };
+
+  function skillOwnedById(id) {
+    if (id === 'arrowRain') return arrowRain.unlocked;
+    if (id === 'heal') return !!(healSkill && healSkill.unlocked);
+    if (id === 'golem') return relics.levels().puppet > 0;
+    if (id === 'mine') return relics.levels().mine > 0;
+    return false;
+  }
+
+  function clearSteal() {
+    if (stealStatSrc) stats.removeBySource(stealStatSrc);
+    stealStatSrc = '';
+    stealStatT = 0;
+    stolenSkills.clear();
+  }
+
+  // 被收账人读到条满时调用（enemy.js 的 ctx.stealFromPlayer）。
+  // 返回 { label } 给敌人头顶弹字用；返回 null = 没东西可收（这一次白读）。
+  function stealFromPlayer(e) {
+    clearSteal();
+    const pool = [];
+    for (const a of STEAL_ATTRS) {
+      if (!a.when || a.when()) pool.push({ kind: 'stat', ...a });
+    }
+    for (const id of Object.keys(STEAL_SKILL_NAMES)) {
+      if (skillOwnedById(id)) pool.push({ kind: 'skill', id, name: STEAL_SKILL_NAMES[id] });
+    }
+    if (!pool.length) return null;
+    const pick = pool[Math.floor(rngOf('collect')() * pool.length) % pool.length];
+    let label = '';
+    if (pick.kind === 'stat') {
+      stealSerial++;
+      stealStatSrc = `steal:${stealSerial}`;
+      stealStatT = STEAL_TIME;
+      stats.addMod({ stat: pick.key, pct: pick.pct, src: stealStatSrc });
+      label = `${pick.name} −${Math.round(-pick.pct * 100)}%`;
+    } else {
+      stolenSkills.set(pick.id, STEAL_TIME);
+      label = `${pick.name} 被收走`;
+    }
+    // 让玩家立刻知道发生了什么：头顶一行字 + 一条提示条。
+    // 静默削弱是本作最忌讳的失败方式（玩家会以为数值坏了）。
+    if (fx) fx.text(pos, label, { color: '#f0c46a', y: 1.9, size: 0.6 });
+    showToast('被收走了', `${label} · ${STEAL_TIME.toFixed(0)} 秒后还回来 —— 账还没结清`);
+    audio.sfx('curse');
+    renderSkill();
+    return { label, kind: pick.kind, id: pick.id || pick.key };
+  }
+
+  // 每帧收尾：属性到时摘 mod、技能到时解锁。只在 playing 里走（结算时冻结）。
+  function updateSteal(dt) {
+    if (stealStatT > 0) {
+      stealStatT -= dt;
+      if (stealStatT <= 0) {
+        if (stealStatSrc) stats.removeBySource(stealStatSrc);
+        stealStatSrc = '';
+        stealStatT = 0;
+      }
+    }
+    if (stolenSkills.size) {
+      for (const [id, t] of stolenSkills) {
+        const nt = t - dt;
+        if (nt <= 0) stolenSkills.delete(id);
+        else stolenSkills.set(id, nt);
+      }
+    }
+  }
+
   // 传给怪物 AI 的上下文（每帧复用同一个对象，避免反复分配）
   // ============================================================
   // 第 69 块：擦名者「只在你看得见的地方起手」
@@ -9310,6 +9626,9 @@ async function boot() {
         pos.z = (pos.z / dist2) * limit;
       }
     },
+    // 第 114 块：收账人读到条满 → 收走玩家身上的一样东西。
+    // 返回 { label, kind, id } 或 null（null = 池子空，这次读条白给，它自己会撤）。
+    stealFromPlayer: (e) => stealFromPlayer(e),
   };
 
   function tick() {
@@ -9354,6 +9673,7 @@ async function boot() {
       elapsed += dt;
       updateCurse(dt);
       updateRoot(dt);        // 第 82 块：被泡定住的倒计时（到点自动解除）
+      updateSteal(dt);       // 第 114 块：收账人收走的东西到点还回来
 
       // 1) 输入 → 目标速度（屏幕 y 向下 = 世界 +Z，相机在 +Z 方向看向场景）
       //    移速取属性面板里的实时值：升级加成就立刻跑得更快
@@ -9404,6 +9724,11 @@ async function boot() {
       healSkill.update(dt);          // 第 62 块：回血技能的冷却
       turrets.update(dt, { playerPos: pos });
       hazards.update(dt, { playerPos: pos });          // 第 63 块：漏电地板
+      // 第 114 块：雾（只有第十一关有；on=false 时第一行就 return）
+      fog.update(dt, { playerPos: pos });
+      // 第 114 块：地上的墨丸（踩到就炸）。法器等级每帧对账，和傀儡 / 镇牌铃同一思路。
+      mines.setRelicLevel(relics.levels().mine);
+      mines.update(dt, { playerPos: pos });
       // 第 83 块：寄存柜（收木牌 / 封柜倒数 / 5 秒后把「寄存处看守」放出来）
       // 第 84 块：顺手把镇牌铃的等级对一次账 —— 买到 / 读档 / 换关重建柜子
       // 三个时刻都会让柜子上的铃变样，每帧对一次比在三处各写一遍稳
@@ -9529,6 +9854,21 @@ async function boot() {
         camera.position.z += (Math.random() - 0.5) * s;
       }
 
+      // 第 114 块：雾里移动 → 镜头轻摇。
+      // 用**独立的偏移**而不是复用上面的 shake —— 受击是「猛地一下」，这是持续的
+      // 微晃，两者叠在一起会互相取消（shake 递减到 0 时那个式子会突然消失）。
+      // 只在「雾里 + 真的在走」时给，站着不动就稳（否则会有点晕）。
+      // 尊重设置里的「屏幕震动」开关：关掉的玩家不该被雾破例。
+      if (fog.on && speed > 0.35) {
+        const dens = fog.densityAt(pos.x, pos.z);
+        if (dens > 0.05 && shakeOn) {
+          const amp = 0.035 * dens * Math.min(1, speed / 4.4);
+          camera.position.x += (Math.random() - 0.5) * amp;
+          camera.position.y += (Math.random() - 0.5) * amp;
+          camera.position.z += (Math.random() - 0.5) * amp;
+        }
+      }
+
       // 7) 特效 → 场景动画 → 渲染
       fx.update(dt);
       updateScene(dt);
@@ -9553,9 +9893,12 @@ async function boot() {
       whSub.textContent = `${curLevelRegion} · 击杀 ${kills}`;
       // yaw 内部是累加值（转身插值会跨 ±180° 继续加减），显示前规范到 0~360
       const deg = ((yaw * 180 / Math.PI) % 360 + 360) % 360;
-      dbgEl.textContent =
-        `FPS ${fps.toFixed(0)}   速度 ${speed.toFixed(2)}\n` +
-        `坐标 ${pos.x.toFixed(1)}, ${pos.z.toFixed(1)}   朝向 ${deg.toFixed(0)}°   怪 ${enemies.aliveCount()}`;
+      // 第 115 块：坐标 + 朝向默认关（设置「坐标与朝向」打开才显示）。
+      // 关掉时只留 FPS / 速度 / 怪数这行基础信息，坐标角度不再刷到屏上。
+      dbgEl.textContent = showPosOn
+        ? `FPS ${fps.toFixed(0)}   速度 ${speed.toFixed(2)}\n` +
+          `坐标 ${pos.x.toFixed(1)}, ${pos.z.toFixed(1)}   朝向 ${deg.toFixed(0)}°   怪 ${enemies.aliveCount()}`
+        : `FPS ${fps.toFixed(0)}   速度 ${speed.toFixed(2)}   怪 ${enemies.aliveCount()}`;
     }
 
     // 第一次真的走起来就把提示淡掉

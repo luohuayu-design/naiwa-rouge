@@ -173,7 +173,7 @@ ok(/const want = Math\.min\(4\.5, 0\.60 \+ t \* 0\.18\);/.test(enemySrc),
 ok(/weighTier: \(\) => weighTier/.test(enemySrc) && /namedCount: \(\) =>/.test(enemySrc),
   '暴露观测口 weighTier / namedCount');
 // 接线
-ok(/LEVEL_9, LEVEL_10, LEVELS_BY_ID/.test(mainSrc), 'main 导入 LEVEL_9 与 LEVEL_10（第 107 块）');
+ok(/LEVEL_9, LEVEL_10, LEVEL_11, LEVELS_BY_ID/.test(mainSrc), 'main 导入 LEVEL_9 / 10 / 11（第 107、114 块）');
 ok(/\{ id: 9, name: LEVEL_9\.name, playable: true \}/.test(mainSrc), '选关列表里有第九关');
 ok(/id: 's09', no: 9, act: 2, levelId: 9, atRound: 2,/.test(storySrc), '剧情 s09 接第九关第 2 回合');
 const wDesc = (codexSrc.match(/if \(cfg\.weigh\) \{\s*\n\s*const p = cfg\.weigh\.per;\s*\n\s*return `([^`]+)`/) || [, ''])[1];

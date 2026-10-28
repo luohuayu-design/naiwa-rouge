@@ -130,6 +130,7 @@ ok(cdLines.length >= 13, `扫到 ${cdLines.length} 处 attackCd 赋值`, String(
 const WHITELIST = [
   '0.35',                       // 重启体：躺 4 秒后站起来的那点延迟，不是出手间隔
   'Math.max(e.attackCd, 0.9)',  // 震钟打断：玩家主动打断的奖励窗口，不该被怪变快抹掉
+  'Math.max(e.attackCd, 1.4)',  // 第 114 块收账人：读条被打断后的缓冲，同上 —— 是「奖励窗口」不是出手间隔
 ];
 const bad = cdLines.filter((expr) => {
   if (WHITELIST.some((w) => expr.trim() === w)) return false;

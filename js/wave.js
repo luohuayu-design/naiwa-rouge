@@ -742,10 +742,89 @@ export const LEVEL_10 = {
   ],
 };
 
+// ============================================================
+// 第十一关「钟楼雾原」（第 114 块）
+// ============================================================
+// 剧情接 s11「空白的账簿」：空白第一次主动现身，不带雾、不吓人 ——
+// 「它就站在焦土上」。地点是「钟楼外的雾里」，也就是第三关那座焦土钟楼的外面。
+// 所以玩家是从骨塔顶层（第十关）一路走回钟楼，穿过那片从来没有散过的雾。
+//
+// **这一关的场地机制不是陷阱，是「看不见」**（用户 2026-10-28 定案）：
+//   雾团每隔 gap 秒起一批，在场上慢慢漂，全遮住蛙 / 怪 / 投掷物 / 地面圈，
+//   只留主角判定环 + 一层极淡的轮廓微光。起雾前 1.6 秒有地面预警圈。
+//   怪的**出手预警**穿雾可见（老铁律：前摇不能被遮蔽），身体和划痕被遮。
+// 它和前面十关的关系：第六关是「固定的地板不许站」，第十关是「中间有个洞」，
+// 这一关是「你看不见」，压力从脚底搬到了眼睛上。
+//
+// 数值：用户定案「略高于第十关」—— hpMul 1.55 / dmgMul 1.95
+// （第十关 1.45 / 1.80）。杂兵密度与第十关持平：雾本身已经是新增压力，
+// 数值再猛就变成纯苦。
+export const LEVEL_11 = {
+  id: 11,
+  name: '第十一关 · 钟楼雾原',
+  theme: 'fogfield',          // 冷灰 + 一点焦土的橙（scene.js 的 THEMES）
+  arena: 18,                  // 比井台大一圈：看不见的时候需要更多跑动空间
+  order: [
+    ['minion', 1], ['warrior', 1.6], ['clerk', 1.9],
+    ['archer', 2.0], ['bowman', 2.2], ['leaper', 2.2],
+    ['wraith', 2.4], ['shielder', 2.4], ['brood', 2.6],
+    ['mender', 2.6], ['reboot', 2.8], ['hexer', 3.0],
+    ['collector', 3.2],
+  ],
+  spawnRadius: 16.2,
+  spawnJitter: 0.5,
+  minPlayerDistance: 7.6,
+  minSpawnGap: 2.4,
+  gapScale: 1.12,
+  gap: 2.6,
+  upgradeAfter: [1, 2, 3, 4, 5, 8, 10, 12, 15, 17, 19, 20],
+  shopAfter: [3, 6, 9, 12, 15, 18],
+  weaponAt: 4,
+  scale: { hp: 0.34, damage: 0.20, speed: 0.045, haste: 0.0110, curve: 0.28, hpMul: 1.55, dmgMul: 1.95 },
+  // 雾：见 js/fog.js。arena 要跟着本关的场地半径走（雾不会飘到场外）。
+  fog: {
+    arena: 18,
+    max: 4,
+    gap: 12.0,
+    life: 8.0,
+    warn: 1.6,
+    drift: 0.35,
+    radiusMin: 4.4,
+    radiusMax: 6.5,
+  },
+  rounds: [
+    // ---- 第一幕（R1~R4）：先学会「看不见」 ----
+    { minion: 4, warrior: 1, clerk: 0, collector: 0, archer: 0, bowman: 0, leaper: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, reboot: 0, hexer: 0, gap: 0.86, tip: '钟楼外的雾从来没散过。雾起来的时候你什么都看不见 —— 但脚下那个环一直在' },
+    { minion: 4, warrior: 2, clerk: 1, collector: 0, archer: 0, bowman: 0, leaper: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, reboot: 0, hexer: 0, gap: 0.80, tip: '新面孔·誊录员：它站着不动，在你身上划一条直线 —— 那条线是直的，横着走一步就躲开' },
+    { minion: 5, warrior: 2, clerk: 1, collector: 0, archer: 1, bowman: 0, leaper: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, reboot: 0, hexer: 0, gap: 0.76, tip: '它划过的地会留下墨痕，站在上面会一直掉血 —— 那是它的笔迹，七秒才干' },
+    { minion: 5, warrior: 2, clerk: 1, collector: 1, archer: 1, bowman: 1, leaper: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, reboot: 0, hexer: 0, gap: 0.72, tip: '新面孔·收账人：它不打你，它来收 —— 贴着读条 2.2 秒，读完你身上就少一样东西' },
+    // ---- 第二幕（R5~R8）：雾里开始有东西 ----
+    { minion: 5, warrior: 3, clerk: 1, collector: 1, archer: 1, bowman: 1, leaper: 1, wraith: 1, shielder: 0, brood: 0, mender: 0, reboot: 0, hexer: 0, gap: 0.70, tip: '雾鬼也在这片雾里：它隐身的时候你打不着，除非有路口灯' },
+    { minion: 6, warrior: 3, clerk: 1, collector: 1, archer: 2, bowman: 1, leaper: 1, wraith: 1, shielder: 1, brood: 0, mender: 0, reboot: 0, hexer: 0, gap: 0.68, tip: '头顶那圈在缩的金环 = 有人在收你。金环缩完之前走到 3.5 格外，或者先把它打碎' },
+    { minion: 6, warrior: 3, clerk: 2, collector: 1, archer: 2, bowman: 1, leaper: 1, wraith: 1, shielder: 1, brood: 1, mender: 0, reboot: 0, hexer: 0, gap: 0.66, tip: '两只誊录员：墨痕会从两个方向来，别只盯着脚下一条' },
+    { minion: 6, warrior: 4, clerk: 2, collector: 1, archer: 2, bowman: 2, leaper: 1, wraith: 2, shielder: 1, brood: 1, mender: 0, reboot: 0, hexer: 0, gap: 0.64, tip: '雾里听声比看画面有用：短促的那一声是它落笔了' },
+    // ---- 第三幕（R9~R12）：墨开始积起来 ----
+    { minion: 6, warrior: 4, clerk: 2, collector: 1, archer: 2, bowman: 2, leaper: 2, wraith: 2, shielder: 1, brood: 1, mender: 1, reboot: 0, hexer: 0, gap: 0.62, tip: '五道墨痕是上限：旧墨会先干掉。别站在旧墨上等它消失，绕着走' },
+    { minion: 7, warrior: 4, clerk: 2, collector: 2, archer: 2, bowman: 2, leaper: 2, wraith: 2, shielder: 1, brood: 1, mender: 1, reboot: 0, hexer: 0, gap: 0.60, tip: '两只收账人：它们收的不是血，是你身上已经堆起来的东西 —— 越强，被收越疼' },
+    { minion: 7, warrior: 4, clerk: 3, collector: 2, archer: 3, bowman: 2, leaper: 2, wraith: 2, shielder: 1, brood: 1, mender: 1, reboot: 1, hexer: 0, gap: 0.58, tip: '三条线一起划的时候，最好往它们中间穿 —— 两条线之间的缝比线外侧宽' },
+    { minion: 7, warrior: 5, clerk: 3, collector: 2, archer: 3, bowman: 3, leaper: 2, wraith: 2, shielder: 2, brood: 1, mender: 1, reboot: 1, hexer: 1, gap: 0.56, tip: '第 12 回合：空白翻到第三万七千页了' },
+    // ---- 第四幕（R13~R16）：雾越来越密 ----
+    { minion: 8, warrior: 5, clerk: 3, collector: 2, archer: 3, bowman: 3, leaper: 3, wraith: 2, shielder: 2, brood: 2, mender: 1, reboot: 1, hexer: 1, gap: 0.54, tip: '墨痕 + 雾：真正危险的不是怪，是你脚下那块看不见的黑' },
+    { minion: 8, warrior: 5, clerk: 3, collector: 2, archer: 3, bowman: 3, leaper: 3, wraith: 3, shielder: 2, brood: 2, mender: 2, reboot: 1, hexer: 1, gap: 0.52, tip: '誊录员站得远，一笔能划十三格 —— 看不见它的时候，先往侧面走再说' },
+    { minion: 9, warrior: 6, clerk: 3, collector: 2, archer: 4, bowman: 3, leaper: 3, wraith: 3, shielder: 2, brood: 2, mender: 2, reboot: 2, hexer: 1, gap: 0.50, tip: '被收走一样东西的时候，头顶会浮一行字 —— 那不是提示，是账目' },
+    { minion: 9, warrior: 6, clerk: 3, collector: 2, archer: 4, bowman: 4, leaper: 4, wraith: 3, shielder: 3, brood: 2, mender: 2, reboot: 2, hexer: 2, gap: 0.48, tip: '第 16 回合：雾里那本账簿翻得越来越快了' },
+    // ---- 第五幕（R17~R20）：门前 ----
+    { minion: 10, warrior: 6, clerk: 4, collector: 3, archer: 4, bowman: 4, leaper: 4, wraith: 4, shielder: 3, brood: 2, mender: 2, reboot: 2, hexer: 2, gap: 0.46, tip: '四支笔：这一波先把誊录员清掉，地上的墨就不再加了' },
+    { minion: 10, warrior: 7, clerk: 4, collector: 3, archer: 5, bowman: 4, leaper: 4, wraith: 4, shielder: 3, brood: 2, mender: 2, reboot: 2, hexer: 2, gap: 0.44, tip: '三本账簿一起摊开：你身上最多同时被收走一样，但下一次永远在排队' },
+    { minion: 11, warrior: 7, clerk: 4, collector: 3, archer: 5, bowman: 5, leaper: 5, wraith: 4, shielder: 3, brood: 2, mender: 2, reboot: 3, hexer: 2, gap: 0.42, tip: '倒数第二波：雾散的那几秒是唯一的清账窗口' },
+    { minion: 11, warrior: 8, clerk: 4, collector: 3, archer: 5, bowman: 5, leaper: 5, wraith: 5, shielder: 4, brood: 2, mender: 2, reboot: 3, hexer: 2, gap: 0.40, tip: '最后一波：写下你自己的那一行，别让它替你写' },
+  ],
+};
+
 // 关卡号 → 关卡表（主流程 / 选关 / 测试都从这里取）
 export const LEVELS_BY_ID = {
   1: LEVEL_1, 2: LEVEL_2, 3: LEVEL_3, 4: LEVEL_4, 5: LEVEL_5, 6: LEVEL_6, 7: LEVEL_7, 8: LEVEL_8,
-  9: LEVEL_9, 10: LEVEL_10,
+  9: LEVEL_9, 10: LEVEL_10, 11: LEVEL_11,
 };
 
 // 第 roundNo 回合（从 1 开始）的怪物属性倍率

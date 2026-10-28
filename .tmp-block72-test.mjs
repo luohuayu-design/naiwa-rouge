@@ -20,7 +20,7 @@ for (const id of Object.keys(LEVELS_BY_ID)) {
 // 第 81 块 +无名者 / 旗手 → 20 种（8 关）
 // 第 83 块：无名者 / 旗手删掉，加寄存处看守 warden → 还是 20 种
 // 第 97 块：+盖章人 stamper（第九关）→ 21 种
-ok('全部 10 关合起来覆盖 25 种怪（第 107 块 +4）', seen.size === 25, String(seen.size));
+ok('全部 11 关合起来覆盖 27 种怪（第 107 块 +4 / 第 114 块 +2）', seen.size === 27, String(seen.size));
 ok('第一关只有 4 种（首屏最小集）', levelTypes(LEVELS_BY_ID[1]).length === 4);
 ok('第一关含 minion（教程要打一只）', levelTypes(LEVELS_BY_ID[1]).includes('minion'));
 ok('第五关含 eraser', levelTypes(LEVELS_BY_ID[5]).includes('eraser'));

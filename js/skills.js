@@ -32,7 +32,7 @@
 //
 // ctx 由 main.js 每帧拼好传进来：{ playing, weapon, playerPos, stats, coins }
 // ============================================================
-import audio from './audio.js?v=128';
+import audio from './audio.js?v=129';
 
 // 冷却数字统一两位小数（第 64 块用户需求：倒计时精确到两位小数）。
 // 不补零会跳字（3.4 → 3.35 期间宽度变化），toFixed(2) 宽度恒定。
@@ -185,6 +185,50 @@ export const SKILLS = [
       if (!ctx.golems) return false;
       ctx.openGolemPick();          // 真暂停 + 二选一（main.js 里实现）
       return true;
+    },
+  },
+
+  // ---- 第 11 件法器「墨丸」（第 114 块，用户定案） ----
+  // 用户原话：「获得之后解锁技能按钮，按下一次就放下一个地雷，被怪物踩到
+  // 瞬间触发范围伤害」。夜行商店买到墨丸后出现，按下在脚下留一枚，
+  // 怪踩到就炸。同屏上限 / 半径 / 冷却 / 伤害各有独立通道，三选一卡和
+  // 商店两件货都往这几个通道里灌（见 mine.js）。
+  {
+    id: 'mine',
+    name: '墨丸',
+    // 内联 SVG：一颗墨点 + 一圈墨晕 —— 和「账簿」这件法器一样不用外链图
+    art: '<svg viewBox="0 0 40 40" aria-hidden="true">'
+      + '<circle cx="20" cy="21" r="7.2" fill="#2a2038"/>'
+      + '<circle cx="17.6" cy="18.6" r="2.2" fill="#6a55a0" opacity=".85"/>'
+      + '<circle cx="20" cy="21" r="12.4" fill="none" stroke="#8f7cf0" stroke-width="1.6" opacity=".55"/>'
+      + '<circle cx="20" cy="21" r="16.4" fill="none" stroke="#8f7cf0" stroke-width="1" opacity=".25"/>'
+      + '</svg>',
+    ring: true,
+    hint: '在脚下留一枚墨丸，怪踩到就炸（半径 2.6、伤害吃武器攻击）；同屏 3 枚、冷却 8 秒',
+    key: '5',
+    cd: 8.0,
+    cdNow: (ctx) => (ctx.mines ? ctx.mines.cdMax : 8.0),
+    desc: '墨丸：按一下在脚下留一颗雷，站上去的怪立刻吃一次范围爆炸（半径 2.6 格，伤害 = 武器攻击 ×2.5，吃暴击与护甲）。'
+      + '同屏最多 3 枚（法器等级 / 卡 / 商店都能加），冷却 8 秒。'
+      + '它不挑目标、不用瞄 —— 雾里看不见的时候先把路口铺上，让它们自己走过来。'
+      + '地上永远留一圈很淡的墨痕，所以你自己也不会忘了布在哪。',
+    unlockNote: '夜行商店买到「墨丸」（第十一关起上架）后拥有',
+    visible: (ctx) => ctx.playing && !!ctx.mines && ctx.mines.owned,
+    state: (ctx) => {
+      if (!ctx.mines || !ctx.mines.owned) return 'lock';
+      if (ctx.mines.count >= ctx.mines.cap) return 'full';
+      return ctx.mines.ready ? 'ready' : 'cd';
+    },
+    ready: (ctx) => !!ctx.mines && ctx.mines.owned && ctx.playing && ctx.mines.ready,
+    progress: (ctx) => (ctx.mines ? ctx.mines.progress : 0),
+    cdText: (ctx) => {
+      if (!ctx.mines || !ctx.mines.owned) return '';
+      if (ctx.mines.count >= ctx.mines.cap) return '满';
+      return ctx.mines.ready ? '' : fmtCd(ctx.mines.cdLeft);
+    },
+    press(ctx) {
+      if (!ctx.mines) return false;
+      return ctx.mines.drop(ctx.playerPos);   // 冷却中 / 满场地：返回 false，不播音效
     },
   },
 

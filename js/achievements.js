@@ -31,7 +31,7 @@
 //    · tier 决定骨币，**别手写骨币数字**（改档位只改 ACH_TIERS 一处）。
 // ============================================================
 
-import { profile, hasAch, achGot, markAchGot, addBones, save } from './profile.js?v=128';
+import { profile, hasAch, achGot, markAchGot, addBones, save } from './profile.js?v=129';
 
 // ---------------- 八类别 ----------------
 // icon 全部来自 game-icons.net（CC BY 3.0），和背包图标同源；
@@ -170,7 +170,7 @@ export const ACHS = [
   { id: 'clear_5', cat: 'level', tier: 1, icon: '🌾', name: '登临第五关', desc: '通关「草甸路口」' },
   { id: 'clear_9', cat: 'level', tier: 2, icon: '🏛️', name: '骨塔之巅', desc: '通关「骨塔登记庭」' },
   { id: 'clear_10', cat: 'level', tier: 2, icon: '🕳️', name: '井水无痕', desc: '通关「塔顶井台」' },   // 第 107 块
-  { id: 'clear_all', cat: 'level', tier: 2, icon: '🏆', name: '十关皆通', desc: '十关全部通关' },   // 第 107 块：第十关加入，口径跟着变（need 取 playable 关卡数，自动适配）
+  { id: 'clear_all', cat: 'level', tier: 2, icon: '🏆', name: '十一关皆通', desc: '十一关全部通关' },   // 第 114 块：第十一关加入，口径跟着变（need 取 playable 关卡数，自动适配）
   // 五~九关的关卡专属怪
   { id: 'eraser_10', cat: 'level', tier: 1, icon: '🧽', name: '名字还在', desc: '累计击倒 10 只擦名者', prog: { k: 'enemy', id: 'eraser', need: 10 } },
   { id: 'reboot_10', cat: 'level', tier: 1, icon: '🔌', name: '彻底拆了', desc: '累计击倒 10 只重启体', prog: { k: 'enemy', id: 'reboot', need: 10 } },
@@ -185,6 +185,13 @@ export const ACHS = [
   { id: 'addressee_10', cat: 'level', tier: 1, icon: '📜', name: '退件', desc: '累计击倒 10 只收件人', prog: { k: 'enemy', id: 'addressee', need: 10 } },
   { id: 'waiter_5', cat: 'level', tier: 1, icon: '🪦', name: '别再等了', desc: '累计击倒 5 只等的那个', prog: { k: 'enemy', id: 'waiter', need: 5 } },
   { id: 'echo_10', cat: 'level', tier: 1, icon: '🔔', name: '回声到此为止', desc: '累计击倒 10 只回声', prog: { k: 'enemy', id: 'echo', need: 10 } },
+  // ---- 第十一关两只 + 雾（第 114 块）----
+  { id: 'clear_11', cat: 'level', tier: 2, icon: '🌫️', name: '雾散之时', desc: '通关「钟楼雾原」' },
+  { id: 'clerk_10', cat: 'level', tier: 1, icon: '🖋', name: '一笔勾销', desc: '累计击倒 10 只誊录员', prog: { k: 'enemy', id: 'clerk', need: 10 } },
+  { id: 'collector_5', cat: 'level', tier: 1, icon: '📕', name: '账清了', desc: '累计击倒 5 只收账人', prog: { k: 'enemy', id: 'collector', need: 5 } },
+  // 雾里击倒：这一关「看不见」本身就是压力，所以单独给一条 —— 它奖励的是
+  // 「不跑出去等雾散，就地在雾里打死它」。埋点在 main.js 的击杀回调（读 fog.inside）。
+  { id: 'fog_20', cat: 'level', tier: 1, icon: '🌁', name: '摸黑也能打', desc: '在雾里击倒 20 只怪', prog: { k: 'stat', key: 'fogKills', need: 20 } },
   // ---- 第 106 块新增 ----
   { id: 'round_5', cat: 'level', tier: 0, icon: '🌱', name: '第一步', desc: '单局打到第 5 回合' },
   { id: 'rounds_500', cat: 'level', tier: 1, icon: '⏳', name: '五百个回合', desc: '累计打满 500 个回合', prog: { k: 'stat', key: 'rounds', need: 500 } },

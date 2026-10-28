@@ -9,7 +9,7 @@
 // 视觉：一张 256² 的 canvas 环贴图（内圈淡填充 + 亮环 + 外发光），
 // 加色混合贴地，外围有一点点呼吸感，不会盖住草地纹理。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=128';
+import * as THREE from '../lib/three.module.js?v=129';
 
 // 所有环共用同一张环贴图与同一块平面（半径 1，靠 scale 改大小）
 let TEX = null;
@@ -83,6 +83,18 @@ export function createRangeRing({
     setColor(hex) { mat.color.setHex(hex); },
     setOpacity(v) { mat.opacity = v; },
     setVisible(v) { mesh.visible = v; },
+    // 第 114 块：置顶显示（把深度测试关掉 + 排到最前面）。
+    // 用途只有一个 —— 第十一关的雾会挡住地面上的一切，但「主角判定环」
+    // 是玩家在雾里唯一的锚点，必须压在雾上面。别的关卡不要开：开了之后
+    // 这个环会穿过井壁 / 柜子等实体地形，看着像画在空气里。
+    setOnTop(v) {
+      mat.depthTest = !v;
+      mesh.renderOrder = v ? 900 : 1;
+      // 第 114 块：置顶时**换成普通混合**。加色混合（AdditiveBlending）压在雾上
+      // 会叠成一条纯白实心环，亮得像 UI 边框；普通混合才看得出是「薄荷色的一圈」。
+      mat.blending = v ? THREE.NormalBlending : THREE.AdditiveBlending;
+      mat.needsUpdate = true;
+    },
     update(dt) {
       if (pulse <= 0) return;
       t += dt;

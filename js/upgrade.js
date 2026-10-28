@@ -34,9 +34,9 @@
 //   标了 scope:'weapon' 的项改的是武器表（剑系 / 元素系），其余改主角表。
 //   两块表都要传进来，没传 wstats 时武器项会退化到主角表（只为兼容老调用）。
 // ============================================================
-import { STAT_DEFS } from './stats.js?v=128';
-import { WEAPON_STAT_DEFS } from './weaponStats.js?v=128';
-import { RARITIES, rarityWeight, oddsOf } from './rarity.js?v=128';
+import { STAT_DEFS } from './stats.js?v=129';
+import { WEAPON_STAT_DEFS } from './weaponStats.js?v=129';
+import { RARITIES, rarityWeight, oddsOf } from './rarity.js?v=129';
 
 // 一张卡改的是哪块表
 function tableFor(scope, stats, wstats) {
@@ -448,6 +448,58 @@ const UNIQUE = [
     title: '箭雨冷却 −1.6 秒',
     desc: '传说：一次顶两张速射号令（能重复拿，最低 3 秒）—— 箭雨接近常驻技',
   },
+  // ---------------- 墨丸卡（第 114 块，用户定案「要有自己独立的升级卡、要多样」） ----------------
+  // 买到「墨丸」后才会进池子（weightOf 里拦：opts.mineOwned）。
+  // 四个通道 × 两档品质：伤害 / 同屏上限 / 爆炸半径 / 冷却。
+  // 和傀儡卡、箭雨卡一样**不走属性表**：up.mine 由 applyUpgrade 转交 mine.applyCard()。
+  {
+    id: 'mineDmgS', tag: 'atk', glyph: '🖤', name: '浓黑一笔',
+    rarity: 0,
+    w0: 0.60, gw: +0.015,
+    mine: { stat: 'dmg', flat: 0.08 },
+    title: '墨丸伤害 +8%',
+    desc: '每颗墨丸炸得更狠（能重复拿）—— 它吃武器攻击，所以剑越强它越强',
+  },
+  {
+    id: 'mineMaxS', tag: 'def', glyph: '⚫', name: '多带一颗',
+    rarity: 1,
+    w0: 0.55, gw: +0.015,
+    mine: { stat: 'max', flat: 1 },
+    title: '墨丸同屏 +1 枚',
+    desc: '能同时布下的雷多一颗（能重复拿，硬上限 8）—— 雾里提前铺满一整条路',
+  },
+  {
+    id: 'mineRadiusS', tag: 'atk', glyph: '💥', name: '墨开一片',
+    rarity: 0,
+    w0: 0.60, gw: +0.015,
+    mine: { stat: 'radius', flat: 0.4 },
+    title: '墨丸爆炸半径 +0.4 格',
+    desc: '炸得更开，一群怪一起踩进去就一起没（能重复拿）',
+  },
+  {
+    id: 'mineCdS', tag: 'mov', glyph: '⏱', name: '随手一掷',
+    rarity: 2,
+    w0: 0.40, gw: +0.020,
+    mine: { stat: 'cd', flat: 0.8 },
+    title: '墨丸冷却 −0.8 秒',
+    desc: '布得更勤（能重复拿，最低 3 秒）—— 配合「多带一颗」可以边走边铺',
+  },
+  {
+    id: 'mineDmgL', tag: 'atk', glyph: '🩸', name: '血墨',
+    rarity: 3,
+    w0: 0.35, gw: +0.015,
+    mine: { stat: 'dmg', flat: 0.18 },
+    title: '墨丸伤害 +18%',
+    desc: '一次顶两张浓黑一笔（能重复拿）—— 一颗雷清掉一圈小兵',
+  },
+  {
+    id: 'mineSetL', tag: 'atk', glyph: '📕', name: '整页划掉',
+    rarity: 4,
+    w0: 0.30, gw: +0.008,
+    mine: { stat: 'radius', flat: 0.5, extra: [{ stat: 'dmg', flat: 0.10 }, { stat: 'max', flat: 1 }] },
+    title: '半径 +0.5 · 伤害 +10% · 同屏 +1',
+    desc: '传说：一次给三样 —— 墨的范围、浓度、份数一起来。拿到这张，墨丸就从「补刀」变成「清场」',
+  },
 ];
 
 // 把「族 × 三档」摊平成一张张卡。小档沿用原来的 id（老存档 / 老测试照旧认得）。
@@ -503,6 +555,9 @@ export function weightOf(up, round = 1, opts = {}) {
     if (!opts.puppetOwned) return 0;
     if (up.golem.stat === 'cap' && (opts.golemCap || 0) >= 1) return 0;
   }
+  // 第 114 块：墨丸卡同理 —— 没买到墨丸之前它们一张都不该出现
+  // （不然三选一里会弹出「墨丸伤害 +8%」，而你连墨丸都没有）
+  if (up.mine && !opts.mineOwned) return 0;
   if (up.needsWeapon && !opts.hasWeapon) return 0;
   const r = Math.max(1, round);
   return Math.max(0, (up.w0 ?? 1) + (up.gw ?? 0) * (r - 1));
@@ -551,7 +606,7 @@ export function rollChoices(rng = Math.random, opts = {}) {
 // wstats = 武器属性表：scope:'weapon' 的条目改它，其余改主角 stats。
 // weapon = 武器系统本身：只有「直接给一把剑」的卡（sword 字段）才需要它。
 // 返回 { src, changes }：changes 是精确的「选前 → 选后」（用于卡片/提示文案）。
-export function applyUpgrade(stats, up, serial = 0, wstats = null, weapon = null, golems = null, arrowRain = null) {
+export function applyUpgrade(stats, up, serial = 0, wstats = null, weapon = null, golems = null, arrowRain = null, mines = null) {
   // 第 107 块：傀儡卡不碰属性表，交给傀儡系统记账（golem.applyCard）
   if (up.golem) {
     const g = up.golem;
@@ -570,6 +625,16 @@ export function applyUpgrade(stats, up, serial = 0, wstats = null, weapon = null
     return {
       src: `upg:${up.id}:${serial}`,
       changes: [arrowChange(a, before)],
+    };
+  }
+  // 第 114 块：墨丸卡交给墨丸系统记账（mine.applyCard）
+  if (up.mine) {
+    const m = up.mine;
+    const before = mines ? mines.bonuses() : null;
+    if (mines) mines.applyCard(m);
+    return {
+      src: `upg:${up.id}:${serial}`,
+      changes: [mineChange(m, before)],
     };
   }
   // 剑阵这类「直接加一把剑」的卡：不碰属性表，交给武器系统上环
@@ -696,7 +761,40 @@ function arrowChange(a, b) {
   };
 }
 
-export function previewUpgrade(stats, up, wstats = null, weapon = null, golems = null, arrowRain = null) {
+// ---- 第 114 块：墨丸卡的 changes 文案（apply 与 preview 共用）----
+// b = mine.bonuses()：{ dmgPct, cap, radius, cdMax, ... }
+// 传说卡一张动三个通道（半径 / 伤害 / 同屏），所以 extras 也要写进文案，
+// 否则玩家看到的「半径 +0.5」背后还有两项没声张。
+function mineChange(m, b) {
+  const sum = (stat) => (m.stat === stat ? m.flat : 0)
+    + (m.extra || []).reduce((a, e) => a + (e.stat === stat ? e.flat : 0), 0);
+  const b0 = b || { dmgPct: 0, cap: 3, radius: 2.6, cdMax: 8.0 };
+  const meta = {
+    dmg: { name: '墨丸伤害', from: b0.dmgPct, fmt: (v) => `+${Math.round(v * 100)}%` },
+    max: { name: '墨丸同屏', from: b0.cap, fmt: (v) => `${v} 枚` },
+    radius: { name: '墨丸半径', from: b0.radius, fmt: (v) => `${v.toFixed(1)} 格` },
+    cd: { name: '墨丸冷却', from: b0.cdMax, fmt: (v) => `${v.toFixed(1)} 秒` },
+  };
+  const stat = meta[m.stat] ? m.stat : 'dmg';
+  const mm = meta[stat];
+  const flat = sum(stat);
+  const to = stat === 'cd' ? Math.max(3.0, mm.from - flat) : mm.from + flat;
+  // 附带通道（只有传说卡有）：每条都写成「名字 旧 → 新」
+  const extraNotes = (m.extra || []).map((e) => {
+    const x = meta[e.stat];
+    if (!x) return '';
+    const f = e.flat;
+    const t = e.stat === 'cd' ? Math.max(3.0, x.from - f) : x.from + f;
+    return `${x.name} ${x.fmt(x.from)} → ${x.fmt(t)}`;
+  }).filter(Boolean);
+  return {
+    key: `mine_${stat}`, scope: 'mine', name: mm.name,
+    from: mm.from, to, fromText: mm.fmt(mm.from), toText: mm.fmt(to),
+    text: `${mm.fmt(mm.from)} → ${mm.fmt(to)}` + (extraNotes.length ? ` · ${extraNotes.join(' · ')}` : ''),
+  };
+}
+
+export function previewUpgrade(stats, up, wstats = null, weapon = null, golems = null, arrowRain = null, mines = null) {
   if (up.golem) {
     const g = up.golem;
     const b = golems ? golems.bonuses() : null;
@@ -706,6 +804,12 @@ export function previewUpgrade(stats, up, wstats = null, weapon = null, golems =
     const a = up.arrow;
     const bb = arrowRain ? arrowRain.bonuses() : null;
     return [arrowChange(a, bb)];
+  }
+  // 第 114 块：墨丸卡 —— 和 applyUpgrade 走同一个 mineChange，预览与实值永远一致
+  if (up.mine) {
+    const m = up.mine;
+    const bb = mines ? mines.bonuses() : null;
+    return [mineChange(m, bb)];
   }
   if (up.sword) {
     const n = weapon ? weapon.count : 0;

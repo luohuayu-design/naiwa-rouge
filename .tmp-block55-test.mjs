@@ -121,7 +121,9 @@ ok(/export function markEnemyMet/.test(profSrc) && /save\(\);/.test(profSrc.spli
 
 // B2 enemy.js：onSpawn 在 push 之后调（回调里能看见这只怪已经在场上）
 ok(/export function createEnemySystem\(\{[^}]*onSpawn/.test(enemySrc), 'createEnemySystem 接了 onSpawn');
-ok(/list\.push\(e\);[\s\S]{0,900}?if \(onSpawn\) onSpawn\(e\);[\s\S]{0,80}?return e;/.test(enemySrc),
+// ⚠️ 中间那段「落地后挂环」的代码会随新怪增长（第 114 块加了收账人的读条环），
+// 所以只钉「顺序」不钉距离：push → …任意… → onSpawn → 紧跟 return。
+ok(/list\.push\(e\);[\s\S]{0,2400}?if \(onSpawn\) onSpawn\(e\);[\s\S]{0,80}?return e;/.test(enemySrc),
   'onSpawn 在 list.push 之后、return 之前触发');
 
 // B3 main.js：接线 + 守卫 + 冻结

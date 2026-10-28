@@ -26,6 +26,10 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   fs.mkdirSync(OUT, { recursive: true });
   const chrome = spawn(CHROME, [
     '--headless=new', '--remote-debugging-port=' + PORT, '--num-raster-threads=2',
+    // 第 114 块：这台机器常驻 http_proxy（沙盒代理）。本地回环多一层保险：
+    // 万一 Chrome 顺着系统代理走，导航会掉进 chrome-error://chromewebdata
+    // （症状是「动态 import 全失败」，很容易误判成代码坏了）。
+    '--no-proxy-server',
     '--enable-unsafe-swiftshader', '--no-first-run', '--no-default-browser-check',
     '--disable-dev-shm-usage', '--user-data-dir=' + UD, '--window-size=520,720', 'about:blank',
   ], { stdio: 'ignore' });

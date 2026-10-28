@@ -105,7 +105,7 @@ console.log('[§2] 四只新怪 cfg');
   ok(E.keepDistance >= 5, `回声站得远（${E.keepDistance} 格）`);
   ok(!!E.file && fs.existsSync(path.join(ROOT, E.file)), '回声有 glb');
 
-  ok(Object.keys(ENEMY_TYPES).length === 25, 'ENEMY_TYPES 共 25 只');
+  ok(Object.keys(ENEMY_TYPES).length === 27, 'ENEMY_TYPES 共 27 只（第 114 块 +2）');
 }
 
 // ============================================================ §3 收件人免疫契约
@@ -237,7 +237,8 @@ console.log('[§10] main.js 接线');
   ok(/tryAch\('clear_10'\)/.test(mainSrc) && /tryAch\('mirror_10'\)/.test(mainSrc)
     && /tryAch\('waiter_5'\)/.test(mainSrc), 'clear_10 与新怪里程碑埋点');
   ok(/puppetOwned: relics\.levels\(\)\.puppet > 0/.test(mainSrc), '三选一抽签带 puppetOwned');
-  ok(/applyUpgrade\(stats, up, upSerial, wstats, weapon, golems(, arrowRain)?\)/.test(mainSrc),
+  // 第 114 块起参数表尾部多了 arrowRain / mines，用 [^)]* 兜住后续追加
+  ok(/applyUpgrade\(stats, up, upSerial, wstats, weapon, golems[^)]*\)/.test(mainSrc),
     '选卡时把 golems 递给 applyUpgrade');
 }
 
@@ -246,12 +247,12 @@ console.log('[§11] 剧情 / 成就 / 版本');
 {
   const s10 = STORY_CHAPTERS.find((c) => c.id === 's10');
   ok(s10 && s10.levelId === 10 && s10.atRound === 2, 's10 绑第十关第 2 回合');
-  ok(ACHS.length === 110, '成就 110 条', String(ACHS.length));
+  ok(ACHS.length === 114, '成就 114 条（第 114 块 +4）', String(ACHS.length));
   for (const id of ['clear_10', 'mirror_10', 'addressee_10', 'waiter_5', 'echo_10']) {
     const a = achById(id);
     ok(!!a, `成就 ${id} 存在`);
   }
-  ok(achById('clear_all').desc.includes('十关'), '九关皆通改口径：十关全部通关');
+  ok(achById('clear_all').desc.includes('十一关'), '九关皆通改口径：十一关全部通关（第 114 块）');
   ok(/^\d+$/.test(VER) && idx.includes(`style.css?v=${VER}`), `版本号 ${VER} 两处一致`);
   for (const f of ['golem.js', 'skills.js', 'upgrade.js', 'shop.js', 'relics.js', 'enemy.js', 'main.js']) {
     ok(!src(f).includes('?v=' + (Number(VER) - 1)) && src(f).includes('?v=' + VER), `${f} 版本号跟随全站`);

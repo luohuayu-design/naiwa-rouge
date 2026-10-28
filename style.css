@@ -239,6 +239,16 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
 .sk.heal .sk-num{font-size:10px;top:auto;bottom:3px;color:#bfffe0;
   text-shadow:0 0 5px rgba(0,0,0,.95)}
 
+/* ---- 第 114 块：被收账人收走的技能键 ----
+   和「冷却中」的灰必须能分开：冷却中是自己等，被收走是「技能在别人手上」。
+   所以描边和数字都换成账本金褐色，数字挪到底部当倒计时（还差几秒回来），
+   图标去色 —— 灰是「暂时」，金色是「被拿走」。 */
+.sk.stolen{border-color:rgba(240,196,106,.52);background:rgba(26,18,8,.72);
+  box-shadow:0 4px 14px rgba(0,0,0,.4),0 0 16px rgba(240,196,106,.18)}
+.sk.stolen .sk-art,.sk.stolen img{opacity:.18;filter:grayscale(1)}
+.sk.stolen .sk-num{top:auto;bottom:3px;font-size:11px;color:#f0c46a;
+  text-shadow:0 0 5px rgba(0,0,0,.95)}
+
 /* ---------------- 读条百分比（奶蛙头顶，第 65 块） ----------------
    擦名者开始读条时挂在他头上：紫色进度条 + 百分比数字，越接近读完越亮、
    还会整块轻轻脉冲 —— 用户要求「提示和进度条要明显」。 */

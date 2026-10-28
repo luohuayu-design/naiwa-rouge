@@ -26,9 +26,9 @@
 // 第 11 块：每件货都带 rarity（0 普通 ~ 4 传说），店里按品质加权抽取 ——
 // 幸运越高，摆出来的货越往金/红那一头走（见 rarity.js）。
 // ============================================================
-import { rarityWeight } from './rarity.js?v=128';
-import { TURRET } from './turret.js?v=128';
-import { RELIC_DEFS } from './relics.js?v=128';
+import { rarityWeight } from './rarity.js?v=129';
+import { TURRET } from './turret.js?v=129';
+import { RELIC_DEFS } from './relics.js?v=129';
 
 export const SHOP_ITEMS = [
   // ---------------- 生命药水（第 13 块起：买进背包，作战中随时用） ----------------
@@ -232,6 +232,31 @@ export const SHOP_ITEMS = [
     glyph: '🏹', name: '强化箭袋',
     desc: '箭雨每次多落 5 支、每支伤害 +15%（一局只能买一次）。三选一的箭雨卡不受影响，可以继续叠。',
   },
+  // ---------------- 第十一关新增（第 114 块）：墨丸 ----------------
+  // 用户定案：「获得之后解锁技能按钮，按下一次就放下一个地雷，被怪物踩到
+  // 瞬间触发范围伤害」+「有自己独立的升级卡和商店物品，要多样」。
+  // 第 12 回合的商店常驻摆它（SHOP_PINNED）—— 这是本关的头号新玩具。
+  {
+    id: 'buyMine', type: 'relic', relic: 'mine', price: 32, needRound: 8, needLevel: 11,
+    rarity: 3,
+    glyph: '⚫', name: '墨丸',
+    desc: '捡到空白的墨：技能栏多一颗「墨丸」。按下在脚下留一枚雷，怪踩到就炸开一片'
+      + '（半径 2.6、伤害 = 你攻击的 2.5 倍），同屏最多 3 枚、冷却 8 秒。'
+      + '雾里提前布好，让它们自己走过来。再买可升级（最多 3 级）。',
+  },
+  // 墨丸的两件买断强化（和「强化箭袋」同一个套路：一局各一次，与三选一的卡互不冲突）
+  {
+    id: 'buyInkSac', type: 'ink', ink: 'sac', price: 24, needRound: 5, needLevel: 11,
+    rarity: 2,
+    glyph: '🖋', name: '墨囊',
+    desc: '墨丸同屏 +1 枚、伤害 +15%（一局只能买一次）。三选一的墨丸卡不受影响，可以继续叠。',
+  },
+  {
+    id: 'buyInkThick', type: 'ink', ink: 'thick', price: 24, needRound: 9, needLevel: 11,
+    rarity: 2,
+    glyph: '🪣', name: '浓墨',
+    desc: '墨丸炸得更开：半径 +0.5 格、冷却 −1.5 秒（一局只能买一次）。雾里看不清脚下时，大一圈就是多一条命。',
+  },
 ];
 
 // 商店里买不到 / 已卖光时给出原因（渲染禁用态用）
@@ -260,6 +285,12 @@ export function itemLocked(item, ctx = {}) {
   }
   // 第 108 块：强化箭袋一局只能买一次（main 会把 arrowRain.hasQuiver() 传进来）
   if (item.type === 'quiver' && ctx.quiver) return '这一局已经强化过了';
+  // 第 114 块：墨丸的两件买断货 —— 没学会墨丸之前摆了也没用
+  if (item.type === 'ink') {
+    if (!ctx.mineLevel) return '要先拥有「墨丸」';
+    if (item.ink === 'sac' && ctx.inkSac) return '这一局已经买过了';
+    if (item.ink === 'thick' && ctx.inkThick) return '这一局已经买过了';
+  }
   return null;
 }
 
@@ -270,7 +301,10 @@ export const SHOP_SHOW = 4;
 // 用户定案：「第 9 回合、12 回合的商店加入法器购买（不是随机，是常驻）」。
 // 常驻只占固定格子（4 件里 1 件常驻 → 剩下 3 件照旧抽签），
 // 而且**仍然要过可用性判定**：铃已满级 / 没到解锁回合时不会硬摆出来。
-export const SHOP_PINNED = { 9: ['buySeal'], 12: ['buySeal', 'buyPuppet'] };
+// 第 114 块：第 9 回合也钉上「墨丸」—— 第八关的镇牌铃和第十一关的墨丸
+// 都挂在 9 这一格，靠 onlyLevel / needLevel 各自过滤，同一格互不干扰
+// （第 8 关只摆铃、第 11 关只摆墨丸、第 10 关两件都被滤掉）。
+export const SHOP_PINNED = { 9: ['buySeal', 'buyMine'], 12: ['buySeal', 'buyPuppet'] };
 
 // 抽本次商店的货物：返回一个**不含重复**的物品数组（默认 4 件）。
 // hasWeapon = 已拿到环剑（没有时剑类买了也用不了，先不进池）

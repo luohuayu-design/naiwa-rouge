@@ -22,7 +22,7 @@
 //   所以 buffer 缓存按**实际文件**存（'s:音效名' / 'v:文件名'），换包只换取哪份。
 // ============================================================
 
-import { VOICE_BASE, VOICE_GAIN, FROG_SFX } from './voicepack.js?v=128';
+import { VOICE_BASE, VOICE_GAIN, FROG_SFX } from './voicepack.js?v=129';
 
 const BGM_BASE = 'assets/audio/bgm/';
 const SFX_BASE = 'assets/audio/sfx/';
@@ -134,6 +134,9 @@ export function init() {
 
 function ensureCtx() {
   if (ctx) return ctx;
+  // 第 114 块：Node 里跑契约测试（mine.js / golem.js 都会 sfx）没有 window ——
+  // 这里返回 null 就变成静音空转，测试不用为了一个音效去造整个浏览器。
+  if (typeof window === 'undefined') return null;
   const AC = window.AudioContext || window.webkitAudioContext;
   if (!AC) return null;
   try {
