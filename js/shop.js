@@ -26,9 +26,9 @@
 // 第 11 块：每件货都带 rarity（0 普通 ~ 4 传说），店里按品质加权抽取 ——
 // 幸运越高，摆出来的货越往金/红那一头走（见 rarity.js）。
 // ============================================================
-import { rarityWeight } from './rarity.js?v=122';
-import { TURRET } from './turret.js?v=122';
-import { RELIC_DEFS } from './relics.js?v=122';
+import { rarityWeight } from './rarity.js?v=123';
+import { TURRET } from './turret.js?v=123';
+import { RELIC_DEFS } from './relics.js?v=123';
 
 export const SHOP_ITEMS = [
   // ---------------- 生命药水（第 13 块起：买进背包，作战中随时用） ----------------
@@ -220,6 +220,15 @@ export const SHOP_ITEMS = [
       + '—— 铁的不拉仇恨、两秒一拳（一拳 = 你攻击的 1.5 倍）；雪的替你挨打（追你的怪改去围殴它）、'
       + '雪球把怪推开但不伤人。同时最多一只，碎了等 40 秒冷却再召。再买可升级（最多 3 级）。',
   },
+  // ---------------- 第 108 块：强化箭袋 ----------------
+  // 箭雨一直只有技能本体、没有任何成长线（用户点名的缺口）。这是商店侧的
+  // 买断强化：一局只能买一次（quiver 标记防重复），三选一的箭雨卡不受它影响。
+  {
+    id: 'buyQuiver', type: 'quiver', price: 26, needRound: 5,
+    rarity: 2,
+    glyph: '🏹', name: '强化箭袋',
+    desc: '箭雨每次多落 5 支、每支伤害 +15%（一局只能买一次）。三选一的箭雨卡不受影响，可以继续叠。',
+  },
 ];
 
 // 商店里买不到 / 已卖光时给出原因（渲染禁用态用）
@@ -241,6 +250,8 @@ export function itemLocked(item, ctx = {}) {
     const lv = (ctx.relicLevels || {})[item.relic] || 0;
     if (lv >= RELIC_DEFS[item.relic].maxLevel) return '已到满级';
   }
+  // 第 108 块：强化箭袋一局只能买一次（main 会把 arrowRain.hasQuiver() 传进来）
+  if (item.type === 'quiver' && ctx.quiver) return '这一局已经强化过了';
   return null;
 }
 

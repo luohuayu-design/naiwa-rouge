@@ -237,7 +237,7 @@ console.log('[§10] main.js 接线');
   ok(/tryAch\('clear_10'\)/.test(mainSrc) && /tryAch\('mirror_10'\)/.test(mainSrc)
     && /tryAch\('waiter_5'\)/.test(mainSrc), 'clear_10 与新怪里程碑埋点');
   ok(/puppetOwned: relics\.levels\(\)\.puppet > 0/.test(mainSrc), '三选一抽签带 puppetOwned');
-  ok(/golems\.applyCard|applyUpgrade\(stats, up, upSerial, wstats, weapon, golems\)/.test(mainSrc),
+  ok(/applyUpgrade\(stats, up, upSerial, wstats, weapon, golems(, arrowRain)?\)/.test(mainSrc),
     '选卡时把 golems 递给 applyUpgrade');
 }
 

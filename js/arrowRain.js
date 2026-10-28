@@ -13,9 +13,9 @@
 // 数值：伤害吃武器属性表 wstats（swordDamage / 暴击），× ARROW_DMG_MUL ——
 //   商店的剑油 / 磨剑石同样强化箭雨，升级卡不白买。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=122';
-import { mitigate } from './stats.js?v=122';
-import audio from './audio.js?v=122';
+import * as THREE from '../lib/three.module.js?v=123';
+import { mitigate } from './stats.js?v=123';
+import audio from './audio.js?v=123';
 
 const AIM_TIME = 0.85;      // 警告圈亮起到第一支箭落地（给怪走位、给玩家预判）
 const SPREAD_TIME = 1.0;    // 全部箭落完的时间窗（每支箭在这个窗内错开）
@@ -26,6 +26,7 @@ const ARROWS = 14;          // 每次施放的总箭数
 const ARROW_DMG_MUL = 0.55; // 每支箭伤害 = 剑伤害 × 这个（再吃暴击与目标护甲）
 const ARROW_HIT_R = 0.85;   // 单支箭的溅射半径（加怪的碰撞半径）
 const CD_MAX = 8.0;         // 冷却（秒）—— 技能框上要有倒计时
+const CD_MIN = 3.0;         // 冷却下限（冷却卡叠多了兜底）
 const ARROW_LEN = 0.95;     // 箭的长度
 const DROP_Y = 8.5;         // 箭出现的高度
 
@@ -34,6 +35,12 @@ export function createArrowRainSystem({ scene, fx, enemies, wstats }) {
   let cd = 0;                  // 剩余冷却
   let cdMul = 1;               // 局外商店「技能CD缩短」倍率（第 58 块，默认 1）
   let t = 0;
+  // 第 108 块：三选一箭雨卡 + 商店「强化箭袋」的加成入口（applyCard / applyQuiver）
+  const mods = { arrows: 0, dmgPct: 0, zone: 0, cdCut: 0, quiver: false };
+  const zoneR = () => ZONE_R + mods.zone;                                  // 覆盖半径
+  const arrowsN = () => ARROWS + mods.arrows;                              // 每次总箭数
+  const dmgMul = () => ARROW_DMG_MUL * (1 + mods.dmgPct);                  // 每箭伤害倍率
+  const cdMaxV = () => Math.max(CD_MIN, (CD_MAX - mods.cdCut) * cdMul);    // 冷却（下限 CD_MIN）
   const strikes = [];          // 进行中的箭雨：{ x, z, ring, mat, arrows: [{dx,dz,at,mesh,state}] }
   const arrowPool = [];        // 箭 mesh 对象池
 
@@ -87,15 +94,17 @@ export function createArrowRainSystem({ scene, fx, enemies, wstats }) {
     const x = best.pos.x, z = best.pos.z;
     const mat = warnMatBase.clone();
     const ring = new THREE.Mesh(warnGeo, mat);
+    // 第 108 块：范围卡让覆盖变大 —— 警告环等比缩放（RingGeometry 是共享的，别重建）
+    ring.scale.setScalar(zoneR() / ZONE_R);
     ring.position.set(x, 0.07, z);
     ring.frustumCulled = false;
     scene.add(ring);
 
     // 预生成每支箭的落点与时刻（错开 SPREAD_TIME）
     const arrows = [];
-    for (let i = 0; i < ARROWS; i++) {
+    for (let i = 0; i < arrowsN(); i++) {
       const a = Math.random() * Math.PI * 2;
-      const r = Math.sqrt(Math.random()) * ZONE_R * 0.94;
+      const r = Math.sqrt(Math.random()) * zoneR() * 0.94;
       arrows.push({
         dx: Math.cos(a) * r, dz: Math.sin(a) * r,
         at: AIM_TIME + Math.random() * SPREAD_TIME,
@@ -104,15 +113,15 @@ export function createArrowRainSystem({ scene, fx, enemies, wstats }) {
     }
     strikes.push({ x, z, ring, mat, arrows, age: 0 });
 
-    cd = CD_MAX * cdMul;
+    cd = cdMaxV();
     audio.sfx('swordFire', { vol: 0.6 });
-    if (fx) fx.ring({ x, z }, { from: ZONE_R * 0.4, to: ZONE_R + 0.3, color: 0xffc46a, life: 0.4, opacity: 0.7, y: 0.06 });
+    if (fx) fx.ring({ x, z }, { from: zoneR() * 0.4, to: zoneR() + 0.3, color: 0xffc46a, life: 0.4, opacity: 0.7, y: 0.06 });
     return true;
   }
 
   // 一支箭落地：对落点小范围内的怪造成伤害
   function land(s, a) {
-    const dmgBase = wstats.get('swordDamage') * ARROW_DMG_MUL;
+    const dmgBase = wstats.get('swordDamage') * dmgMul();
     const crit = Math.random() < wstats.get('swordCrit');
     const raw = dmgBase * (crit ? wstats.get('swordCritMul') : 1);
     let hitAny = false;
@@ -193,6 +202,8 @@ export function createArrowRainSystem({ scene, fx, enemies, wstats }) {
     strikes.length = 0;
     cd = 0;
     unlocked = false;
+    // 第 108 块：三选一卡 / 商店强化是**局内**加成，新局清零（和傀儡卡同口径）
+    mods.arrows = 0; mods.dmgPct = 0; mods.zone = 0; mods.cdCut = 0; mods.quiver = false;
   }
 
   function restore(saved) {
@@ -223,13 +234,31 @@ export function createArrowRainSystem({ scene, fx, enemies, wstats }) {
     get unlocked() { return unlocked; },
     get ready() { return unlocked && cd <= 0; },
     get cdLeft() { return cd; },
-    get cdMax() { return CD_MAX * cdMul; },
-    get progress() { return unlocked ? 1 - cd / (CD_MAX * cdMul) : 0; },   // 技能键竖条
+    get cdMax() { return cdMaxV(); },
+    get progress() { return unlocked ? 1 - cd / cdMaxV() : 0; },   // 技能键竖条
     // 第 58 块：局外商店技能CD缩短 —— 直接乘倍率（下限 0.1）
     setCdMul(m) {
       cdMul = Math.max(0.1, Number(m) || 1);
-      if (cd > 0) cd = Math.min(cd, CD_MAX * cdMul);
+      if (cd > 0) cd = Math.min(cd, cdMaxV());
     },
+    // ---- 第 108 块：三选一箭雨卡 / 商店强化入口 ----
+    // card: { stat:'arrows'|'dmg'|'zone'|'cd', flat:N }
+    applyCard(card) {
+      if (card.stat === 'arrows') mods.arrows += card.flat;
+      else if (card.stat === 'dmg') mods.dmgPct += card.flat;
+      else if (card.stat === 'zone') mods.zone += card.flat;
+      else if (card.stat === 'cd') mods.cdCut += card.flat;
+    },
+    // 商店「强化箭袋」（买断，一次）：+5 箭 +15% 伤害 —— 和卡是同一个 mods，不冲突
+    applyQuiver() {
+      if (mods.quiver) return false;
+      mods.quiver = true;
+      mods.arrows += 5;
+      mods.dmgPct += 0.15;
+      return true;
+    },
+    hasQuiver: () => mods.quiver,
+    bonuses: () => ({ ...mods, arrowsN: arrowsN(), zoneR: +zoneR().toFixed(2), dmgMul: +dmgMul().toFixed(3), cdMax: +cdMaxV().toFixed(2) }),
     get strikeCount() { return strikes.length; },
     // 第 66 块：上一次 fire() 为什么没放出去（'' = 成功了）
     get lastFail() { return lastFail; },

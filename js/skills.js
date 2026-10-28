@@ -32,7 +32,7 @@
 //
 // ctx 由 main.js 每帧拼好传进来：{ playing, weapon, playerPos, stats, coins }
 // ============================================================
-import audio from './audio.js?v=122';
+import audio from './audio.js?v=123';
 
 // 冷却数字统一两位小数（第 64 块用户需求：倒计时精确到两位小数）。
 // 不补零会跳字（3.4 → 3.35 期间宽度变化），toFixed(2) 宽度恒定。
@@ -71,12 +71,12 @@ export const SKILLS = [
   },
 
   // ---- 新武器「箭雨」（第 47 块，用户定案：第二关起解锁） ----
-  // 没有普通攻击形态，只有这一个技能；冷却 8 秒，技能框上有倒计时数字。
+  // 没有普通攻击形态，只有这一个技能；冷却 8 秒起（速射卡可缩短），技能框上有倒计时数字。
   {
     id: 'arrowRain',
     name: '箭雨',
     icon: 'assets/skills/icon-arrow.svg',
-    hint: '在最近的怪物头顶标出一片区域，片刻后群箭落下（冷却 8 秒）',
+    hint: '在最近的怪物头顶标出一片区域，片刻后群箭落下（冷却 8 秒起，可被卡与箭袋缩短）',
     key: '2',
     cd: 8.0,
     cdNow: (ctx) => (ctx.arrowRain ? ctx.arrowRain.cdMax : 8.0),
@@ -161,10 +161,10 @@ export const SKILLS = [
       + '<path d="M9 10 Q14 6 19 10" stroke="#5f8f5a" stroke-width="1.8" fill="none"/>'
       + '<path d="M24 31 Q29 27 33 30" stroke="#5f8f5a" stroke-width="1.8" fill="none"/>'
       + '</svg>',
-    hint: '召一只傀儡并肩作战：铁的不拉仇恨但会重拳，雪的替你挨打、雪球击退。冷却 40 秒',
+    hint: '召一只傀儡并肩作战：铁的不拉仇恨但会重拳，雪的替你挨打、雪球击退。冷却 40 秒（速召卡可缩短）',
     key: '4',
     cd: 40.0,
-    cdNow: (ctx) => (ctx.golems ? ctx.golems.cdTotal : 40.0),
+    cdNow: (ctx) => (ctx.golems ? ctx.golems.cdTotal() : 40.0),
     desc: '傀儡术：按下后整个世界暂停，在铁傀儡和雪傀儡里选一只召在脚下。'
       + '铁傀儡不拉仇恨，站在原地两秒一拳，一拳是你攻击的 1.5 倍；'
       + '雪傀儡拉仇恨 —— 追你的怪改去围殴它（贴脸的怪持续磨它的血），它扔雪球把怪推开但一点伤害都没有。'
@@ -178,7 +178,7 @@ export const SKILLS = [
       return ctx.golems.ready() ? 'ready' : 'cd';
     },
     ready: (ctx) => !!ctx.golems && ctx.golems.owned && ctx.playing && ctx.golems.ready(),
-    progress: (ctx) => (ctx.golems ? 1 - ctx.golems.cdLeft() / ctx.golems.cdTotal : 0),
+    progress: (ctx) => (ctx.golems ? 1 - ctx.golems.cdLeft() / ctx.golems.cdTotal() : 0),
     cdText: (ctx) => (!ctx.golems || !ctx.golems.owned || ctx.golems.ready())
       ? '' : fmtCd(ctx.golems.cdLeft()),
     press(ctx) {

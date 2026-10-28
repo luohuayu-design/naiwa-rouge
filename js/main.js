@@ -5,41 +5,41 @@
 // 目标是把三件事调顺：摇杆输入 → 角色速度/朝向 → 相机跟随。
 // 后续叠战斗时，只需要在 tick() 里加敌人更新与自动攻击，不用动输入层。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=122';
-import { buildNightScene } from './scene.js?v=122';
-import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=122';
+import * as THREE from '../lib/three.module.js?v=123';
+import { buildNightScene } from './scene.js?v=123';
+import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=123';
 // 第 80 块：给 glb 拼上版本号 → SW 缓存优先（详见 assetUrl.js）
-import { withV } from './assetUrl.js?v=122';
-import { createInput } from './input.js?v=122';
-import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=122';
-import { createStatView } from './statView.js?v=122';
-import { createWeaponStats } from './weaponStats.js?v=122';
-import { createFx } from './fx.js?v=122';
-import { createEnemySystem, ENEMY_TYPES } from './enemy.js?v=122';
+import { withV } from './assetUrl.js?v=123';
+import { createInput } from './input.js?v=123';
+import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=123';
+import { createStatView } from './statView.js?v=123';
+import { createWeaponStats } from './weaponStats.js?v=123';
+import { createFx } from './fx.js?v=123';
+import { createEnemySystem, ENEMY_TYPES } from './enemy.js?v=123';
 import {
   createLevel, LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVEL_5, LEVEL_6, LEVEL_7, LEVEL_8, LEVEL_9, LEVEL_10, LEVELS_BY_ID, DIFFS, setDifficulty, getDifficulty, roundScale, levelStats, levelTypes,
-} from './wave.js?v=122';
-import { createRangeRing } from './rangeRing.js?v=122';
-import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=122';
-import { createWeaponSystem } from './weapon.js?v=122';
-import { createArrowRainSystem } from './arrowRain.js?v=122';
-import { SWORD_KINDS } from './swordKinds.js?v=122';
-import { createGoldSystem } from './gold.js?v=122';
-import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW, SHOP_PINNED } from './shop.js?v=122';
-import { createTurretSystem, TURRET } from './turret.js?v=122';
-import { createRelicSystem, RELIC_DEFS } from './relics.js?v=122';
-import { createGolemSystem } from './golem.js?v=122';   // 第 107 块：法器「傀儡术」的铁 / 雪傀儡
-import { createHazards } from './hazards.js?v=122';
-import { createDeposit, tagChance } from './deposit.js?v=122';   // 第 81 块：寄存柜；第 84 块：掉牌概率
-import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=122';
-import audio from './audio.js?v=122';
-import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=122';
+} from './wave.js?v=123';
+import { createRangeRing } from './rangeRing.js?v=123';
+import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=123';
+import { createWeaponSystem } from './weapon.js?v=123';
+import { createArrowRainSystem } from './arrowRain.js?v=123';
+import { SWORD_KINDS } from './swordKinds.js?v=123';
+import { createGoldSystem } from './gold.js?v=123';
+import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW, SHOP_PINNED } from './shop.js?v=123';
+import { createTurretSystem, TURRET } from './turret.js?v=123';
+import { createRelicSystem, RELIC_DEFS } from './relics.js?v=123';
+import { createGolemSystem } from './golem.js?v=123';   // 第 107 块：法器「傀儡术」的铁 / 雪傀儡
+import { createHazards } from './hazards.js?v=123';
+import { createDeposit, tagChance } from './deposit.js?v=123';   // 第 81 块：寄存柜；第 84 块：掉牌概率
+import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=123';
+import audio from './audio.js?v=123';
+import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=123';
 // 第 62 块：回血技能（第四关通关后永久解锁，回 5 点 / CD 25 秒）
-import { createHealSkill, HEAL_AMOUNT, HEAL_CD } from './healSkill.js?v=122';
+import { createHealSkill, HEAL_AMOUNT, HEAL_CD } from './healSkill.js?v=123';
 // 第 62 块：民心专属事件（升档走良性池、掉档走恶性池）
-import { repPoolForTier, REP_GOOD, REP_BAD } from './repEvents.js?v=122';
+import { repPoolForTier, REP_GOOD, REP_BAD } from './repEvents.js?v=123';
 // 第 62 块：攻略面板（战败提示上的「查看攻略」，手风琴三组）
-import { renderGuide, GUIDE_SECTIONS } from './guide.js?v=122';
+import { renderGuide, GUIDE_SECTIONS } from './guide.js?v=123';
 import {
   settings as readSettings, setSetting, save as saveProfile, profile,
   bumpStat, setStatMax, codexAdd, codexCount, countCard, unlockAch, hasAch, addBones, bones, resetAll,
@@ -54,32 +54,32 @@ import {
   hintSeen, markHintSeen,                  // 第 65 块：一次性提示卡
   markLevelClear, levelCleared, clearCount, // 第 94 块：通关过哪些关（成就用）
   getStatAdmin, setStatAdmin, resetStatAdmin, // 第 95 / 98 块：管理员模式二（手改最终值 → 存追加项，基础值不动）
-} from './profile.js?v=122';
+} from './profile.js?v=123';
 // 第 44 块：礼包兑换（码表只有哈希，明细在 gift.js 顶部注释）
-import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=122';
+import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=123';
 // 第 46 块：音效包（抽象奶蛙音效包 —— 4 段奶蛙叫声，通关第一关解锁）
-import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=122';
-import * as runSave from './runSave.js?v=122';
+import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=123';
+import * as runSave from './runSave.js?v=123';
 // 第 78 块：存档导出 / 导入。数据逻辑全在这个模块里（不碰 DOM），这里只接按钮
-import * as saveIO from './saveIO.js?v=122';
+import * as saveIO from './saveIO.js?v=123';
 import {
   CAMPFIRE, CAMP_STEP, campBuy, campOwned, campLevel,
   campCost, campApply, bonesFor, diffBoneMul, levelBoneMul, coinBones, BONE,
-} from './campfire.js?v=122';
+} from './campfire.js?v=123';
 // 第 23 块：永夜火种（通关白给的 3 次永久三选一）
 import {
   BOONS, BOON_BY_ID, BOON_PICKS, boonOwned, boonStacks, boonPending, boonTotalStacks,
   grantBoons, rollBoons, takeBoon, applyBoons, boonStackText,
-} from './boons.js?v=122';
+} from './boons.js?v=123';
 // 第 21 块：夜行诅咒（自选 debuff 换骨币倍率）
-import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=122';
+import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=123';
 // 第 22 块：种子与每日挑战
 import {
   DAILY_RULES, dayKey, dayText, dailySeed, seedCode, pickDailyCurses,
   seedFromText, pickSeedRules, loadSeedRecords, saveSeedRecord, pruneSeeds,
   dailyRecord, saveDailyRecord, pruneDaily, makeRng,
-} from './seed.js?v=122';
-import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=122';
+} from './seed.js?v=123';
+import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=123';
 // 第 58 块：局外商店 · 宝箱（花骨币买，开箱随机给永久属性 / 永久法器 / 技能CD缩短）
 import {
   BOXES, BOX_BY_ID, buyBox, rollBox, metaApplyStats, applyMeta,
@@ -89,36 +89,36 @@ import {
   boxPoolEntries,
   // 第 105 块：属性幅度统一系数（UI 显示的「强度 ×」必须和实际算法同源）
   boxMag,
-} from './metaShop.js?v=122';
+} from './metaShop.js?v=123';
 // 第 59 块：每日签到（以周为单位，周一 00:00 重置）
 // 第 105 块：固定 +20 改成每天随机 0~100；里程碑 3/5/7 天 → 100 / 150 骨币 + 一次永夜火种
 import {
   SIGN_BONES_MIN, SIGN_BONES_MAX, weekCells, signSummary, signToday, signedToday,
-} from './signin.js?v=122';
+} from './signin.js?v=123';
 // 第 94 块：成就（八类 × 三档骨币奖励）
 // 第 94-2 块：骨币改成**手动领取**（achPending / achClaim），老用户补发走 achMigrate
 import {
   ACHS, ACH_CATS, ACH_TIERS, ACH_COUNT, achById, achsByCat, achTier,
   achPending, achPendingBones, achClaim, achClaimAll, achClaimed, achMigrate,
-} from './achievements.js?v=122';
+} from './achievements.js?v=123';
 // 第 94 块：通用手风琴（盲盒奖池与成就面板共用，不复制第三份引擎）
-import { renderAccordion } from './accordion.js?v=122';
+import { renderAccordion } from './accordion.js?v=123';
 // 第 94 块：每日任务（简单 3 + 中等 1 + 困难 1，每天 0 点刷新）
 import {
   DQ_TIERS, DQ_BONES, dqTasks, dqPump, dqSave, dqClaim, dqClaimAll,
   dqPending, dqGained, dqMsLeft, dayKeyOf, dqTier, dqTaskName,
   dqState, dqForceReroll, dqReset,   // 调试口：跨天重掷 / 整条重置
-} from './dailyQuest.js?v=122';
+} from './dailyQuest.js?v=123';
 import {
   EVENTS, ALL_EVENTS, getEventById, pickEvent, effectLines,
   choiceHint, canAfford, costShort, REP_MIN, REP_MAX, REP_START,
   isTalk, eventChoices, resolveRoll, mergeEffects,
-} from './events.js?v=122';
+} from './events.js?v=123';
 // 第 32 块：主线《笑不出来的那一夜》（18 夜，一夜一关，前 3 夜已有关卡）
 import {
   STORY_ARC, STORY_CHAPTERS, STORY_ENDINGS, MARK_INFO,
   storyChapterAt, storyChapterById, storyEndingKey,
-} from './story.js?v=122';
+} from './story.js?v=123';
 
 // 标记模块已经跑起来了：index.html 的兜底自检靠它判断
 // 「模块根本没执行」还是「执行了但加载慢」。
@@ -1669,7 +1669,7 @@ async function boot() {
       // 精确的「原值 → 选后值」：用 stats.preview 算，和真选下去的数字完全一致
       const delta = document.createElement('div');
       delta.className = 'up-delta';
-      for (const c of previewUpgrade(stats, up, wstats, weapon, golems)) {
+      for (const c of previewUpgrade(stats, up, wstats, weapon, golems, arrowRain)) {
         const row = document.createElement('span');
         row.className = 'up-chg';
         const label = document.createElement('i');
@@ -1710,7 +1710,7 @@ async function boot() {
 
     upSerial++;
     upgradesTaken++;
-    const res = applyUpgrade(stats, up, upSerial, wstats, weapon, golems);
+    const res = applyUpgrade(stats, up, upSerial, wstats, weapon, golems, arrowRain);
     takenUpgrades.push(up);
     // 图鉴 / 战绩 / 成就（第 18 块）：拿到的卡记一笔，本局品质集合也记一笔
     const rIdx = up.rarity ?? 0;
@@ -4446,6 +4446,7 @@ async function boot() {
       level: curLevelId,
       turretCount: turrets.count(),
       relicLevels: relics.levels(),
+      quiver: arrowRain.hasQuiver(),   // 第 108 块：箭袋买断标记
     };
     for (const item of shopStock) {
       const rar = rarityInfo(item);
@@ -4512,6 +4513,7 @@ async function boot() {
       round: shopRound,
       turretCount: turrets.count(),
       relicLevels: relics.levels(),
+      quiver: arrowRain.hasQuiver(),   // 第 108 块：箭袋买断标记
     });
     if (locked) return;
     if (adminOn) coins = ADMIN_GOLD; else coins -= price;
@@ -4562,6 +4564,10 @@ async function boot() {
         queueHint('puppet');
       }
       showToast(`${def.name} ${lv} 级`, def.desc[lv - 1] + (lv < def.maxLevel ? ' · 再买可升级' : ' · 已满级'));
+    } else if (item.type === 'quiver') {
+      // 第 108 块：强化箭袋 —— +5 箭 +15% 伤害（买断，itemLocked 已拦重复）
+      arrowRain.applyQuiver();
+      showToast('强化箭袋', `箭雨现在 ${arrowRain.bonuses().arrowsN} 支 · 伤害 +15% · 一局一次`);
     }
     renderHud();
     // 第 87 块（用户定案）：**药水不售罄** —— 同一家店里可以连着买、
@@ -8481,6 +8487,16 @@ async function boot() {
           const cs = getComputedStyle(b);
           return cs.display !== 'none' && cs.visibility !== 'hidden';
         },
+      },
+      // 第 108 块：箭雨成长线。bonuses() 返回纯数对象，序列化安全；
+      // applyCard 直接喂卡（CDP 里不用真抽三选一）。
+      block108: {
+        arrow: () => arrowRain.bonuses(),
+        applyArrowCard: (stat, flat) => arrowRain.applyCard({ stat, flat }),
+        applyQuiver: () => arrowRain.applyQuiver(),
+        hasQuiver: () => arrowRain.hasQuiver(),
+        // CDP 全新档没有「拿过环剑」的战绩，第二关不送箭雨 —— 测试用它解锁
+        unlockArrow: () => { arrowRain.unlock(); renderSkill(); },
       },
       // 第 64 块：新手教程 / 属性面板技能页 / 元素群体 / 环剑恢复顺序（测试钩子）
       block64: {

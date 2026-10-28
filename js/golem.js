@@ -30,9 +30,9 @@
 // 官方资源（iron_golem.png / snow_golem.png，版权归 Mojang）。这是用户明确
 // 要求的（「贴图就用MC的」），风险已知。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=122';
-import { distance2D } from './stats.js?v=122';
-import audio from './audio.js?v=122';
+import * as THREE from '../lib/three.module.js?v=123';
+import { distance2D } from './stats.js?v=123';
+import audio from './audio.js?v=123';
 
 // ---- 数值（用户定案 + 我的拍板，都写在这里方便改） ----
 const CD_TOTAL = 40;        // 技能冷却：召出（或傀儡阵亡）后要等这么久才能再召
@@ -47,6 +47,9 @@ const SNOW_KNOCK = 2.2;     // 雪球击退距离（格）
 const SNOWBALL_SPEED = 12;  // 雪球飞行速度
 const TAUNT_ABSORB_R = 1.05; // 怪离雪傀儡这么近就算「正在打它」
 const ABSORB_MUL = 0.8;     // 贴脸怪每秒磨掉 倍率 × 它自己的伤害
+
+const CD_MIN = 16;          // 召唤冷却下限（速召卡叠多了兜底）
+const IRON_ATK_CD_MIN = 0.8; // 铁傀儡出手间隔下限（连击卡叠多了兜底）
 
 // 法器等级加成（relics.puppet 1~3 级）
 const RELIC_HP_MUL = [1, 1.3, 1.6];
@@ -117,6 +120,12 @@ export function createGolemSystem({ scene, fx, enemies }) {
   let relicLv = 0;            // 法器等级（main 每帧喂，或 buy 时喂）
   let playerAttack = () => 1; // 主角此刻攻击（main 喂）
   const snowballs = [];       // 飞行中的雪球
+  // 第 108 块：傀儡卡第二批（召唤CD / 铁傀儡出手 / 雪球击退 / 雪球减速）
+  let cdCut = 0;              // Σ 召唤 CD 缩短（秒），下限 CD_MIN
+  let ironSpdPct = 0;         // Σ 铁傀儡出手加速（乘在 IRON_ATK_CD 上，下限 IRON_ATK_CD_MIN）
+  let snowKnockFlat = 0;      // Σ 雪球击退加值（格）
+  let snowSlowT = 0;          // 雪球命中减速时长（秒；>0 才生效）
+  const SNOW_SLOW_FACTOR = 0.45; // 减速幅度（固定 45%，卡叠的是时长）
 
   const texIron = new THREE.TextureLoader().load('assets/golems/iron_golem.png');
   texIron.magFilter = THREE.NearestFilter;   // MC 像素风：绝不双线性糊掉
@@ -191,7 +200,7 @@ export function createGolemSystem({ scene, fx, enemies }) {
       born: 0,            // 落地小动画计时
     };
     list.push(g);
-    cd = CD_TOTAL;
+    cd = Math.max(CD_MIN, CD_TOTAL - cdCut);
     if (fx) {
       fx.ring({ x: at.x, z: at.z }, { from: 0.3, to: 1.5, color: kind === 'iron' ? 0xd8dade : 0xbfe8ff, life: 0.5, opacity: 0.8, y: 0.05 });
       fx.burst(root.position, { color: kind === 'iron' ? 0xd8dade : 0xffffff, count: 14, speed: 1.6, life: 0.4, size: 0.09, y: 1.0, up: 1.2 });
@@ -239,7 +248,9 @@ export function createGolemSystem({ scene, fx, enemies }) {
         snowballs.splice(i, 1);
         // 落点击退：目标还活着才退（雪球不伤害，用户原话）
         if (b.target && enemies.hittable(b.target)) {
-          enemies.knockback(b.target, b.x0, b.z0, SNOW_KNOCK);
+          enemies.knockback(b.target, b.x0, b.z0, SNOW_KNOCK + snowKnockFlat);
+          // 第 108 块：「彻骨寒雪」卡 —— 被雪球砸中的怪减速（只降移速，不冻结）
+          if (snowSlowT > 0) enemies.applySlow(b.target, { factor: SNOW_SLOW_FACTOR, time: snowSlowT });
           if (fx) fx.ring({ x: b.x1, z: b.z1 }, { from: 0.2, to: 0.9, color: 0xeaf6ff, life: 0.35, opacity: 0.7, y: 0.5 });
         }
       }
@@ -275,7 +286,7 @@ export function createGolemSystem({ scene, fx, enemies }) {
           if (d < nd) { nd = d; near = e; }
         }
         if (near && g.atkT <= 0) {
-          g.atkT = IRON_ATK_CD;
+          g.atkT = Math.max(IRON_ATK_CD_MIN, IRON_ATK_CD * (1 - ironSpdPct));
           g.swing = 1;
           const dmg = Math.max(1, Math.round(IRON_ATK_RATIO * playerAttack() * RELIC_ATK_MUL[(relicLv || 1) - 1] * (1 + atkBonus)));
           enemies.takeDamage(near, dmg, false, { cls: 'phys' });
@@ -315,12 +326,19 @@ export function createGolemSystem({ scene, fx, enemies }) {
 
   // ---- 三选一卡入口（upgrade.js 的 up.golem 卡走这里） ----
   // card: { stat:'hp', kind:'iron'|'snow', flat:N } / { stat:'atk', flat:0.3 } / { stat:'cap', flat:1 }
+  // 第 108 块新增：cdCut（召唤CD-秒）/ ironSpd（铁傀儡出手+pct）/ snowKnock（雪球击退+格）/
+  //                snowSlow（雪球减速：首张点亮，时长 +flat 秒）
   function applyCard(card) {
     if (card.stat === 'hp' && hpBonus[card.kind] != null) hpBonus[card.kind] += card.flat;
     else if (card.stat === 'atk') atkBonus += card.flat;
     else if (card.stat === 'cap') capBonus += card.flat;
+    else if (card.stat === 'cdCut') cdCut += card.flat;
+    else if (card.stat === 'ironSpd') ironSpdPct += card.flat;
+    else if (card.stat === 'snowKnock') snowKnockFlat += card.flat;
+    else if (card.stat === 'snowSlow') snowSlowT += card.flat;
     // 上限卡是唯一要立刻生效在**活着的**傀儡身上的（生命卡对已召出的不追补，
-    // 下一只才吃 —— 和「厚皮」不追补旧血是同一个口径）
+    // 下一只才吃 —— 和「厚皮」不追补旧血是同一个口径）；
+    // 召唤 CD 卡只影响下一次冷却（正在转的那段不追改）。
   }
 
   function reset() {
@@ -339,6 +357,7 @@ export function createGolemSystem({ scene, fx, enemies }) {
     hpBonus.iron = 0; hpBonus.snow = 0;
     atkBonus = 0;
     relicLv = 0;
+    cdCut = 0; ironSpdPct = 0; snowKnockFlat = 0; snowSlowT = 0;
   }
 
   return {
@@ -354,11 +373,16 @@ export function createGolemSystem({ scene, fx, enemies }) {
     count: () => list.length,
     cap,
     cdLeft: () => +cd.toFixed(2),
-    cdTotal: CD_TOTAL,
+    cdTotal: () => Math.max(CD_MIN, CD_TOTAL - cdCut),
     info: () => list.map((g) => ({
       kind: g.kind, hp: +g.hp.toFixed(2), maxHp: g.maxHp, x: +g.x.toFixed(2), z: +g.z.toFixed(2),
     })),
-    bonuses: () => ({ cap: cap(), hp: { ...hpBonus }, atk: atkBonus }),
+    bonuses: () => ({
+      cap: cap(), hp: { ...hpBonus }, atk: atkBonus,
+      cdCut, ironSpd: ironSpdPct, snowKnock: snowKnockFlat, snowSlowT,
+      cdTotal: Math.max(CD_MIN, CD_TOTAL - cdCut),
+      ironAtkCd: Math.max(IRON_ATK_CD_MIN, IRON_ATK_CD * (1 - ironSpdPct)),
+    }),
     hasIron: () => list.some((g) => g.kind === 'iron'),
     hasSnow: () => list.some((g) => g.kind === 'snow'),
   };

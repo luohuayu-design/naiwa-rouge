@@ -34,17 +34,17 @@ ok('每族都有 stat 与 mode', FAMILIES.every((f) => f.stat && (f.mode === 'fl
 ok('每族都有 title/desc 生成函数', FAMILIES.every((f) => typeof f.title === 'function' && typeof f.desc === 'function'));
 ok('族 id 不重复', new Set(FAMILIES.map((f) => f.id)).size === FAMILIES.length);
 
-// 22 族 × 3 + 9 张拆不动的整卡 = 75（第 107 块：+4 张傀儡卡）
-ok('卡池 75 张', UPGRADES.length === 75, `实际 ${UPGRADES.length}`);
+// 22 族 × 3 + 21 张拆不动的整卡 = 87（第 107 块 +4 傀儡；第 108 块 +4 傀儡 +8 箭雨）
+ok('卡池 87 张', UPGRADES.length === 87, `实际 ${UPGRADES.length}`);
 ok('id 不重复', new Set(UPGRADES.map((u) => u.id)).size === UPGRADES.length);
 ok('每族恰好生成 3 张', FAMILIES.every((f) => UPGRADES.filter((u) => u.family === f.id).length === 3));
-ok('整卡 family 为 null（拆不成档）', UPGRADES.filter((u) => u.family === null).length === 9);
-// 拆不成三档的 9 张：给的是「+1 只 / +1 把 / 一组效果 / 傀儡加成」这种结构性的东西
+ok('整卡 family 为 null（拆不成档）', UPGRADES.filter((u) => u.family === null).length === 21);
+// 拆不成三档的 21 张：给的是「+1 只 / +1 把 / 一组效果 / 傀儡加成 / 箭雨加成」这种结构性的东西
 const UNIQ = UPGRADES.filter((u) => u.family === null).map((u) => u.id).sort().join(',');
-ok('整卡就是那 9 张结构卡（原 5 + 傀儡 4）',
-  UNIQ === 'aegisUp,doublePalm,golemCap,golemIronAtk,golemIronHp,golemSnowHp,luckStar,swordArray,undying', UNIQ);
+ok('整卡就是那 21 张结构卡（原 5 + 傀儡 8 + 箭雨 8）',
+  UNIQ === 'aegisUp,arrowCdL,arrowCdS,arrowCountL,arrowCountS,arrowDmgL,arrowDmgS,arrowZoneL,arrowZoneS,doublePalm,golemCap,golemCd,golemIronAtk,golemIronHp,golemIronSpd,golemSnowHp,golemSnowKnock,golemSnowSlow,luckStar,swordArray,undying', UNIQ);
 ok('整卡都给「结构」而非一个可缩放的数值',
-  UPGRADES.filter((u) => u.family === null).every((u) => u.sword || u.golem || u.extra || u.extras
+  UPGRADES.filter((u) => u.family === null).every((u) => u.sword || u.golem || u.arrow || u.extra || u.extras
     || u.stat === 'multiHit' || u.stat === 'aegis'));
 
 // 小档沿用旧 id —— 老存档、老测试、老统计照旧认得
@@ -200,7 +200,7 @@ ok('chanceTable 里的 rarity 和卡一致',
   const weapon = { count: 0, addSword() { this.count++; }, granted: true };
   let bad = 0;
   for (const up of UPGRADES) {
-    if (up.golem) continue;   // 第 107 块：傀儡卡不进属性表，见 block107 套件的 applyCard 专项
+    if (up.golem || up.arrow) continue;   // 第 107/108 块：傀儡卡、箭雨卡不进属性表，各有专项套件
     const s = createStats();
     const w = createWeaponStats();
     const wp = up.sword ? { count: 0, addSword() { this.count++; } } : null;
@@ -214,7 +214,7 @@ ok('chanceTable 里的 rarity 和卡一致',
       }
     }
   }
-  ok('75 张卡里非傀儡卡的「卡片预览」与「选完实际值」完全一致', bad === 0, `${bad} 处不一致`);
+  ok('87 张卡里非傀儡/箭雨卡的「卡片预览」与「选完实际值」完全一致', bad === 0, `${bad} 处不一致`);
 }
 // 生命上限档位要同步补血
 {

@@ -34,9 +34,9 @@
 //   标了 scope:'weapon' 的项改的是武器表（剑系 / 元素系），其余改主角表。
 //   两块表都要传进来，没传 wstats 时武器项会退化到主角表（只为兼容老调用）。
 // ============================================================
-import { STAT_DEFS } from './stats.js?v=122';
-import { WEAPON_STAT_DEFS } from './weaponStats.js?v=122';
-import { RARITIES, rarityWeight, oddsOf } from './rarity.js?v=122';
+import { STAT_DEFS } from './stats.js?v=123';
+import { WEAPON_STAT_DEFS } from './weaponStats.js?v=123';
+import { RARITIES, rarityWeight, oddsOf } from './rarity.js?v=123';
 
 // 一张卡改的是哪块表
 function tableFor(scope, stats, wstats) {
@@ -349,6 +349,105 @@ const UNIQUE = [
     title: '场上可同时站两只傀儡',
     desc: '传说：傀儡上限 +1 —— 铁 / 雪可以各站一只（只能拿一次）',
   },
+  // ---------------- 傀儡卡第二批（第 108 块，用户定案「幅度大一些」） ----------------
+  {
+    id: 'golemSnowKnock', tag: 'def', glyph: '❄', name: '重型雪球',
+    rarity: 0,
+    w0: 0.60, gw: +0.015,
+    golem: { stat: 'snowKnock', flat: 1.0 },
+    title: '雪球击退 +1.0 格',
+    desc: '雪傀儡的雪球把怪推得更远（能重复拿）—— 控住场面，给自己留出走位空间',
+  },
+  {
+    id: 'golemCd', tag: 'def', glyph: '⏱', name: '傀儡速召',
+    rarity: 2,
+    w0: 0.40, gw: +0.020,
+    golem: { stat: 'cdCut', flat: 8 },
+    title: '召唤冷却 −8 秒',
+    desc: '傀儡碎了之后等得更短（能重复拿，最低 16 秒）—— 傀儡流的核心续航',
+  },
+  {
+    id: 'golemIronSpd', tag: 'atk', glyph: '🥊', name: '铁腕连击',
+    rarity: 3,
+    w0: 0.35, gw: +0.015,
+    golem: { stat: 'ironSpd', flat: 0.20 },
+    title: '铁傀儡出手快 20%',
+    desc: '铁傀儡的拳越来越密（能重复拿，最快 0.8 秒一拳）—— 配合重拳卡，输出翻着涨',
+  },
+  {
+    id: 'golemSnowSlow', tag: 'def', glyph: '🧊', name: '彻骨寒雪',
+    rarity: 3,
+    w0: 0.35, gw: +0.015,
+    golem: { stat: 'snowSlow', flat: 1.2 },
+    title: '雪球命中减速 45%',
+    desc: '被雪球砸中的怪减速 45%，持续随卡叠加（每张 +1.2 秒）—— 雪傀儡从推怪变成控怪',
+  },
+  // ---------------- 箭雨卡（第 108 块，用户定案：四方向 × 两档品质） ----------------
+  // 箭雨是开局就有的技能，这些卡不需要门控。
+  {
+    id: 'arrowCountS', tag: 'atk', glyph: '🏹', name: '箭袋扩充',
+    rarity: 0,
+    w0: 0.60, gw: +0.015,
+    arrow: { stat: 'arrows', flat: 3 },
+    title: '箭雨 +3 支',
+    desc: '每次箭雨多落 3 支箭（能重复拿）—— 火力密度直接加',
+  },
+  {
+    id: 'arrowDmgS', tag: 'atk', glyph: '🎯', name: '磨尖箭镞',
+    rarity: 0,
+    w0: 0.60, gw: +0.015,
+    arrow: { stat: 'dmg', flat: 0.06 },
+    title: '箭雨伤害 +6%',
+    desc: '每支箭的伤害在剑伤害的基础上再提一档（能重复拿）',
+  },
+  {
+    id: 'arrowZoneS', tag: 'atk', glyph: '⭕', name: '扩容箭阵',
+    rarity: 1,
+    w0: 0.55, gw: +0.015,
+    arrow: { stat: 'zone', flat: 0.4 },
+    title: '箭雨范围 +0.4 格',
+    desc: '覆盖圈变大，更多的怪被罩进来（能重复拿）—— 群怪时尤其明显',
+  },
+  {
+    id: 'arrowDmgL', tag: 'atk', glyph: '💥', name: '穿云箭',
+    rarity: 2,
+    w0: 0.40, gw: +0.020,
+    arrow: { stat: 'dmg', flat: 0.12 },
+    title: '箭雨伤害 +12%',
+    desc: '一次顶两张磨尖箭镞（能重复拿）—— 配合箭袋扩充，箭雨成型很快',
+  },
+  {
+    id: 'arrowCdS', tag: 'mov', glyph: '⏳', name: '速射号令',
+    rarity: 2,
+    w0: 0.40, gw: +0.020,
+    arrow: { stat: 'cd', flat: 0.8 },
+    title: '箭雨冷却 −0.8 秒',
+    desc: '箭雨来得更勤（能重复拿，最低 3 秒）',
+  },
+  {
+    id: 'arrowCountL', tag: 'atk', glyph: '🌪', name: '万箭齐发',
+    rarity: 3,
+    w0: 0.35, gw: +0.010,
+    arrow: { stat: 'arrows', flat: 6 },
+    title: '箭雨 +6 支',
+    desc: '一次顶两张箭袋扩充（能重复拿）—— 天上像下暴雨',
+  },
+  {
+    id: 'arrowZoneL', tag: 'atk', glyph: '🌀', name: '箭如雨下',
+    rarity: 3,
+    w0: 0.35, gw: +0.010,
+    arrow: { stat: 'zone', flat: 0.8 },
+    title: '箭雨范围 +0.8 格',
+    desc: '覆盖圈大了一圈（能重复拿）—— 几乎小半个场都在箭雨里',
+  },
+  {
+    id: 'arrowCdL', tag: 'mov', glyph: '⚡', name: '连珠箭令',
+    rarity: 4,
+    w0: 0.30, gw: +0.008,
+    arrow: { stat: 'cd', flat: 1.6 },
+    title: '箭雨冷却 −1.6 秒',
+    desc: '传说：一次顶两张速射号令（能重复拿，最低 3 秒）—— 箭雨接近常驻技',
+  },
 ];
 
 // 把「族 × 三档」摊平成一张张卡。小档沿用原来的 id（老存档 / 老测试照旧认得）。
@@ -452,33 +551,25 @@ export function rollChoices(rng = Math.random, opts = {}) {
 // wstats = 武器属性表：scope:'weapon' 的条目改它，其余改主角 stats。
 // weapon = 武器系统本身：只有「直接给一把剑」的卡（sword 字段）才需要它。
 // 返回 { src, changes }：changes 是精确的「选前 → 选后」（用于卡片/提示文案）。
-export function applyUpgrade(stats, up, serial = 0, wstats = null, weapon = null, golems = null) {
+export function applyUpgrade(stats, up, serial = 0, wstats = null, weapon = null, golems = null, arrowRain = null) {
   // 第 107 块：傀儡卡不碰属性表，交给傀儡系统记账（golem.applyCard）
   if (up.golem) {
     const g = up.golem;
     const before = golems ? golems.bonuses() : null;
     if (golems) golems.applyCard(g);
-    let name, from, to;
-    if (g.stat === 'hp') {
-      name = g.kind === 'iron' ? '铁傀儡生命' : '雪傀儡生命';
-      from = before ? before.hp[g.kind] : 0;
-      to = from + g.flat;
-    } else if (g.stat === 'atk') {
-      name = '铁傀儡攻击';
-      from = before ? before.atk : 0;
-      to = from + g.flat;
-    } else {
-      name = '傀儡上限';
-      from = before ? before.cap : 1;
-      to = from + g.flat;
-    }
     return {
       src: `upg:${up.id}:${serial}`,
-      changes: [{
-        key: `golem_${g.stat}`, scope: 'golem', name,
-        from, to, fromText: String(from), toText: `+${g.flat}`,
-        text: `${from} → ${to}`,
-      }],
+      changes: [golemChange(g, before)],
+    };
+  }
+  // 第 108 块：箭雨卡交给箭雨系统记账（arrowRain.applyCard）
+  if (up.arrow) {
+    const a = up.arrow;
+    const before = arrowRain ? arrowRain.bonuses() : null;
+    if (arrowRain) arrowRain.applyCard(a);
+    return {
+      src: `upg:${up.id}:${serial}`,
+      changes: [arrowChange(a, before)],
     };
   }
   // 剑阵这类「直接加一把剑」的卡：不碰属性表，交给武器系统上环
@@ -527,29 +618,94 @@ export function applyUpgrade(stats, up, serial = 0, wstats = null, weapon = null
 
 // 预演一张升级：返回与 applyUpgrade 同结构的 changes，但不改任何状态。
 // 三选一卡片上的「1 → 2」就是用它算的，所以点下去之后数值一定与预览一致。
-export function previewUpgrade(stats, up, wstats = null, weapon = null, golems = null) {
+// ---- 第 108 块：傀儡卡 / 箭雨卡的 changes 文案（apply 与 preview 共用，保证两者一致） ----
+function golemChange(g, b) {
+  let name, from, to, fromText, toText;
+  if (g.stat === 'hp') {
+    name = g.kind === 'iron' ? '铁傀儡生命' : '雪傀儡生命';
+    from = b ? b.hp[g.kind] : 0;
+    to = from + g.flat;
+    fromText = String(from); toText = `+${g.flat}`;
+  } else if (g.stat === 'atk') {
+    name = '铁傀儡攻击';
+    from = b ? b.atk : 0;
+    to = from + g.flat;
+    fromText = String(from); toText = `+${g.flat}`;
+  } else if (g.stat === 'cap') {
+    name = '傀儡上限';
+    from = b ? b.cap : 1;
+    to = from + g.flat;
+    fromText = String(from); toText = String(to);
+  } else if (g.stat === 'cdCut') {
+    name = '召唤冷却';
+    from = b ? b.cdTotal : 40;
+    to = Math.max(16, from - g.flat);
+    fromText = `${Math.round(from)}秒`; toText = `${Math.round(to)}秒`;
+  } else if (g.stat === 'ironSpd') {
+    name = '铁傀儡出手';
+    from = b ? b.ironAtkCd : 2.0;
+    const oldPct = b ? b.ironSpd : 0;
+    to = Math.max(0.8, 2.0 * (1 - (oldPct + g.flat)));
+    fromText = `${from.toFixed(1)}秒/拳`; toText = `${to.toFixed(1)}秒/拳`;
+  } else if (g.stat === 'snowKnock') {
+    name = '雪球击退';
+    from = 2.2 + (b ? b.snowKnock : 0);
+    to = from + g.flat;
+    fromText = `${from.toFixed(1)}格`; toText = `${to.toFixed(1)}格`;
+  } else { // snowSlow
+    name = '雪球减速';
+    from = b ? b.snowSlowT : 0;
+    to = from + g.flat;
+    fromText = from > 0 ? `${from.toFixed(1)}秒` : '无';
+    toText = `${to.toFixed(1)}秒`;
+  }
+  return {
+    key: `golem_${g.stat}`, scope: 'golem', name,
+    from, to, fromText, toText,
+    text: `${fromText} → ${toText}`,
+  };
+}
+
+function arrowChange(a, b) {
+  let name, from, to, fromText, toText;
+  if (a.stat === 'arrows') {
+    name = '箭雨箭数';
+    from = b ? b.arrowsN : 14;
+    to = from + a.flat;
+    fromText = `${from} 支`; toText = `${to} 支`;
+  } else if (a.stat === 'dmg') {
+    name = '箭雨伤害';
+    from = b ? b.dmgPct : 0;
+    to = from + a.flat;
+    fromText = `+${Math.round(from * 100)}%`; toText = `+${Math.round(to * 100)}%`;
+  } else if (a.stat === 'zone') {
+    name = '箭雨范围';
+    from = b ? b.zoneR : 2.3;
+    to = from + a.flat;
+    fromText = `${from.toFixed(1)}格`; toText = `${to.toFixed(1)}格`;
+  } else { // cd
+    name = '箭雨冷却';
+    from = b ? b.cdMax : 8.0;
+    to = Math.max(3.0, from - a.flat);
+    fromText = `${from.toFixed(1)}秒`; toText = `${to.toFixed(1)}秒`;
+  }
+  return {
+    key: `arrow_${a.stat}`, scope: 'arrowRain', name,
+    from, to, fromText, toText,
+    text: `${fromText} → ${toText}`,
+  };
+}
+
+export function previewUpgrade(stats, up, wstats = null, weapon = null, golems = null, arrowRain = null) {
   if (up.golem) {
     const g = up.golem;
     const b = golems ? golems.bonuses() : null;
-    let name, from, to;
-    if (g.stat === 'hp') {
-      name = g.kind === 'iron' ? '铁傀儡生命' : '雪傀儡生命';
-      from = b ? b.hp[g.kind] : 0;
-      to = from + g.flat;
-    } else if (g.stat === 'atk') {
-      name = '铁傀儡攻击';
-      from = b ? b.atk : 0;
-      to = from + g.flat;
-    } else {
-      name = '傀儡上限';
-      from = b ? b.cap : 1;
-      to = from + g.flat;
-    }
-    return [{
-      key: `golem_${g.stat}`, scope: 'golem', name,
-      from, to, fromText: String(from), toText: `+${g.flat}`,
-      text: `${from} → ${to}`,
-    }];
+    return [golemChange(g, b)];
+  }
+  if (up.arrow) {
+    const a = up.arrow;
+    const bb = arrowRain ? arrowRain.bonuses() : null;
+    return [arrowChange(a, bb)];
   }
   if (up.sword) {
     const n = weapon ? weapon.count : 0;
