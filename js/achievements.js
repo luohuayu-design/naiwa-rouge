@@ -31,7 +31,7 @@
 //    · tier 决定骨币，**别手写骨币数字**（改档位只改 ACH_TIERS 一处）。
 // ============================================================
 
-import { profile, hasAch, achGot, markAchGot, addBones, save } from './profile.js?v=133';
+import { profile, hasAch, achGot, markAchGot, addBones, save } from './profile.js?v=134';
 
 // ---------------- 八类别 ----------------
 // icon 全部来自 game-icons.net（CC BY 3.0），和背包图标同源；
