@@ -18,9 +18,9 @@
 // 玩家自己都不知道自己布了什么。所以地上永远有一圈很淡的墨痕，
 // 数量不多、看得见、踩上去才炸。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=135';
-import { mitigate } from './stats.js?v=135';
-import audio from './audio.js?v=135';
+import * as THREE from '../lib/three.module.js?v=136';
+import { mitigate } from './stats.js?v=136';
+import audio from './audio.js?v=136';
 
 const DMG_MUL = 2.5;        // 基础伤害倍率（× 武器攻击）
 const MAX_MINE = 3;         // 同屏最多几枚（法器等级 / 卡 / 商店都能加）
