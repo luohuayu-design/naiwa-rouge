@@ -26,9 +26,9 @@
 // 第 11 块：每件货都带 rarity（0 普通 ~ 4 传说），店里按品质加权抽取 ——
 // 幸运越高，摆出来的货越往金/红那一头走（见 rarity.js）。
 // ============================================================
-import { rarityWeight } from './rarity.js?v=132';
-import { TURRET } from './turret.js?v=132';
-import { RELIC_DEFS } from './relics.js?v=132';
+import { rarityWeight } from './rarity.js?v=133';
+import { TURRET } from './turret.js?v=133';
+import { RELIC_DEFS } from './relics.js?v=133';
 
 export const SHOP_ITEMS = [
   // ---------------- 生命药水（第 13 块起：买进背包，作战中随时用） ----------------
@@ -280,7 +280,60 @@ export const SHOP_ITEMS = [
     glyph: '🫙', name: '保温杯',
     desc: '拿铁同屏 +1 杯、冷却 −4 秒（一局只能买一次）。多一杯，就能同时守住两条车道。',
   },
+  // ---------------- 第十一关新增（第 118 块）：守夜烛 / 落款 ----------------
+  // 用户定案：「完善第十一关，考虑设计多样法器配套技能」。
+  // 两件都和墨丸一样：relic 本体（可升 3 级）+ 两件一局一次的买断强化。
+  {
+    id: 'buyCandle', type: 'relic', relic: 'candle', price: 30, needRound: 8, needLevel: 11,
+    rarity: 3,
+    glyph: '🕯', name: '守夜烛',
+    desc: '钟楼守夜人的半截蜡：技能栏多一颗「守夜烛」。按下在脚下点一盏，持续 6 秒 ——'
+      + '圈里怪被灼烧并减速，而且**圈内的雾会被照散**（第十一关唯一能主动开视野的法器）。'
+      + '同屏 1 盏、冷却 22 秒。再买可升级（最多 3 级）。',
+  },
+  // 守夜烛的两件买断强化
+  {
+    id: 'buyCandleWax', type: 'candle', candle: 'wax', price: 20, needRound: 5, needLevel: 11,
+    rarity: 2,
+    glyph: '🪔', name: '蜡油',
+    desc: '守夜烛持续 +1.5 秒、灼烧 +8%（一局只能买一次）。三选一的守夜烛卡不受影响，可以继续叠。',
+  },
+  {
+    id: 'buyCandleShade', type: 'candle', candle: 'shade', price: 20, needRound: 9, needLevel: 11,
+    rarity: 2,
+    glyph: '🏮', name: '灯罩',
+    desc: '守夜烛半径 +0.6 格、减速 +6%（一局只能买一次）。照得更远，雾里那块空地就更大。',
+  },
+  {
+    id: 'buyMark', type: 'relic', relic: 'mark', price: 30, needRound: 8, needLevel: 11,
+    rarity: 3,
+    glyph: '📕', name: '落款',
+    desc: '把名字写回去：技能栏多一颗「落款」。按下给最近的怪盖印，持续 5 秒掉血，'
+      + '它死的时候名字炸开（半径 1.8、伤害 = 你攻击的 1.5 倍）。冷却 14 秒。再买可升级（最多 3 级）。',
+  },
+  // 落款的两件买断强化
+  {
+    id: 'buyMarkCinnabar', type: 'mark', mark: 'cinnabar', price: 20, needRound: 5, needLevel: 11,
+    rarity: 2,
+    glyph: '🔻', name: '朱砂',
+    desc: '落款持续伤害 +25%（一局只能买一次）。三选一的落款卡不受影响，可以继续叠。',
+  },
+  {
+    id: 'buyMarkPaper', type: 'mark', mark: 'paper', price: 20, needRound: 9, needLevel: 11,
+    rarity: 2,
+    glyph: '📜', name: '旧纸',
+    desc: '落款墨爆伤害 +40%（一局只能买一次）。死时那一下炸得更疼，一堆怪挤一起时最划算。',
+  },
 ];
+
+// 第 118 块：付**夜行骨币**刷新（用户定案「本次进店递增、离店重置」）。
+// 首刷 6 骨币，之后每刷一次 ×1.6，四舍五入 —— 6 / 10 / 15 / 25 / 39 …
+// 每次打开商店时 main 把次数清零，所以不会跨店累计。
+export const SHOP_REFRESH_BASE = 6;
+export const SHOP_REFRESH_STEP = 1.6;
+export function shopRefreshCost(n) {
+  return Math.round(SHOP_REFRESH_BASE * Math.pow(SHOP_REFRESH_STEP, Math.max(0, n | 0)));
+}
 
 // 商店里买不到 / 已卖光时给出原因（渲染禁用态用）
 // ctx: hasWeapon / round（当前回合）/ level（第几关）/ turretCount / relicLevels
@@ -319,6 +372,17 @@ export function itemLocked(item, ctx = {}) {
     if (!ctx.latteLevel) return '要先拥有「苔藓拿铁」';
     if (item.latte === 'foam' && ctx.latteFoam) return '这一局已经买过了';
     if (item.latte === 'thermos' && ctx.latteThermos) return '这一局已经买过了';
+  }
+  // 第 118 块：守夜烛 / 落款的两件买断货
+  if (item.type === 'candle') {
+    if (!ctx.candleLevel) return '要先拥有「守夜烛」';
+    if (item.candle === 'wax' && ctx.candleWax) return '这一局已经买过了';
+    if (item.candle === 'shade' && ctx.candleShade) return '这一局已经买过了';
+  }
+  if (item.type === 'mark') {
+    if (!ctx.markLevel) return '要先拥有「落款」';
+    if (item.mark === 'cinnabar' && ctx.markCinnabar) return '这一局已经买过了';
+    if (item.mark === 'paper' && ctx.markPaper) return '这一局已经买过了';
   }
   return null;
 }

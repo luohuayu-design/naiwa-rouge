@@ -16,12 +16,12 @@
 // 与环剑（自动索敌、消耗制）和炮台（固定点位）互补；价格定在
 // 商店里「买得起但要攒一攒」的档，让 9/12/15/18 回合的商店有取舍。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=132';
-import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=132';
-import { withV } from './assetUrl.js?v=132';   // 第 80 块：glb 带版本号，SW 才走缓存优先
-import { distance2D } from './stats.js?v=132';
-import { TAG_BASE, TAG_SEAL } from './deposit.js?v=132';   // 第 84 块：掉牌概率的真相源
-import audio from './audio.js?v=132';
+import * as THREE from '../lib/three.module.js?v=133';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=133';
+import { withV } from './assetUrl.js?v=133';   // 第 80 块：glb 带版本号，SW 才走缓存优先
+import { distance2D } from './stats.js?v=133';
+import { TAG_BASE, TAG_SEAL } from './deposit.js?v=133';   // 第 84 块：掉牌概率的真相源
+import audio from './audio.js?v=133';
 
 // 百分比文案（概率表里存的是 0.5 这种小数）
 const pct = (v) => `${Math.round(v * 100)}%`;
@@ -195,11 +195,54 @@ export const RELIC_DEFS = {
       '招牌特调：圈里攻速 ×1.4、移速 ×1.3 —— 在车道边放一杯，把怪留在危险区',
     ],
   },
+  // ---------------- 第十一关新增（第 118 块）：守夜烛 ----------------
+  // 用户 2026-10-29 定案：「完善第十一关，设计多样法器配套技能」。
+  // 墨丸是「你写、怪来踩」，守夜烛是「你点、雾退开」：放下后圈里怪被灼烧 /
+  // 减速，而且把圈内的雾照散（fog.cut）—— 第十一关独有的反雾手段。
+  // 本体、灼烧、驱雾全在 candle.js；这里只管「买没买 / 几级」。
+  candle: {
+    name: '守夜烛',
+    maxLevel: 3,
+    cap: [1, 1, 1],        // 同屏一盏，靠卡 / 商店扩
+    atkMul: [1, 1.2, 1.4],
+    desc: [
+      '钟楼守夜人留下的半截蜡：技能栏多一颗「守夜烛」。按下在脚下点一盏，持续 6 秒：圈里怪被灼烧并减速，圈内的雾会被照散',
+      '烛芯更旺：范围 3.5 格、持续 7.2 秒、灼烧 ×1.2',
+      '长明灯：范围 3.8 格、持续 8.4 秒、灼烧 ×1.4 —— 雾里点一盏，路就出来了',
+    ],
+  },
+  // ---------------- 第十一关新增（第 118 块）：落款 ----------------
+  // 第十一关讲「谁记得谁」：空白在划掉名字，你能做的就是把名字写回去。
+  // 按下给最近的怪盖一枚「落款」：持续掉血，死时名字炸开（范围伤害）。
+  // 本体、持续伤害、墨爆全在 mark.js；这里只管「买没买 / 几级」。
+  mark: {
+    name: '落款',
+    maxLevel: 3,
+    targets: [1, 2, 3],
+    atkMul: [1, 1.2, 1.4],
+    desc: [
+      '把名字写回去：技能栏多一颗「落款」。按下给最近的怪盖印，持续 5 秒掉血，死时墨爆（半径 1.8）；冷却 14 秒',
+      '一次落两个款：目标 2 个、持续伤害 ×1.2、墨爆 ×1.15',
+      '一页三名：目标 3 个、持续伤害 ×1.4、墨爆 ×1.3 —— 被点名的怪，走不掉',
+    ],
+  },
 };
 
 export function createRelicSystem({ scene, fx, enemies, onLanternReveal }) {
-  const levels = { spikes: 0, frost: 0, bell: 0, thorns: 0, stove: 0, lantern: 0, insulator: 0, woodfish: 0, seal: 0, puppet: 0, mine: 0, latte: 0 };
-  const cds = { spikes: 0, frost: 0, bell: 0, thorns: 0, stove: 0, lantern: 0, insulator: 0, woodfish: 0, seal: 0, puppet: 0, mine: 0, latte: 0 };
+  const levels = { spikes: 0, frost: 0, bell: 0, thorns: 0, stove: 0, lantern: 0, insulator: 0, woodfish: 0, seal: 0, puppet: 0, mine: 0, latte: 0, candle: 0, mark: 0 };
+  const cds = { spikes: 0, frost: 0, bell: 0, thorns: 0, stove: 0, lantern: 0, insulator: 0, woodfish: 0, seal: 0, puppet: 0, mine: 0, latte: 0, candle: 0, mark: 0 };
+
+  // ---------------- 逐件法器增幅（第 118 块）----------------
+  // 火种（逐件法器各一簇）与盲盒（法器属性）都往这张表里灌：
+  //   { relicId: { dmg: 1.12, radius: 0.2, cd: 0.92, coin: -1 } }
+  // 只加数值、不改逻辑；开局由 main 一次灌进来，局内不变。
+  const AMP = {};
+  const ampOf = (id) => AMP[id] || { dmg: 1, radius: 0, cd: 1 };
+  // 三个取值口：半径加算 / 伤害乘算 / 间隔乘算
+  const rOf = (id, lv) => RELIC_DEFS[id].radius[lv - 1] + ampOf(id).radius;
+  const dOf = (id, key, lv) => RELIC_DEFS[id][key][lv - 1] * ampOf(id).dmg;
+  const intOf = (id, lv) => (Array.isArray(RELIC_DEFS[id].interval)
+    ? RELIC_DEFS[id].interval[lv - 1] : RELIC_DEFS[id].interval) * ampOf(id).cd;
 
   // ---------------- 视觉 ----------------
   // 地刺（第 24 块）：KayKit「尖刺地板」里只取尖刺部分（CC0，带手绘贴图），
@@ -440,9 +483,8 @@ export function createRelicSystem({ scene, fx, enemies, onLanternReveal }) {
 
   // 地刺：范围内所有活怪一起掉血（不暴击、显示伤害数字）
   function eruptSpikes(lv, at) {
-    const def = RELIC_DEFS.spikes;
-    const radius = def.radius[lv - 1];
-    const dmg = def.damage[lv - 1];
+    const radius = rOf('spikes', lv);
+    const dmg = dOf('spikes', 'damage', lv);
     const foes = enemies.list.filter((e) =>
       enemies.hittable(e)     // 第 97 块：躺尸重启体不浪费地刺
       && distance2D(at, e.pos) <= radius
@@ -472,8 +514,8 @@ export function createRelicSystem({ scene, fx, enemies, onLanternReveal }) {
   // 霜环：每 0.5 秒一拍，环内怪掉血 + 减速（dot 静默结算，避免数字刷屏）
   function frostTick(lv, at) {
     const def = RELIC_DEFS.frost;
-    const radius = def.radius[lv - 1];
-    const dmg = def.dps[lv - 1] * 0.5;
+    const radius = rOf('frost', lv);
+    const dmg = dOf('frost', 'dps', lv) * 0.5;
     for (const e of enemies.list) {
       if (e.state === 'dead' || e.state === 'spawn') continue;
       if (distance2D(at, e.pos) > radius) continue;
@@ -486,8 +528,8 @@ export function createRelicSystem({ scene, fx, enemies, onLanternReveal }) {
   // 伤害用 quiet 结算（十几只怪同时跳数字太吵），打断单独统计返回给测试。
   function ringBell(lv, at) {
     const def = RELIC_DEFS.bell;
-    const radius = def.radius[lv - 1];
-    const dmg = def.damage[lv - 1];
+    const radius = rOf('bell', lv);
+    const dmg = dOf('bell', 'damage', lv);
     const knock = def.knock[lv - 1];
     let hit = 0, broke = 0;
     for (const e of enemies.list) {
@@ -512,8 +554,8 @@ export function createRelicSystem({ scene, fx, enemies, onLanternReveal }) {
     const lv = levels.thorns;
     if (lv <= 0) return 0;
     const def = RELIC_DEFS.thorns;
-    const radius = def.radius[lv - 1];
-    const dmg = def.reflect[lv - 1];
+    const radius = rOf('thorns', lv);
+    const dmg = dOf('thorns', 'reflect', lv);
     let n = 0;
     for (const e of enemies.list) {
       if (e.state === 'dead' || e.state === 'spawn') continue;
@@ -532,9 +574,8 @@ export function createRelicSystem({ scene, fx, enemies, onLanternReveal }) {
   // 静默结算（dot:true）—— 一秒一次、一次一圈，跳数字会糊满屏幕；
   // 伤害不暴击、不吃攻击力（法器的老规矩：自己一套数值）。
   function stoveTick(lv, at) {
-    const def = RELIC_DEFS.stove;
-    const radius = def.radius[lv - 1];
-    const dmg = def.damage[lv - 1];
+    const radius = rOf('stove', lv);
+    const dmg = dOf('stove', 'damage', lv);
     let n = 0;
     for (const e of enemies.list) {
       if (e.state === 'dead' || e.state === 'spawn') continue;
@@ -561,8 +602,8 @@ export function createRelicSystem({ scene, fx, enemies, onLanternReveal }) {
   // ============================================================
   function lanternFlare(lv, at) {
     const def = RELIC_DEFS.lantern;
-    const radius = def.radius[lv - 1];
-    const dmg = def.damage[lv - 1];
+    const radius = rOf('lantern', lv);
+    const dmg = dOf('lantern', 'damage', lv);
     let shown = 0;
     let hit = 0;
     if (enemies.revealInRadius) shown = enemies.revealInRadius(at, radius);
@@ -593,9 +634,8 @@ export function createRelicSystem({ scene, fx, enemies, onLanternReveal }) {
   // 「以毒攻毒」：第六关的地板本来是惩罚，穿上它就是武器。
   // ============================================================
   function insulatorTick(lv, at) {
-    const def = RELIC_DEFS.insulator;
-    const radius = def.radius[lv - 1];
-    const dmg = def.dps[lv - 1];
+    const radius = rOf('insulator', lv);
+    const dmg = dOf('insulator', 'dps', lv);
     let n = 0;
     for (const e of enemies.list) {
       if (e.state === 'dead' || e.state === 'spawn') continue;
@@ -619,7 +659,7 @@ export function createRelicSystem({ scene, fx, enemies, onLanternReveal }) {
     if (cds.woodfish > 0) return 0;          // 冷却中
     cds.woodfish = 0.45;
     const def = RELIC_DEFS.woodfish;
-    const radius = def.radius[lv - 1];
+    const radius = rOf('woodfish', lv);
     const knock = def.knock[lv - 1];
     const stun = def.stun[lv - 1];
     let n = 0;
@@ -661,7 +701,7 @@ export function createRelicSystem({ scene, fx, enemies, onLanternReveal }) {
     // 霜环盘子跟人走、呼吸
     const fl = levels.frost;
     if (fl > 0) {
-      const r = RELIC_DEFS.frost.radius[fl - 1];
+      const r = rOf('frost', fl);
       frostDisc.position.set(playerPos.x, 0.05, playerPos.z);
       frostRim.position.set(playerPos.x, 0.06, playerPos.z);
       frostDisc.scale.setScalar(r * (1 + Math.sin(performance.now() / 480) * 0.025));
@@ -671,7 +711,7 @@ export function createRelicSystem({ scene, fx, enemies, onLanternReveal }) {
     // 棘甲环：跟着人走；触发反伤时闪一下（thornPulse 从 1 衰减到 0）
     const tl = levels.thorns;
     if (tl > 0) {
-      const r = RELIC_DEFS.thorns.radius[tl - 1];
+      const r = rOf('thorns', tl);
       thornPulse = Math.max(0, thornPulse - dt * 2.2);
       thornRim.position.set(playerPos.x, 0.045, playerPos.z);
       thornRim.scale.setScalar(r * (1 + thornPulse * 0.06));
@@ -681,7 +721,7 @@ export function createRelicSystem({ scene, fx, enemies, onLanternReveal }) {
     // 暖炉：绕人慢转 + 火光呼吸 + 暖圈跟着主角（第 35 块）
     const stl = levels.stove;
     if (stl > 0) {
-      const r = RELIC_DEFS.stove.radius[stl - 1];
+      const r = rOf('stove', stl);
       stoveAngle += dt * 0.55;
       const ox = Math.cos(stoveAngle) * 0.95;
       const oz = Math.sin(stoveAngle) * 0.95;
@@ -703,7 +743,7 @@ export function createRelicSystem({ scene, fx, enemies, onLanternReveal }) {
     // 路口灯（第 63 块）：提着绕人转；每次点亮后暖光呼吸一下
     const ll = levels.lantern;
     if (ll > 0) {
-      const r = RELIC_DEFS.lantern.radius[ll - 1];
+      const r = rOf('lantern', ll);
       lanternAngle += dt * 0.7;
       const sway = Math.sin(performance.now() / 700) * 0.05;
       lanternGroup.position.set(
@@ -760,7 +800,7 @@ export function createRelicSystem({ scene, fx, enemies, onLanternReveal }) {
     const sl = levels.spikes;    if (sl > 0) {
       cds.spikes -= dt;
       if (cds.spikes <= 0) {
-        cds.spikes = RELIC_DEFS.spikes.interval;
+        cds.spikes = intOf('spikes', sl);
         eruptSpikes(sl, playerPos);
       }
     }
@@ -775,7 +815,7 @@ export function createRelicSystem({ scene, fx, enemies, onLanternReveal }) {
     if (bl > 0) {
       cds.bell -= dt;
       if (cds.bell <= 0) {
-        cds.bell = RELIC_DEFS.bell.interval[bl - 1];
+        cds.bell = intOf('bell', bl);
         ringBell(bl, playerPos);
       }
     }
@@ -783,7 +823,7 @@ export function createRelicSystem({ scene, fx, enemies, onLanternReveal }) {
     if (st > 0) {
       cds.stove -= dt;
       if (cds.stove <= 0) {
-        cds.stove = RELIC_DEFS.stove.interval;
+        cds.stove = intOf('stove', st);
         stoveTick(st, playerPos);
       }
     }
@@ -791,7 +831,7 @@ export function createRelicSystem({ scene, fx, enemies, onLanternReveal }) {
     if (ltn > 0) {
       cds.lantern -= dt;
       if (cds.lantern <= 0) {
-        cds.lantern = RELIC_DEFS.lantern.interval[ltn - 1];
+        cds.lantern = intOf('lantern', ltn);
         lanternFlare(ltn, playerPos);
       }
     }
@@ -861,8 +901,17 @@ export function createRelicSystem({ scene, fx, enemies, onLanternReveal }) {
     // （表里第 0 位就是「没买铃」的 50%，所以直接按等级取即可）
     sealLevel: () => levels.seal,
     sealChance: () => RELIC_DEFS.seal.tagChance[levels.seal] ?? TAG_BASE,
-    sealCoinPer: () => RELIC_DEFS.seal.coinPer,
+    // 第 118 块：镇牌铃的火种簇会把这个数往下压（每挡回几块牌子就能换一枚骨币）
+    sealCoinPer: () => Math.max(4, RELIC_DEFS.seal.coinPer + (ampOf('seal').coin || 0)),
     DEF: RELIC_DEFS,
+    // 第 118 块：火种 / 盲盒的法器增幅一次灌进来（开局调一次；局内不变）
+    // table: { spikes: { dmg:1.06 }, mine: { radius:0.2 }, ... } —— 没写到的按中性算
+    setRelicAmp: (table) => {
+      for (const k of Object.keys(AMP)) delete AMP[k];
+      for (const [id, v] of Object.entries(table || {})) {
+        AMP[id] = { dmg: 1, radius: 0, cd: 1, coin: 0, ...v };
+      }
+    },
     // 调试（第 29 块）：手动敲一次钟（截图/测试用）
     debugBell: (at) => ringBell(Math.max(1, levels.bell), at),
     // 调试（第 35 块）：手动烧一次暖炉（测试灼烧半径/伤害用，不依赖 1 秒节拍）

@@ -1737,7 +1737,17 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
 .sh-buy .gc-coin{width:11px;height:11px}
 .sh-buy b.deal{color:#9df2c4}
 .sh-foot{padding:4px 16px 13px;text-align:center;font-size:10px;
-  letter-spacing:.06em;color:rgba(190,175,140,.42)}
+  letter-spacing:.06em;color:rgba(190,175,140,.42);
+  display:flex;flex-direction:column;align-items:center;gap:7px}
+/* 第 118 块：付骨币刷新（本次进店递增，离店重置） */
+.sh-refresh{padding:7px 16px;border:1px solid rgba(255,209,102,.42);border-radius:9px;
+  background:rgba(255,209,102,.1);color:#ffe3a6;font-family:inherit;font-size:11.5px;
+  letter-spacing:.04em;cursor:pointer;-webkit-tap-highlight-color:transparent;
+  transition:filter .15s,transform .1s}
+.sh-refresh:hover:not(:disabled){filter:brightness(1.12)}
+.sh-refresh:active:not(:disabled){transform:scale(.96)}
+.sh-refresh.poor,.sh-refresh:disabled{opacity:.45;cursor:default}
+.sh-foottxt{display:block}
 @media (max-height:600px){
   .sh-card{max-height:90vh}
   .sh-desc{display:none}

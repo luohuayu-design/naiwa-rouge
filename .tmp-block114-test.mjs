@@ -190,7 +190,7 @@ const inkThick = S.SHOP_ITEMS.find((i) => i.id === 'buyInkThick');
 ok(!!buyMine && buyMine.type === 'relic' && buyMine.relic === 'mine', 'buyMine 是法器货');
 ok(buyMine.needLevel === 11, '墨丸只在第十一关起上架');
 ok(!!inkSac && !!inkThick && inkSac.type === 'ink' && inkThick.type === 'ink', '两件墨货 type = ink');
-ok(S.SHOP_ITEMS.length === 34, `商店货 34 件（28 + 3 + 3，实 ${S.SHOP_ITEMS.length}）`);
+ok(S.SHOP_ITEMS.length === 40, `商店货 40 件（28 + 3 + 3 + 6，实 ${S.SHOP_ITEMS.length}）`);
 ok(S.itemLocked(inkSac, {}) === '要先拥有「墨丸」', '没墨丸时墨货锁着');
 ok(S.itemLocked(inkSac, { mineLevel: 1, round: 9, level: 11 }) === null,
   '有墨丸 + 够了回合/关卡后解锁');
@@ -211,7 +211,7 @@ const pv = U.previewUpgrade(
 ok(Array.isArray(pv) && pv.length === 1 && pv[0].fromText && pv[0].toText,
   'previewUpgrade 能给出「原值 → 新值」（不会崩）',
   JSON.stringify(pv && pv[0]));
-ok(U.UPGRADES.length === 99, `卡池 99 张（87 + 6 + 6，实 ${U.UPGRADES.length}）`);
+ok(U.UPGRADES.length === 109, `卡池 109 张（87 + 6 + 6 + 10，实 ${U.UPGRADES.length}）`);
 
 // 技能栏
 const mineSkill = SK.SKILLS.find((s) => s.id === 'mine');
@@ -254,8 +254,9 @@ for (const k of ['attack', 'attackSpeed', 'moveSpeed', 'critRate', 'armor']) {
 }
 ok(/when: \(\) => stats\.get\('critRate'\) >= 0\.05/.test(mainSrc),
   '暴击为 0 时不进池子（不给人「收走一个你没有的东西」）');
-ok(/STEAL_SKILL_NAMES = \{ arrowRain: '箭雨', heal: '回血', golem: '傀儡术', mine: '墨丸' \}/.test(mainSrc),
-  '技能池 = 四个有键的技能');
+const stealPool = (mainSrc.match(/STEAL_SKILL_NAMES = \{[\s\S]*?\};/) || [''])[0];
+ok(['arrowRain', 'heal', 'golem', 'mine', 'latte', 'candle', 'mark'].every((k) => stealPool.includes(k)),
+  '技能池 = 所有有键的技能（箭雨/回血/傀儡/墨丸/拿铁/守夜烛/落款）');
 ok(/function skillOwnedById/.test(mainSrc), '只从真正拥有的技能里抽');
 ok(/function clearSteal/.test(mainSrc), '同一时刻只挂一条（新的先清旧的）');
 ok(/updateSteal\(dt\)/.test(mainSrc), '每帧收尾（到点还回去）');

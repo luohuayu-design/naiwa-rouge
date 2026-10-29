@@ -5,7 +5,7 @@
 // 等级、三选一、商店分别走独立 mods；所有临时属性 mod 都有 src，
 // 离场 / 到期 / reset 必须撤掉，不能把一杯咖啡带进下一局。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=132';
+import * as THREE from '../lib/three.module.js?v=133';
 
 export const LATTE_BASE = {
   cd: 30.0,
@@ -45,6 +45,8 @@ export function createLatteSystem({ scene, fx, enemies, stats, onCast, onSlow, o
   let relicLv = 0;
   let cd = 0;
   let cdMul = 1;
+  // 第 118 块：火种（拿铁那一簇）/ 盲盒的法器增幅
+  let amp = { dmg: 1, radius: 0, cd: 1, dur: 0 };
   let serial = 0;
   let lastFail = '';
   const zones = [];
@@ -53,13 +55,13 @@ export function createLatteSystem({ scene, fx, enemies, stats, onCast, onSlow, o
   const discGeo = new THREE.CircleGeometry(1, 48).rotateX(-Math.PI / 2);
   const rimGeo = new THREE.RingGeometry(0.95, 1, 56).rotateX(-Math.PI / 2);
 
-  const radiusV = () => LATTE_BASE.radius + mods.radius;
-  const durationV = () => LATTE_BASE.duration + mods.duration + Math.max(0, relicLv - 1) + (shop.foam ? 2 : 0);
+  const radiusV = () => LATTE_BASE.radius + mods.radius + amp.radius;
+  const durationV = () => LATTE_BASE.duration + mods.duration + Math.max(0, relicLv - 1) + amp.dur + (shop.foam ? 2 : 0);
   const hasteV = () => (LATTE_BASE.haste + mods.haste) * (relicLv > 0 ? [1, 1, 1.2, 1.4][relicLv] : 1);
   const moveV = () => LATTE_BASE.move * (relicLv > 0 ? [1, 1, 1.15, 1.3][relicLv] : 1);
   const slowV = () => Math.min(0.65, LATTE_BASE.slow + mods.slow + (shop.foam ? 0.08 : 0));
   const capV = () => Math.min(LATTE_BASE.capMax, LATTE_BASE.cap + mods.cap + (shop.thermos ? 1 : 0));
-  const cdMaxV = () => Math.max(LATTE_BASE.cdMin, (LATTE_BASE.cd - mods.cdCut - (shop.thermos ? 4 : 0)) * cdMul);
+  const cdMaxV = () => Math.max(LATTE_BASE.cdMin, (LATTE_BASE.cd - mods.cdCut - (shop.thermos ? 4 : 0)) * cdMul * amp.cd);
 
   function removeZone(i) {
     const z = zones[i];
@@ -245,6 +247,8 @@ export function createLatteSystem({ scene, fx, enemies, stats, onCast, onSlow, o
       cdMul = Math.max(0.1, Number(m) || 1);
       if (cd > 0) cd = Math.min(cd, cdMaxV());
     },
+    // 第 118 块：法器增幅（火种 / 盲盒）
+    setRelicAmp: (a) => { amp = { ...amp, ...(a || {}) }; },
     list: () => zones.map((z) => ({ id: z.id, x: +z.x.toFixed(2), z: +z.z.toFixed(2), t: +z.t.toFixed(2), life: z.life, inside: z.inside, seen: z.seen.size })),
     pickupCount: () => pickups.length,
     timedCount: () => timedMods.length,

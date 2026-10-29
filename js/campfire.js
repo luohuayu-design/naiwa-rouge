@@ -14,7 +14,7 @@
 // camp   { id: 等级 } 已点燃的火种（数字等级，无限级，天然兼容老档案）
 // ============================================================
 
-import { profile, save, bones, addBones } from './profile.js?v=132';
+import { profile, save, bones, addBones } from './profile.js?v=133';
 
 // ---------------- 骨币产出 ----------------
 // 一局打完全程普通（20 回合 273 杀）：60 + 81 + 40 ≈ 181 骨币。
@@ -77,55 +77,155 @@ export const CAMP_STEP = 0.35;         // 每级加价 35%（线性：price = ba
 
 export const CAMPFIRE = [
   {
-    id: 'hide', name: '火种 · 厚皮', icon: '🫀', cost: 90,
+    id: 'hide', name: '火种 · 厚皮', icon: '🫀', cost: 90, core: true,
     desc: '每级开局生命上限 +1。多挨一下，就多一次转身的机会。',
     mods: [{ stat: 'maxHp', flat: 1 }],
   },
   {
-    id: 'claw', name: '火种 · 尖爪', icon: '🐾', cost: 80,
+    id: 'claw', name: '火种 · 尖爪', icon: '🐾', cost: 80, core: true,
     desc: '每级开局攻击力 +8%。普攻涨一点点，环剑不吃这一项。',
     mods: [{ stat: 'attack', pct: 0.08 }],
   },
   {
-    id: 'step', name: '火种 · 轻足', icon: '🌿', cost: 85,
+    id: 'step', name: '火种 · 轻足', icon: '🌿', cost: 85, core: true,
     desc: '每级开局移动速度 +4%。拉扯时脚下快半拍。',
     mods: [{ stat: 'moveSpeed', pct: 0.04 }],
   },
   {
-    id: 'star', name: '火种 · 星屑', icon: '✨', cost: 75,
+    id: 'star', name: '火种 · 星屑', icon: '✨', cost: 75, core: true,
     desc: '每级开局幸运 +0.2。只让三选一与商店更容易出好东西，不加任何伤害。',
     mods: [{ stat: 'luck', flat: 0.2 }],
   },
   {
-    id: 'edge', name: '火种 · 剑锋', icon: '🗡', cost: 110,
+    id: 'edge', name: '火种 · 剑锋', icon: '🗡', cost: 110, core: true,
     desc: '每级剑伤害 +5%。喂给环上的剑，怪越硬越看得出来。',
     mods: [{ stat: 'swordDamage', pct: 0.05, scope: 'weapon' }],
   },
   {
-    id: 'gale', name: '火种 · 疾风', icon: '🌀', cost: 100,
+    id: 'gale', name: '火种 · 疾风', icon: '🌀', cost: 100, core: true,
     desc: '每级攻击速度 +3%。弹幕更密，普攻的节奏更顺。',
     mods: [{ stat: 'attackSpeed', pct: 0.03 }],
   },
   {
-    id: 'shell', name: '火种 · 铁壳', icon: '🛡', cost: 85,
+    id: 'shell', name: '火种 · 铁壳', icon: '🛡', cost: 85, core: true,
     desc: '每级护甲 +0.12。怪撞你一下，你少掉一点。',
     mods: [{ stat: 'armor', flat: 0.12 }],
   },
   {
-    id: 'purse', name: '布袋 · 铜板', icon: '🪙', cost: 50,
+    id: 'purse', name: '布袋 · 铜板', icon: '🪙', cost: 50, core: true,
     // 第 54 块（用户定案）：每级 30 → 10。30 金币一档等于白送半家摊子，
     // 局内经济被它一个人抬起来了；10 金币是「少打两只怪」的量，叠几级才有味道。
     desc: '每级开局多 10 金币。一档不多，点几级才看得出差别。',
     coins: 10,
   },
   {
-    id: 'pouch', name: '行囊 · 小药', icon: '🧪', cost: 60,
+    id: 'pouch', name: '行囊 · 小药', icon: '🧪', cost: 60, core: true,
     desc: '每级开局背包里多 1 瓶小药（回 3 点血，战斗中按 B 喝）。',
     potion: 1,
+  },
+
+  // ============ 第 118 块：逐件法器火种（用户定案「逐件法器各一簇」） ============
+  // 用户 2026-10-29：「在火种商店加上对法器属性的提升购买」。
+  // 每件法器一簇，只提升它自己：这一簇的效果由 campRelicAmp() 汇总成一张表，
+  // 开局灌给对应的法器系统（relics.js / mine.js / latte.js / golem.js / candle.js / mark.js）。
+  // 它们不算「核心九簇」—— 成就「九簇篝火」与 footer 的计数只看 core: true 的那九条。
+  {
+    id: 'rel_spikes', name: '火种 · 地刺', icon: '🪡', cost: 95,
+    desc: '每级地刺伤害 +5%。地刺吃普攻，跟着剑一起长。',
+    relicAmp: { relic: 'spikes', dmg: 0.05 },
+  },
+  {
+    id: 'rel_frost', name: '火种 · 霜环', icon: '❄️', cost: 95,
+    desc: '每级霜环持续伤害 +5%。圈里的怪掉血更快、脚下更黏。',
+    relicAmp: { relic: 'frost', dmg: 0.05 },
+  },
+  {
+    id: 'rel_bell', name: '火种 · 震钟', icon: '🔔', cost: 100,
+    desc: '每级震钟冷却 −4%。钟响得更勤，读条的怪被断得更频繁。',
+    relicAmp: { relic: 'bell', cd: 0.04 },
+  },
+  {
+    id: 'rel_thorns', name: '火种 · 棘甲', icon: '🌵', cost: 90,
+    desc: '每级棘甲反伤 +6%。谁撞你，谁就要多掉一块。',
+    relicAmp: { relic: 'thorns', dmg: 0.06 },
+  },
+  {
+    id: 'rel_stove', name: '火种 · 暖炉', icon: '🔥', cost: 90,
+    desc: '每级暖炉伤害 +6%。站在炉边的怪，一直烧。',
+    relicAmp: { relic: 'stove', dmg: 0.06 },
+  },
+  {
+    id: 'rel_lantern', name: '火种 · 路口灯', icon: '🏮', cost: 100,
+    desc: '每级路口灯照亮半径 +0.1 格。灯照得广一点，藏起来的就少一点。',
+    relicAmp: { relic: 'lantern', radius: 0.1 },
+  },
+  {
+    id: 'rel_insulator', name: '火种 · 绝缘斗篷', icon: '⚡', cost: 90,
+    desc: '每级绝缘斗篷伤害 +6%。通电的地板也能被你踩回去。',
+    relicAmp: { relic: 'insulator', dmg: 0.06 },
+  },
+  {
+    id: 'rel_woodfish', name: '火种 · 木鱼', icon: '🪵', cost: 90,
+    desc: '每级木鱼击退半径 +0.1 格。敲得开一点，怪就贴不上来。',
+    relicAmp: { relic: 'woodfish', radius: 0.1 },
+  },
+  {
+    id: 'rel_seal', name: '火种 · 镇牌铃', icon: '🔖', cost: 105,
+    desc: '每级镇牌铃「挡回几块牌子换一枚骨币」的门槛 −1（最低 4）。',
+    relicAmp: { relic: 'seal', coin: -1 },
+  },
+  {
+    id: 'rel_puppet', name: '火种 · 傀儡术', icon: '🤖', cost: 105,
+    desc: '每级傀儡生命与攻击 +5%。铁傀儡更硬，锤得更重。',
+    relicAmp: { relic: 'puppet', dmg: 0.05 },
+  },
+  {
+    id: 'rel_mine', name: '火种 · 墨丸', icon: '⚫', cost: 100,
+    desc: '每级墨丸伤害 +5%。雾里铺下去的雷，炸得更狠。',
+    relicAmp: { relic: 'mine', dmg: 0.05 },
+  },
+  {
+    id: 'rel_latte', name: '火种 · 拿铁', icon: '☕', cost: 100,
+    desc: '每级拿铁持续 +0.25 秒。咖啡多香一会儿，车道边的怪就多留一会儿。',
+    relicAmp: { relic: 'latte', dur: 0.25 },
+  },
+  {
+    id: 'rel_candle', name: '火种 · 守夜烛', icon: '🕯', cost: 100,
+    desc: '每级守夜烛灼烧 +5%。烛光照到的地方，连雾带怪一起收拾。',
+    relicAmp: { relic: 'candle', dmg: 0.05 },
+  },
+  {
+    id: 'rel_mark', name: '火种 · 落款', icon: '📕', cost: 100,
+    desc: '每级落款伤害 +5%（持续伤害与墨爆一起涨）。名字写得越重，墨爆越疼。',
+    relicAmp: { relic: 'mark', dmg: 0.05 },
   },
 ];
 
 export const CAMP_BY_ID = Object.fromEntries(CAMPFIRE.map((c) => [c.id, c]));
+
+// 第 118 块：核心九簇（成就「九簇篝火」「篝火烧旺」只看它们）
+export const CAMP_CORE = CAMPFIRE.filter((c) => c.core);
+
+// 第 118 块：逐件法器火种 → 开局增幅表。
+// 返回 { spikes: { dmg: 1.05, radius: 0, cd: 1, dur: 0, coin: 0 }, ... }
+// main 开局把它交给 relics.setRelicAmp / mine.setRelicAmp / …；
+// 没点过的法器不在表里（系统按中性值处理）。
+export function campRelicAmp() {
+  const out = {};
+  for (const item of CAMPFIRE) {
+    if (!item.relicAmp) continue;
+    const lv = campLevel(item.id);
+    if (!lv) continue;
+    const a = item.relicAmp;
+    const cur = out[a.relic] || (out[a.relic] = { dmg: 1, radius: 0, cd: 1, dur: 0, coin: 0 });
+    if (a.dmg) cur.dmg *= Math.pow(1 + a.dmg, lv);
+    if (a.radius) cur.radius += a.radius * lv;
+    if (a.cd) cur.cd *= Math.pow(1 - a.cd, lv);
+    if (a.dur) cur.dur += a.dur * lv;
+    if (a.coin) cur.coin += a.coin * lv;
+  }
+  return out;
+}
 
 // 第 level+1 级的价格（level = 当前等级，0 表示还没点）。无限级：永远有下一档。
 export function campCost(id, level = null) {

@@ -18,9 +18,9 @@
 // 玩家自己都不知道自己布了什么。所以地上永远有一圈很淡的墨痕，
 // 数量不多、看得见、踩上去才炸。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=132';
-import { mitigate } from './stats.js?v=132';
-import audio from './audio.js?v=132';
+import * as THREE from '../lib/three.module.js?v=133';
+import { mitigate } from './stats.js?v=133';
+import audio from './audio.js?v=133';
 
 const DMG_MUL = 2.5;        // 基础伤害倍率（× 武器攻击）
 const MAX_MINE = 3;         // 同屏最多几枚（法器等级 / 卡 / 商店都能加）
@@ -38,15 +38,17 @@ export function createMineSystem({ scene, fx, enemies, wstats }) {
   let relicLv = 0;                   // 法器等级（1~3，0 = 没买）
   let cd = 0;
   let cdMul = 1;                     // 局外商店的技能 CD 缩短
+  // 第 118 块：火种（墨丸那一簇）/ 盲盒的法器增幅
+  let amp = { dmg: 1, radius: 0, cd: 1 };
   let lastFail = '';
   let t = 0;
   const mines = [];                  // { x, z, ball, halo, age, armed, boomT, ring }
   const blasts = [];                 // 爆炸收尾：{ disc, mat, t }
 
   const maxV = () => Math.min(MAX_CAP, MAX_MINE + mods.max + (relicLv > 0 ? relicLv - 1 : 0));
-  const radiusV = () => RADIUS + mods.radius + (shop.thick ? 0.5 : 0);
-  const dmgMulV = () => DMG_MUL * (1 + mods.dmgPct + (shop.sac ? 0.15 : 0)) * (relicLv > 0 ? [1, 1, 1.25, 1.5][relicLv] : 1);
-  const cdMaxV = () => Math.max(CD_MIN, (CD_MAX - mods.cdCut - (shop.thick ? 1.5 : 0)) * cdMul);
+  const radiusV = () => RADIUS + mods.radius + amp.radius + (shop.thick ? 0.5 : 0);
+  const dmgMulV = () => DMG_MUL * (1 + mods.dmgPct + (shop.sac ? 0.15 : 0)) * (relicLv > 0 ? [1, 1, 1.25, 1.5][relicLv] : 1) * amp.dmg;
+  const cdMaxV = () => Math.max(CD_MIN, (CD_MAX - mods.cdCut - (shop.thick ? 1.5 : 0)) * cdMul * amp.cd);
 
   // ---------------- 视觉 ----------------
   const ballGeo = new THREE.SphereGeometry(0.17, 12, 10);
@@ -236,6 +238,8 @@ export function createMineSystem({ scene, fx, enemies, wstats }) {
       cdMul = Math.max(0.1, Number(m) || 1);
       if (cd > 0) cd = Math.min(cd, cdMaxV());
     },
+    // 第 118 块：法器增幅（火种 / 盲盒）
+    setRelicAmp: (a) => { amp = { ...amp, ...(a || {}) }; },
     // 测试口
     list: () => mines.map((m) => ({
       x: +m.x.toFixed(2), z: +m.z.toFixed(2),

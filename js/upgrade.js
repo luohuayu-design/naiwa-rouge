@@ -34,9 +34,9 @@
 //   标了 scope:'weapon' 的项改的是武器表（剑系 / 元素系），其余改主角表。
 //   两块表都要传进来，没传 wstats 时武器项会退化到主角表（只为兼容老调用）。
 // ============================================================
-import { STAT_DEFS } from './stats.js?v=132';
-import { WEAPON_STAT_DEFS } from './weaponStats.js?v=132';
-import { RARITIES, rarityWeight, oddsOf } from './rarity.js?v=132';
+import { STAT_DEFS } from './stats.js?v=133';
+import { WEAPON_STAT_DEFS } from './weaponStats.js?v=133';
+import { RARITIES, rarityWeight, oddsOf } from './rarity.js?v=133';
 
 // 一张卡改的是哪块表
 function tableFor(scope, stats, wstats) {
@@ -552,6 +552,92 @@ const UNIQUE = [
     title: '半径 +0.5 · 持续 +1.5 秒 · 减速 +5%',
     desc: '传说：一次给三样 —— 圈更大、更久、更黏。拿到这张，咖啡就从「补位」变成「阵地」',
   },
+  // ---------------- 守夜烛卡（第 118 块，第十一关专属法器） ----------------
+  // 买到「守夜烛」后才会进池子（weightOf 里拦：opts.candleOwned）。
+  // 四个通道：持续 / 半径 / 灼烧 / 冷却；up.candle 由 applyUpgrade 转交 candle.applyCard()。
+  {
+    id: 'candleDur', tag: 'def', glyph: '🕯', name: '多烧一会儿',
+    rarity: 0,
+    w0: 0.60, gw: +0.015,
+    candle: { duration: 1.2 },
+    title: '守夜烛持续 +1.2 秒',
+    desc: '蜡烛烧得更久（能重复拿）—— 雾里那块空地能多留一会儿',
+  },
+  {
+    id: 'candleRad', tag: 'atk', glyph: '🌙', name: '照亮一片',
+    rarity: 0,
+    w0: 0.60, gw: +0.015,
+    candle: { radius: 0.4 },
+    title: '守夜烛半径 +0.4 格',
+    desc: '光圈更大（能重复拿）—— 一块地能照到的雾更多，能烧到的怪也更多',
+  },
+  {
+    id: 'candleDps', tag: 'atk', glyph: '🔥', name: '烛芯加粗',
+    rarity: 1,
+    w0: 0.55, gw: +0.015,
+    candle: { dps: 0.12 },
+    title: '守夜烛灼烧 +12%',
+    desc: '火更旺（能重复拿）—— 它吃武器攻击，剑越强它烧得越狠',
+  },
+  {
+    id: 'candleCd', tag: 'mov', glyph: '⏱', name: '随手点亮',
+    rarity: 2,
+    w0: 0.40, gw: +0.020,
+    candle: { cd: 2.5 },
+    title: '守夜烛冷却 −2.5 秒',
+    desc: '点得更勤（能重复拿，最低 8 秒）—— 一盏接一盏，雾根本贴不上来',
+  },
+  {
+    id: 'candleSet', tag: 'atk', glyph: '🏮', name: '长明灯',
+    rarity: 4,
+    w0: 0.30, gw: +0.008,
+    candle: { radius: 0.5, duration: 2.0, dps: 0.2 },
+    title: '半径 +0.5 · 持续 +2 秒 · 灼烧 +20%',
+    desc: '传说：一次给三样 —— 灯光、长明、火势一起涨。拿到这张，守夜烛就从「开路」变成「圈地」',
+  },
+  // ---------------- 落款卡（第 118 块，第十一关专属法器） ----------------
+  // 买到「落款」后才会进池子（weightOf 里拦：opts.markOwned）。
+  // 四个通道：目标数 / 持续伤害 / 墨爆范围 / 冷却；up.mark 由 applyUpgrade 转交 mark.applyCard()。
+  {
+    id: 'markTarget', tag: 'def', glyph: '📇', name: '多写一名',
+    rarity: 1,
+    w0: 0.55, gw: +0.015,
+    mark: { targets: 1 },
+    title: '落款一次多盖 1 个',
+    desc: '一次给更多怪点名（能重复拿）—— 雾里分不清谁是谁的时候，多写几个名字总没错',
+  },
+  {
+    id: 'markDps', tag: 'atk', glyph: '🖋', name: '重墨',
+    rarity: 0,
+    w0: 0.60, gw: +0.015,
+    mark: { dps: 0.12 },
+    title: '落款持续伤害 +12%',
+    desc: '名字写得更重（能重复拿）—— 被点名的怪血掉得更快',
+  },
+  {
+    id: 'markBoom', tag: 'atk', glyph: '💥', name: '墨溅',
+    rarity: 1,
+    w0: 0.55, gw: +0.015,
+    mark: { boomR: 0.3 },
+    title: '落款墨爆半径 +0.3 格',
+    desc: '死时炸得更开（能重复拿）—— 一堆怪挤在一起时，一个名字能带走一片',
+  },
+  {
+    id: 'markCd', tag: 'mov', glyph: '⏱', name: '速记',
+    rarity: 2,
+    w0: 0.40, gw: +0.020,
+    mark: { cd: 1.5 },
+    title: '落款冷却 −1.5 秒',
+    desc: '写得更快（能重复拿，最低 5 秒）—— 一页又一页地记，谁也别想蒙混过去',
+  },
+  {
+    id: 'markSet', tag: 'atk', glyph: '📕', name: '一页三名',
+    rarity: 4,
+    w0: 0.30, gw: +0.008,
+    mark: { targets: 1, dps: 0.2, boomR: 0.4 },
+    title: '目标 +1 · 持续伤害 +20% · 墨爆 +0.4',
+    desc: '传说：一次给三样 —— 名字更多、写得更重、炸得更开。拿到这张，落款就是「点名清场」',
+  },
 ];
 
 // 把「族 × 三档」摊平成一张张卡。小档沿用原来的 id（老存档 / 老测试照旧认得）。
@@ -612,6 +698,9 @@ export function weightOf(up, round = 1, opts = {}) {
   if (up.mine && !opts.mineOwned) return 0;
   // 第 116 块：拿铁卡同理 —— 没买到拿铁之前它们一张都不该出现
   if (up.latte && !opts.latteOwned) return 0;
+  // 第 118 块：守夜烛 / 落款卡同理
+  if (up.candle && !opts.candleOwned) return 0;
+  if (up.mark && !opts.markOwned) return 0;
   if (up.needsWeapon && !opts.hasWeapon) return 0;
   const r = Math.max(1, round);
   return Math.max(0, (up.w0 ?? 1) + (up.gw ?? 0) * (r - 1));
@@ -660,7 +749,7 @@ export function rollChoices(rng = Math.random, opts = {}) {
 // wstats = 武器属性表：scope:'weapon' 的条目改它，其余改主角 stats。
 // weapon = 武器系统本身：只有「直接给一把剑」的卡（sword 字段）才需要它。
 // 返回 { src, changes }：changes 是精确的「选前 → 选后」（用于卡片/提示文案）。
-export function applyUpgrade(stats, up, serial = 0, wstats = null, weapon = null, golems = null, arrowRain = null, mines = null, latte = null) {
+export function applyUpgrade(stats, up, serial = 0, wstats = null, weapon = null, golems = null, arrowRain = null, mines = null, latte = null, candle = null, mark = null) {
   // 第 107 块：傀儡卡不碰属性表，交给傀儡系统记账（golem.applyCard）
   if (up.golem) {
     const g = up.golem;
@@ -699,6 +788,25 @@ export function applyUpgrade(stats, up, serial = 0, wstats = null, weapon = null
     return {
       src: `upg:${up.id}:${serial}`,
       changes: [latteChange(l, before)],
+    };
+  }
+  // 第 118 块：守夜烛 / 落款卡交给各自的系统记账
+  if (up.candle) {
+    const c = up.candle;
+    const before = candle ? candle.bonuses() : null;
+    if (candle) candle.applyCard(c);
+    return {
+      src: `upg:${up.id}:${serial}`,
+      changes: [candleChange(c, before)],
+    };
+  }
+  if (up.mark) {
+    const m = up.mark;
+    const before = mark ? mark.bonuses() : null;
+    if (mark) mark.applyCard(m);
+    return {
+      src: `upg:${up.id}:${serial}`,
+      changes: [markChange(m, before)],
     };
   }
   // 剑阵这类「直接加一把剑」的卡：不碰属性表，交给武器系统上环
@@ -890,7 +998,49 @@ function latteChange(l, b) {
   };
 }
 
-export function previewUpgrade(stats, up, wstats = null, weapon = null, golems = null, arrowRain = null, mines = null, latte = null) {
+// ---- 第 118 块：守夜烛卡的 changes 文案（apply 与 preview 共用）----
+function candleChange(c, b) {
+  const sum = (k) => (c[k] || 0) + ((c.extra || []).reduce((a, e) => a + (e[k] || 0), 0));
+  const b0 = b || { duration: 6.0, radius: 3.2, dpsMul: 0.55, cdMax: 22.0 };
+  const meta = {
+    duration: { name: '守夜烛持续', from: b0.duration, fmt: (v) => `${v.toFixed(1)} 秒` },
+    radius: { name: '守夜烛半径', from: b0.radius, fmt: (v) => `${v.toFixed(1)} 格` },
+    dps: { name: '守夜烛灼烧', from: b0.dpsMul, fmt: (v) => `×${v.toFixed(2)}` },
+    cd: { name: '守夜烛冷却', from: b0.cdMax, fmt: (v) => `${v.toFixed(1)} 秒` },
+  };
+  const stat = meta[c.stat] ? c.stat : 'radius';
+  const mm = meta[stat];
+  const flat = sum(stat);
+  const to = stat === 'cd' ? Math.max(8.0, mm.from - flat) : mm.from + flat;
+  return {
+    key: `candle_${stat}`, scope: 'candle', name: mm.name,
+    from: mm.from, to, fromText: mm.fmt(mm.from), toText: mm.fmt(to),
+    text: `${mm.fmt(mm.from)} → ${mm.fmt(to)}`,
+  };
+}
+
+// ---- 第 118 块：落款卡的 changes 文案（apply 与 preview 共用）----
+function markChange(m, b) {
+  const sum = (k) => (m[k] || 0) + ((m.extra || []).reduce((a, e) => a + (e[k] || 0), 0));
+  const b0 = b || { targets: 1, dpsMul: 0.9, boomR: 1.8, cdMax: 14.0 };
+  const meta = {
+    targets: { name: '落款目标', from: b0.targets, fmt: (v) => `${v} 个` },
+    dps: { name: '落款伤害', from: b0.dpsMul, fmt: (v) => `×${v.toFixed(2)}` },
+    boomR: { name: '墨爆半径', from: b0.boomR, fmt: (v) => `${v.toFixed(1)} 格` },
+    cd: { name: '落款冷却', from: b0.cdMax, fmt: (v) => `${v.toFixed(1)} 秒` },
+  };
+  const stat = meta[m.stat] ? m.stat : 'targets';
+  const mm = meta[stat];
+  const flat = sum(stat);
+  const to = stat === 'cd' ? Math.max(5.0, mm.from - flat) : mm.from + flat;
+  return {
+    key: `mark_${stat}`, scope: 'mark', name: mm.name,
+    from: mm.from, to, fromText: mm.fmt(mm.from), toText: mm.fmt(to),
+    text: `${mm.fmt(mm.from)} → ${mm.fmt(to)}`,
+  };
+}
+
+export function previewUpgrade(stats, up, wstats = null, weapon = null, golems = null, arrowRain = null, mines = null, latte = null, candle = null, mark = null) {
   if (up.golem) {
     const g = up.golem;
     const b = golems ? golems.bonuses() : null;
@@ -912,6 +1062,15 @@ export function previewUpgrade(stats, up, wstats = null, weapon = null, golems =
     const l = up.latte;
     const bb = latte ? latte.bonuses() : null;
     return [latteChange(l, bb)];
+  }
+  // 第 118 块：守夜烛 / 落款卡 —— 预览与实值共用同一个 change 函数
+  if (up.candle) {
+    const b = candle ? candle.bonuses() : null;
+    return [candleChange(up.candle, b)];
+  }
+  if (up.mark) {
+    const b = mark ? mark.bonuses() : null;
+    return [markChange(up.mark, b)];
   }
   if (up.sword) {
     const n = weapon ? weapon.count : 0;

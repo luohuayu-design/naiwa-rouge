@@ -9,7 +9,7 @@
 // 视觉：一张 256² 的 canvas 环贴图（内圈淡填充 + 亮环 + 外发光），
 // 加色混合贴地，外围有一点点呼吸感，不会盖住草地纹理。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=132';
+import * as THREE from '../lib/three.module.js?v=133';
 
 // 所有环共用同一张环贴图与同一块平面（半径 1，靠 scale 改大小）
 let TEX = null;

@@ -32,7 +32,7 @@
 //
 // ctx 由 main.js 每帧拼好传进来：{ playing, weapon, playerPos, stats, coins }
 // ============================================================
-import audio from './audio.js?v=132';
+import audio from './audio.js?v=133';
 
 // 冷却数字统一两位小数（第 64 块用户需求：倒计时精确到两位小数）。
 // 不补零会跳字（3.4 → 3.35 期间宽度变化），toFixed(2) 宽度恒定。
@@ -273,6 +273,89 @@ export const SKILLS = [
     press(ctx) {
       if (!ctx.latte) return false;
       return ctx.latte.drop(ctx.playerPos);   // 冷却中 / 满场地：返回 false，不播音效
+    },
+  },
+
+  // ---- 第 13 件法器「守夜烛」（第 118 块，第十一关专属） ----
+  // 用户 2026-10-29：「完善第十一关，考虑设计多样法器配套技能」。
+  // 墨丸是「你写、怪来踩」，守夜烛是「你点、雾退开」：放下后圈里怪被灼烧 / 减速，
+  // 而且圈内的雾会被照散（fog.cut）—— 第十一关唯一能主动改视野的法器。
+  {
+    id: 'candle',
+    name: '守夜烛',
+    // 内联 SVG：半截蜡烛 + 一簇火苗 + 一圈暖光
+    art: '<svg viewBox="0 0 40 40" aria-hidden="true">'
+      + '<rect x="16.5" y="17" width="7" height="15" rx="1.6" fill="#f0e2c0"/>'
+      + '<rect x="14" y="31.5" width="12" height="3" rx="1.4" fill="#8a6a44"/>'
+      + '<path d="M20 8 q4.4 5 4.4 8.4 a4.4 4.4 0 0 1 -8.8 0 Q15.6 13 20 8 z" fill="#ffc873"/>'
+      + '<path d="M20 11.6 q2.2 3 2.2 4.8 a2.2 2.2 0 0 1 -4.4 0 Q17.8 14.6 20 11.6 z" fill="#fff2c8" opacity=".9"/>'
+      + '<circle cx="20" cy="22" r="14" fill="none" stroke="#ffd79b" stroke-width="1.2" opacity=".45"/>'
+      + '</svg>',
+    ring: true,
+    hint: '在脚下点一盏烛：圈里怪被灼烧并减速，圈内的雾被照散。持续 6 秒、冷却 22 秒',
+    key: '7',
+    cd: 22.0,
+    cdNow: (ctx) => (ctx.candle ? ctx.candle.cdMax : 22.0),
+    desc: '守夜烛：按一下在脚下点亮一盏蜡烛，持续 6 秒。圈里的怪每半秒被灼烧一次并减速；'
+      + '更关键的是，圈内的雾会被照散 —— 第十一关的雾里看不见路，这盏烛就是你能主动开出的那块空地。'
+      + '同屏一盏，冷却 22 秒。它不是输出装，是「把路还给你」的那件东西。',
+    unlockNote: '夜行商店买到「守夜烛」（第十一关起上架）后拥有',
+    visible: (ctx) => ctx.playing && !!ctx.candle && ctx.candle.owned,
+    state: (ctx) => {
+      if (!ctx.candle || !ctx.candle.owned) return 'lock';
+      if (ctx.candle.count >= ctx.candle.cap) return 'full';
+      return ctx.candle.ready ? 'ready' : 'cd';
+    },
+    ready: (ctx) => !!ctx.candle && ctx.candle.owned && ctx.playing && ctx.candle.ready,
+    progress: (ctx) => (ctx.candle ? ctx.candle.progress : 0),
+    cdText: (ctx) => {
+      if (!ctx.candle || !ctx.candle.owned) return '';
+      if (ctx.candle.count >= ctx.candle.cap) return '满';
+      return ctx.candle.ready ? '' : fmtCd(ctx.candle.cdLeft);
+    },
+    press(ctx) {
+      if (!ctx.candle) return false;
+      return ctx.candle.drop(ctx.playerPos);
+    },
+  },
+
+  // ---- 第 14 件法器「落款」（第 118 块，第十一关专属） ----
+  // 第十一关讲「谁记得谁」：空白在划掉名字，你能做的就是把名字写回去。
+  // 按下给最近的怪盖一枚「落款」，持续掉血，死时名字炸开（范围伤害）。
+  {
+    id: 'mark',
+    name: '落款',
+    // 内联 SVG：一枚红色印章 + 一个「名」字形的竖笔
+    art: '<svg viewBox="0 0 40 40" aria-hidden="true">'
+      + '<rect x="9" y="8" width="22" height="17" rx="2.4" fill="none" stroke="#ff6b5a" stroke-width="2.2"/>'
+      + '<path d="M20 11.4 v10.4" stroke="#ff6b5a" stroke-width="2.4" stroke-linecap="round"/>'
+      + '<path d="M15.4 16.6 h9.2" stroke="#ff8a6a" stroke-width="1.8" stroke-linecap="round"/>'
+      + '<rect x="13" y="27.4" width="14" height="4.4" rx="1.6" fill="#c0453a"/>'
+      + '<circle cx="20" cy="29.6" r="0.9" fill="#ffe6c0" opacity=".9"/>'
+      + '</svg>',
+    ring: true,
+    hint: '给最近的怪盖印：持续掉血，死亡时墨爆（半径 1.8）。目标 1 个、冷却 14 秒',
+    key: '8',
+    cd: 14.0,
+    cdNow: (ctx) => (ctx.mark ? ctx.mark.cdMax : 14.0),
+    desc: '落款：按一下给最近的怪盖上一枚你的名字。被盖印的怪会持续掉血，'
+      + '它死的时候名字炸开一次墨爆（半径 1.8，伤害 = 武器攻击 ×1.5，范围内所有怪一起吃）。'
+      + '冷却 14 秒；法器等级 / 卡可以一次落好几个款。雾里点名一个最烦的，它走不出这一页。',
+    unlockNote: '夜行商店买到「落款」（第十一关起上架）后拥有',
+    visible: (ctx) => ctx.playing && !!ctx.mark && ctx.mark.owned,
+    state: (ctx) => {
+      if (!ctx.mark || !ctx.mark.owned) return 'lock';
+      return ctx.mark.ready ? 'ready' : 'cd';
+    },
+    ready: (ctx) => !!ctx.mark && ctx.mark.owned && ctx.playing && ctx.mark.ready,
+    progress: (ctx) => (ctx.mark ? ctx.mark.progress : 0),
+    cdText: (ctx) => {
+      if (!ctx.mark || !ctx.mark.owned || ctx.mark.ready) return '';
+      return fmtCd(ctx.mark.cdLeft);
+    },
+    press(ctx) {
+      if (!ctx.mark) return false;
+      return ctx.mark.press(ctx.playerPos);   // 场上没怪：返回 false，不播音效
     },
   },
 

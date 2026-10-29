@@ -135,7 +135,7 @@ ok(relics.RELIC_DEFS.insulator && relics.RELIC_DEFS.insulator.maxLevel === 3, '�
 ok(relics.RELIC_DEFS.lantern.desc.length === 3 && relics.RELIC_DEFS.insulator.desc.length === 3, '两件法器每级都有说明');
 // 第 71 块 +木鱼
 // 第 84 块 +镇牌铃（第八关寄存柜专用）→ 9 件
-ok(Object.keys(relics.RELIC_DEFS).length === 12, '法器一共 12 件（第 107 块 +傀儡术 / 第 114 块 +墨丸 / 第 116 块 +拿铁）', Object.keys(relics.RELIC_DEFS).join(','));
+ok(Object.keys(relics.RELIC_DEFS).length === 14, '法器一共 14 件（第 107 块 +傀儡术 / 第 114 块 +墨丸 / 第 116 块 +拿铁 / 第 118 块 +守夜烛 / +落款）', Object.keys(relics.RELIC_DEFS).join(','));
 
 // ============================================================
 sec('D、怪物表：擦名者 / 重启体');

@@ -26,7 +26,7 @@
 //   camOffset(0, 10.6, 9.2) → 视线方向 (0, -0.757, -0.653) →
 //   沿视线把地面点抬到 h 高度，z 要加 h×0.653/0.757 = 0.862h。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=132';
+import * as THREE from '../lib/three.module.js?v=133';
 
 const VIEW_K = 0.862;        // 见文件头（相机常量算出来的，改相机要一起改）
 // 雾层的渲染顺序：实体 / 投掷物 / 地面圈都 ≤ 7，穿雾的东西都在 850 以上
@@ -172,6 +172,7 @@ export function createFogSystem({ scene }) {
       born: force ? -opts.warn : 0,   // force = 跳过预警直接起雾（读档 / 测试用）
       vx: 0, vz: 0,
       driftT: 0,
+      cutT: 0,                  // 第 118 块：守夜烛照过来时，这团雾加速散掉
       layers: [],
       warn: null,
     };
@@ -276,6 +277,18 @@ export function createFogSystem({ scene }) {
     return Math.min(1, d);
   }
 
+  // 守夜烛（第 118 块）：把一块地上的雾照散 —— 和半径相交的雾团原地加速消散。
+  // 注意只改「散得快」，不直接 killPatch：删掉会立刻被 spawn 补一团，反而更密。
+  function cut(x, z, r) {
+    let n = 0;
+    for (const p of patches) {
+      if (Math.hypot(x - p.x, z - p.z) > p.r * 0.9 + r) continue;
+      p.cutT = Math.max(p.cutT || 0, 0.5);
+      n++;
+    }
+    return n;
+  }
+
   function update(dt, extra = {}) {
     if (!on) return;
     clock += dt;
@@ -315,6 +328,12 @@ export function createFogSystem({ scene }) {
       else if (t < opts.life - opts.fadeOut) a = 1;
       else a = Math.max(0, (opts.life - t) / opts.fadeOut);
       p.a = Math.min(1, a);
+
+      // 第 118 块：被烛光照到 → 半秒内散开（每秒被刷新一次；烛灭了雾会回来）
+      if (p.cutT > 0) {
+        p.cutT -= dt;
+        p.a = Math.min(p.a, Math.max(0, p.cutT) / 0.5);
+      }
 
       // ---- 预警圈：只在起雾之前显示，越临近越亮 ----
       if (p.warn) {
@@ -365,7 +384,7 @@ export function createFogSystem({ scene }) {
   }
 
   return {
-    build, update, clear, clearPatches, inside, densityAt,
+    build, update, clear, clearPatches, inside, densityAt, cut,
     get on() { return on; },
     get count() { return patches.length; },
     get max() { return opts.max; },

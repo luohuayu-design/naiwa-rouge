@@ -1,7 +1,7 @@
 // 第 54 块 —— 用户报的四条（布袋金币超模 / 主菜单排版 / 篝火改名 / 失败提示）
 // 纯 Node 跑：`node .tmp-block54-test.mjs`（cwd = naiwa-rouge）
 import fs from 'fs';
-import { CAMPFIRE, CAMP_BY_ID, campApply } from './js/campfire.js';
+import { CAMPFIRE, CAMP_CORE, CAMP_BY_ID, campApply } from './js/campfire.js';
 
 let pass = 0, fail = 0;
 const fails = [];
@@ -37,7 +37,9 @@ for (const [id, v] of Object.entries(OTHER)) {
   ok(got === v, `${id} 的每级效果没动（${got}）`);
 }
 ok(CAMP_BY_ID.pouch.potion === 1, '行囊 · 小药每级还是 1 瓶');
-ok(CAMPFIRE.length === 9, `火种还是 9 簇（实际 ${CAMPFIRE.length}）`);
+// 第 118 块：核心九簇不变，另加 14 簇逐件法器增幅（共 23）
+ok(CAMP_CORE.length === 9, `核心火种还是 9 簇（实际 ${CAMP_CORE.length}）`);
+ok(CAMPFIRE.length === 23, `火种摊共 23 簇（实际 ${CAMPFIRE.length}）`);
 
 // 1.3 落到这一局的实际发放量：点 1 级给 10，点 3 级给 30
 function fakeStats() {

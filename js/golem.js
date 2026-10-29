@@ -30,9 +30,9 @@
 // 官方资源（iron_golem.png / snow_golem.png，版权归 Mojang）。这是用户明确
 // 要求的（「贴图就用MC的」），风险已知。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=132';
-import { distance2D } from './stats.js?v=132';
-import audio from './audio.js?v=132';
+import * as THREE from '../lib/three.module.js?v=133';
+import { distance2D } from './stats.js?v=133';
+import audio from './audio.js?v=133';
 
 // ---- 数值（用户定案 + 我的拍板，都写在这里方便改） ----
 const CD_TOTAL = 40;        // 技能冷却：召出（或傀儡阵亡）后要等这么久才能再召
@@ -122,6 +122,8 @@ export function createGolemSystem({ scene, fx, enemies }) {
   let atkBonus = 0;           // 三选一卡：铁傀儡攻击 pct（0.3 = +30%）
   let relicLv = 0;            // 法器等级（main 每帧喂，或 buy 时喂）
   let playerAttack = () => 1; // 主角此刻攻击（main 喂）
+  // 第 118 块：火种（傀儡那一簇）/ 盲盒的法器增幅 —— dmg 同时乘生命与攻击
+  let amp = { dmg: 1 };
   const snowballs = [];       // 飞行中的雪球
   // 第 108 块：傀儡卡第二批（召唤CD / 铁傀儡出手 / 雪球击退 / 雪球减速）
   let cdCut = 0;              // Σ 召唤 CD 缩短（秒），下限 CD_MIN
@@ -189,7 +191,7 @@ export function createGolemSystem({ scene, fx, enemies }) {
     if (!ready() || (kind !== 'iron' && kind !== 'snow')) return null;
     const lv = Math.max(1, relicLv);
     const baseHp = kind === 'iron' ? IRON_BASE_HP : SNOW_BASE_HP;
-    const maxHp = Math.round(baseHp * RELIC_HP_MUL[lv - 1] + hpBonus[kind]);
+    const maxHp = Math.round((baseHp * RELIC_HP_MUL[lv - 1] + hpBonus[kind]) * amp.dmg);
     const root = kind === 'iron' ? buildIron() : buildSnow();
     root.position.set(at.x, 0, at.z);
     const bar = makeHpBar(kind === 'iron' ? 2.6 : 1.75);
@@ -330,7 +332,7 @@ export function createGolemSystem({ scene, fx, enemies }) {
         if (near && nd <= IRON_REACH && g.atkT <= 0) {
           g.atkT = Math.max(IRON_ATK_CD_MIN, IRON_ATK_CD * (1 - ironSpdPct));
           g.swing = 1;
-          const dmg = Math.max(1, Math.round(IRON_ATK_RATIO * playerAttack() * RELIC_ATK_MUL[(relicLv || 1) - 1] * (1 + atkBonus)));
+          const dmg = Math.max(1, Math.round(IRON_ATK_RATIO * playerAttack() * RELIC_ATK_MUL[(relicLv || 1) - 1] * (1 + atkBonus) * amp.dmg));
           enemies.takeDamage(near, dmg, false, { cls: 'phys' });
         }
       } else {
@@ -408,6 +410,8 @@ export function createGolemSystem({ scene, fx, enemies }) {
     // main 每帧喂的输入
     setRelicLevel: (lv) => { relicLv = lv || 0; },
     setPlayerAttack: (fn) => { playerAttack = fn || (() => 1); },
+    // 第 118 块：法器增幅（生命与攻击一起乘，取值 1 = 不增幅）
+    setRelicAmp: (a) => { amp = { dmg: 1, ...(a || {}) }; },
     // ---- 观测口（main / 测试 / ?debug=1 用） ----
     tauntAt: () => {
       const g = list.find((x) => x.kind === 'snow');

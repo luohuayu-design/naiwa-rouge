@@ -24,8 +24,8 @@
 import {
   profile, bones, addBones, metaShopState, metaAddMod, metaGrantRelic,
   metaGrantSkillCd, metaLog, metaBought, save,
-} from './profile.js?v=132';
-import { RELIC_DEFS } from './relics.js?v=132';
+} from './profile.js?v=133';
+import { RELIC_DEFS } from './relics.js?v=133';
 
 // ---------------- 三档宝箱 ----------------
 // tier 0/1/2 对应「最低可出现的池子档位」；mag 是木匣基准的强度倍率；
@@ -115,6 +115,12 @@ const POS = [
   { stat: 'swordCrit',   flat: 0.02, scope: 'weapon', icon: '✦', name: '锋线', desc: '剑暴击率', minTier: 0, weight: 0.80 },
   { stat: 'swordOrbit',  pct: 0.06,  scope: 'weapon', icon: '🌀', name: '环绕', desc: '剑转速', minTier: 1, weight: 0.60 },
   { stat: 'elementRadius', flat: 0.50, scope: 'weapon', icon: '📡', name: '扩散', desc: '元素波及', minTier: 1, weight: 0.50 },
+  // 第 118 块（用户：「盲盒的池子也同步配对所有东西」）：补三条**法器属性**，
+  // 和火种那边的「逐件法器各一簇」并行 —— 火种点的是某一件，盲盒给的是全场一起。
+  // 这三条不进 stats（stats 没有这些键），由 metaRelicAmp() 汇总后开局灌给法器系统。
+  { stat: 'relicDmg',    pct: 0.04,  icon: '🔮', name: '器魂', desc: '法器伤害', minTier: 0, weight: 0.70 },
+  { stat: 'relicRadius', flat: 0.06, icon: '📐', name: '广域', desc: '法器范围', minTier: 1, weight: 0.50 },
+  { stat: 'relicCd',     pct: 0.03,  icon: '⏱️', name: '疾器', desc: '法器冷却', minTier: 1, weight: 0.50 },
 ];
 
 // 负面池（与正面一一对应，幅度一致；诅咒时强制给其中一条）
@@ -134,6 +140,10 @@ const NEG = [
   { stat: 'swordCrit',   flat: 0.02, scope: 'weapon', icon: '🪤', name: '钝锋', desc: '剑暴击率', minTier: 0, weight: 0.80 },
   { stat: 'swordOrbit',  pct: 0.06,  scope: 'weapon', icon: '🕸️', name: '滞环', desc: '剑转速', minTier: 1, weight: 0.60 },
   { stat: 'elementRadius', flat: 0.50, scope: 'weapon', icon: '🧿', name: '收束', desc: '元素波及', minTier: 1, weight: 0.50 },
+  // 第 118 块：三条法器属性的对应负面（幅度一致、方向相反）
+  { stat: 'relicDmg',    pct: 0.04,  icon: '💀', name: '器蚀', desc: '法器伤害', minTier: 0, weight: 0.70 },
+  { stat: 'relicRadius', flat: 0.06, icon: '🔍', name: '窄域', desc: '法器范围', minTier: 1, weight: 0.50 },
+  { stat: 'relicCd',     pct: 0.03,  icon: '🐢', name: '滞器', desc: '法器冷却', minTier: 1, weight: 0.50 },
 ];
 
 // 稀有项里可永久拥有的法器（不含任何一关才有的，全部 5 种都能常驻）
@@ -334,6 +344,8 @@ export function metaApplyStats(stats, wstats) {
   const agg = new Map();   // 'weapon|attack' -> { stat, scope, flat, pct }
   for (const m of (s.mods || [])) {
     if (!m || !m.stat) continue;
+    // 第 118 块：relic* 不是 stats 的属性键，走 metaRelicAmp() 灌法器（别塞进 addMod）
+    if (m.stat.startsWith('relic')) continue;
     const scope = m.scope === 'weapon' ? 'weapon' : '';
     let flat = Number(m.flat) || 0;
     const pct = Number(m.pct) || 0;
@@ -353,6 +365,23 @@ export function metaApplyStats(stats, wstats) {
     target.addMod({ stat: a.stat, flat: a.flat, pct: a.pct, src: 'meta' });
   }
   return agg.size;
+}
+
+// ---------------- 第 118 块：盲盒里攒下的法器增幅 ----------------
+// 把 metaShop 里的 relicDmg / relicRadius / relicCd 汇总成：
+//   { dmg: 1.12, radius: 0.18, cd: 0.94 }
+// 开局由 main 交给所有法器系统（不占 stats，也不会被 stats 的 get 漏掉）。
+export function metaRelicAmp() {
+  const out = { dmg: 1, radius: 0, cd: 1 };
+  for (const m of (metaShopState().mods || [])) {
+    if (!m || !m.stat || m.scope) continue;
+    if (m.stat === 'relicDmg') out.dmg *= 1 + (Number(m.pct) || 0);
+    else if (m.stat === 'relicRadius') out.radius += Number(m.flat) || 0;
+    else if (m.stat === 'relicCd') out.cd *= 1 - (Number(m.pct) || 0);
+  }
+  out.dmg = Math.max(0.2, out.dmg);
+  out.cd = Math.max(0.3, out.cd);
+  return out;
 }
 
 // ---------------- 开局注入（含实例：技能CD + 永久法器） ----------------
