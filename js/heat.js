@@ -73,7 +73,9 @@ export function createHeat(opts = {}) {
   }
 
   function reset() {
+    const had = heat > 0;
     heat = 0; lastKillT = -1e9;
+    if (had) onChange(0);   // 第 117 块：断连归零时通知 UI 收起提示
   }
 
   return {

@@ -1481,18 +1481,6 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
 .rep-chip.low b{color:#ffa495}
 .rep-chip.low .rc-heart{background:radial-gradient(circle at 34% 30%,#ffe0d8,#e86d6d 62%,#96322b)}
 
-/* 声音开关：和金币/民心角标同高的一颗圆钮（#hud 整体 pointer-events:none，这里要单独打开） */
-.mute-btn{display:inline-flex;align-items:center;justify-content:center;
-  width:30px;height:30px;margin-top:10px;margin-left:6px;padding:0;
-  border-radius:999px;border:1px solid rgba(160,220,255,.26);
-  background:rgba(10,24,30,.55);color:#cfe9ff;font-size:14px;line-height:1;
-  cursor:pointer;pointer-events:auto;-webkit-tap-highlight-color:transparent;
-  transition:border-color .18s,background .18s,transform .12s,opacity .18s}
-.mute-btn:hover{border-color:rgba(160,220,255,.5);background:rgba(14,32,40,.7)}
-.mute-btn:active{transform:scale(.92)}
-.mute-btn.off{opacity:.62;border-color:rgba(255,140,120,.32)}
-.mute-btn:focus-visible{outline:2px solid rgba(126,235,196,.6);outline-offset:2px}
-
 /* ---------------- 背包（第 13 块） ---------------- */
 /* 背包按钮：与金币/民心同排的圆钮，有东西时亮起并显示数量 */
 .bag-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;
@@ -1503,7 +1491,12 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
   box-shadow:0 4px 14px rgba(0,0,0,.45),inset 0 1px 0 rgba(180,235,255,.1);
   cursor:pointer;pointer-events:auto;-webkit-tap-highlight-color:transparent;
   transition:border-color .18s,background .18s,transform .12s}
-.bag-btn .bg-img{width:30px;height:30px;filter:drop-shadow(0 0 5px rgba(150,235,255,.35));
+/* 第 117 块：<i> 默认 inline，宽高和 mask 都不生效 —— 图标就成了空白。
+   必须 display:block + background:currentColor 才能把 SVG 当形状显示出来。 */
+.bag-btn .bg-img{display:block;width:30px;height:30px;flex:none;
+  background:currentColor;
+  -webkit-mask:var(--ic) center/contain no-repeat;mask:var(--ic) center/contain no-repeat;
+  color:#cfe9ff;filter:drop-shadow(0 0 5px rgba(150,235,255,.35));
   opacity:.88;pointer-events:none}
 .bag-btn.on .bg-img{opacity:1;filter:drop-shadow(0 0 7px rgba(255,209,102,.55))}
 .bag-btn:hover{border-color:rgba(160,220,255,.55);background:rgba(14,32,40,.75)}
@@ -1525,7 +1518,10 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
   background:rgba(10,26,32,.6);color:#dff3ff;cursor:pointer;
   transition:border-color .15s,background .15s;-webkit-tap-highlight-color:transparent}
 .bg-item:hover{border-color:rgba(126,235,196,.5);background:rgba(12,34,40,.75)}
-.bg-glyph{font-size:20px;width:28px;text-align:center;flex:none}
+.bg-glyph{display:block;width:26px;height:26px;flex:none;color:#cfe9ff;
+  background:currentColor;
+  -webkit-mask:var(--ic) center/contain no-repeat;mask:var(--ic) center/contain no-repeat;
+  filter:drop-shadow(0 0 4px rgba(150,235,255,.3))}
 .bg-mid{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0}
 .bg-mid b{font-size:13px;font-weight:700}
 .bg-mid i{font-style:normal;font-size:11px;color:#8fb0bd}
@@ -2451,25 +2447,33 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
 .code-panel.bad .cp-foot{color:#ffb0a0}
 .code-panel.good .cp-foot{color:#a8f0d0}
 
-/* ---------------- 第 115 块：合成台 / 剑阵反向 / 热度条 / 音乐盒 ---------------- */
-/* 热度条：连杀时左下角一条橙红进度（满格移速/攻速加成）。默认隐藏，有热度才显示 */
-.heat-chip{margin-top:10px;display:none;align-items:center;gap:6px;
-  padding:4px 10px;border-radius:999px;
-  border:1px solid rgba(255,150,80,.3);background:rgba(30,14,6,.55);
-  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;pointer-events:none}
-.heat-chip .hc-mark{font-size:11px;font-weight:700;color:#ffb08a;letter-spacing:.04em}
-.heat-bar{width:56px;height:7px;border-radius:999px;background:rgba(255,255,255,.12);overflow:hidden}
-.heat-bar i{display:block;height:100%;width:0;border-radius:999px;
-  background:linear-gradient(90deg,#ff9a4a,#ff5a5a);transition:width .18s}
+/* ---------------- 第 115 块：合成台 / 音乐盒 ---------------- */
+/* 第 117 块：连杀提示 —— 不再用进度条，击杀后在屏幕中间浮现，
+   停留约 1 秒再淡出；每次击杀重启动画（scale 弹一下）。 */
+.streak-pop{position:fixed;left:50%;top:34%;z-index:24;transform:translate(-50%,-50%);
+  display:flex;flex-direction:column;align-items:center;gap:5px;
+  pointer-events:none;opacity:0;text-align:center;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.streak-pop.show{animation:streakPop 1.6s ease-out forwards}
+.streak-pop b{font-size:34px;font-weight:800;letter-spacing:.06em;
+  color:#ffd166;text-shadow:0 0 18px rgba(255,150,60,.75),0 2px 0 rgba(90,30,0,.55)}
+.streak-pop span{font-size:13px;font-weight:700;letter-spacing:.04em;
+  color:#ffb08a;text-shadow:0 0 10px rgba(255,120,60,.55)}
+@keyframes streakPop{
+  0%{opacity:0;transform:translate(-50%,-50%) scale(.72)}
+  14%{opacity:1;transform:translate(-50%,-50%) scale(1.12)}
+  26%{transform:translate(-50%,-50%) scale(1)}
+  72%{opacity:1;transform:translate(-50%,-50%) scale(1)}
+  100%{opacity:0;transform:translate(-50%,-58%) scale(.96)}
+}
 
-/* 合成台 / 剑阵反向 按钮：HUD 右侧小圆钮（和声音开关同高） */
+/* 合成台按钮：HUD 右侧小圆钮（和声音开关同高） */
 .craft-btn{margin-top:10px;margin-left:6px;display:inline-flex;align-items:center;justify-content:center;
   width:auto;min-width:40px;height:34px;padding:0 10px;border-radius:999px;
   border:1px solid rgba(220,190,140,.4);background:rgba(24,16,6,.6);
   color:#e8d5b0;font-size:12px;font-weight:700;letter-spacing:.05em;cursor:pointer;
   font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;pointer-events:auto}
 .craft-btn:active{background:rgba(60,40,14,.8)}
-.craft-btn.sword-rev-btn{border-color:rgba(150,210,255,.4);background:rgba(8,20,32,.6);color:#b8dcff}
 
 /* 合成台面板内的元素 */
 .cr-section{margin:10px 0;padding:0 4px}

@@ -13,14 +13,14 @@
 | `js/elite.js` | 精英怪 + 掉落词条 | 同上 |
 | `js/weather.js` | 天气 / 环境变化 | 同上 |
 | `js/musicbox.js` | 音乐盒收集 | 同上 |
-| `js/swordReverse.js` | 剑阵反向切换（创意 A1） | `.tmp-handfeel-test.mjs` |
-| `js/dash.js` | 冲刺斩位移技（创意 A2） | 同上 |
-| `js/heat.js` | 连杀热度条（创意 A3） | 同上 |
+| `js/dash.js` | 冲刺斩位移技（创意 A2） | `.tmp-handfeel-test.mjs` |
+| `js/heat.js` | 连杀热度（创意 A3；第 117 块改为屏幕中间浮现，不再用进度条） | 同上 |
 | `js/lastwords.js` | 青蛙遗言系统（创意 B5） | 同上 |
 
-> 九个引擎全部**零 import 业务模块**，依赖注入 + 回调，可 Node 独立测试；
+> 八个引擎全部**零 import 业务模块**，依赖注入 + 回调，可 Node 独立测试；
 > 接 main.js 时每套只加「创建 + 一两处调用」，不污染另一组在改的 enemy.js / relics.js。
-> 手感四件套（swordReverse/dash/heat/lastwords）测试 `.tmp-handfeel-test.mjs` **32 项全绿**。
+> 手感三件套（dash/heat/lastwords）测试 `.tmp-handfeel-test.mjs` 全绿。
+> **第 117 块删除 `js/swordReverse.js`**：用户要求取消「剑转」按钮与剑阵反向机制。
 
 ---
 

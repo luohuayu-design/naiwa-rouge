@@ -5,45 +5,45 @@
 // 目标是把三件事调顺：摇杆输入 → 角色速度/朝向 → 相机跟随。
 // 后续叠战斗时，只需要在 tick() 里加敌人更新与自动攻击，不用动输入层。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=131';
-import { buildNightScene } from './scene.js?v=131';
-import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=131';
+import * as THREE from '../lib/three.module.js?v=132';
+import { buildNightScene } from './scene.js?v=132';
+import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=132';
 // 第 80 块：给 glb 拼上版本号 → SW 缓存优先（详见 assetUrl.js）
-import { withV } from './assetUrl.js?v=131';
-import { createInput } from './input.js?v=131';
-import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=131';
-import { createStatView } from './statView.js?v=131';
-import { createWeaponStats } from './weaponStats.js?v=131';
-import { createFx } from './fx.js?v=131';
-import { createEnemySystem, ENEMY_TYPES } from './enemy.js?v=131';
+import { withV } from './assetUrl.js?v=132';
+import { createInput } from './input.js?v=132';
+import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=132';
+import { createStatView } from './statView.js?v=132';
+import { createWeaponStats } from './weaponStats.js?v=132';
+import { createFx } from './fx.js?v=132';
+import { createEnemySystem, ENEMY_TYPES } from './enemy.js?v=132';
 import {
   createLevel, LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVEL_5, LEVEL_6, LEVEL_7, LEVEL_8, LEVEL_9, LEVEL_10, LEVEL_11, LEVELS_BY_ID, DIFFS, setDifficulty, getDifficulty, roundScale, levelStats, levelTypes,
-} from './wave.js?v=131';
-import { createRangeRing } from './rangeRing.js?v=131';
-import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=131';
-import { createWeaponSystem } from './weapon.js?v=131';
-import { createArrowRainSystem } from './arrowRain.js?v=131';
-import { SWORD_KINDS } from './swordKinds.js?v=131';
-import { createGoldSystem } from './gold.js?v=131';
-import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW, SHOP_PINNED } from './shop.js?v=131';
-import { createTurretSystem, TURRET } from './turret.js?v=131';
-import { createRelicSystem, RELIC_DEFS } from './relics.js?v=131';
-import { createGolemSystem } from './golem.js?v=131';   // 第 107 块：法器「傀儡术」的铁 / 雪傀儡
-import { createHazards } from './hazards.js?v=131';
-import { createFogSystem } from './fog.js?v=131';    // 第 114 块：第十一关的雾
-import { createMineSystem } from './mine.js?v=131';  // 第 114 块：第 11 件法器「墨丸」
-import { createTrafficSystem } from './traffic.js?v=131';  // 第 116 块：第十二关的车流
-import { createLatteSystem } from './latte.js?v=131';      // 第 116 块：第 12 件法器「苔藓拿铁」
-import { createDeposit, tagChance } from './deposit.js?v=131';   // 第 81 块：寄存柜；第 84 块：掉牌概率
-import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=131';
-import audio from './audio.js?v=131';
-import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=131';
+} from './wave.js?v=132';
+import { createRangeRing } from './rangeRing.js?v=132';
+import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=132';
+import { createWeaponSystem } from './weapon.js?v=132';
+import { createArrowRainSystem } from './arrowRain.js?v=132';
+import { SWORD_KINDS } from './swordKinds.js?v=132';
+import { createGoldSystem } from './gold.js?v=132';
+import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW, SHOP_PINNED } from './shop.js?v=132';
+import { createTurretSystem, TURRET } from './turret.js?v=132';
+import { createRelicSystem, RELIC_DEFS } from './relics.js?v=132';
+import { createGolemSystem } from './golem.js?v=132';   // 第 107 块：法器「傀儡术」的铁 / 雪傀儡
+import { createHazards } from './hazards.js?v=132';
+import { createFogSystem } from './fog.js?v=132';    // 第 114 块：第十一关的雾
+import { createMineSystem } from './mine.js?v=132';  // 第 114 块：第 11 件法器「墨丸」
+import { createTrafficSystem } from './traffic.js?v=132';  // 第 116 块：第十二关的车流
+import { createLatteSystem } from './latte.js?v=132';      // 第 116 块：第 12 件法器「苔藓拿铁」
+import { createDeposit, tagChance } from './deposit.js?v=132';   // 第 81 块：寄存柜；第 84 块：掉牌概率
+import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=132';
+import audio from './audio.js?v=132';
+import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=132';
 // 第 62 块：回血技能（第四关通关后永久解锁，回 5 点 / CD 25 秒）
-import { createHealSkill, HEAL_AMOUNT, HEAL_CD } from './healSkill.js?v=131';
+import { createHealSkill, HEAL_AMOUNT, HEAL_CD } from './healSkill.js?v=132';
 // 第 62 块：民心专属事件（升档走良性池、掉档走恶性池）
-import { repPoolForTier, REP_GOOD, REP_BAD } from './repEvents.js?v=131';
+import { repPoolForTier, REP_GOOD, REP_BAD } from './repEvents.js?v=132';
 // 第 62 块：攻略面板（战败提示上的「查看攻略」，手风琴三组）
-import { renderGuide, GUIDE_SECTIONS } from './guide.js?v=131';
+import { renderGuide, GUIDE_SECTIONS } from './guide.js?v=132';
 import {
   settings as readSettings, setSetting, save as saveProfile, profile,
   bumpStat, setStatMax, codexAdd, codexCount, countCard, unlockAch, hasAch, addBones, bones, resetAll,
@@ -58,32 +58,32 @@ import {
   hintSeen, markHintSeen,                  // 第 65 块：一次性提示卡
   markLevelClear, levelCleared, clearCount, // 第 94 块：通关过哪些关（成就用）
   getStatAdmin, setStatAdmin, resetStatAdmin, // 第 95 / 98 块：管理员模式二（手改最终值 → 存追加项，基础值不动）
-} from './profile.js?v=131';
+} from './profile.js?v=132';
 // 第 44 块：礼包兑换（码表只有哈希，明细在 gift.js 顶部注释）
-import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=131';
+import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=132';
 // 第 46 块：音效包（抽象奶蛙音效包 —— 4 段奶蛙叫声，通关第一关解锁）
-import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=131';
-import * as runSave from './runSave.js?v=131';
+import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=132';
+import * as runSave from './runSave.js?v=132';
 // 第 78 块：存档导出 / 导入。数据逻辑全在这个模块里（不碰 DOM），这里只接按钮
-import * as saveIO from './saveIO.js?v=131';
+import * as saveIO from './saveIO.js?v=132';
 import {
   CAMPFIRE, CAMP_STEP, campBuy, campOwned, campLevel,
   campCost, campApply, bonesFor, diffBoneMul, levelBoneMul, coinBones, BONE,
-} from './campfire.js?v=131';
+} from './campfire.js?v=132';
 // 第 23 块：永夜火种（通关白给的 3 次永久三选一）
 import {
   BOONS, BOON_BY_ID, BOON_PICKS, boonOwned, boonStacks, boonPending, boonTotalStacks,
   grantBoons, rollBoons, takeBoon, applyBoons, boonStackText,
-} from './boons.js?v=131';
+} from './boons.js?v=132';
 // 第 21 块：夜行诅咒（自选 debuff 换骨币倍率）
-import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=131';
+import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=132';
 // 第 22 块：种子与每日挑战
 import {
   DAILY_RULES, dayKey, dayText, dailySeed, seedCode, pickDailyCurses,
   seedFromText, pickSeedRules, loadSeedRecords, saveSeedRecord, pruneSeeds,
   dailyRecord, saveDailyRecord, pruneDaily, makeRng,
-} from './seed.js?v=131';
-import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=131';
+} from './seed.js?v=132';
+import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=132';
 // 第 58 块：局外商店 · 宝箱（花骨币买，开箱随机给永久属性 / 永久法器 / 技能CD缩短）
 import {
   BOXES, BOX_BY_ID, buyBox, rollBox, metaApplyStats, applyMeta,
@@ -93,46 +93,45 @@ import {
   boxPoolEntries,
   // 第 105 块：属性幅度统一系数（UI 显示的「强度 ×」必须和实际算法同源）
   boxMag,
-} from './metaShop.js?v=131';
+} from './metaShop.js?v=132';
 // 第 59 块：每日签到（以周为单位，周一 00:00 重置）
 // 第 105 块：固定 +20 改成每天随机 0~100；里程碑 3/5/7 天 → 100 / 150 骨币 + 一次永夜火种
 import {
   SIGN_BONES_MIN, SIGN_BONES_MAX, weekCells, signSummary, signToday, signedToday,
-} from './signin.js?v=131';
+} from './signin.js?v=132';
 // 第 94 块：成就（八类 × 三档骨币奖励）
 // 第 94-2 块：骨币改成**手动领取**（achPending / achClaim），老用户补发走 achMigrate
 import {
   ACHS, ACH_CATS, ACH_TIERS, ACH_COUNT, achById, achsByCat, achTier,
   achPending, achPendingBones, achClaim, achClaimAll, achClaimed, achMigrate,
-} from './achievements.js?v=131';
+} from './achievements.js?v=132';
 // 第 94 块：通用手风琴（盲盒奖池与成就面板共用，不复制第三份引擎）
-import { renderAccordion } from './accordion.js?v=131';
+import { renderAccordion } from './accordion.js?v=132';
 // 第 94 块：每日任务（简单 3 + 中等 1 + 困难 1，每天 0 点刷新）
 import {
   DQ_TIERS, DQ_BONES, dqTasks, dqPump, dqSave, dqClaim, dqClaimAll,
   dqPending, dqGained, dqMsLeft, dayKeyOf, dqTier, dqTaskName,
   dqState, dqForceReroll, dqReset,   // 调试口：跨天重掷 / 整条重置
-} from './dailyQuest.js?v=131';
+} from './dailyQuest.js?v=132';
 import {
   EVENTS, ALL_EVENTS, getEventById, pickEvent, effectLines,
   choiceHint, canAfford, costShort, REP_MIN, REP_MAX, REP_START,
   isTalk, eventChoices, resolveRoll, mergeEffects,
-} from './events.js?v=131';
+} from './events.js?v=132';
 // 第 32 块：主线《笑不出来的那一夜》（18 夜，一夜一关，前 3 夜已有关卡）
 import {
   STORY_ARC, STORY_CHAPTERS, STORY_ENDINGS, MARK_INFO,
   storyChapterAt, storyChapterById, storyEndingKey,
-} from './story.js?v=131';
+} from './story.js?v=132';
 // 第 115 块：九套玩法系统引擎（合成台 / 元素反应 / 精英怪 / 天气 / 音乐盒 / 手感四件套）
-import { createCraftingSystem } from './crafting.js?v=131';
-import { createReactionSystem } from './elementReaction.js?v=131';
-import { createEliteSystem } from './elite.js?v=131';
-import { createWeatherSystem } from './weather.js?v=131';
-import { createMusicboxSystem } from './musicbox.js?v=131';
-import { createSwordReverse } from './swordReverse.js?v=131';
-import { createDash } from './dash.js?v=131';
-import { createHeat } from './heat.js?v=131';
-import { pickLastWords, winLine } from './lastwords.js?v=131';
+import { createCraftingSystem } from './crafting.js?v=132';
+import { createReactionSystem } from './elementReaction.js?v=132';
+import { createEliteSystem } from './elite.js?v=132';
+import { createWeatherSystem } from './weather.js?v=132';
+import { createMusicboxSystem } from './musicbox.js?v=132';
+import { createDash } from './dash.js?v=132';
+import { createHeat } from './heat.js?v=132';
+import { pickLastWords, winLine } from './lastwords.js?v=132';
 
 // 标记模块已经跑起来了：index.html 的兜底自检靠它判断
 // 「模块根本没执行」还是「执行了但加载慢」。
@@ -880,9 +879,8 @@ async function boot() {
   // 模型很小（~20KB），跟着怪物一起在加载段拿；失败时 weapon.preload 内部会占位降级
   const weapon = createWeaponSystem({
     scene, stats, wstats, fx, enemies,
-    // 第 115 块：元素反应（元素剑命中挂印记）+ 剑阵反向（方向系数）
+    // 第 115 块：元素反应（元素剑命中挂印记）
     onElementHit: (kind, e) => reaction.apply(e, kind),
-    orbitSpeedMul: () => swordRev.dir * swordRev.speedMul(),
   });
 
   // ---------------- 武器：箭雨（第 47 块） ----------------
@@ -1071,11 +1069,6 @@ async function boot() {
   // 从 profile 恢复收集进度
   musicbox.restore({ collected: profile().musicbox.collected || [] });
 
-  // —— 剑阵反向：方向切换 ——
-  const swordRev = createSwordReverse({
-    onFlip: (dir) => { if (dir < 0) audio.sfx('card'); },
-  });
-
   // —— 冲刺斩：双推位移 ——
   const dash = createDash({
     onDash: (dir) => { audio.sfx('swordHit'); },
@@ -1083,21 +1076,27 @@ async function boot() {
 
   // —— 热度条：连杀 ——
   const heat = createHeat({
-    onChange: (h) => { renderHeatBar(h); },
+    onChange: (h) => { renderStreakPop(h); },
   });
 
-  // 热度条 UI 渲染（复用 HUD，简洁一行提示）
-  let heatBarEl = document.getElementById('heatBar');
-  let heatChipEl = document.getElementById('heatChip');
-  function renderHeatBar(h) {
-    if (!heatBarEl) heatBarEl = document.getElementById('heatBar');
-    if (!heatChipEl) heatChipEl = document.getElementById('heatChip');
-    if (!heatBarEl) return;
-    heatBarEl.style.width = (heat.ratio * 100).toFixed(0) + '%';
-    // 热度条 + 容器：有热度才显示，0 热度整体隐藏
-    const show = h > 0;
-    if (heatChipEl) heatChipEl.style.display = show ? 'flex' : 'none';
-    heatBarEl.style.display = show ? 'block' : 'none';
+  // 第 117 块：连杀提示（不再用进度条）—— 屏幕中间浮现「连杀 ×N + 具体加成」，
+  // 停 1.6 秒淡出；每次击杀重启动画。
+  let streakPopEl = document.getElementById('streakPop');
+  let streakNumEl = document.getElementById('streakNum');
+  let streakBuffEl = document.getElementById('streakBuff');
+  function renderStreakPop(h) {
+    if (!streakPopEl) streakPopEl = document.getElementById('streakPop');
+    if (!streakNumEl) streakNumEl = document.getElementById('streakNum');
+    if (!streakBuffEl) streakBuffEl = document.getElementById('streakBuff');
+    if (!streakPopEl) return;
+    if (h <= 0) { streakPopEl.classList.remove('show'); return; }
+    const spd = Math.round((heat.speedMul() - 1) * 100);
+    const atk = Math.round((heat.atkMul() - 1) * 100);
+    if (streakNumEl) streakNumEl.textContent = `连杀 ×${h}`;
+    if (streakBuffEl) streakBuffEl.textContent = `移速 +${spd}% · 攻速 +${atk}%`;
+    streakPopEl.classList.remove('show');
+    void streakPopEl.offsetWidth;   // 强制回流，让动画从头播
+    streakPopEl.classList.add('show');
   }
 
   // —— 第 115 块：音乐盒音符（关卡里撒金色小音符，走近拾取）——
@@ -1565,8 +1564,8 @@ async function boot() {
   //   结构预留：ITEMS 里加一种东西，商店与背包就都认识它。
   // ============================================================
   const BAG_ITEMS = {
-    potion: { name: '生命药水', glyph: '⚗', heal: 3, desc: '回复 3.0 生命' },
-    bigPotion: { name: '大生命药水', glyph: '🧪', healFull: true, desc: '生命直接回满' },
+    potion: { name: '生命药水', icon: 'assets/icons/potion.svg', heal: 3, desc: '回复 3.0 生命' },
+    bigPotion: { name: '大生命药水', icon: 'assets/icons/potion-full.svg', healFull: true, desc: '生命直接回满' },
   };
   const bag = { potion: 0, bigPotion: 0 };
   let bagOpen = false;
@@ -1594,9 +1593,9 @@ async function boot() {
       const row = document.createElement('button');
       row.className = 'bg-item';
       row.type = 'button';
-      const glyph = document.createElement('span');
+      const glyph = document.createElement('i');
       glyph.className = 'bg-glyph';
-      glyph.textContent = def.glyph;
+      glyph.style.setProperty('--ic', `url(${def.icon})`);
       const mid = document.createElement('span');
       mid.className = 'bg-mid';
       const name = document.createElement('b');
@@ -3233,6 +3232,7 @@ async function boot() {
   };
 
   const SET_ROWS = [
+    { key: 'mute', name: '声音', type: 'mute', hint: '关闭后音乐与音效一起静音（局内按 M 也能切）' },
     { key: 'sfx', name: '音效音量', type: 'range', hint: '打斗、按钮' },
     { key: 'music', name: '音乐音量', type: 'range', hint: '夜里的小调' },
     // 第 46 块：音效包（正常 / 抽象奶蛙，第一关通关后解锁）
@@ -3303,6 +3303,25 @@ async function boot() {
         });
         box.append(inp, out);
         wrap.append(label, box);
+      } else if (row.type === 'mute') {
+        // 第 117 块：声音开关（原局内 HUD 扩音器按钮搬到这里）
+        const seg = document.createElement('div');
+        seg.className = 'set-seg';
+        for (const [val, txt] of [[false, '开'], [true, '关']]) {
+          const b = document.createElement('button');
+          b.type = 'button';
+          b.textContent = txt;
+          if (audio.isMuted() === val) b.classList.add('on');
+          b.addEventListener('click', () => {
+            if (audio.isMuted() === val) return;
+            audio.unlock();
+            audio.setMuted(val);
+            if (!val) audio.sfx('uiClick');
+            renderSettings();
+          });
+          seg.appendChild(b);
+        }
+        wrap.append(label, seg);
       } else if (row.type === 'pack') {
         // 第 46 块：音效包两段。没解锁时「奶蛙」那项灰着点不动，
         // 切换立刻生效（并播一声，让玩家立刻听出区别）。
@@ -3891,26 +3910,13 @@ async function boot() {
   document.getElementById('btnBoons').addEventListener('click', showBoonPanel);
   document.getElementById('bnBack').addEventListener('click', () => hideSub(boonScr));
   // 静音开关：记在 localStorage 里，下次进来还是关着的
-  const muteBtn = document.getElementById('muteBtn');
-  const muteIcon = document.getElementById('muteIcon');
-  function renderMute() {
-    const m = audio.isMuted();
-    if (muteIcon) muteIcon.textContent = m ? '🔇' : '🔊';
-    if (muteBtn) {
-      muteBtn.classList.toggle('off', m);
-      muteBtn.setAttribute('aria-pressed', m ? 'true' : 'false');
-      muteBtn.setAttribute('aria-label', m ? '打开声音' : '关闭声音');
-    }
+  // 第 117 块：声音开关从局内 HUD 移到局外「设置」页；键盘 M 仍然可用。
+  function toggleMuteSetting() {
+    audio.unlock();
+    audio.toggleMute();
+    if (setScr.classList.contains('on')) renderSettings();
+    return audio.isMuted();
   }
-  if (muteBtn) {
-    muteBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      audio.unlock();
-      audio.toggleMute();
-      renderMute();
-    });
-  }
-  renderMute();
 
   // BGM 跟着场景走：标题夜曲 → 战斗 → 叙事面板换轻快曲；属性面板内暂停只压低不换曲。
   // 每帧只比一次状态，不反复设音量 / 不反复触发加载。
@@ -3941,8 +3947,7 @@ async function boot() {
   window.addEventListener('keydown', (e) => {
     audio.unlock();
     if (e.key === 'm' || e.key === 'M') {          // M 也能静音 / 恢复
-      audio.toggleMute();
-      renderMute();
+      toggleMuteSetting();
       return;
     }
     // 数字键 = 技能快捷键（1 对应第一格，往后类推；武器教程里也能按）
@@ -4946,12 +4951,7 @@ async function boot() {
     if (gameState === 'playing') openCraft();
   });
 
-  // 第 115 块：剑阵反向按钮（环剑反向转 + 加速，冷却中点了没反应）
-  const revBtn = document.getElementById('revBtn');
-  revBtn.addEventListener('click', () => {
-    if (gameState !== 'playing') return;
-    if (swordRev.flip()) audio.sfx('card');
-  });
+  // 第 117 块：剑阵反向已按用户要求删除（按钮与机制一并移除）。
 
 
 
@@ -9438,8 +9438,6 @@ async function boot() {
         heatSpeedMul: () => +heat.speedMul().toFixed(3),
         weather: () => weather.get(),
         weatherEffect: () => weather.effect(),
-        swordDir: () => swordRev.dir,
-        swordSpeedMul: () => swordRev.speedMul(),
         dashDashing: () => dash.dashing,
         dashCd: () => +dash.cd.toFixed(2),
         eliteMods: () => elite.modSnapshot(),
@@ -9697,7 +9695,7 @@ async function boot() {
       // 音频（第 8 块）
       audio,
       audioStats: () => audio.stats(),
-      toggleMute: () => { audio.toggleMute(); renderMute(); return audio.isMuted(); },
+      toggleMute: () => toggleMuteSetting(),
       // 民心（第 7 块）
       get rep() { return reputation; },
       addRep: (n) => addRep(n),
@@ -10128,7 +10126,6 @@ async function boot() {
       dash.push(dir.x, dir.y);
       const dashMove = dash.step(dt);
       heat.tick(dt);           // 热度条走表（断连掉热度）
-      swordRev.tick(dt);       // 剑阵反向走表（反向倒计时/冷却）
       updateMusicNotes(dt);    // 音乐盒音符漂浮 + 拾取判定
       const targetVX = dir.x * moveSpeed;
       const targetVZ = dir.y * moveSpeed;

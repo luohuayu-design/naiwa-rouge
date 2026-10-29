@@ -1,5 +1,6 @@
-// .tmp-handfeel-test.mjs —— 手感四件套（剑阵反向/冲刺/热度/遗言）契约测试
-import { createSwordReverse, DIR, REVERSE_T, REVERSE_CD, REVERSE_SPEED_MUL } from './js/swordReverse.js';
+// .tmp-handfeel-test.mjs —— 手感三件套（冲刺/热度/遗言）契约测试
+// 注：剑阵反向（swordReverse.js）已在第 117 块按用户要求删除。
+import { existsSync } from 'node:fs';
 import { createDash, DASH_WINDOW, DASH_DIST, DASH_T, DASH_CD } from './js/dash.js';
 import { createHeat, HEAT_MAX } from './js/heat.js';
 import { pickLastWords, winLine } from './js/lastwords.js';
@@ -14,31 +15,9 @@ function okEq(name, got, want) {
   else { fail++; console.log(`  FAIL: ${name} —— 期望 ${JSON.stringify(want)}，实得 ${JSON.stringify(got)}`); }
 }
 
-// ---------- 剑阵反向 ----------
+// ---------- 剑阵反向（第 117 块已删除）----------
 {
-  const flips = [];
-  const s = createSwordReverse({ now: () => 1000, onFlip: (d) => flips.push(d) });
-  okEq('初始正转', s.dir, DIR.FWD);
-  okEq('初始速度系数=1', s.speedMul(), 1);
-
-  const okFlip = s.flip();
-  ok('触发反向成功', okFlip);
-  okEq('反向后 dir=REV', s.dir, DIR.REV);
-  okEq('反向后速度系数=REVERSE_SPEED_MUL', s.speedMul(), REVERSE_SPEED_MUL);
-  okEq('触发回调收到 REV', flips[0], DIR.REV);
-
-  // 反向中再 flip 应失败
-  ok('反向中再 flip 失败', !s.flip());
-
-  // 走表到反向结束
-  s.tick(REVERSE_T + 0.01);
-  okEq('反向结束回到正转', s.dir, DIR.FWD);
-  okEq('回调收到 FWD', flips[1], DIR.FWD);
-
-  // 冷却中 flip 失败
-  ok('冷却中 flip 失败', !s.flip());
-  s.tick(REVERSE_CD);
-  ok('冷却结束可再 flip', s.flip());
+  ok('swordReverse.js 已删除', !existsSync('js/swordReverse.js'));
 }
 
 // ---------- 冲刺斩 ----------
@@ -117,5 +96,5 @@ function okEq(name, got, want) {
   okEq('通关文案', winLine(), '夜色里的骷髅被清干净了，奶蛙的名字，今晚被记住了。');
 }
 
-console.log(`\n=== 手感四件套测试结果：${pass} 通过 / ${fail} 失败 ===`);
+console.log(`\n=== 手感三件套测试结果：${pass} 通过 / ${fail} 失败 ===`);
 if (fail > 0) process.exit(1);

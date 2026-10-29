@@ -284,9 +284,10 @@ ok(/mines: mines\.snapshot\(\)/.test(mainSrc), '存档里带墨丸的局内成�
 ok(/mines\.restore\(saved\.mines\)/.test(mainSrc), '读档还原墨丸');
 ok(/mines\.reset\(\)/.test(mainSrc), 'resetRunState 清场地上的墨丸');
 
-// 版本号一致性
-ok((indexHtml.match(/\?v=131/g) || []).length === 2, 'index.html 两处 ?v=131');
-ok(!/\?v=128/.test(indexHtml) && !/\?v=128/.test(mainSrc), '没有残留的 ?v=128');
+// 版本号一致性（第 117 块：不再写死 131，全部以 index.html 当前版本为准）
+ok((indexHtml.match(new RegExp(`\\?v=${VER}`, 'g')) || []).length === 2, `index.html 两处 ?v=${VER}`);
+const htmlVers = [...indexHtml.matchAll(/\?v=(\d+)/g)].map((m) => m[1]);
+ok(htmlVers.every((v) => v === VER), `index.html 没有残留的旧版本号`);
 const imports = [...mainSrc.matchAll(/from '\.\/[^']*\?v=(\d+)'/g)].map((m) => m[1]);
 ok(imports.length > 30 && imports.every((v) => v === VER), `main.js 的 ${imports.length} 条 import 全是 v=${VER}`);
 
