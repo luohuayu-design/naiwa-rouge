@@ -4,7 +4,7 @@
 //   ③ 抽取：rollChallenge 会避开刚出过的那条；rollBoosts 三类各一
 //   ④ 接线契约（扫源码）：效果来源 src / 清理口 / 受击加重 / 挑战弹窗位置 /
 //      奖励三选一 / wave 的 roundMod / weapon 的 mute 门
-//   ⑤ 三选一刷新：3 次免费 → 诅咒换 → 六条背齐就没得换
+//   ⑤ 三选一刷新：3 次免费 → 盲盒减成换 → 十条背满就没得换
 //   ⑥ DOM / 样式 / 文案 / 版本一致
 // 运行：node .tmp-block122-test.mjs
 import { readFileSync } from 'node:fs';
@@ -181,8 +181,8 @@ ok(/function clearRoundBuffs\(\)[\s\S]{0,900}clearBoost\(\)/.test(mainSrc),
 ok(/boostSrc/.test(mainSrc) && !/roundBuffSrc = boostSrc/.test(mainSrc),
   '大涨用独立 boostSrc，不抢 roundBuffSrc');
 // 受击加重
-ok(/const raw = amount \* \(1 \+ runCurseDmg\) \* \(1 \+ chalDmgTaken\);/.test(mainSrc),
-  '破防挑战乘在 hurtPlayer 的 raw 上');
+ok(/const raw = amount \* \(1 \+ runCurseDmg\) \* \(1 \+ boxCurseDmg\) \* \(1 \+ chalDmgTaken\);/.test(mainSrc),
+  '破防挑战乘在 hurtPlayer 的 raw 上（盲盒减成也各占一项）');
 // 攻击力用 mul 不用 flat
 ok(/stats\.addMod\(\{ stat: 'attack', mul: target \/ Math\.max/.test(mainSrc),
   '绵软挑战用 mul 折算（flat 会被 pct 放大）');
@@ -216,6 +216,11 @@ ok(/stats\.removeBySource\('boost'\);/.test(mainSrc), '读档抹掉大涨');
 // 复位
 ok(/upRefreshLeft = UP_REFRESH_FREE;/.test(mainSrc), 'resetRunState 复位免费刷新次数');
 ok(/chalPlan = \[\];/.test(mainSrc), 'resetRunState 清空挑战规划');
+// 盲盒减成的存档 / 读档 / 复位（第 122 块修的：以前错记成夜行诅咒，会污染 profile 与骨币倍率）
+ok(/box: boxCurses\.slice\(\),/.test(mainSrc), '减成进档');
+ok(/boxCurses = \(saved\.box \|\| \[\]\)\.filter\(\(id\) => BOX_CURSE_BY_ID\[id\]\)/.test(mainSrc),
+  '读档恢复减成（不认识的 id 直接丢）');
+ok(/boxCurses = \[\];\s*\n\s*boxCurseDmg = 0;/.test(mainSrc), 'resetRunState 清空减成');
 // 随机流
 ok(/chal: makeRng\(runSeed \^ 0x2545f491\)/.test(mainSrc), 'chal 独立随机流（种子局可复现）');
 // wave 的 roundMod
@@ -228,7 +233,7 @@ ok(/setMuted, /.test(weaponSrc), 'setMuted 导出');
 ok(/muted = false;/.test(weaponSrc), 'reset 里清 mute（不跨局残留）');
 
 // ============================================================
-sec('⑤ 三选一刷新');
+sec('⑤ 三选一刷新（价格是盲盒式减成，不是夜行诅咒）');
 // ============================================================
 ok(/const UP_REFRESH_FREE = 3;/.test(mainSrc), '一局 3 次免费');
 ok(/function rerollUpPicks\(\)/.test(mainSrc), '重抽函数在');
@@ -237,20 +242,36 @@ ok(/function rollUpPicks\(roundNo\)/.test(mainSrc), '抽卡也拆成函数（刷
 // 刷新出来的三张不能和刚才一模一样
 ok(/const sig = \(list\) => list\.map\(\(u\) => u\.id\)\.slice\(\)\.sort\(\)\.join\('\|'\);/.test(mainSrc),
   '重抽会比对 id 集合（避免刷出一模一样的三张）');
-// 免费 → 诅咒换 → 用尽
+// 免费 → 减成换 → 用尽
 ok(/if \(upRefreshLeft > 0\) \{[\s\S]{0,160}upRefreshLeft--;/.test(mainSrc), '先扣免费次数再重抽');
-ok(/askConfirm\(\s*'用一个诅咒换一次刷新？'/.test(mainSrc), '免费次数用完后走确认弹窗');
-ok(/const ok = await askConfirm\(\s*'用一个诅咒换一次刷新？'[\s\S]{0,400}addRunCurse\(c\.id\);/.test(mainSrc),
-  '确认后随机抽一条诅咒并落账');
+ok(/askConfirm\(\s*'用一条减成换一次刷新？'/.test(mainSrc), '免费次数用完后走确认弹窗');
+ok(/const ok = await askConfirm\(\s*'用一条减成换一次刷新？'[\s\S]{0,600}addBoxCurse\(c\.id\);/.test(mainSrc),
+  '确认后随机抽一条减成并落账');
 ok(/upRefreshPaid\+\+/.test(mainSrc), '付费刷新有计数');
-ok(/const avail = RUN_CURSES\.filter\(\(c\) => !pendingCurses\.includes\(c\.id\)\)/.test(mainSrc),
-  '只抽自己还没有的诅咒');
-ok(/function addRunCurse\(id\) \{/.test(mainSrc), 'addRunCurse 收口');
-ok(/const rc = applyRunCurses\(stats, wstats, pendingCurses\);/.test(mainSrc),
-  '诅咒落账走 applyRunCurses（先撤再重放，不会叠两次）');
-ok(/runCurseDmg = rc\.dmgTaken;/.test(mainSrc), '荆棘的受伤加重当场重算');
-ok(/stats\.clampHp\(\);/.test(mainSrc), '脆骨压上限后血量跟着夹');
-ok(CU.RUN_CURSES.length === 6, `诅咒仍然是六条（实 ${CU.RUN_CURSES.length}）`);
+ok(/const avail = BOX_CURSES\.filter\(\(c\) => !boxCurses\.includes\(c\.id\)\)/.test(mainSrc),
+  '只抽自己还没有的减成');
+ok(/function addBoxCurse\(id\) \{/.test(mainSrc), 'addBoxCurse 收口');
+ok(/const rc = applyBoxCurses\(stats, wstats, boxCurses\);/.test(mainSrc),
+  '减成落账走 applyBoxCurses（先撤再重放，不会叠两次）');
+ok(/boxCurseDmg = rc\.dmgTaken;/.test(mainSrc), '荆棘皮的受伤加重当场重算');
+ok(/stats\.clampHp\(\);/.test(mainSrc), '瘪血压上限后血量跟着夹');
+// 关键：刷新用的是**盲盒式减成**，不是开局的夜行诅咒 —— 这两样一个字都不能碰
+ok(!/function addBoxCurse[\s\S]{0,500}pendingCurses/.test(mainSrc), '刷新不写 pendingCurses（夜行诅咒是另一套）');
+ok(!/function addBoxCurse[\s\S]{0,500}profile\(\)\.runCurses/.test(mainSrc), '刷新不写 profile().runCurses');
+// 数据契约：10 条、一条只碰一个数、全部走 mul / dmgTaken
+ok(CU.BOX_CURSES.length === 10, `盲盒减成 10 条（实 ${CU.BOX_CURSES.length}）`);
+ok(CU.BOX_CURSES.every((c) => (c.mods || []).length + (c.dmgTaken ? 1 : 0) === 1), '每条减成只碰一个数');
+ok(CU.BOX_CURSES.every((c) => (c.mods || []).every((m) => m.mul != null && m.flat == null && m.pct == null)),
+  '一律走 mul 最终乘算（flat 会被 pct 反向放大）');
+ok(!!(CU.BOX_CURSE_BY_ID.weak && CU.BOX_CURSE_BY_ID.weak.mods[0].stat === 'attack'), '池子里有「薄刃」');
+// 落账口径：能撤、受伤加重单独回、不重复
+const mkStats = () => ({ list: [], removeBySource(s) { this.list = this.list.filter((m) => m.src !== s); }, addMod(m) { this.list.push(m); } });
+const bs1 = mkStats(); const bs2 = mkStats();
+const r1 = CU.applyBoxCurses(bs1, bs2, ['weak', 'thorns']);
+CU.applyBoxCurses(bs1, bs2, ['weak', 'thorns', 'lead']);
+ok(r1.count === 2 && Math.abs(r1.dmgTaken - 0.12) < 1e-9, 'applyBoxCurses 回 count / dmgTaken');
+ok(bs1.list.length === 2 && bs1.list.every((m) => m.src === 'boxcurse'), '三次投放只留最后一次（先撤再重放）');
+ok(CU.BOX_CURSES.length === 10 && CU.RUN_CURSES.length === 6, '两套诅咒各自独立（10 条减成 / 6 条夜行）');
 // 火种面板不能出现刷新键
 ok(/\.upgrade\.boon \.up-refresh\{display:none\}/.test(cssSrc), '永夜火种面板里藏掉刷新键');
 // 升级池没被动过

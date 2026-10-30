@@ -107,3 +107,105 @@ export function applyRunCurses(stats, wstats, ids = []) {
 export function curseNames(ids) {
   return curseList(ids).map((c) => c.name).join(' / ');
 }
+
+// ============================================================
+// 第 122 块追加：盲盒式减成（三选一「刷新」的价格）
+//
+// 与上面 RUN_CURSES 是两套东西，别混：
+//   · RUN_CURSES = 开局**自选**的大刀，换局外骨币倍率，写进 profile，进诅咒勾选面板；
+//   · BOX_CURSES = 局内**随机抽**的小减成，**没有任何补偿** —— 它就是刷新的价格。
+//     味道照局外盲盒的负面池（`metaShop.js` 的 NEG）：一次只碰一个数、幅度小、成对挤压手感。
+//   · 一局内不重复（抽过的不会再抽），池子就这 10 条；全部走 stats 的 **mul 最终乘算**，
+//     叠几条是连乘，不会像 flat 那样被 pct 反向放大，也不会线性失控。
+//   · **只影响本局**：不写 profile、不改骨币倍率、不进诅咒勾选面板、读档成对抹掉。
+// ============================================================
+export const BOX_CURSES = [
+  {
+    id: 'weak', name: '薄刃', icon: '🗡️', eff: '攻击力 −10%',
+    desc: '拍下去轻了一成。前期怪血薄还看不出来，越往后越记账。',
+    mods: [{ stat: 'attack', mul: 0.90 }],
+  },
+  {
+    id: 'anemic', name: '瘪血', icon: '💔', eff: '生命上限 −10%',
+    desc: '血条短一截（基础 10 → 9 起步）。这一局没有满血开局这回事。',
+    mods: [{ stat: 'maxHp', mul: 0.90 }],
+  },
+  {
+    id: 'lead', name: '铅靴', icon: '🥾', eff: '移动速度 −12%',
+    desc: '拉扯变贵。躲红圈、绕背、切车道都会差那半步。',
+    mods: [{ stat: 'moveSpeed', mul: 0.88 }],
+  },
+  {
+    id: 'numb', name: '钝拍', icon: '🐌', eff: '攻击速度 −10%',
+    desc: '两拍之间多一道空档，怪会用这点时间贴上来。',
+    mods: [{ stat: 'attackSpeed', mul: 0.90 }],
+  },
+  {
+    id: 'shortarm', name: '短臂', icon: '🧤', eff: '攻击范围 −15%',
+    desc: '脚下的圈小一圈，走位要更贴脸 —— 也更危险。',
+    mods: [{ stat: 'attackRange', mul: 0.85 }],
+  },
+  {
+    id: 'dull', name: '哑锋', icon: '💥', eff: '暴击伤害 −10%',
+    desc: '暴击还在，但没那么炸。堆暴击的流派会先感觉到。',
+    mods: [{ stat: 'critDamage', mul: 0.90 }],
+  },
+  {
+    id: 'holey', name: '漏财', icon: '🕳️', eff: '金币掉落 −15%',
+    desc: '商店那几格会看得更久。不致命，但这一局的装备会慢半拍。',
+    mods: [{ stat: 'goldRate', mul: 0.85 }],
+  },
+  {
+    id: 'thorns', name: '荆棘皮', icon: '🩸', eff: '每次受伤 +12%',
+    desc: '挨打更疼，金钟罩照挡。和「荆棘」那条夜行诅咒不是一回事，别叠加算。',
+    dmgTaken: 0.12,
+  },
+  {
+    id: 'rusty', name: '剑锈', icon: '🌫️', eff: '剑伤害 −10%',
+    desc: '环剑整把钝掉一成（元素波及的伤害同源，一起变轻）。',
+    mods: [{ stat: 'swordDamage', scope: 'weapon', mul: 0.90 }],
+  },
+  {
+    id: 'blunt', name: '钝锋', icon: '🪤', eff: '剑暴击率 −15%',
+    desc: '剑的暴击（基础 10%）被削到 8.5%。剑流前期最难受的一条。',
+    mods: [{ stat: 'swordCrit', scope: 'weapon', mul: 0.85 }],
+  },
+];
+
+export const BOX_CURSE_BY_ID = Object.fromEntries(BOX_CURSES.map((c) => [c.id, c]));
+
+export function boxCurseById(id) {
+  return BOX_CURSE_BY_ID[id] || null;
+}
+
+// 只留认识的 id、去重、按表顺序排（存档塞了怪东西也不炸）
+export function boxCurseList(ids) {
+  const set = new Set(Array.isArray(ids) ? ids : []);
+  return BOX_CURSES.filter((c) => set.has(c.id));
+}
+
+// 受伤加重合计（荆棘皮；没背就是 0）
+export function boxCurseDmg(ids) {
+  const sum = boxCurseList(ids).reduce((a, c) => a + (c.dmgTaken || 0), 0);
+  return Math.round(sum * 100) / 100;
+}
+
+// 落账：先按 src='boxcurse' 全撤再重放（刷新多次不会叠两遍）。
+// 返回 { count, dmgTaken } —— main.js 把 dmgTaken 存给 hurtPlayer 用。
+export function applyBoxCurses(stats, wstats, ids = []) {
+  stats.removeBySource('boxcurse');
+  wstats.removeBySource('boxcurse');
+  const list = boxCurseList(ids);
+  for (const c of list) {
+    for (const m of c.mods || []) {
+      const target = m.scope === 'weapon' ? wstats : stats;
+      target.addMod({ stat: m.stat, flat: 0, pct: 0, mul: m.mul, src: 'boxcurse' });
+    }
+  }
+  return { count: list.length, dmgTaken: boxCurseDmg(ids) };
+}
+
+// 「薄刃 / 漏财」这样的一行摘要（刷新面板的提示行 + 调试口用）
+export function boxCurseNames(ids) {
+  return boxCurseList(ids).map((c) => c.name).join(' · ');
+}

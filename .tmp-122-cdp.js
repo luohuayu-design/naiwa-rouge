@@ -1,5 +1,5 @@
 // 第 122 块 CDP：三选一刷新 + 回合挑战（实机）
-//   A 刷新：三次免费 → 第四次要确认 → 确认后背一条诅咒 + 换卡 → 六条背齐就锁死
+//   A 刷新：三次免费 → 第四次要确认 → 确认后背一条盲盒减成 + 换卡 → 十条背满就锁死
 //   B 挑战弹窗：force 弹出 / 接下 / 放弃
 //   C 效果：残血（上限×0.5）/ 绵软（攻击→40%，最低1）/ 断剑（weapon.muted）/
 //            禁术（技能栏全灰 + pressSkill 拒绝）/ 怪物潮（roundMod.countScale=2）
@@ -102,7 +102,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     // 再 skipRound（把没出场的划掉）+ 全歼 —— 否则在 gap 里 kill 是空杀，
     // 回合根本不结算（第 122 块写这套时踩过）
     async function clearRound() {
-      // 先补满血：这套测试背了六条诅咒，等待期间被砍死会让后面所有断言假红
+      // 先补满血：这套测试背了十条减成，等待期间被砍死会让后面所有断言假红
       await ev('__game.stats.hp.cur = __game.stats.get("maxHp"); 1');
       await ev('__game.setWaves(false); 1');
       await waitFor('__game.level.phase === "spawning" && __game.enemies.all().length > 0', 20000, '下一回合开始刷怪');
@@ -150,31 +150,45 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     }
     const c3 = await cards();
     ok(c3.split(',').length === 3, '刷新后仍然是三张卡');
-    ok(await ev('__game.upgrade.rfText().danger'), '免费次数用完后换成危险色（要付诅咒）');
-    ok((await ev('__game.upgrade.rfText().name')).includes('诅咒'), '键面改成「用一个诅咒换」');
+    ok(await ev('__game.upgrade.rfText().danger'), '免费次数用完后换成危险色（要付减成）');
+    ok((await ev('__game.upgrade.rfText().name')).includes('减成'), '键面改成「用一条减成换」');
 
     const curseBefore = await ev('__game.runCurses().length');
     await ev('__game.upgrade.refreshClick()');
     await waitFor("document.getElementById('confirmAsk').classList.contains('on')", 4000, '确认弹窗弹出');
     ok(true, '第四次要先确认');
-    ok((await ev('document.getElementById("caSub").textContent')).includes('诅咒'), '确认弹窗写清了代价');
+    ok((await ev('document.getElementById("caSub").textContent')).includes('减成'), '确认弹窗写清了代价');
     await ev('document.getElementById("caOk").click()');
     await sleep(400);
-    const curseAfter = await ev('__game.runCurses().length');
-    ok(curseAfter === curseBefore + 1, `确认后背上了 1 条诅咒（${curseBefore} → ${curseAfter}）`);
+    const boxN = await ev('__game.upgrade.box.length');
+    ok(boxN === 1, `确认后背上了 1 条盲盒减成（${boxN}）`);
+    ok((await ev('__game.runCurses().length')) === curseBefore, '夜行诅咒没被写进去（两套账分开）');
+    ok((await ev('__game.upgrade.rfText().n')).includes('已背 1'), '键面写「已背 1 条」');
+    ok((await ev('__game.upgrade.rfText().tip')).includes('本局已背'), '提示行列出了已背的减成');
     ok((await ev('__game.upgrade.refresh.paid')) === 1, '付费刷新计数 +1');
     const c4 = await cards();
-    ok(c4.split(',').length === 3, '诅咒换的刷新也真的换了一批卡');
+    ok(c4.split(',').length === 3, '减成换的刷新也真的换了一批卡');
     await shot('a2-upgrade-curse.png');
 
-    // 六条背齐 → 键锁死
-    await ev('__game.upgrade.addCurse("frail"); __game.upgrade.addCurse("lead"); __game.upgrade.addCurse("sluggish"); __game.upgrade.addCurse("hunger"); __game.upgrade.addCurse("thin"); __game.upgrade.addCurse("thorn"); 1');
+    // 减成真的生效：指定背「薄刃」，攻击力必须掉 10%（mul 最终乘算，不吃 pct）
+    const atkBefore = await ev("__game.stats.get('attack')");
+    await ev('__game.upgrade.addCurse("weak")');
+    await sleep(200);
+    const atkAfter = await ev("__game.stats.get('attack')");
+    ok(Math.abs(atkAfter - atkBefore * 0.9) < 0.02, `薄刃把攻击压了 10%（${atkBefore.toFixed(2)} → ${atkAfter.toFixed(2)}）`);
+    ok((await ev('__game.upgrade.boxNames()')).includes('薄刃'), '减成名字挂在面板提示上');
+
+    // 十条背满 → 键锁死
+    await ev('["anemic","lead","numb","shortarm","dull","holey","thorns","rusty","blunt"]'
+      + '.forEach((id) => __game.upgrade.addCurse(id)); 1');
     await sleep(200);
     await ev('__game.upgrade.show(3, null)');   // 重开面板触发一次 syncRefreshUi
     await sleep(200);
-    ok((await ev('__game.runCurses().length')) === 6, '六条诅咒都背上了');
-    ok((await ev('__game.upgrade.rfText().disabled')) === true, '没有可背的诅咒后刷新键锁死');
+    ok((await ev('__game.upgrade.box.length')) === 10, '十条减成都背上了');
+    ok(Math.abs((await ev('__game.upgrade.boxDmg')) - 0.12) < 1e-9, '荆棘皮记进受伤加重（+12%）');
+    ok((await ev('__game.upgrade.rfText().disabled')) === true, '没有可再背的减成后刷新键锁死');
     ok((await ev('__game.upgrade.rfText().name')).includes('用完'), '键面写「刷新已用完」');
+    ok((await ev('__game.runCurses().length')) === curseBefore, '全程没污染夜行诅咒列表');
     // 矮屏可用性：320×560 上刷新键必须在视口内（否则等于没做）
     await send('Emulation.setDeviceMetricsOverride', { width: 320, height: 560, deviceScaleFactor: 1, mobile: true });
     await sleep(400);

@@ -1,7 +1,7 @@
 # 蛙步 · 夜行 —— 交接文档
 
 > 新对话从这里开始读，**别翻聊天记录**。要动手只读 §1 铁律 + §2 当前状态 + §3 坑。
-> 最后更新 2026-10-30 · 线上 **v=138** · 第 122 块。更早的细节查 `git log` / `git show`，本文件不重复。
+> 最后更新 2026-10-30 · 线上 **v=139** · 第 122 块。更早的细节查 `git log` / `git show`，本文件不重复。
 
 ## 0. 一句话
 
@@ -39,7 +39,7 @@ Three.js r160 的单摇杆幸存者肉鸽《蛙步 · 夜行》：纯静态站�
 
 ---
 
-## 2. 当前状态（v=138 · 第 122 块）
+## 2. 当前状态（v=139 · 第 122 块）
 
 ### 2.1 第 122 块：回合挑战 + 三选一刷新
 
@@ -51,7 +51,8 @@ Three.js r160 的单摇杆幸存者肉鸽《蛙步 · 夜行》：纯静态站�
 
 **挑战奖励**（排整条结算链**最前**）：88 金币 / 立刻再一次三选一 / **下一回合属性大涨**（`rollBoosts` 三类各一条 → `applyBoost`，**只活一回合**）。
 
-**三选一刷新**：`UP_REFRESH_FREE = 3`（**一局**三次，不是每面板）。用完后每次刷新随机背一条**未持有**的夜行诅咒（`askConfirm` → `addRunCurse` → `applyRunCurses` → `runCurseDmg` → `clampHp`）；六条齐了锁键。
+**三选一刷新**：`UP_REFRESH_FREE = 3`（**一局**三次，不是每面板）。用完后每次刷新随机背一条**未持有**的**盲盒式减成** —— `BOX_CURSES`（`curses.js`，10 条，一条只碰一个数，一律走 `mul`）→ `askConfirm` → `addBoxCurse` → `applyBoxCurses`（`src='boxcurse'`，先撤再重放）→ `boxCurseDmg`（荆棘皮）→ `clampHp`；十条背满锁键。
+**⚠️ 别跟夜行诅咒混**（v=139 修的就是这个）：`RUN_CURSES` 是开局自选、换骨币倍率、写进 `profile().runCurses` 的大刀；刷新的减成只掉属性、不写 profile、不动骨币倍率、不进诅咒勾选面板，存档走独立的 `box` 字段。
 
 **生命周期**：效果 src 分别是 `chal` / `boost`，`clearRoundBuffs()` 里成对撤；`resumeGame` 成对抹 + `weapon.setMuted(false)` + `applySkillCdFactor(1)`；`resetRunState` 归零全部计数。存档带 `chal: {plan, used, seen}`。
 
@@ -126,6 +127,7 @@ Three.js r160 的单摇杆幸存者肉鸽《蛙步 · 夜行》：纯静态站�
 **环境**
 40. **Bash cwd 多次调用间会重置回「班级网站」根** → git / sed 必须 `cd naiwa-rouge && ...` 单条链式。
 41. **`http_proxy` 常驻** → 探连通性必须 `curl -s --noproxy '*'`。push 用 `git -c http.proxy=http://127.0.0.1:7897 push`，**push 完必须 `git status -sb` 验证不 ahead**（曾出现 exit 0、零输出、其实没推上去）；`unexpected disconnect` 后再推一次往往就成。
+42. **同名概念要分两套账**（v=139 用户指出的真错）：第一版把刷新代价写成「夜行诅咒」，结果是**开局自选、换骨币倍率、写 profile** 的那六条被局内偷偷塞了一条 —— 玩家的诅咒勾选、骨币倍率、`curse_5/curse_7` 成就全被污染。同一个中文词如果背后是两种语义（自选大局 vs 局内小账），必须两套数据、两个 src、两个存档字段，别图省事复用数组。
 
 ---
 
@@ -142,7 +144,7 @@ Three.js r160 的单摇杆幸存者肉鸽《蛙步 · 夜行》：纯静态站�
 | `upgrade.js` | 109 张升级卡、`weightOf` 门控、`*Change()` 文案函数 |
 | `challenge.js` | **第 122 块**：挑战九条 + 规划 + 奖励池，纯数据纯函数 |
 | `relics.js` + `mine/latte/golem/candle/mark.js` | 14 件法器引擎（各 3 级，独立 `reset / applyCard / snapshot`） |
-| `shop.js` / `campfire.js` / `boons.js` / `curses.js` / `metaShop.js` | 商店 40 件 / 篝火 9 簇 / 火种 16 卡 / 诅咒 6 条 / 盲盒 |
+| `shop.js` / `campfire.js` / `boons.js` / `curses.js` / `metaShop.js` | 商店 40 件 / 篝火 9 簇 / 火种 16 卡 / 诅咒（夜行 6 + 刷新减成 10）/ 盲盒 |
 | `events.js + eventsExtra + eventsSide + repEvents` | 131 个事件（99 随机 + 10 番外 + 13 连锁 + 9 民心），`TEMP_SCALE` |
 | `deposit.js` / `hazards.js` / `traffic.js` / `fog.js` | 第八关寄存柜 / 场地机关 / 第十二关车流 / 第十一关雾（后三者零 import，纯注入） |
 | `achievements.js` / `dailyQuest.js` / `signin.js` / `codex.js` / `story.js` | 118 成就（手动领取）/ 每日 39 条 / 签到 / 图鉴 / 18 夜主线（12 夜已绑关） |
