@@ -5,47 +5,47 @@
 // 目标是把三件事调顺：摇杆输入 → 角色速度/朝向 → 相机跟随。
 // 后续叠战斗时，只需要在 tick() 里加敌人更新与自动攻击，不用动输入层。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=137';
-import { buildNightScene } from './scene.js?v=137';
-import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=137';
+import * as THREE from '../lib/three.module.js?v=138';
+import { buildNightScene } from './scene.js?v=138';
+import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=138';
 // 第 80 块：给 glb 拼上版本号 → SW 缓存优先（详见 assetUrl.js）
-import { withV } from './assetUrl.js?v=137';
-import { createInput } from './input.js?v=137';
-import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=137';
-import { createStatView } from './statView.js?v=137';
-import { createWeaponStats } from './weaponStats.js?v=137';
-import { createFx } from './fx.js?v=137';
-import { createEnemySystem, ENEMY_TYPES } from './enemy.js?v=137';
+import { withV } from './assetUrl.js?v=138';
+import { createInput } from './input.js?v=138';
+import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=138';
+import { createStatView } from './statView.js?v=138';
+import { createWeaponStats } from './weaponStats.js?v=138';
+import { createFx } from './fx.js?v=138';
+import { createEnemySystem, ENEMY_TYPES } from './enemy.js?v=138';
 import {
   createLevel, LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVEL_5, LEVEL_6, LEVEL_7, LEVEL_8, LEVEL_9, LEVEL_10, LEVEL_11, LEVELS_BY_ID, DIFFS, setDifficulty, getDifficulty, roundScale, levelStats, levelTypes,
-} from './wave.js?v=137';
-import { createRangeRing } from './rangeRing.js?v=137';
-import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=137';
-import { createWeaponSystem } from './weapon.js?v=137';
-import { createArrowRainSystem } from './arrowRain.js?v=137';
-import { SWORD_KINDS } from './swordKinds.js?v=137';
-import { createGoldSystem } from './gold.js?v=137';
-import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW, SHOP_PINNED, shopRefreshCost } from './shop.js?v=137';
-import { createTurretSystem, TURRET } from './turret.js?v=137';
-import { createRelicSystem, RELIC_DEFS } from './relics.js?v=137';
-import { createGolemSystem } from './golem.js?v=137';   // 第 107 块：法器「傀儡术」的铁 / 雪傀儡
-import { createHazards } from './hazards.js?v=137';
-import { createFogSystem } from './fog.js?v=137';    // 第 114 块：第十一关的雾
-import { createMineSystem } from './mine.js?v=137';  // 第 114 块：第 11 件法器「墨丸」
-import { createTrafficSystem } from './traffic.js?v=137';  // 第 116 块：第十二关的车流
-import { createLatteSystem } from './latte.js?v=137';      // 第 116 块：第 12 件法器「苔藓拿铁」
-import { createCandleSystem } from './candle.js?v=137';    // 第 118 块：第 13 件法器「守夜烛」（第十一关）
-import { createMarkSystem } from './mark.js?v=137';        // 第 118 块：第 14 件法器「落款」（第十一关）
-import { createDeposit, tagChance } from './deposit.js?v=137';   // 第 81 块：寄存柜；第 84 块：掉牌概率
-import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=137';
-import audio from './audio.js?v=137';
-import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=137';
+} from './wave.js?v=138';
+import { createRangeRing } from './rangeRing.js?v=138';
+import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=138';
+import { createWeaponSystem } from './weapon.js?v=138';
+import { createArrowRainSystem } from './arrowRain.js?v=138';
+import { SWORD_KINDS } from './swordKinds.js?v=138';
+import { createGoldSystem } from './gold.js?v=138';
+import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW, SHOP_PINNED, shopRefreshCost } from './shop.js?v=138';
+import { createTurretSystem, TURRET } from './turret.js?v=138';
+import { createRelicSystem, RELIC_DEFS } from './relics.js?v=138';
+import { createGolemSystem } from './golem.js?v=138';   // 第 107 块：法器「傀儡术」的铁 / 雪傀儡
+import { createHazards } from './hazards.js?v=138';
+import { createFogSystem } from './fog.js?v=138';    // 第 114 块：第十一关的雾
+import { createMineSystem } from './mine.js?v=138';  // 第 114 块：第 11 件法器「墨丸」
+import { createTrafficSystem } from './traffic.js?v=138';  // 第 116 块：第十二关的车流
+import { createLatteSystem } from './latte.js?v=138';      // 第 116 块：第 12 件法器「苔藓拿铁」
+import { createCandleSystem } from './candle.js?v=138';    // 第 118 块：第 13 件法器「守夜烛」（第十一关）
+import { createMarkSystem } from './mark.js?v=138';        // 第 118 块：第 14 件法器「落款」（第十一关）
+import { createDeposit, tagChance } from './deposit.js?v=138';   // 第 81 块：寄存柜；第 84 块：掉牌概率
+import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=138';
+import audio from './audio.js?v=138';
+import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=138';
 // 第 62 块：回血技能（第四关通关后永久解锁，回 5 点 / CD 25 秒）
-import { createHealSkill, HEAL_AMOUNT, HEAL_CD } from './healSkill.js?v=137';
+import { createHealSkill, HEAL_AMOUNT, HEAL_CD } from './healSkill.js?v=138';
 // 第 62 块：民心专属事件（升档走良性池、掉档走恶性池）
-import { repPoolForTier, REP_GOOD, REP_BAD } from './repEvents.js?v=137';
+import { repPoolForTier, REP_GOOD, REP_BAD } from './repEvents.js?v=138';
 // 第 62 块：攻略面板（战败提示上的「查看攻略」，手风琴三组）
-import { renderGuide, GUIDE_SECTIONS } from './guide.js?v=137';
+import { renderGuide, GUIDE_SECTIONS } from './guide.js?v=138';
 import {
   settings as readSettings, setSetting, save as saveProfile, profile,
   bumpStat, setStatMax, codexAdd, codexCount, countCard, unlockAch, hasAch, addBones, bones, resetAll,
@@ -60,32 +60,37 @@ import {
   hintSeen, markHintSeen,                  // 第 65 块：一次性提示卡
   markLevelClear, levelCleared, clearCount, // 第 94 块：通关过哪些关（成就用）
   getStatAdmin, setStatAdmin, resetStatAdmin, // 第 95 / 98 块：管理员模式二（手改最终值 → 存追加项，基础值不动）
-} from './profile.js?v=137';
+} from './profile.js?v=138';
 // 第 44 块：礼包兑换（码表只有哈希，明细在 gift.js 顶部注释）
-import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=137';
+import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=138';
 // 第 46 块：音效包（抽象奶蛙音效包 —— 4 段奶蛙叫声，通关第一关解锁）
-import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=137';
-import * as runSave from './runSave.js?v=137';
+import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=138';
+import * as runSave from './runSave.js?v=138';
 // 第 78 块：存档导出 / 导入。数据逻辑全在这个模块里（不碰 DOM），这里只接按钮
-import * as saveIO from './saveIO.js?v=137';
+import * as saveIO from './saveIO.js?v=138';
 import {
   CAMPFIRE, CAMP_CORE, CAMP_STEP, campBuy, campOwned, campLevel, campRelicAmp,
   campCost, campApply, bonesFor, diffBoneMul, levelBoneMul, coinBones, BONE,
-} from './campfire.js?v=137';
+} from './campfire.js?v=138';
 // 第 23 块：永夜火种（通关白给的 3 次永久三选一）
 import {
   BOONS, BOON_BY_ID, BOON_PICKS, boonOwned, boonStacks, boonPending, boonTotalStacks,
   grantBoons, rollBoons, takeBoon, applyBoons, boonStackText,
-} from './boons.js?v=137';
+} from './boons.js?v=138';
 // 第 21 块：夜行诅咒（自选 debuff 换骨币倍率）
-import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=137';
+import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames } from './curses.js?v=138';
+// 第 122 块：回合挑战（每关随机 2 个回合，回合前弹；打完给三选一奖励）
+import {
+  CHALLENGES, CHAL_PER_LEVEL, CHAL_FIRST_ROUND, CHAL_LAST_GAP,
+  chalById, planRounds, rollChallenge, REWARDS, REWARD_BY_ID, rollBoosts, boostSummary,
+} from './challenge.js?v=138';
 // 第 22 块：种子与每日挑战
 import {
   DAILY_RULES, dayKey, dayText, dailySeed, seedCode, pickDailyCurses,
   seedFromText, pickSeedRules, loadSeedRecords, saveSeedRecord, pruneSeeds,
   dailyRecord, saveDailyRecord, pruneDaily, makeRng,
-} from './seed.js?v=137';
-import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=137';
+} from './seed.js?v=138';
+import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=138';
 // 第 58 块：局外商店 · 宝箱（花骨币买，开箱随机给永久属性 / 永久法器 / 技能CD缩短）
 import {
   BOXES, BOX_BY_ID, buyBox, rollBox, metaApplyStats, applyMeta,
@@ -97,45 +102,45 @@ import {
   boxMag,
   // 第 118 块：盲盒里的法器属性 → 开局注入法器系统
   metaRelicAmp,
-} from './metaShop.js?v=137';
+} from './metaShop.js?v=138';
 // 第 59 块：每日签到（以周为单位，周一 00:00 重置）
 // 第 105 块：固定 +20 改成每天随机 0~100；里程碑 3/5/7 天 → 100 / 150 骨币 + 一次永夜火种
 import {
   SIGN_BONES_MIN, SIGN_BONES_MAX, weekCells, signSummary, signToday, signedToday,
-} from './signin.js?v=137';
+} from './signin.js?v=138';
 // 第 94 块：成就（八类 × 三档骨币奖励）
 // 第 94-2 块：骨币改成**手动领取**（achPending / achClaim），老用户补发走 achMigrate
 import {
   ACHS, ACH_CATS, ACH_TIERS, ACH_COUNT, achById, achsByCat, achTier,
   achPending, achPendingBones, achClaim, achClaimAll, achClaimed, achMigrate,
-} from './achievements.js?v=137';
+} from './achievements.js?v=138';
 // 第 94 块：通用手风琴（盲盒奖池与成就面板共用，不复制第三份引擎）
-import { renderAccordion } from './accordion.js?v=137';
+import { renderAccordion } from './accordion.js?v=138';
 // 第 94 块：每日任务（简单 3 + 中等 1 + 困难 1，每天 0 点刷新）
 import {
   DQ_TIERS, DQ_BONES, dqTasks, dqPump, dqSave, dqClaim, dqClaimAll,
   dqPending, dqGained, dqMsLeft, dayKeyOf, dqTier, dqTaskName,
   dqState, dqForceReroll, dqReset,   // 调试口：跨天重掷 / 整条重置
-} from './dailyQuest.js?v=137';
+} from './dailyQuest.js?v=138';
 import {
   EVENTS, ALL_EVENTS, getEventById, pickEvent, effectLines,
   choiceHint, canAfford, costShort, REP_MIN, REP_MAX, REP_START,
   isTalk, eventChoices, resolveRoll, mergeEffects,
-} from './events.js?v=137';
+} from './events.js?v=138';
 // 第 32 块：主线《笑不出来的那一夜》（18 夜，一夜一关，前 3 夜已有关卡）
 import {
   STORY_ARC, STORY_CHAPTERS, STORY_ENDINGS, MARK_INFO,
   storyChapterAt, storyChapterById, storyEndingKey,
-} from './story.js?v=137';
+} from './story.js?v=138';
 // 第 115 块：九套玩法系统引擎（合成台 / 元素反应 / 精英怪 / 天气 / 音乐盒 / 手感四件套）
-import { createCraftingSystem } from './crafting.js?v=137';
-import { createReactionSystem } from './elementReaction.js?v=137';
-import { createEliteSystem } from './elite.js?v=137';
-import { createWeatherSystem } from './weather.js?v=137';
-import { createMusicboxSystem } from './musicbox.js?v=137';
-import { createDash } from './dash.js?v=137';
-import { createHeat } from './heat.js?v=137';
-import { pickLastWords, winLine } from './lastwords.js?v=137';
+import { createCraftingSystem } from './crafting.js?v=138';
+import { createReactionSystem } from './elementReaction.js?v=138';
+import { createEliteSystem } from './elite.js?v=138';
+import { createWeatherSystem } from './weather.js?v=138';
+import { createMusicboxSystem } from './musicbox.js?v=138';
+import { createDash } from './dash.js?v=138';
+import { createHeat } from './heat.js?v=138';
+import { pickLastWords, winLine } from './lastwords.js?v=138';
 
 // 标记模块已经跑起来了：index.html 的兜底自检靠它判断
 // 「模块根本没执行」还是「执行了但加载慢」。
@@ -522,6 +527,25 @@ async function boot() {
   const upSub = document.getElementById('upSub');
   const upFoot = document.getElementById('upFoot');
   const upWarn = document.getElementById('upWarn');   // 永久提示条：只在永夜火种面板里露头
+  // 第 122 块：刷新这批卡（一局 3 次免费，之后用诅咒换）
+  const upRfBtn = document.getElementById('upRfBtn');
+  const upRfName = document.getElementById('upRfName');
+  const upRfN = document.getElementById('upRfN');
+  const upRfTip = document.getElementById('upRfTip');
+  // 第 122 块：回合挑战 / 挑战奖励
+  const chalAsk = document.getElementById('chalAsk');
+  const chTag = document.getElementById('chTag');
+  const chIcon = document.getElementById('chIcon');
+  const chName = document.getElementById('chName');
+  const chRule = document.getElementById('chRule');
+  const chDesc = document.getElementById('chDesc');
+  const chYes = document.getElementById('chYes');
+  const chNo = document.getElementById('chNo');
+  const chalReward = document.getElementById('chalReward');
+  const crTag = document.getElementById('crTag');
+  const crName = document.getElementById('crName');
+  const crDesc = document.getElementById('crDesc');
+  const crList = document.getElementById('crList');
   // 开始界面 / 新手教程 / 武器获得卡
   const titleScr = document.getElementById('titleScr');
   const btnStart = document.getElementById('btnStart');
@@ -1487,6 +1511,35 @@ async function boot() {
   // title（标题页）| tutorial（新手教程）| playing | upgrade（三选一）| weapon（武器卡）| over
   // 第 55 块新增一种：meet（新怪物信息卡，世界冻结）
   let gameState = 'title';
+
+  // ---- 第 122 块：回合挑战与三选一刷新的**状态变量** ----
+  // 声明放在这里（而不是和那几百行逻辑一起放到文件后段）：
+  // renderSkill / hurtPlayer / renderUpPicks 在**初始化阶段**就会读到它们，
+  // 声明在后段会踩 TDZ（初始化期间访问 `let` 直接抛 ReferenceError）。
+  let chalPlan = [];         // 本关挑中的挑战回合号（升序，最多 2 个）
+  let chalUsed = [];         // 已经弹过（接受或放弃）的回合号
+  let chalSeen = [];         // 本关出过的挑战 id（两条尽量不重样）
+  let chalActive = null;     // 正在生效的挑战
+  let chalCur = null;        // 当前弹窗上那条（点了「接下」才生效）
+  let chalNextRound = 0;     // 弹窗对应的是第几回合（回调里别用 level.roundNo 现算：
+                             // 那时机器还停在 gap 里的上一回合，+1 只是巧合正确）
+  let chalDmgTaken = 0;      // 受击加重（破防挑战），乘在 hurtPlayer 的 raw 上
+  let chalNoSkill = false;   // 禁术挑战：技能栏全锁
+  let chalPopOpen = false;   // 挑战弹窗开着（防重复点击 / 防重入）
+  let chalRewardOpen = false;
+  let chalRewardCb = null;
+  let chalRewardRound = 0;
+  let boostSrc = null;       // 「下一回合大涨」的 mod src
+  let boostRound = 0;        // 它作用于第几回合（只用来显示 / 调试）
+  let boostInfo = '';        // 「攻击力 ×1.9 · 技能冷却 ×0.5 · 法器增幅 ×1.6」
+  let boostList = [];        // 大涨的三条名字（调试 / 测试读条数用；
+                             // 别用 boostInfo 里 split(' · ') 数 —— 名字本身可能带「·」，
+                             // 比如「生命上限 ×1.6 · 回满」）
+  const UP_REFRESH_FREE = 3; // 一局几次免费刷新（三选一面板）
+  let upRefreshLeft = UP_REFRESH_FREE;
+  let upRefreshPaid = 0;     // 本局用诅咒换过几次
+  let upCurRound = 0;        // 面板现在属于哪一回合（刷新重抽要用）
+  let upCurPicks = [];
   // 本局的**战斗时长**（秒）——用户定案（第 55 块）：只算真正在打的时间。
   // 商店 / 奇遇与主线剧情 / 升级三选一 / 属性卡 / 背包 / 确认弹窗 / 新怪信息卡
   // 全都不许算进来（判断在 tick 里的 combatOn），开新局时归零。
@@ -1803,7 +1856,8 @@ async function boot() {
     // 荆棘（第 21 块）：本局选了它就按比例加重；金钟罩在上面已经整下挡掉了，不吃这一项
     // 第 76 块（用户定案）：**场地伤害无视防御** —— 漏电地板 / 井底滴水走 damageTrue；
     // 第 82 块（用户定案）：**电路伤害无视无敌时段但吃防御** —— 电弧走 stats.damage。
-    const raw = amount * (1 + runCurseDmg);
+    // 第 122 块：破防挑战的「受到的伤害 ×1.6」也乘在这里（和荆棘同类，加法叠在外层）
+    const raw = amount * (1 + runCurseDmg) * (1 + chalDmgTaken);
     if (isHazard) stats.damageTrue(raw);
     else stats.damage(raw);
     // 第 94 块：这一回合受了多少伤（成就「一根汗毛都没少」+ 每日任务的无伤回合数）。
@@ -1896,15 +1950,21 @@ async function boot() {
   // 打开面板时整局进入 upgrade 状态：怪物/波次/无敌帧全部冻结，只留渲染与待机动画。
   // 回合结束的三选一：面板关闭后要接「商店」（第 3/6/9/12 回合先升级后购物）
   let upgradeAfterCb = null;
-  function showUpgrade(roundNo, after) {
-    upgradeAfterCb = after || null;
-    pendingRound = roundNo;
+
+  // 第 122 块：**刷新这批卡**。
+  //   · 一局 3 次免费（`UP_REFRESH_FREE`），三次用完之后每次刷新要背一条夜行诅咒；
+  //   · 计数按「一局」而不是「每个面板」—— 按面板算就是每回合白送三次，
+  //     抽卡的方差被彻底摊平，三选一就不再是一次选择；
+  //   · 诅咒从 RUN_CURSES 里抽一条**你还没有的**，立刻走 applyRunCurses 落账
+  //     （它内部先按 src='curse' 全撤再重放，所以不会叠加两次）；
+  //     六条都背齐了就再也换不了 —— 这一局刷到头了。
+  function rollUpPicks(roundNo) {
     // 权重按回合变化：round 决定每项的 w0 + gw×(回合-1)
     // 拿到环剑之后，武器系升级才进池子（没武器时抽到等于废牌）
     // 幸运只放宽高品质那一头（第 11 块）：史诗/传说的权重 ×(1 + 幸运 × 该档系数)
     const luck = stats.get('luck');
     // 第 22 块：种子局用固定随机流（同一天同一颗种子 → 同一手牌）
-    const picks = rollChoices(rngOf('card'), {
+    return rollChoices(rngOf('card'), {
       round: roundNo, hasWeapon: weapon.granted, luck,
       // 第 107 块：买到傀儡术后傀儡卡才进池子；上限卡拿过一次就收摊
       puppetOwned: relics.levels().puppet > 0,
@@ -1917,17 +1977,37 @@ async function boot() {
       candleOwned: relics.levels().candle > 0,
       markOwned: relics.levels().mark > 0,
     });
+  }
 
-    upTitle.textContent = `第 ${roundNo} 回合结束 · 三选一`;
-    upSub.textContent = upgradesTaken > 0
-      ? `已获得 ${upgradesTaken} 次强化 · 选一个带进下一回合`
-      : '选一个带进下一回合';
-    // 页脚把「幸运到底值多少」写成数字，玩家才知道这属性有用
-    const odds = rarityOdds(roundNo, { hasWeapon: weapon.granted, luck });
-    upFoot.textContent = `幸运 ${luck.toFixed(1)} · 精良及以上 ${(highTierOdds(odds) * 100).toFixed(0)}%`
-      + ' · 点一张卡立即生效';
+  // 刷新键的两副面孔：还有免费次数就用绿色（免费），用完了换成橙色的「拿诅咒换」。
+  // 代价必须写在键上、不是藏在二次弹窗里 —— 玩家按下去之前就得知道要付什么。
+  function syncRefreshUi() {
+    if (!upRfBtn) return;
+    const free = upRefreshLeft > 0;
+    const avail = RUN_CURSES.filter((c) => !pendingCurses.includes(c.id));
+    upRfBtn.classList.toggle('danger', !free);
+    if (free) {
+      upRfBtn.disabled = false;
+      upRfName.textContent = '刷新这批卡';
+      upRfN.textContent = `免费 ${upRefreshLeft}/${UP_REFRESH_FREE}`;
+      upRfTip.textContent = '一局三次免费 · 用完之后每次刷新要背一条夜行诅咒';
+    } else if (avail.length) {
+      upRfBtn.disabled = false;
+      upRfName.textContent = '用一个诅咒换一次刷新';
+      upRfN.textContent = `已换 ${upRefreshPaid} 次`;
+      upRfTip.textContent = '免费次数用完了 · 每刷一次随机背一条夜行诅咒（骨币倍率会涨一点，但这一局更难过）';
+    } else {
+      upRfBtn.disabled = true;
+      upRfName.textContent = '刷新已用完';
+      upRfN.textContent = '六条诅咒都齐了';
+      upRfTip.textContent = '没有能再背的诅咒了 —— 这一局到此为止';
+    }
+  }
+
+  // 把一批卡铺到面板上（第 122 块从 showUpgrade 里抽出来：刷新要能重铺）
+  function renderUpPicks(picks) {
+    upCurPicks = picks.slice();
     upList.textContent = '';
-
     for (const up of picks) {
       const rar = rarityInfo(up);
       const btn = document.createElement('button');
@@ -1980,6 +2060,41 @@ async function boot() {
       btn.addEventListener('click', () => chooseUpgrade(up));
       upList.appendChild(btn);
     }
+    syncRefreshUi();
+  }
+
+  // 重抽。种子局同一批次里刷新也走 card 流，所以「同一种子 + 同样操作 = 同一结果」。
+  // 三张全一样就再抽（最多 6 次）—— 刷出和刚才一模一样的牌，玩家会觉得键坏了。
+  function rerollUpPicks() {
+    const sig = (list) => list.map((u) => u.id).slice().sort().join('|');
+    const before = sig(upCurPicks);
+    let picks = upCurPicks;
+    for (let i = 0; i < 6; i++) {
+      const next = rollUpPicks(upCurRound);
+      if (sig(next) !== before) { picks = next; break; }
+      picks = next;
+    }
+    renderUpPicks(picks);
+    audio.sfx('card');
+  }
+
+  function showUpgrade(roundNo, after) {
+    upgradeAfterCb = after || null;
+    pendingRound = roundNo;
+    upCurRound = roundNo;
+    const picks = rollUpPicks(roundNo);
+    const luck = stats.get('luck');
+
+    upTitle.textContent = `第 ${roundNo} 回合结束 · 三选一`;
+    upSub.textContent = upgradesTaken > 0
+      ? `已获得 ${upgradesTaken} 次强化 · 选一个带进下一回合`
+      : '选一个带进下一回合';
+    // 页脚把「幸运到底值多少」写成数字，玩家才知道这属性有用
+    const odds = rarityOdds(roundNo, { hasWeapon: weapon.granted, luck });
+    upFoot.textContent = `幸运 ${luck.toFixed(1)} · 精良及以上 ${(highTierOdds(odds) * 100).toFixed(0)}%`
+      + ' · 点一张卡立即生效';
+    upList.textContent = '';
+    renderUpPicks(picks);
 
     audio.sfx('card');
     upgradeOpen = true;
@@ -1989,6 +2104,51 @@ async function boot() {
     upWarn.setAttribute('aria-hidden', 'true');   // 局内升级不写永久存档，警示条收起来
     upPanel.classList.add('on');
     upPanel.setAttribute('aria-hidden', 'false');
+  }
+
+  // ---------------- 第 122 块：刷新这批卡 ----------------
+  // 落一条诅咒到本局（诅咒只会加重、不可撤销）。**不能直接改 profile 就算了** ——
+  // 属性表要重放一遍（applyRunCurses 先按 src='curse' 全撤再写），
+  // 受伤加重（runCurseDmg）也要重算，否则「荆棘」这条今天刷出来是没有任何效果的。
+  function addRunCurse(id) {
+    if (!id || pendingCurses.includes(id)) return false;
+    pendingCurses.push(id);
+    profile().runCurses = pendingCurses.slice();   // 记住选择：下次开局的诅咒勾选跟着变
+    const rc = applyRunCurses(stats, wstats, pendingCurses);
+    runCurseDmg = rc.dmgTaken;
+    stats.clampHp();       // 脆骨把上限压下去以后，当前血量得跟着夹一次
+    renderHud();
+    return true;
+  }
+
+  if (upRfBtn) {
+    upRfBtn.addEventListener('click', async () => {
+      if (!upgradeOpen) return;
+      // ① 还有免费次数：直接重抽
+      if (upRefreshLeft > 0) {
+        upRefreshLeft--;
+        rerollUpPicks();
+        showToast('刷新了一批', `本次免费 · 还剩 ${upRefreshLeft} 次免费机会`);
+        return;
+      }
+      // ② 免费用完：拿一条诅咒换。先问，问完再抽 —— 抽到哪条都不可撤销
+      const avail = RUN_CURSES.filter((c) => !pendingCurses.includes(c.id));
+      if (!avail.length) { audio.sfx('soldout'); return; }
+      const ok = await askConfirm(
+        '用一个诅咒换一次刷新？',
+        `免费次数已经用完了。\n确认后会随机抽一条你还没有的夜行诅咒背上（六条里还剩 ${avail.length} 条），`
+        + '然后把这三张卡换掉。\n诅咒这一局内不可撤销 —— 抽到哪条都得背到结算。',
+        { okText: '换', cancelText: '算了' }
+      );
+      if (!ok || !upgradeOpen) return;
+      const pool = RUN_CURSES.filter((c) => !pendingCurses.includes(c.id));
+      const c = pool[Math.floor(Math.random() * pool.length)];
+      addRunCurse(c.id);
+      upRefreshPaid++;
+      rerollUpPicks();
+      audio.sfx('curse');
+      showToast(`背上了「${c.name}」`, `${c.eff} · 骨币 ×${curseMul(pendingCurses).toFixed(2)}`);
+    });
   }
 
   function chooseUpgrade(up) {
@@ -2130,6 +2290,8 @@ async function boot() {
     const lvMark = relics.levels().mark;
     return {
       playing: gameState === 'playing' || gameState === 'wtut' || gameState === 'tutorial',
+      // 第 122 块：禁术挑战期间整栏按不动（渲染与按键判定都读它）
+      muted: chalNoSkill,
       weapon, arrowRain, heal: healSkill, playerPos: pos, stats, coins,
       golems: golems && lvPuppet > 0 ? {
         owned: true,
@@ -2194,6 +2356,12 @@ async function boot() {
   // （不让人白扔 8 秒 CD），但**静默失败 = 玩家以为按键坏了**。
   // 教程里靠「补靶子」解决（见 ensureRainTargets），教程外至少给一句话。
   function pressSkill(sk) {
+    // 第 122 块：禁术挑战 —— 先说清是挑战锁的，不是键坏了
+    if (chalNoSkill) {
+      showToast('技能被禁', '这是「禁术挑战」的规矩 · 这一回合只能靠走位和巴掌');
+      audio.sfx('uiSwitch');
+      return false;
+    }
     const ctx = skillCtx();
     // 第 114 块：被收账人收走的技能按不动。
     // 和「冷却中」必须区分开：冷却中是不说话（玩家懂），被收走要明说是谁拿走了、
@@ -2232,8 +2400,10 @@ async function boot() {
       // 第 114 块：被收账人收走 → 灰态 + 数字区显示「还差几秒回来」，
       // 让玩家看技能栏就知道「不是我按错了，是技能在别人手上」。
       const stolen = !!(ctx.stolenSkill && ctx.stolenSkill(sk.id));
-      btn.classList.toggle('ready', ready && !stolen);
-      btn.classList.toggle('spent', !ready || stolen);
+      // 第 122 块：禁术挑战期间整栏灰掉，一眼看得出「这一回合放不了」
+      const muted = !!ctx.muted;
+      btn.classList.toggle('ready', ready && !stolen && !muted);
+      btn.classList.toggle('spent', !ready || stolen || muted);
       btn.classList.toggle('stolen', stolen);
       const p = sk.progress ? Math.max(0, Math.min(1, sk.progress(ctx) || 0)) : 0;
       cd.style.height = (p * 100).toFixed(1) + '%';
@@ -2744,6 +2914,21 @@ async function boot() {
     runPotions = 0;
     runDmgTaken = 0;
     runTrafficKills = 0; // 第 116 块：借车撞死怪的单局口径，跟一局走
+    // 第 122 块：三选一刷新按**一局**计数（3 次免费），挑战规划与效果也一局一清
+    upRefreshLeft = UP_REFRESH_FREE;
+    upRefreshPaid = 0;
+    upCurPicks = [];
+    chalPlan = [];
+    chalUsed = [];
+    chalSeen = [];
+    chalActive = null;
+    chalCur = null;
+    chalDmgTaken = 0;
+    chalNoSkill = false;
+    boostSrc = null;
+    boostInfo = '';
+    boostList = [];
+    boostRound = 0;
     shopSerial = 0;
     nextShopDiscount = 0;
     sealBlocked = 0;
@@ -2865,6 +3050,8 @@ async function boot() {
     if (boonLv) stats.syncHp(stats.get('maxHp'));
     // 第 21 / 22 块：种子与诅咒也在开局落账。普通局 seed=0 → 全部退回 Math.random
     initRunRng(dailyMode ? dailySeedNow : (customSeed ? customSeed.seed : 0));
+    // 第 122 块：这一关挑哪 2 个回合出挑战（必须在 initRunRng 之后 —— 种子局要吃到固定流）
+    rollChalPlan(level.totals.rounds);
     const rc = applyRunCurses(stats, wstats, pendingCurses);
     runCurseDmg = rc.dmgTaken;
     if (rc.count) {
@@ -2897,18 +3084,24 @@ async function boot() {
 
   // 第 118 块：法器增幅 = 火种（逐件法器各一簇）+ 盲盒（全场法器三条）合并后灌给各引擎。
   // 开局调一次；续玩读档后再调一次（局内不变），所以各引擎的 setRelicAmp 都是幂等覆盖。
-  function applyRelicAmp() {
+  // boost（第 122 块）：挑战奖励「下一回合法器大涨」的临时增幅，
+  // { dmg?:乘数, radius?:加值, cd?:乘数 }。不传 = 回基准（撤销）。
+  // 之所以在**这张表里**叠、而不是去每个法器引擎上改数：
+  // 表和局外那两份（火种 / 盲盒）本来就是「重算一遍再灌」的，
+  // 撤销只要不带 boost 再调一次，天然幂等。
+  function applyRelicAmp(boost = null) {
     const g = metaRelicAmp();
     const per = campRelicAmp();
+    const b = boost || null;
     const ids = ['spikes', 'frost', 'bell', 'thorns', 'stove', 'lantern', 'insulator',
       'woodfish', 'seal', 'puppet', 'mine', 'latte', 'candle', 'mark'];
     const table = {};
     for (const id of ids) {
       const e = per[id] || {};
       table[id] = {
-        dmg: g.dmg * (e.dmg || 1),
-        radius: g.radius + (e.radius || 0),
-        cd: g.cd * (e.cd || 1),
+        dmg: g.dmg * (e.dmg || 1) * (b && b.dmg ? b.dmg : 1),
+        radius: g.radius + (e.radius || 0) + (b && b.radius ? b.radius : 0),
+        cd: g.cd * (e.cd || 1) * (b && b.cd ? b.cd : 1),
         dur: e.dur || 0,
         coin: e.coin || 0,
       };
@@ -3076,6 +3269,8 @@ async function boot() {
       talk: makeRng(runSeed ^ 0x165667b1),
       // 第 84 块：掉落牌的掷骰单独一条流 —— 掉不掉牌子不该把事件抽签的序列带偏
       deposit: makeRng(runSeed ^ 0x7feb352d),
+      // 第 122 块：挑战回合的规划与抽取也单独一条（种子局同样可复现）
+      chal: makeRng(runSeed ^ 0x2545f491),
     } : null;
     return runSeed;
   }
@@ -4434,6 +4629,11 @@ async function boot() {
       roundBuffSrc = null;
     }
     roundDrain = 0;
+    // 第 122 块：挑战与「下一回合大涨」都只活一个回合，一律在这里收摊。
+    // 两个来源分开撤：挑战是 src='chal'，大涨是 src='boost' —— 同一条结算链里
+    // 事件还会往 roundBuffSrc 里写自己的东西，三者不能共用一个槽位。
+    clearChallengeState();
+    clearBoost();
   }
 
   // 事件卡上的效果行：好事绿、坏事红、中性的金
@@ -5335,13 +5535,270 @@ async function boot() {
     renderShop();   // 刷新金币与按钮可用态（面板保持打开，可以连买别的）
   }
 
+  // ============================================================
+  // 第 122 块：**回合挑战**
+  //
+  // 用户需求：每关随机挑 2 个回合，回合开始前弹一张挑战卡（残血 / 绵软 / 断剑 /
+  // 怪物潮 ……），打完给一次奖励三选一（88 金币 / 再一次三选一 / 下一回合属性大涨）。
+  // 追问后定案两条：**大涨只活一回合**、**挑战可以放弃但没奖励**。
+  //
+  // 为什么挂在「上一回合结算链的末尾」而不是 wave.js 里：
+  //   · wave 的 gap（2.6 秒）是纯计时，没有任何暂停点；只要在 gap 里把 gameState
+  //     从 'playing' 改掉，`level.update` 就整段不跑，gap 也不会走表 ——
+  //     等于天然拿到了一个「回合还没开始」的冻结态，不用给 wave 加门闩接口；
+  //   · 结算链（事件 → 三选一 → 商店）跑完的那一刻，正是玩家心里
+  //     「上个回合彻底完了、下一回合还没开始」的那一帧。
+  //
+  // 生命周期的三条硬规矩：
+  //   ① 效果一律用 src='chal' 写进属性表，`clearRoundBuffs` 里按这个 src 撤 ——
+  //      挑战只活一个回合，绝不能漏进下一回合；
+  //   ② 「下一回合大涨」用**独立** src='boost'，不复用 `roundBuffSrc`
+  //      （那是随机事件的槽位，同一条结算链里事件会把它覆盖成 event:N，
+  //      覆盖之后大涨就再也没人撤得掉了）；
+  //   ③ 读档时把 'chal' / 'boost' 全部抹掉（见 resumeGame）—— 存档不该带着
+  //      「生命上限只剩一半」这种一次性的东西。
+  // ============================================================
+  // 状态变量本身声明在文首（`let gameState` 那一段）——
+  // 因为 renderSkill / hurtPlayer 在初始化阶段就会读到 chalNoSkill，
+  // 放在这里会踩 TDZ（`Cannot access before initialization`）。
+
+  // 挑战是否启用。`?debug=1` 默认把叙事类的东西全跳过（剧情 / 事件 / 商店），
+  // 挑战同属这一类 —— 老 CDP 套件靠「清场就能推进」跑，弹个框会把它们全卡住。
+  // 要在调试里测挑战就加 `&chal`。
+  function chalEnabled() {
+    return !DEBUG_SKIP_NARRATIVE || params.has('chal');
+  }
+
+  // 按关卡重新规划（开局 / 换关 / 读档缺字段时调）
+  function rollChalPlan(totalRounds) {
+    chalPlan = planRounds(rngOf('chal'), totalRounds, CHAL_PER_LEVEL);
+    chalUsed = [];
+    chalSeen = [];
+    return chalPlan.slice();
+  }
+
+  // 技能 CD 倍率：局外商店那个值是**基准**，大涨只是在它上面再乘一个系数。
+  // 撤的时候必须乘回 1，不能写死 setCdMul(1) —— 那会把玩家买的「技能CD缩短」抹掉。
+  function baseSkillCdMul() {
+    return Math.max(0.3, metaShopState().skillCdMul || 1);
+  }
+  function applySkillCdFactor(f) {
+    const m = Math.max(0.3, baseSkillCdMul() * (Number(f) || 1));
+    for (const mod of [weapon, arrowRain, mines, latte, candle, mark]) {
+      if (mod && mod.setCdMul) mod.setCdMul(m);
+    }
+    return m;
+  }
+
+  // 把一条挑战的效果落到本局（只活当前这一回合）
+  function applyChallenge(ch, roundNo = level.roundNo) {
+    const src = 'chal';
+    for (const m of ch.stat || []) {
+      stats.addMod({ stat: m.stat, flat: m.flat || 0, pct: m.pct || 0, mul: m.mul, src });
+    }
+    if (ch.attackTo) {
+      // 攻击力压到「原值 × attackTo」，且不低于 1。
+      // **必须用 mul 不用 flat**：属性公式是 (base+Σflat)×(1+Σpct)×Πmul，
+      // flat 会被 pct 再放大一遍（+60% 攻击的构筑会把这个减益吃掉一半），
+      // 只有 mul 能保证「最终值 = 当前面板值 × 系数」。
+      const cur = stats.get('attack');
+      const target = Math.max(1, cur * ch.attackTo);
+      stats.addMod({ stat: 'attack', mul: target / Math.max(0.0001, cur), src });
+    }
+    if (ch.roundMod) level.applyRoundMod(ch.roundMod);
+    if (ch.noSword) weapon.setMuted(true);
+    if (ch.noSkill) chalNoSkill = true;
+    if (ch.dmgTaken) chalDmgTaken = ch.dmgTaken;
+    if (ch.clampHp) stats.clampHp();
+    chalActive = { id: ch.id, name: ch.name, rule: ch.rule, roundNo };
+    renderHud();
+    renderSkill();
+  }
+
+  // 撤掉挑战的一切痕迹（回合结束 / 读档 / 重开都走这里）
+  function clearChallengeState() {
+    stats.removeBySource('chal');
+    wstats.removeBySource('chal');
+    // 断剑一定要解禁：这是「暂停剑」不是「没收剑」，玩家的剑还在 owned 里
+    weapon.setMuted(false);
+    chalNoSkill = false;
+    chalDmgTaken = 0;
+    chalActive = null;
+    chalCur = null;
+    renderSkill();
+  }
+
+  // 下一回合大涨：三类各一条，只活一个回合
+  function applyBoost(list) {
+    clearBoost();
+    const src = 'boost';
+    boostSrc = src;
+    boostRound = level.roundNo + 1;
+    const names = [];
+    for (const b of list || []) {
+      names.push(b.name);
+      if (b.kind === 'stat' || b.kind === 'weapon') {
+        const target = b.kind === 'weapon' ? wstats : stats;
+        for (const m of b.mods || []) {
+          target.addMod({ stat: m.stat, flat: m.flat || 0, pct: m.pct || 0, mul: m.mul, src });
+        }
+        if (b.healFull) stats.heal(1e9);
+      } else if (b.kind === 'cd') {
+        applySkillCdFactor(b.cdFactor);
+      } else if (b.kind === 'relic') {
+        applyRelicAmp(b.relicAmp || null);
+      }
+    }
+    stats.clampHp();
+    boostList = names.slice();
+    boostInfo = names.join(' · ');
+    renderHud();
+    return boostInfo;
+  }
+
+  function clearBoost() {
+    if (!boostSrc) return;
+    stats.removeBySource(boostSrc);
+    wstats.removeBySource(boostSrc);
+    boostSrc = null;
+    boostInfo = '';
+    boostList = [];
+    applySkillCdFactor(1);   // 技能 CD 回基准（不是回 1）
+    applyRelicAmp();         // 法器增幅回基准
+  }
+
+  // 这一回合该不该弹挑战
+  function maybeChallenge(roundNo) {
+    if (!chalEnabled()) return false;
+    if (chalPopOpen || chalRewardOpen) return false;
+    if (!level || roundNo > level.totals.rounds) return false;
+    if (!chalPlan.includes(roundNo) || chalUsed.includes(roundNo)) return false;
+    const ch = rollChallenge(rngOf('chal'), chalSeen);
+    chalSeen.push(ch.id);
+    chalCur = ch;
+    chalNextRound = roundNo;
+    chalPopOpen = true;
+    gameState = 'challenge';
+    input.joystick.release();
+    vel.set(0, 0, 0);
+    chTag.textContent = `第 ${roundNo} 回合 · 挑战`;
+    chIcon.textContent = ch.icon;
+    chName.textContent = ch.name;
+    chRule.textContent = ch.rule;
+    chDesc.textContent = ch.desc;
+    audio.sfx('boss');
+    chalAsk.classList.add('on');
+    chalAsk.setAttribute('aria-hidden', 'false');
+    return true;
+  }
+
+  function closeChalAsk() {
+    chalPopOpen = false;
+    chalAsk.classList.remove('on');
+    chalAsk.setAttribute('aria-hidden', 'true');
+    chalCur = null;
+  }
+
+  if (chYes) {
+    chYes.addEventListener('click', () => {
+      if (!chalPopOpen || !chalCur) return;
+      const ch = chalCur;
+      const rn = chalNextRound;
+      chalUsed.push(rn);
+      closeChalAsk();
+      gameState = 'playing';
+      applyChallenge(ch, rn);
+      audio.sfx('curse');
+      showToast(`挑战 · ${ch.name}`, `${ch.rule} · 打完它给你一次奖励三选一`);
+    });
+  }
+  if (chNo) {
+    chNo.addEventListener('click', () => {
+      if (!chalPopOpen) return;
+      chalUsed.push(chalNextRound);
+      closeChalAsk();
+      gameState = 'playing';
+      audio.sfx('uiSwitch');
+      showToast('放弃了挑战', '这一回合照常打 —— 但没有奖励');
+    });
+  }
+
+  // 挑战打完 → 奖励三选一。选完接 `next`（正常的回合结算链）。
+  function openChalReward(ch, roundNo, next) {
+    chalRewardCb = next || null;
+    chalRewardRound = roundNo;
+    chalRewardOpen = true;
+    gameState = 'challenge';
+    input.joystick.release();
+    vel.set(0, 0, 0);
+    crTag.textContent = `第 ${roundNo} 回合 · 挑战完成`;
+    crName.textContent = `${ch.name} 已完成`;
+    crDesc.textContent = '挑一样带走。';
+    crList.textContent = '';
+    for (const r of REWARDS) {
+      const btn = document.createElement('button');
+      btn.className = 'ch-item';
+      btn.type = 'button';
+      btn.dataset.id = r.id;
+      const icon = document.createElement('span');
+      icon.className = 'ch-item-icon';
+      icon.textContent = r.icon;
+      const name = document.createElement('span');
+      name.className = 'ch-item-name';
+      name.textContent = r.name;
+      const hint = document.createElement('span');
+      hint.className = 'ch-item-hint';
+      hint.textContent = r.hint;
+      name.appendChild(hint);
+      const text = document.createElement('span');
+      text.className = 'ch-item-text';
+      text.textContent = r.text;
+      btn.append(icon, name, text);
+      btn.addEventListener('click', () => takeChalReward(r));
+      crList.appendChild(btn);
+    }
+    audio.sfx('boon');
+    chalReward.classList.add('on');
+    chalReward.setAttribute('aria-hidden', 'false');
+  }
+
+  function takeChalReward(r) {
+    if (!chalRewardOpen || !r) return;
+    chalRewardOpen = false;
+    chalReward.classList.remove('on');
+    chalReward.setAttribute('aria-hidden', 'true');
+    const next = chalRewardCb;
+    chalRewardCb = null;
+    gameState = 'playing';
+    audio.sfx('upgrade');
+    if (r.coin) {
+      addCoins(r.coin);
+      showToast(`挑战奖励 · ${r.coin} 金币`, `现在共 ${coins} 金币`);
+    }
+    if (r.boost) {
+      const list = rollBoosts(rngOf('chal'));
+      const txt = applyBoost(list);
+      showToast('下一回合属性大涨', `${txt} —— 只活这一回合`);
+    }
+    if (r.card) {
+      // 额外三选一：面板自己会把 gameState 切到 upgrade，选完接 next
+      showUpgrade(chalRewardRound, next);
+      return;
+    }
+    if (next) next();
+  }
+
   // 回合清空后的编排：
   //   第 5 回合（weaponAt）打完 → 武器卡 → 三选一（若有）→ 商店（若有）
   //   其余回合   → 三选一（若有）→ 商店（若有）→ 2.6 秒后下一回合
   // 回合清空后的编排（第 7 块：全部挪到「回合结束」这一侧）：
   //   清上回合临时效果 → 武器卡（第 5 回合）→ 夜行奇遇 → 三选一 → 商店 → 下一回合
   //   第 15 回合是最后一关：不弹事件、不弹商店，选完升级直接结算。
+  // 第 122 块：挑战奖励排在这条链的**最前面**（它属于「这一回合打完了」本身），
+  // 挑战弹窗排在**最后面**（它属于「下一回合还没开始」）。
   function handleRoundClear(roundNo) {
+    const chalDone = chalActive;   // 本回合带着挑战打完了（下面 clearRoundBuffs 会把它清掉）
+    chalActive = null;
     clearRoundBuffs();
     autoBackup();          // 第 97 块：每回合自动留一份本机备份（最近 3 份）
     const isLast = roundNo >= level.totals.rounds;
@@ -5378,11 +5835,19 @@ async function boot() {
       next();
     };
 
+    // 结算链的终点：商店（若有）关掉之后，正好是「下一回合还没开始」的那一帧 ——
+    // 挑战弹窗挂在这里（第 122 块）。关底不弹：最后一个回合打完就结算，
+    // 挑战奖励（尤其「下一回合大涨」）没有落点。
+    const beforeNextRound = () => {
+      if (isLast) return;
+      maybeChallenge(roundNo + 1);
+    };
     const runShop = () => {
       // 关底：民心事件（若有）播完，这里就是终点 —— 真正的结算点。
       // 原来结算硬编码在 chooseUpgrade 里、绕过回调，关底那条民心事件因此没人播。
       if (isLast) { endGame(true); return; }
-      if (level.shouldShop(roundNo) && !DEBUG_SKIP_NARRATIVE) openShop(roundNo, null);
+      if (level.shouldShop(roundNo) && !DEBUG_SKIP_NARRATIVE) openShop(roundNo, beforeNextRound);
+      else beforeNextRound();
     };
     // 属性选择 →（选完）→ 民心事件 → 商店
     const runUpgrade = () => {
@@ -5436,11 +5901,16 @@ async function boot() {
 
     // 武器卡排在最前：拿到环剑之后抽到的事件才可能出现「夜风顺了」
     // 卡片关掉 → 武器教程（只教第一次）→ 再接事件
-    if (roundNo >= level.level.weaponAt && !weapon.granted) {
-      grantRingThen(runEvent);
-      return;
-    }
-    runEvent();
+    const startChain = () => {
+      if (roundNo >= level.level.weaponAt && !weapon.granted) {
+        grantRingThen(runEvent);
+        return;
+      }
+      runEvent();
+    };
+    // 挑战奖励排在整条链最前：先把「你打赢了」兑现，再走正常的结算
+    if (chalDone && chalEnabled()) { openChalReward(chalDone, roundNo, startChain); return; }
+    startChain();
   }
 
   // 第 65 块（用户定案）：**技能的「有没有」只跟解锁有关，跟当前打第几关无关**。
@@ -5663,6 +6133,9 @@ async function boot() {
       rarities: [...runRarities],
       // 第 21 / 22 块：诅咒、种子、每日挑战标记都要进档，否则续玩会变成「无诅咒白拿倍率」
       curses: pendingCurses.slice(),
+      // 第 122 块：这一关还剩哪几个挑战回合 —— 不存的话读档会「重新抽一遍」，
+      // 玩家已经打过的那次又冒出来（或者干脆再也碰不到挑战）
+      chal: { plan: chalPlan.slice(), used: chalUsed.slice(), seen: chalSeen.slice() },
       seed: runSeed,
       daily: dailyMode,
       dailyStamp,
@@ -5798,6 +6271,38 @@ async function boot() {
     candle.setRelicLevel(relics.levels().candle);
     mark.restore(saved.mark);
     mark.setRelicLevel(relics.levels().mark);
+    // 第 122 块：挑战 / 大涨都是「只活一回合」的东西，**不进档** ——
+    // 存档里的 playerMods 会把它们一起带回来（dumpMods 不区分 src），这里成对抹掉。
+    // 顺序：先撤属性表上的，再把 CD 倍率与法器增幅复位（这两样不在属性表里）。
+    stats.removeBySource('chal');
+    wstats.removeBySource('chal');
+    stats.removeBySource('boost');
+    wstats.removeBySource('boost');
+    weapon.setMuted(false);
+    {
+      chalActive = null;
+      chalCur = null;
+      chalPopOpen = false;
+      chalRewardOpen = false;
+      chalRewardCb = null;
+      chalDmgTaken = 0;
+      chalNoSkill = false;
+      boostSrc = null;
+      boostInfo = '';
+      boostList = [];
+      boostRound = 0;
+    }
+    applySkillCdFactor(1);   // 回基准（局外商店那个值），不是回 1
+    applyRelicAmp();
+    // 挑战规划跟着存档走；老存档没有这个字段 → 按本关重新规划（还能玩到）
+    const sc = saved.chal || null;
+    if (sc && Array.isArray(sc.plan) && sc.plan.length) {
+      chalPlan = sc.plan.slice();
+      chalUsed = Array.isArray(sc.used) ? sc.used.slice() : [];
+      chalSeen = Array.isArray(sc.seen) ? sc.seen.slice() : [];
+    } else {
+      rollChalPlan(level.totals.rounds);
+    }
     runRarities = new Set(saved.rarities || []);   // 本局品质集合一并恢复
     // 注意顺序：diffOverride 在下面几行才赋值，这里直接读存档里的 prevDiff
     if (saved.diff && DIFFS[saved.diff]) {
@@ -9758,6 +10263,78 @@ async function boot() {
           }));
         },
         isOpen: () => upgradeOpen,
+        // 第 122 块：刷新口的观测（次数 / 重抽 / 诅咒换）
+        get refresh() { return { left: upRefreshLeft, paid: upRefreshPaid, free: UP_REFRESH_FREE }; },
+        reroll: () => { if (upgradeOpen) rerollUpPicks(); return upCurPicks.map((u) => u.id); },
+        refreshClick: () => { if (upRfBtn) upRfBtn.click(); },
+        rfText: () => ({
+          name: upRfName ? upRfName.textContent : '',
+          n: upRfN ? upRfN.textContent : '',
+          tip: upRfTip ? upRfTip.textContent : '',
+          danger: upRfBtn ? upRfBtn.classList.contains('danger') : false,
+          disabled: upRfBtn ? !!upRfBtn.disabled : true,
+        }),
+        addCurse: (id) => addRunCurse(id),
+      },
+      // 第 122 块：回合挑战
+      chal: {
+        list: () => CHALLENGES.map((c) => ({ id: c.id, name: c.name, rule: c.rule })),
+        plan: () => chalPlan.slice(),
+        // 直接改计划（CDP 要在「指定回合」验挑战会不会自己弹出来）
+        setPlan: (arr) => {
+          chalPlan = (Array.isArray(arr) ? arr : []).slice();
+          chalUsed = [];
+          chalSeen = [];
+          return chalPlan.slice();
+        },
+        used: () => chalUsed.slice(),
+        get active() {
+          return chalActive
+            ? { id: chalActive.id, name: chalActive.name, rule: chalActive.rule, roundNo: chalActive.roundNo }
+            : null;
+        },
+        get ask() { return { open: chalPopOpen, round: chalNextRound, id: chalCur ? chalCur.id : null }; },
+        get reward() {
+          return chalRewardOpen
+            ? { open: true, round: chalRewardRound, items: REWARDS.map((r) => r.id) }
+            : { open: false };
+        },
+        get dmg() { return chalDmgTaken; },
+        get noSkill() { return chalNoSkill; },
+        get boost() {
+          return boostSrc
+            ? { round: boostRound, info: boostInfo, n: boostList.length, names: boostList.slice() }
+            : null;
+        },
+        // 手开一个挑战（调试 / CDP 用）：推到这个回合的待弹名单里，再立刻弹
+        force: (id, roundNo = level.roundNo) => {
+          const ch = chalById(id);
+          if (!ch) return false;
+          if (!chalPlan.includes(roundNo)) chalPlan.push(roundNo);
+          chalCur = ch;
+          chalSeen.push(ch.id);
+          chalNextRound = roundNo;
+          chalPopOpen = true;
+          gameState = 'challenge';
+          chTag.textContent = `第 ${roundNo} 回合 · 挑战`;
+          chIcon.textContent = ch.icon;
+          chName.textContent = ch.name;
+          chRule.textContent = ch.rule;
+          chDesc.textContent = ch.desc;
+          chalAsk.classList.add('on');
+          chalAsk.setAttribute('aria-hidden', 'false');
+          return true;
+        },
+        accept: () => { if (chYes) chYes.click(); },
+        refuse: () => { if (chNo) chNo.click(); },
+        look: () => ({
+          open: chalPopOpen,
+          name: chName ? chName.textContent : '',
+          rule: chRule ? chRule.textContent : '',
+        }),
+        takeReward: (id) => { const r = REWARD_BY_ID[id]; if (r) takeChalReward(r); },
+        boosts: () => JSON.stringify(rollBoosts(rngOf('chal')).map((b) => b.id)),
+        summary: (list) => boostSummary(list),
       },
       // 金币 / 商店 / 随机事件（自动化测试用）
       get coins() { return coins; },

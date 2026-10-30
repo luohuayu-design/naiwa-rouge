@@ -176,7 +176,9 @@ ok(/fx\.ring\(e\.pos, \{ from: [^}]*life: e\.cfg\.windup/.test(ENEMY),
 // ============================================================
 sec('五、调用链：wave / main 都把 haste 传下去');
 // ============================================================
-ok(/hasteScale: sc\.haste,/.test(WAVE), 'wave.js 刷怪时传 hasteScale');
+// 第 122 块：疾风挑战要在这一项上再乘一个系数，断言改成「传了 hasteScale，且以 sc.haste 为底」
+ok(/hasteScale: sc\.haste(\s*\*\s*\(rm\.hasteMul \|\| 1\))?,/.test(WAVE),
+  'wave.js 刷怪时传 hasteScale');
 ok(/hasteScale: sc\.haste,\s+\/\/ 第 91 块：看守的出手也要跟着回合变密/.test(MAIN),
   'main.js 寄存处看守被召唤时也传 hasteScale');
 ok(/const sc = roundScale\(roundIndex \+ 1, level\);/.test(WAVE),

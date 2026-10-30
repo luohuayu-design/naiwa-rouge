@@ -1197,9 +1197,15 @@ export function createLevel(level, { enemies, fx, getPlayerPos, onRound, onRound
         // 第 75 块：擦名者（near）从更近的圈上进场 —— 它得让玩家当场看见
         const at = pickSpawn(sp.near ? level.spawnRadius * ERASER_NEAR : 0);
         const sc = roundScale(roundIndex + 1, level);
+        // 第 122 块：本回合修正也可以改怪物的数值（「疾风挑战」的移速 / 出手频率）。
+        // 只有 countScale 是 buildSpawns 自己吃的，其余三项在这里乘，
+        // 缺省 1 —— 老事件写的 mod 没有这几个键，行为一点不变。
+        const rm = roundMod || {};
         const e = enemies.spawn(sp.type, at, {
-          hpScale: sc.hp, damageScale: sc.damage, speedScale: sc.speed,
-          hasteScale: sc.haste,     // 第 91 块：出手频率（enemy.js 的 e.haste）
+          hpScale: sc.hp * (rm.hpMul || 1),
+          damageScale: sc.damage * (rm.dmgMul || 1),
+          speedScale: sc.speed * (rm.speedMul || 1),
+          hasteScale: sc.haste * (rm.hasteMul || 1),   // 第 91 块：出手频率（enemy.js 的 e.haste）
         });
         if (e) spawned++;
       }

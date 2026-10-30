@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#080f14">
 <link rel="icon" href="data:,">
 <title>蛙步 · 夜行</title>
-<link rel="stylesheet" href="style.css?v=137">
+<link rel="stylesheet" href="style.css?v=138">
 </head>
 <body>
 
@@ -142,6 +142,13 @@
     </div>
     <div class="up-warn" id="upWarn" aria-hidden="true">这一张会永久写进本机存档 · 之后每一关、每一局都带着它 · 不可撤销</div>
     <div class="up-list" id="upList"></div>
+    <div class="up-refresh" id="upRefresh">
+      <button class="up-rf" id="upRfBtn" type="button">
+        <span class="up-rf-name" id="upRfName">刷新这批卡</span>
+        <span class="up-rf-n" id="upRfN">3 次免费</span>
+      </button>
+      <div class="up-rf-tip" id="upRfTip">一局三次免费 · 用完之后每次刷新要背一条夜行诅咒</div>
+    </div>
     <div class="up-foot" id="upFoot">点一张卡片立即生效 · 同一项可以重复叠加</div>
   </div>
 </div>
@@ -888,6 +895,33 @@
 </div>
 
 
+<!-- 回合挑战（第 122 块）：每关随机 2 个回合，回合开始前弹一次；可以放弃（没奖励） -->
+<div id="chalAsk" class="chal" aria-hidden="true">
+  <div class="chal-card">
+    <div class="ch-tag" id="chTag">第 7 回合 · 挑战</div>
+    <div class="ch-icon" id="chIcon">🩸</div>
+    <div class="ch-name" id="chName">残血挑战</div>
+    <div class="ch-rule" id="chRule">生命上限 ×0.5</div>
+    <div class="ch-desc" id="chDesc">这一段说明。</div>
+    <div class="ch-note">接下这一回合就按上面的规矩打 · 打完它，给你一次奖励三选一</div>
+    <div class="ch-btns">
+      <button class="ch-btn primary" id="chYes" type="button">接下挑战</button>
+      <button class="ch-btn" id="chNo" type="button">放弃（没有奖励）</button>
+    </div>
+  </div>
+</div>
+
+<!-- 挑战完成：奖励三选一（第 122 块） -->
+<div id="chalReward" class="chal" aria-hidden="true">
+  <div class="chal-card reward">
+    <div class="ch-tag good" id="crTag">挑战完成</div>
+    <div class="ch-name" id="crName">挑一样带走</div>
+    <div class="ch-desc" id="crDesc">这只是你应得的。</div>
+    <div class="ch-list" id="crList"></div>
+    <div class="ch-note">三选一 · 选完继续这一回合的结算</div>
+  </div>
+</div>
+
 <!-- 是否进入新手教程 -->
 <div id="tutAsk" class="modal" aria-hidden="true">
   <div class="md-card">
@@ -1111,7 +1145,7 @@
 <!-- 不用 importmap：老手机浏览器（iOS 16.4 以下、旧版微信/安卓 WebView）
      不支持 import maps，会让整个模块解析失败、加载页永远停在 0%。
      项目内所有 import 都写成相对路径，直接靠原生 ES Module 解析。 -->
-<script type="module" src="js/main.js?v=137"></script>
+<script type="module" src="js/main.js?v=138"></script>
 
 <!-- 兜底自检（第 79 块重写）：把「慢」和「真的失败」分开，别再把慢当错。
      - 脚本 404 / 解析失败 → 红字 + 重试按钮（这才是真失败）

@@ -1,7 +1,7 @@
 # 蛙步 · 夜行 —— 交接文档
 
 > 新对话从这里开始读，不要先翻聊天记录。**先读 §0，再按需查后面章节。**
-> 最后更新：2026-10-29 · 线上 **v=137** · 第 121 块（连杀断连改接战斗秒表）；上一块 120（进关进度条复位）、119（首访加载兜底）、118（第十一关补完 / 商店刷新 / 火种法器簇 / 盲盒法器属性）。
+> 最后更新：2026-10-30 · 线上 **v=138** · 第 122 块（回合挑战 + 三选一刷新）；上一块 121（连杀断连改接战斗秒表）、120（进关进度条复位）、119（首访加载兜底）、118（第十一关补完 / 商店刷新 / 火种法器簇 / 盲盒法器属性）。
 > 本文件只记**结论与坑**；逐块实现细节看代码注释与 `git log` / `git show`。
 
 ---
@@ -23,7 +23,25 @@
 
 ## 0. 给新对话的话
 
-### 0.1 当前基线：v=137（第 121 块；下面 1~6 是第 116 块打下的底子，第 118 块补第十一关，119/120 修加载，121 修连杀计时）
+### 0.1 当前基线：v=138（第 122 块；下面 1~6 是第 116 块打下的底子，第 118 块补第十一关，119/120 修加载，121 修连杀计时，122 加回合挑战与三选一刷新）
+
+**第 122 块（v=138）两块新玩法，都在 `js/challenge.js` + `main.js` 里：**
+
+1. **回合挑战**：每关 `planRounds()` 从 `[3, rounds-1]` 里无放回抽 **2 个回合**（种子局走 `chal` 独立随机流）。
+   回合**开始前**弹卡（挂在 `handleRoundClear` 那条链的**末尾**：商店关掉之后、gap 还没走完），
+   九条挑战各碰一个轴：`thinBlood`（maxHp ×0.5，`clampHp`）/ `softPaw`（攻击 → 原值 40%，**下限 1**，走 `mul` 折算）/
+   `brokenSword`（`weapon.setMuted(true)`：整把剑失效）/ `tide`（`roundMod.countScale 2`）/
+   `gale`（`roundMod.speedMul 1.45 / hasteMul 1.3`，wave.js 新吃这三项）/ `coldHand`（攻速 ×0.55）/
+   `mute`（`chalNoSkill`：技能栏全灰 + `pressSkill` 拒绝）/ `heavyStep`（移速 ×0.62）/ `fragile`（受伤 ×1.6，乘在 `hurtPlayer` 的 raw 上）。
+   **可以放弃**（`chalUsed` 记一笔，这一回合照常打、没奖励）。
+2. **挑战奖励**：挑战回合清空时，奖励三选一排在整条结算链**最前**（`openChalReward(chalDone, roundNo, startChain)`）：
+   88 金币 / 立刻再来一次三选一（复用 `showUpgrade`）/ **下一回合属性大涨**（`rollBoosts` 三类各一条 → `applyBoost`，
+   只活一个回合，`src='boost'`）。
+3. **三选一刷新**：`UP_REFRESH_FREE = 3`（**一局**三次免费，不是每面板三次）。免费用完后每次刷新要
+   **随机背一条还没有的夜行诅咒**（`askConfirm` 二次确认 → `addRunCurse` → `applyRunCurses` 全量重放 → `runCurseDmg` 重算 → `stats.clampHp()`）。
+4. **生命周期三条铁律**：效果 src 分别是 `chal` / `boost`，`clearRoundBuffs()` 里成对撤；`resumeGame` 里成对抹（存档不该带着「上限只剩一半」）；
+   `resetRunState()` 里把 `upRefreshLeft / chalPlan / chalUsed / chalSeen` 全部归零。
+
 
 剧情底座是 `story.js` 的 s12。第十二关把「看不见」换成「躲车流」——两条平行车道 + 中距放风筝的新怪 + 一个区域增益法器，与前十一关机制正交。
 
@@ -36,6 +54,9 @@
 
 ### 0.2 最近几块（细节见 §2 与 git log）
 
+- **122 · v=138**：**回合挑战 + 三选一刷新**（见 §0.1）。`js/challenge.js` 是纯数据/纯函数（零 DOM、零 import 业务模块），
+  接线全在 `main.js`；`wave.js` 的刷怪多吃了 `roundMod` 的 `hpMul / dmgMul / speedMul / hasteMul`；`weapon.js` 多了 `setMuted()`。
+  数量没变（关卡 12 / 怪 28 / 卡池 109 / 法器 14 / 成就 118），所以老套件只用改 4 处**源码正则**（76/85/91/56 行）。
 - **121 · v=137**：**连杀不再被暂停时间冲掉**。连杀的「断连计时」原来读 `performance.now()`（真实时钟）：在商店 / 事件对话 / 背包里停多久都记进断连里，一出店第一帧 `idle` 就超阈值，热度被整段暂停时间刷掉。现在 `createHeat` 注入 `now: () => elapsed`（局内战斗秒表），暂停期间热度原样冻结。顺带复核了「一局用时」：它本来就走 `elapsed`，**只算打斗** —— CDP 实测商店 / 背包 / 事件卡 / 三选一 / 合成台 / 提示卡各停 2.2 秒，秒表涨幅全是 `+0.000`（改前后一致）。
 - **120 · v=136**：**进关进度条复位**。`setProgress` 是「只升不降」的（启动阶段用它抵消真实进度晚到），启动结束时 `_progressShown` 已经钉在 1.0；`ensureLevelAssets` 再调 `setProgress(0.05)` 时就永远是满格 —— 表现是「进关进度条始终 100%」。新增 `resetProgress(p)` 直接压回起点，进关改走它。CDP 实测（本地服务器给 glb 加 700ms 延迟 + 启动阶段屏蔽全部 glb，逼出进关补载）：进度条从 74%→83%→85%→87% 跟着 `n/11` 走，不再满格。
 - **119 · v=135**：**首访加载 0% 兜底**。症状：第一次打开永远停在 0%、关掉重进就快（本质是 100+ 个 js 模块还没下完，`main.js` 一行没跑；第二次命中 HTTP / SW 缓存）。全部改动在 `index.html` 的兜底脚本：① 模块下载期间进度条自己爬到 **55%**，`main.js` 的 `_progressShown` 改成从当前显示值接着算（否则真实进度一到又把条拽回 0）；② **连续 6 秒没有任何新 js 下完**才判定卡死并 `location.reload()`（同 tab 最多 2 次、2 分钟内计数；成功启动清 `sessionStorage['naiwa.bootRetry']`）；还在慢慢下载就不重载。CDP 用 `Network.setBlockedURLs(['*main.js*'])` 复现验证：正常启动 0 重载，阻断后约 7s 自动重载、第 3 次退回「黄字 + 手动重试」。
@@ -81,12 +102,26 @@
 25. **商店「买断型」法器强化走 `itemLocked` 门控**（第 116 块）：奶泡 / 保温杯这种「一局一次」的货，`itemLocked` 看 `ctx.latte.hasFoam()` / `hasThermos()` 返回 true 就锁死，别让玩家重复买。
 26. **加载页「0%」是模块图的锅，不是模型**（第 119 块）：`window.__naiwaBooted` 在 `main.js` 顶层才置位 = 全部 import 都下完并执行；在那之前进度条一格都走不动。所以兜底必须写在 `index.html` 的内联脚本里（能先跑），判据用 `performance.getEntriesByType('resource')` 里 `.js` 条目数是否连续 N 秒不涨 —— 别按固定秒数重载，否则会掐断正在慢慢下载的玩家。复现/验证用 CDP `Network.setBlockedURLs(['*main.js*'])`。
 27. **同一个进度条服务两段加载时，必须能复位**（第 120 块）：`setProgress` 刻意的「只升不降」是给启动阶段对冲真实进度用的，但启动收尾会把它顶到 1.0；`ensureLevelAssets` 复用它就成了「进关永远 100%」。凡是「阶段制」的进度，阶段开始一律走显式 `resetProgress()`，别指望 `setProgress(0.05)` 能压回去。
-28. **手感计时一律接「战斗秒表」`elapsed`，别用真实时钟**（第 121 块）：连杀断连原来读 `performance.now()`，商店 / 对话 / 背包停多久都算进 `idle`，一出店连杀被整段暂停时间刷掉。凡是「局内手感」的计时（断连、双推窗口、任何 cd/超时）都必须吃只在 `inGame` 里走的 `elapsed`（`createHeat({now: () => elapsed})`）；真实时钟只配给「和游戏是否暂停无关」的场合（读秒锁、签到倒计时）。
+29. **`let` 状态变量别写在「会读它的函数」后面**（第 122 块）：`renderSkill()` 在**初始化阶段**就执行，
+    它读的 `chalNoSkill` 如果声明在文件后段（几千行之后），整页直接 `Cannot access 'chalNoSkill' before initialization`
+    —— 表现是白屏 / 什么都没跑起来，控制台只有一行 TDZ。凡是渲染函数、hurtPlayer、任何早期就会跑到的路径读的开关，声明一律放文首。
+30. **两个「只活一回合」的效果不能共用 `roundBuffSrc`**（第 122 块）：同一条结算链里随机事件会把它写成 `event:N`，
+    后写的覆盖前写的 —— 被覆盖那份**永远撤不掉**，会跟着一局跑到底。挑战（`chal`）与大涨（`boost`）各自独立 src，`clearRoundBuffs` 里成对撤。
+31. **「整把武器失效」要做成开关，别动 `granted / owned`**（第 122 块 `weapon.setMuted`）：那是整局资产，
+    清掉等于把玩家的剑偷走，而且 `prefillRing` / `restore` 会跟着错。开关只影响 `update` / `fire` 两处入口，
+    `reset()` 里清一次，回合结束自动还给他。
+32. **挑战弹窗挂在「结算链末尾 + 波次 gap 里」**（第 122 块）：gap 是纯计时、没有任何暂停点，
+    只要把 `gameState` 从 `'playing'` 改掉，`level.update` 就不跑、gap 也不走表 —— 天然就是「回合还没开始」的冻结态，
+    不用给 wave 加门闩接口。顺序上「奖励（本回合打完）」排链首、「挑战（下回合开始前）」排链尾，一句话就分清了。
+33. **CDP 清回合要先放开波次、等真的进 spawning**（第 122 块）：`setWaves(true)` 冻波次时 `level.update` 根本不跑，
+    全歼也不会触发结算；在 gap 里 `skipRound()` 只是催下一回合，紧接着的 `kill` 是空杀。正确姿势 =
+    `setWaves(false)` → 等 `phase === 'spawning' && 场上有怪` → `skipRound()` + 全歼。
+34. **手感计时一律接「战斗秒表」`elapsed`，别用真实时钟**（第 121 块）：连杀断连原来读 `performance.now()`，商店 / 对话 / 背包停多久都算进 `idle`，一出店连杀被整段暂停时间刷掉。凡是「局内手感」的计时（断连、双推窗口、任何 cd/超时）都必须吃只在 `inGame` 里走的 `elapsed`（`createHeat({now: () => elapsed})`）；真实时钟只配给「和游戏是否暂停无关」的场合（读秒锁、签到倒计时）。
 
 ### 0.4 发版与测试
 
 - 推送：`git -c http.proxy=http://127.0.0.1:7897 ...`（本机 Clash 代理；代理没开时 push 会失败，让用户开代理，别改 git 配置）。
-- 回归：`.tmp-block114-test.mjs` 等 **60 套 Node** 全绿；CDP 按需单套串行（一次只跑一套，套间 `node .tmp-cdp-clean.js`）。
+- 回归：`.tmp-block122-test.mjs` 等 **62 套 Node** 全绿；CDP 按需单套串行（一次只跑一套，套间 `node .tmp-cdp-clean.js`）。
 - 已知黄账（别浪费时间）：`block63-cdp` 4 个通电地板、`block54-cdp` 签到浮层 z-index（35/1）、`camp-test` / `boon-test` / `eventui-test` / `block18` / `start-test` / `block30-cdp` / `ui-test` 等老套件本身过期。
 - 用户规则：**全中文**；有疑问先问；README 与实况同步；美术优先 GitHub 现成 CC0；不做多角色；局外对局内影响要小。
 
@@ -118,6 +153,7 @@ Three.js r160 的单摇杆幸存者肉鸽《蛙步 · 夜行》，纯静态站�
 
 | 块 | 版本 | 核心内容 |
 | --- | --- | --- |
+| **122** | **v=138** | **回合挑战 + 三选一刷新**：每关随机 2 个回合在开打前弹挑战（九条，可放弃），打完给「88 金币 / 再一次三选一 / 下一回合大涨」三选一；三选一面板加刷新（一局 3 次免费，之后用诅咒换）。新增 `js/challenge.js`（纯数据）、`weapon.setMuted()`、`wave` 的 `roundMod` 三项数值 |
 | **121** | **v=137** | **连杀只认战斗时间**：断连计时从 `performance.now()` 换成注入的 `now: () => elapsed`（只在真在打时走表），商店 / 对话 / 背包里停多久都不再掉热度。顺带 CDP 复核「一局用时」本来就只算打斗（六个面板各停 2.2s，秒表 +0.000） |
 | **120** | **v=136** | **进关进度条复位**：`setProgress` 只升不降，启动后 `_progressShown` 钉在 1.0，导致任何关卡入场都 100%。新增 `resetProgress(p)`，`ensureLevelAssets` 改走它。CDP 实测进关条从 74% 跟到 87%（`n/11`） |
 | **119** | **v=135** | **首访加载兜底**：冷启动时 100+ 个 js 还没下完，`main.js` 没跑、进度条钉在 0%。`index.html` 兜底脚本让进度条先自走到 55%，并且「连续 6 秒没有新 js 下完」才 `location.reload()`（同 tab 最多 2 次，成功即清标记）；`main.js` 的 `_progressShown` 改为从当前显示值接着算。CDP 用 `Network.setBlockedURLs` 复现通过 |
@@ -196,6 +232,7 @@ Three.js r160 的单摇杆幸存者肉鸽《蛙步 · 夜行》，纯静态站�
 | `enemy.js` | **28 只怪**（24 个 glb；`addressee` / `clerk` / `collector` / `kangaroo` 程序化）、`CLIP_FAMILIES`、血条、冰冻 / 定身、`attachTag`、木鱼灵追踪泡、并联体分离、称量官叠层（`weighTier / dressWeigh / performWeigh / clearWeigh`）、盖章人（`spawnSeal` / `sealBySource`）、看守五招、`hittable`、**墨线（`startInkCast / spawnInkBand / updateInks / distToInk`）**、**加急袋鼠（`handleKangaroo / performRush`，`e.hasted` 在 `moveToward` / `cdOf` 乘算、`updateOne` 递减）** |
 | `traffic.js` | **第 116 块新增**：第十二关的车流。`createTrafficSystem({scene,fx,enemies,hurtPlayer,onEnemyHit,onPlayerHit})` → `build / update / clear / spawn / list / config`；常量 `TRAFFIC_DEFAULTS {lanes:[-4.5,4.5],width:2.4,warn:2.2,speed:18,damage:2.0,enemyPct:0.36,doubleFrom:13}`；零 import 业务模块，纯注入 |
 | `latte.js` | **第 116 块新增**：法器「苔藓拿铁」（12 号）。`createLatteSystem({scene,fx,enemies,stats,onCast,onSlow,onPickup})` → `drop / dropPickup / update / reset / clearField / setRelicLevel / applyCard / buyFoam / buyThermos / snapshot / restore / setCdMul / bonuses`；`LATTE_BASE {cd 30, cdMin 14, radius 3.2, duration 5, haste 0.2, move 0.15, slow 0.28, cap 1, capMax 3}`；零 import，纯注入 |
+| `challenge.js` | **第 122 块新增**：回合挑战的**纯数据 + 纯函数**（零 DOM、零 import）。`CHALLENGES`（九条，每条只碰一个轴）/ `CHAL_PER_LEVEL 2` / `CHAL_FIRST_ROUND 3` / `CHAL_LAST_GAP 1` / `planRounds(rng,total)` / `rollChallenge(rng,exclude)` / `REWARDS`（coin 88 / card / boost）/ `BOOST_POOL`（base / skill / relic 三类）/ `rollBoosts` / `boostSummary`。**效果怎么落地全在 main.js**，这里只描述 |
 | `fog.js` | **第 114 块新增**：第十一关的雾。`createFogSystem({scene})` → `build / update / clear / clearPatches / inside / densityAt / on / count / spawn / heat / haloVisible / haloPos`；常量 `VIEW_K 0.862`（深度投影补偿）、`FOG_ORDER 700`；两层平面 `makeLayer(1.35,1.00,0.06)` + `makeLayer(2.05,0.82,-0.05)`，`depthTest:false` |
 | `mine.js` | **第 114 块新增**：法器「墨丸」（11 号）。`DMG_MUL 2.5 / MAX_MINE 3 / MAX_CAP 8 / RADIUS 2.6 / TRIGGER_R 0.9 / CD 8→3`；`drop / update / reset / clearField / applyCard / buySac / buyThick / setRelicLevel / snapshot / restore`；地雷 `renderOrder 721`、光环 720（穿雾） |
 | `deposit.js` | 寄存柜（第八关）：`build / update / reset / addTag / takeAll / clearTags / setSeal`；常量 `CAP 8 / LOCK_DELAY 5.0 / RANGE 3.6`；掉牌率唯一真相源 `TAG_BASE 0.50` / `TAG_SEAL [.50,.34,.22,.13]` |
@@ -280,6 +317,11 @@ __game.enemies.collectCast()          ← 只回 {progress}，别回敌人对象
 __game.traffic.list() / config() / spawn()   ← 第 116 块：场上的车 / 车道配置 / 手动来一辆
 __game.latte.drop() / count / cap / ready / bonuses() / setRelicLevel()   ← 第 116 块：拿铁放增益 / 读数
 __game.enemies.kangarooCount() / hastedCount()   ← 第 116 块：袋鼠数 / 被挂「加急」的怪数
+__game.upgrade.refresh{r.left,r.paid,r.free} / upgrade.reroll() / upgrade.refreshClick()
+__game.upgrade.rfText{name,n,tip,danger,disabled} / upgrade.addCurse(id)     ← 第 122 块：三选一刷新
+__game.chal.list() / plan() / setPlan(arr) / used() / active / ask{open,round,id} / look()
+__game.chal.reward{open,round,items} / takeReward('coin'|'card'|'boost') / force(id,round) / accept() / refuse()
+__game.chal.dmg / noSkill / boost{round,info,n}                              ← 第 122 块：回合挑战
 ```
 
 > **第 114 块踩过的两个坑**：①`fog.clear()` 会整系统关掉，调试只想抹掉场上那几片要用 `clearPatches()`（`block114.fog.clear` 已指向后者）。②`block114.steal()` 是纯数据快照（`{stat, t, skills}`），不是取敌人。
@@ -294,6 +336,11 @@ __game.enemies.kangarooCount() / hastedCount()   ← 第 116 块：袋鼠数 / �
 - **实机 CDP（需先起 8124）**：`.tmp-blockNN-cdp.js` 或 `.tmp-NN-smoke.js`；启动参数带 `--num-raster-threads=2 --renderer-process-limit=1` 并关后台节流；**串行，一次只跑一套**，套间 `node .tmp-cdp-clean.js`；SwiftShader 慢，必须轮询等待不能固定 sleep；截图路径不能含中文。第 114 块为 `.tmp-114-cdp.js`（**56 项**：雾起散 / 判定环置顶 / 微光跟随 / 墨丸落地炸 / 墨痕掉血减速 / 收账人读条偷取与 8 秒归还）。
 - **CDP 里测「持续掉血」必须先钉住局面**（第 114 块真踩过）：主角只有 10 点血，一边等墨痕一边被近战砍，人一死 `hurtPlayer` 第一行就 `if (gameState !== 'playing') return`，断言全变假红且看不出原因。正确做法 = 清怪（只留被测伤害源）→ `stats.hp.cur = stats.hp.max` → `enemies.clearInks()` → 再读差值，并且补一条 `state === 'playing'` 的断言把「主角死了」变成显式失败。
 - 跑全量：`sh .tmp-94-runall.sh`（只报挂了的）。**改数值类断言记得回头改老套件**（版本号 / 怪数 / 关卡数 / 卡池数 / 成就数 / 码表数都有人写死过）。
+- **第 122 块**：`.tmp-block122-test.mjs`（**125 项**：九条挑战数据 / 奖励三条 / 大涨池三类 / 规划范围与分布 / 抽出不重复 /
+  源码契约（src、清理口、弹窗位置、mute 门、刷新三道闸）/ DOM 与样式 / 版本一致）+ `.tmp-122-cdp.js`（**59 项**：三次免费刷新 →
+  第四次确认后背诅咒 → 六条背齐锁死 / 320×560 下刷新键仍在视口内 / 挑战自然弹出与放弃 / 残血上限减半后夹血 / 绵软攻击下限 1 /
+  断剑 mute 与剑资产保留 / 禁术技能栏全灰 / 怪物潮与疾风的 roundMod / 奖励三条各自生效 / 大涨只活一回合 / 全程无异常）。
+  挑战在 `?debug=1` 下**默认不弹**（和老 CDP 套件「清场就能推进」的假设一致），要在调试里测就加 `&chal`。
 - 第 116 块回归结果：**60 套 Node 全绿**（含修复 block82 / block85 两个既有黄账的正则断言——分离循环 `pass<2/pass<6`、`orbitHold` getter 写法）。数量位移清单见 §0.1 第 6 条。
 
 ---

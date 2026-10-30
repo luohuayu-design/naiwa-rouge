@@ -93,7 +93,9 @@ sec('C、万剑齐发：CD + 辐射 n 把');
 
 ok(/const FIRE_CD = 6\.0;/.test(weaponSrc), '冷却常量 FIRE_CD = 6 秒');
 ok(/let fireCd = 0;/.test(weaponSrc), '有 fireCd 状态');
-ok(/if \(!granted \|\| fireCd > 0\) return false;/.test(weaponSrc), '冷却中按不动（fire 直接返回 false）');
+// 第 122 块：断剑挑战期间也要按不动，条件里多了一个 muted
+ok(/if \(!granted \|\| muted \|\| fireCd > 0\) return false;/.test(weaponSrc),
+  '冷却中按不动（fire 直接返回 false）');
 ok(/const n = owned\.length;/.test(weaponSrc), 'n = 拥有的总剑数（不是环上恢复了几把）');
 ok(/if \(n === 0\) return false;/.test(weaponSrc), '一把都没有时不放（兜底）');
 ok(/flyers\.push\(\{ kind: owned\[i\], holder: acquire\(owned\[i\]\), a, ox: p\.x, oz: p\.z, dist: 0, spin: -a \}\);/.test(weaponSrc),

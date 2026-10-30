@@ -34,15 +34,15 @@
 //       五种元素共用同一模型，克隆后改材质 color/emissive 染色区分；
 //       图标用 assets/weapons/icon-*.svg。加载失败时用双盒拼占位剑。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=137';
-import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=137';
-import { withV } from './assetUrl.js?v=137';   // 第 80 块：glb 带版本号，SW 才走缓存优先
-import { SWORD_KINDS, KIND_ORDER } from './swordKinds.js?v=137';
-import { rollSwordDamage } from './weaponStats.js?v=137';
-import audio from './audio.js?v=137';
+import * as THREE from '../lib/three.module.js?v=138';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=138';
+import { withV } from './assetUrl.js?v=138';   // 第 80 块：glb 带版本号，SW 才走缓存优先
+import { SWORD_KINDS, KIND_ORDER } from './swordKinds.js?v=138';
+import { rollSwordDamage } from './weaponStats.js?v=138';
+import audio from './audio.js?v=138';
 // 第 106 块：环剑命中数 / 累计伤害两条成就的记账。
 // profile.js 不反向依赖 weapon.js，这里加导入不会成环。
-import { bumpStat } from './profile.js?v=137';
+import { bumpStat } from './profile.js?v=138';
 
 // 轨道半径（世界单位）：贴着主角攻击范围环内侧转，视觉上「护体剑气」
 const ORBIT_R = 1.7;
@@ -87,6 +87,11 @@ export function createWeaponSystem({ scene, stats, wstats, fx, enemies, onElemen
   // 只冻**角度**，不冻别的 —— 剑停在原地依然会碰伤怪物（它还是利器，只是不转了），
   // 恢复补剑的计时、飞剑、雷链全都照常跑。这样「停转」是纯削弱，不是「环剑消失」。
   let orbitHold = 0;           // >0 = 环剑停转剩余秒数
+  // 第 122 块：「断剑挑战」用 —— 整把剑都失效（不转、不补、不打、不能放技能），
+  // 和 orbitHold 的削弱完全不同：那是「剑还在，只是停住」，这是「剑根本不存在」。
+  // 单独一个开关而不是直接改 granted：challenge 结束后要原样还回来，
+  // granted / owned 是整局的资产，动它们等于把玩家的剑偷走。
+  let muted = false;
   let t = 0;                   // 总时间（浮动动画用）
 
   const orbiting = [];         // 环上的剑：{ kind, holder, spawnT }
@@ -261,7 +266,7 @@ export function createWeaponSystem({ scene, stats, wstats, fx, enemies, onElemen
   //     放完技能环上一把不少，该转的转、该补的照补。
   // 辐射的剑飞完/命中就回池，和环绕的剑共用一套 holder 池，互不干扰。
   function fire(getPlayerPos) {
-    if (!granted || fireCd > 0) return false;
+    if (!granted || muted || fireCd > 0) return false;
     const n = owned.length;
     if (n === 0) return false;
     const p = getPlayerPos();
@@ -441,7 +446,7 @@ export function createWeaponSystem({ scene, stats, wstats, fx, enemies, onElemen
 
   // ---------------- 每帧 ----------------
   function update(dt, { playerPos, onHudChange } = {}) {
-    if (!granted) return;
+    if (!granted || muted) return;
     t += dt;
     // 万剑齐发冷却（第 56 块）：走表，归零就可再放
     if (fireCd > 0) fireCd = Math.max(0, fireCd - dt);
@@ -552,6 +557,13 @@ export function createWeaponSystem({ scene, stats, wstats, fx, enemies, onElemen
     for (const f of flyers) f.holder.visible = v;
   }
 
+  // 第 122 块：整把剑的开关（断剑挑战）。true = 剑彻底失效，并立刻藏起来。
+  // 解禁时把手上还挂着的剑重新亮出来 —— 不清任何计数，等于「暂停」而不是「重置」。
+  function setMuted(v) {
+    muted = !!v;
+    setVisible(!muted);
+  }
+
   function reset() {
     for (const s of orbiting) release(s.holder);
     for (const f of flyers) release(f.holder);
@@ -567,6 +579,7 @@ export function createWeaponSystem({ scene, stats, wstats, fx, enemies, onElemen
     regenT = 0;
     fireCd = 0;
     orbitHold = 0;
+    muted = false;              // 第 122 块：断剑挑战的开关不能跨局残留
     granted = false;
   }
 
@@ -594,6 +607,8 @@ export function createWeaponSystem({ scene, stats, wstats, fx, enemies, onElemen
 
   return {
     preload, grant, fire, update, reset, restore, setVisible, addSword, kindCounts, applyKind,
+    setMuted,                   // 第 122 块：断剑挑战（整把剑失效）
+    get muted() { return muted; },
     // 第 85 块：木鱼灵的泡命中 → 环剑停转（停的是角度，剑还在原处照常砍）
     holdOrbit,
     get orbitHold() { return orbitHold; },

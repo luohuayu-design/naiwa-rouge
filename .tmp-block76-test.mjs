@@ -55,7 +55,9 @@ sec('二、hurtPlayer：场地伤害走真伤通道');
   const mainSrc = readFileSync(new URL('./js/main.js', import.meta.url), 'utf8');
   ok(/if \(isHazard\) stats\.damageTrue\(raw\);\s*\n\s*else stats\.damage\(raw\);/.test(mainSrc),
     'isHazard 走 damageTrue，其它走 damage');
-  ok(/const raw = amount \* \(1 \+ runCurseDmg\);/.test(mainSrc), '荆棘惩罚先乘、再分流（两边都吃）');
+  // 第 122 块：这一行多乘了一个挑战系数（破防挑战），后半段仍是「先乘、再分流」
+  ok(/const raw = amount \* \(1 \+ runCurseDmg\)[^;]*;\s*\n\s*if \(isHazard\) stats\.damageTrue\(raw\);/.test(mainSrc),
+    '荆棘惩罚先乘、再分流（两边都吃）');
   // 原来那条「无条件 stats.damage(...)」不能再出现
   ok(!/^\s*stats\.damage\(amount \* \(1 \+ runCurseDmg\)\);/m.test(mainSrc),
     '旧的「一律 stats.damage」已经删掉');

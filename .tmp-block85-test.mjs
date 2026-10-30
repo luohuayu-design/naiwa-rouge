@@ -73,7 +73,7 @@ ok(/if \(orbitHold > 0\) \{[\s\S]*?orbitHold = Math\.max\(0, orbitHold - dt\);[\
   '停转只冻 orbitAngle（补剑 / 飞剑 / 雷链照常跑）');
 ok(/function holdOrbit\(sec\)/.test(weaponSrc) && /orbitHold = Math\.max\(orbitHold, s\);/.test(weaponSrc),
   'holdOrbit 用 max 而不是相加（连着挨两颗不叠成 2.4 秒）');
-ok(/orbitHold = 0;\s*granted = false;/.test(weaponSrc), 'reset 清掉停转');
+ok(/orbitHold = 0;[\s\S]{0,120}granted = false;/.test(weaponSrc), 'reset 清掉停转');
 ok(/holdOrbit,/.test(weaponSrc) && /get orbitHold\(\) \{ return orbitHold; \}/.test(weaponSrc), '导出 holdOrbit + orbitHold 读数（测试/调试用）');
 // 停转 ≠ 停手：剑还在原处，照样碰伤怪
 ok(/const hit = findHit\(x, z, list\);/.test(weaponSrc), '停转期间环剑仍然参与命中判定');
