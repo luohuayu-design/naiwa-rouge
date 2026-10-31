@@ -1144,10 +1144,87 @@ export const LEVEL_15 = {
   ],
 };
 
+// ============================================================
+// 第十六关 · 钟楼画室（第 129 块）
+// ============================================================
+// 场地机制：线稿 / 定稿（js/sketch.js）—— 地上会自己冒出一圈铅笔线稿，
+//   两秒后「定稿」变实；定稿那一瞬站在圈里的人被钉 1.2 秒并掉 6% 最大生命。
+//   第 6 / 11 / 16 回合各多一圈，到后场四圈同时在场上轮换。
+//
+// 它和第十五关的关系：第十五关是「主动走进光里贪」，这一关是「看着地上
+// 的草稿算时间」—— 线稿不是立刻落下来的，你永远有 2 秒可以走开。
+// 两只新怪围绕这条线：纸屑（脆、快、碰到就自爆，逼你在算圈的时候还要清场）、
+// 画框（读条扣一个方框，框里出不去 —— 把你钉在正在定稿的圈里）。
+//
+// 数值：比第十五关再抬一档 —— hpMul 1.78 / dmgMul 2.12（第十五关 1.70 / 2.05）。
+export const LEVEL_16 = {
+  id: 16,
+  name: '第十六关 · 钟楼画室',
+  theme: 'atelier',         // 钟楼顶的圆形画室：纸白 + 铅笔灰 + 台灯的暖黄
+  arena: 19,
+  order: [
+    ['minion', 1], ['warrior', 1.5], ['archer', 1.8],
+    ['paper', 2.1], ['bowman', 2.2], ['misprint', 2.3],
+    ['frame', 2.4], ['wraith', 2.5], ['shielder', 2.6],
+    ['charger', 2.7], ['mender', 2.8], ['proofreader', 2.9],
+    ['addressee', 3.0], ['camera', 3.1],
+  ],
+  spawnRadius: 16.6,
+  spawnJitter: 0.5,
+  minPlayerDistance: 7.4,
+  minSpawnGap: 2.4,
+  gapScale: 1.12,
+  gap: 2.6,
+  upgradeAfter: [1, 2, 3, 4, 5, 8, 10, 12, 15, 17, 19, 20],
+  shopAfter: [3, 6, 9, 12, 15, 18],
+  weaponAt: 4,
+  scale: { hp: 0.30, damage: 0.18, speed: 0.045, haste: 0.0105, curve: 0.28, hpMul: 1.78, dmgMul: 2.12 },
+  // 线稿 / 定稿：见 js/sketch.js。arena 变了这里要跟着改（圈在场地内随机落）。
+  sketch: {
+    arena: 19,
+    count: 1,
+    radius: 1.55,
+    warn: 2.0,
+    gap: 2.4,
+    inkLife: 1.6,
+    pct: 0.06,
+    pin: 1.2,
+    extraAt: [{ round: 6, add: 1 }, { round: 11, add: 1 }, { round: 16, add: 1 }],
+  },
+  rounds: [
+    // ---- 第一幕（R1~R4）：先认识地上的草稿 ----
+    { minion: 4, warrior: 1, archer: 0, paper: 0, bowman: 0, misprint: 0, frame: 0, wraith: 0, shielder: 0, charger: 0, mender: 0, proofreader: 0, addressee: 0, camera: 0, gap: 0.88, tip: '地上那圈淡淡的铅笔线是草稿。两秒后它会「定稿」变实 —— 站在定稿的圈里会被钉住，别等它变深才走' },
+    { minion: 4, warrior: 2, archer: 0, paper: 1, bowman: 0, misprint: 0, frame: 0, wraith: 0, shielder: 0, charger: 0, mender: 0, proofreader: 0, addressee: 0, camera: 0, gap: 0.84, tip: '新面孔·纸屑：一小片被擦下来的纸，跑得很快、一碰就炸。它很脆，一刀的事 —— 但会逼你在算圈的时候分神' },
+    { minion: 4, warrior: 2, archer: 1, paper: 2, bowman: 0, misprint: 0, frame: 0, wraith: 0, shielder: 0, charger: 0, mender: 0, proofreader: 0, addressee: 0, camera: 0, gap: 0.80, tip: '被钉住是 1.2 秒，还会掉 6% 最大生命。血越厚这一下越疼 —— 别用脸去试' },
+    { minion: 5, warrior: 2, archer: 1, paper: 2, bowman: 0, misprint: 0, frame: 1, wraith: 0, shielder: 0, charger: 0, mender: 0, proofreader: 0, addressee: 0, camera: 0, gap: 0.76, tip: '新面孔·画框：它不打你，只读条。读条完成时一个方框扣在你脚下 —— 框消失前你出不去' },
+    // ---- 第二幕（R5~R8）：圈开始轮换 ----
+    { minion: 5, warrior: 3, archer: 1, paper: 3, bowman: 1, misprint: 1, frame: 1, wraith: 0, shielder: 0, charger: 0, mender: 0, proofreader: 0, addressee: 0, camera: 0, gap: 0.72, tip: '画框的框是扣在你脚下的，不是它脚下：它站在框外，看你在框里被别的怪围住' },
+    { minion: 6, warrior: 3, archer: 2, paper: 3, bowman: 1, misprint: 1, frame: 1, wraith: 0, shielder: 0, charger: 0, mender: 0, proofreader: 0, addressee: 0, camera: 0, gap: 0.70, tip: '第 6 回合起多一圈草稿：两圈错开时间定稿，走位要同时算两个倒计时' },
+    { minion: 6, warrior: 3, archer: 2, paper: 4, bowman: 1, misprint: 2, frame: 1, wraith: 0, shielder: 0, charger: 0, mender: 0, proofreader: 0, addressee: 0, camera: 0, gap: 0.68, tip: '被框住的时候先别慌：框里还能打，环剑照转。把框当成一个四秒的小房间，先清掉贴脸的' },
+    { minion: 6, warrior: 4, archer: 2, paper: 4, bowman: 2, misprint: 2, frame: 1, wraith: 0, shielder: 1, charger: 0, mender: 0, proofreader: 0, addressee: 0, camera: 0, gap: 0.66, tip: '草稿圈的节奏比车流慢，但它会追着你落：七成落在你周围几格，别站在一块地上不动' },
+    // ---- 第三幕（R9~R12）：三圈 + 纸屑潮 ----
+    { minion: 7, warrior: 4, archer: 3, paper: 5, bowman: 2, misprint: 2, frame: 1, wraith: 1, shielder: 1, charger: 1, mender: 0, proofreader: 1, addressee: 0, camera: 0, gap: 0.64, tip: '纸屑开始成群：它们一碰就炸，别让它们和定稿圈同时到 —— 先清贴脸的，再走出去' },
+    { minion: 7, warrior: 4, archer: 3, paper: 5, bowman: 2, misprint: 2, frame: 2, wraith: 1, shielder: 1, charger: 1, mender: 1, proofreader: 1, addressee: 0, camera: 0, gap: 0.62, tip: '两只画框会轮流扣框。框的间隙就是你的窗口 —— 技能和位移都留给「框刚消失」那一下' },
+    { minion: 7, warrior: 5, archer: 3, paper: 5, bowman: 3, misprint: 3, frame: 2, wraith: 1, shielder: 1, charger: 2, mender: 1, proofreader: 1, addressee: 0, camera: 0, gap: 0.60, tip: '第 11 回合：第三圈草稿。现在总有一圈正在变深 —— 眼睛要分一半给地上' },
+    { minion: 8, warrior: 5, archer: 3, paper: 5, bowman: 3, misprint: 3, frame: 2, wraith: 1, shielder: 2, charger: 2, mender: 1, proofreader: 1, addressee: 0, camera: 0, gap: 0.58, tip: '被校对的批注过的怪头上也有一圈红 —— 和草稿圈分清楚：红圈是「打它更快」，铅笔圈是「站进去挨钉」' },
+    // ---- 第四幕（R13~R16）：框 + 圈 ----
+    { minion: 8, warrior: 5, archer: 4, paper: 6, bowman: 3, misprint: 3, frame: 2, wraith: 2, shielder: 2, charger: 2, mender: 2, proofreader: 1, addressee: 1, camera: 1, gap: 0.56, tip: '收件人也来了：它给别的怪填名。被填名的怪免掉你环上占多数的那一类伤害 —— 先拆收件人' },
+    { minion: 8, warrior: 6, archer: 4, paper: 6, bowman: 3, misprint: 3, frame: 2, wraith: 2, shielder: 2, charger: 3, mender: 2, proofreader: 1, addressee: 1, camera: 1, gap: 0.54, tip: '取景的闪光和铅笔圈叠在一起会很晃。记住：圈有两秒，闪光只有一瞬 —— 先躲闪光' },
+    { minion: 9, warrior: 6, archer: 4, paper: 6, bowman: 4, misprint: 4, frame: 2, wraith: 2, shielder: 2, charger: 3, mender: 2, proofreader: 1, addressee: 2, camera: 1, gap: 0.52, tip: '第 15 回合：三只画框。框住你的时候别按位移，按清场技能 —— 框里能杀，框外才是他们的' },
+    { minion: 9, warrior: 6, archer: 5, paper: 7, bowman: 4, misprint: 4, frame: 2, wraith: 2, shielder: 3, charger: 3, mender: 2, proofreader: 2, addressee: 2, camera: 2, gap: 0.50, tip: '第 16 回合：第四圈草稿。到这一步，地上几乎没有一块「一直安全」的地方' },
+    // ---- 第五幕（R17~R20）：画满 ----
+    { minion: 10, warrior: 7, archer: 5, paper: 7, bowman: 4, misprint: 5, frame: 3, wraith: 3, shielder: 3, charger: 4, mender: 3, proofreader: 2, addressee: 2, camera: 2, gap: 0.47, tip: '四圈轮换开始同步了：一圈刚定稿，另一圈正在变深。眼睛盯地面，脚别停' },
+    { minion: 10, warrior: 7, archer: 5, paper: 8, bowman: 5, misprint: 5, frame: 3, wraith: 3, shielder: 3, charger: 4, mender: 3, proofreader: 2, addressee: 3, camera: 2, gap: 0.45, tip: '两只校对的 + 两只画框：一边把怪变凶，一边把你框住。先杀校对的，框里的人才有得打' },
+    { minion: 11, warrior: 8, archer: 6, paper: 8, bowman: 5, misprint: 5, frame: 3, wraith: 4, shielder: 4, charger: 5, mender: 3, proofreader: 2, addressee: 3, camera: 3, gap: 0.43, tip: '倒数第二波：纸屑像雪一样。它们很脆，但别用手去数 —— 线稿定稿的那一秒，你只有一次机会走开' },
+    { minion: 12, warrior: 8, archer: 6, paper: 9, bowman: 5, misprint: 5, frame: 3, wraith: 4, shielder: 4, charger: 5, mender: 4, proofreader: 3, addressee: 4, camera: 3, gap: 0.40, tip: '最后一波：她把整整一叠草稿全倒在地上 —— 四十七张，每一张都画着同一个你' },
+  ],
+};
+
 // 关卡号 → 关卡表（主流程 / 选关 / 测试都从这里取）
 export const LEVELS_BY_ID = {
   1: LEVEL_1, 2: LEVEL_2, 3: LEVEL_3, 4: LEVEL_4, 5: LEVEL_5, 6: LEVEL_6, 7: LEVEL_7, 8: LEVEL_8,
   9: LEVEL_9, 10: LEVEL_10, 11: LEVEL_11, 12: LEVEL_12, 13: LEVEL_13, 14: LEVEL_14, 15: LEVEL_15,
+  16: LEVEL_16,
 };
 
 // 第 roundNo 回合（从 1 开始）的怪物属性倍率

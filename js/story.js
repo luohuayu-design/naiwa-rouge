@@ -1932,7 +1932,7 @@ export const STORY_CHAPTERS = [
   },
 
   {
-    id: 's16', no: 16, act: 3, levelId: null, atRound: null,
+    id: 's16', no: 16, act: 3, levelId: 16, atRound: 2,   // 第 129 块：接第十六关「钟楼画室」
     icon: '🖌', title: '小满', who: '小满', place: '钟楼顶',
     story:
       '钟楼顶是一个圆形的房间，四面都是窗，没有钟。\n'

@@ -26,9 +26,9 @@
 // 第 11 块：每件货都带 rarity（0 普通 ~ 4 传说），店里按品质加权抽取 ——
 // 幸运越高，摆出来的货越往金/红那一头走（见 rarity.js）。
 // ============================================================
-import { rarityWeight } from './rarity.js?v=145';
-import { TURRET } from './turret.js?v=145';
-import { RELIC_DEFS } from './relics.js?v=145';
+import { rarityWeight } from './rarity.js?v=146';
+import { TURRET } from './turret.js?v=146';
+import { RELIC_DEFS } from './relics.js?v=146';
 
 export const SHOP_ITEMS = [
   // ---------------- 生命药水（第 13 块起：买进背包，作战中随时用） ----------------
@@ -396,6 +396,30 @@ export const SHOP_ITEMS = [
     glyph: '🦵', name: '落地支架',
     desc: '环形灯装上一副落地支架：持续 +2 秒、冷却 −4 秒。一局只能买一次。',
   },
+  // ---------------- 第十六关新增（第 129 块）：铅笔 ----------------
+  // 场地是「线稿 → 定稿」：怪在地上的圈里把你钉住。铅笔是玩家自己在地上划线 ——
+  // 怪要来的方向先划一道，它自己走进来减速掉血；描红则把标记按回怪身上。
+  // 同样 relic 本体 + 两件一局一次的买断。
+  {
+    id: 'buyPencil', type: 'relic', relic: 'pencil', price: 34, needRound: 8, needLevel: 16,
+    rarity: 3,
+    glyph: '✏️', name: '铅笔',
+    desc: '小满桌上那支铅笔：技能栏多一颗「描红」。铅笔会每隔几秒在你面朝的方向划一道 5 格的线，'
+      + '踩线的怪移速 −30%、持续掉血；描红朝面前扫一条线，被扫到的怪 5 秒内受到的伤害 +25%。'
+      + '描红冷却 30 秒。再买可升级（最多 3 级：线长 7 格、每 6 秒划一道、描红冷却 22 秒）。',
+  },
+  {
+    id: 'buyPencilLong', type: 'pencil', pencil: 'long', price: 20, needRound: 5, needLevel: 16,
+    rarity: 2,
+    glyph: '📏', name: '加长笔杆',
+    desc: '铅笔的线再长 1.5 格（5 → 6.5）—— 一道线能横着盖住整条冲锋路。一局只能买一次。',
+  },
+  {
+    id: 'buyPencilTwin', type: 'pencil', pencil: 'twin', price: 24, needRound: 9, needLevel: 16,
+    rarity: 2,
+    glyph: '✖️', name: '双头铅笔',
+    desc: '两道笔头：每道线同时划出十字形的另一道 —— 一条封路、一条截腰，怪绕不过去。一局只能买一次。',
+  },
 ];
 
 // 第 118 块：付**夜行骨币**刷新（用户定案「本次进店递增、离店重置」）。
@@ -474,6 +498,12 @@ export function itemLocked(item, ctx = {}) {
     if (item.ringlight === 'bulb' && ctx.ringBulb) return '这一局已经买过了';
     if (item.ringlight === 'stand' && ctx.ringStand) return '这一局已经买过了';
   }
+  // 第 129 块：铅笔的两件买断货
+  if (item.type === 'pencil') {
+    if (!ctx.pencilLevel) return '要先拥有「铅笔」';
+    if (item.pencil === 'long' && ctx.pencilLong) return '这一局已经买过了';
+    if (item.pencil === 'twin' && ctx.pencilTwin) return '这一局已经买过了';
+  }
   return null;
 }
 
@@ -487,7 +517,8 @@ export const SHOP_SHOW = 4;
 // 第 114 块：第 9 回合也钉上「墨丸」—— 第八关的镇牌铃和第十一关的墨丸
 // 都挂在 9 这一格，靠 onlyLevel / needLevel 各自过滤，同一格互不干扰
 // （第 8 关只摆铃、第 11 关只摆墨丸、第 10 关两件都被滤掉）。
-export const SHOP_PINNED = { 9: ['buySeal', 'buyMine', 'buyLatte', 'buyRinglight'], 12: ['buySeal', 'buyPuppet', 'buyRinglight'] };
+// 第 129 块：铅笔挂 12 这一格（第 16 关起 needLevel 才放行，前几关自动跳过）。
+export const SHOP_PINNED = { 9: ['buySeal', 'buyMine', 'buyLatte', 'buyRinglight'], 12: ['buySeal', 'buyPuppet', 'buyRinglight', 'buyPencil'] };
 
 // 抽本次商店的货物：返回一个**不含重复**的物品数组（默认 4 件）。
 // hasWeapon = 已拿到环剑（没有时剑类买了也用不了，先不进池）

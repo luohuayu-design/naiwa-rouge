@@ -34,9 +34,9 @@
 //   标了 scope:'weapon' 的项改的是武器表（剑系 / 元素系），其余改主角表。
 //   两块表都要传进来，没传 wstats 时武器项会退化到主角表（只为兼容老调用）。
 // ============================================================
-import { STAT_DEFS } from './stats.js?v=145';
-import { WEAPON_STAT_DEFS } from './weaponStats.js?v=145';
-import { RARITIES, rarityWeight, oddsOf } from './rarity.js?v=145';
+import { STAT_DEFS } from './stats.js?v=146';
+import { WEAPON_STAT_DEFS } from './weaponStats.js?v=146';
+import { RARITIES, rarityWeight, oddsOf } from './rarity.js?v=146';
 
 // 一张卡改的是哪块表
 function tableFor(scope, stats, wstats) {
@@ -752,6 +752,49 @@ const UNIQUE = [
     title: '灯下打赏 +1 币 · 半径 +0.4 · 持续 +1.5 秒',
     desc: '传说：一次给三样 —— 圈里的钱翻倍、圈更大、亮更久。拿到这张，灯下就是提款机',
   },
+  // ---------------- 铅笔卡（第 129 块，第十六关专属法器） ----------------
+  // 买到「铅笔」后才会进池子（weightOf 里拦：opts.pencilOwned）。
+  // 五个通道：线长 / 磨血 / 划线频率 / 描红冷却 / 描红增伤；up.pencil 转交 pencil.applyCard()。
+  {
+    id: 'pencilLen', tag: 'atk', glyph: '📏', name: '再削一截',
+    rarity: 0,
+    w0: 0.58, gw: +0.015,
+    pencil: { stat: 'len', flat: 1.0 },
+    title: '铅笔线长 +1 格',
+    desc: '地上的线更长（能重复拿）—— 一道线横着封住半条冲锋路，怪得绕远才进得来',
+  },
+  {
+    id: 'pencilDps', tag: 'atk', glyph: '🖤', name: '换根硬笔芯',
+    rarity: 0,
+    w0: 0.56, gw: +0.015,
+    pencil: { stat: 'dps', flat: 0.12 },
+    title: '线上磨血 +0.12 伤/秒',
+    desc: '踩线的怪掉血更快（能重复拿）—— 不用追着打，把怪引进线里磨到死',
+  },
+  {
+    id: 'pencilRate', tag: 'def', glyph: '⏳', name: '划得更勤',
+    rarity: 1,
+    w0: 0.48, gw: +0.016,
+    pencil: { stat: 'interval', flat: 0.8 },
+    title: '划线间隔 −0.8 秒',
+    desc: '划得更密（能重复拿，最快 3.2 秒一道）—— 地上永远有新鲜的线，断不了',
+  },
+  {
+    id: 'pencilCd', tag: 'mov', glyph: '⏱', name: '削尖一点',
+    rarity: 2,
+    w0: 0.38, gw: +0.020,
+    pencil: { stat: 'cd', flat: 2.5 },
+    title: '描红冷却 −2.5 秒',
+    desc: '描红更勤（能重复拿，最低 15 秒）—— 一轮围殴能描第二遍，红标几乎不断',
+  },
+  {
+    id: 'pencilMark', tag: 'atk', glyph: '🟥', name: '红笔',
+    rarity: 4,
+    w0: 0.30, gw: +0.008,
+    pencil: { stat: 'markMul', flat: 0.10, extra: [{ stat: 'markTime', flat: 1.5 }] },
+    title: '描红增伤 +10% · 标记 +1.5 秒',
+    desc: '传说：换成红笔 —— 被描红的怪受到的伤害从 +25% 提到 +35%，还多标 1.5 秒。先描最厚的那只',
+  },
 ];
 
 // 把「族 × 三档」摊平成一张张卡。小档沿用原来的 id（老存档 / 老测试照旧认得）。
@@ -821,6 +864,8 @@ export function weightOf(up, round = 1, opts = {}) {
   if (up.guillotine && !opts.guillotineOwned) return 0;
   // 第 128 块：环形灯卡同理
   if (up.ringlight && !opts.ringlightOwned) return 0;
+  // 第 129 块：铅笔卡同理
+  if (up.pencil && !opts.pencilOwned) return 0;
   if (up.needsWeapon && !opts.hasWeapon) return 0;
   const r = Math.max(1, round);
   return Math.max(0, (up.w0 ?? 1) + (up.gw ?? 0) * (r - 1));
@@ -869,7 +914,7 @@ export function rollChoices(rng = Math.random, opts = {}) {
 // wstats = 武器属性表：scope:'weapon' 的条目改它，其余改主角 stats。
 // weapon = 武器系统本身：只有「直接给一把剑」的卡（sword 字段）才需要它。
 // 返回 { src, changes }：changes 是精确的「选前 → 选后」（用于卡片/提示文案）。
-export function applyUpgrade(stats, up, serial = 0, wstats = null, weapon = null, golems = null, arrowRain = null, mines = null, latte = null, candle = null, mark = null, board = null, guillotine = null, ringlight = null) {
+export function applyUpgrade(stats, up, serial = 0, wstats = null, weapon = null, golems = null, arrowRain = null, mines = null, latte = null, candle = null, mark = null, board = null, guillotine = null, ringlight = null, pencil = null) {
   // 第 107 块：傀儡卡不碰属性表，交给傀儡系统记账（golem.applyCard）
   if (up.golem) {
     const g = up.golem;
@@ -957,6 +1002,16 @@ export function applyUpgrade(stats, up, serial = 0, wstats = null, weapon = null
     return {
       src: `upg:${up.id}:${serial}`,
       changes: [ringlightChange(rl, before)],
+    };
+  }
+  // 第 129 块：铅笔卡交给 pencil.js 记账
+  if (up.pencil) {
+    const pc = up.pencil;
+    const before = pencil ? pencil.bonuses() : null;
+    if (pencil) pencil.applyCard(pc);
+    return {
+      src: `upg:${up.id}:${serial}`,
+      changes: [pencilChange(pc, before)],
     };
   }
   // 剑阵这类「直接加一把剑」的卡：不碰属性表，交给武器系统上环
@@ -1257,7 +1312,33 @@ function ringlightChange(c, b) {
   };
 }
 
-export function previewUpgrade(stats, up, wstats = null, weapon = null, golems = null, arrowRain = null, mines = null, latte = null, candle = null, mark = null, board = null, guillotine = null, ringlight = null) {  if (up.golem) {
+// ---- 第 129 块：铅笔卡的 changes 文案（apply 与 preview 共用）----
+// 卡里的键（len/interval/dps/cd/markTime/markMul）和 pencil.bonuses() 同名；
+// interval 与 cd 都是「减」的方向，markMul 是 1.25 这种倍率，显示按百分数。
+function pencilChange(c, b) {
+  const b0 = b || { len: 5.0, interval: 8.0, dps: 0.60, cdMax: 30.0, markTime: 5.0, markMul: 1.25 };
+  const meta = {
+    len: { name: '铅笔线长', from: b0.len, fmt: (v) => `${v.toFixed(1)} 格`, dflt: 0 },
+    interval: { name: '划线间隔', from: b0.interval, fmt: (v) => `${v.toFixed(1)} 秒`, dflt: 3.2 },
+    dps: { name: '线上磨血', from: b0.dps, fmt: (v) => `${v.toFixed(2)} 伤/秒`, dflt: 0 },
+    cd: { name: '描红冷却', from: b0.cdMax, fmt: (v) => `${v.toFixed(1)} 秒`, dflt: 15.0 },
+    markTime: { name: '标记时长', from: b0.markTime, fmt: (v) => `${v.toFixed(1)} 秒`, dflt: 0 },
+    markMul: { name: '描红增伤', from: b0.markMul, fmt: (v) => `+${Math.round((v - 1) * 100)}%`, dflt: 1.0 },
+  };
+  const stat = meta[c.stat] ? c.stat : 'len';
+  const mm = meta[stat];
+  const flat = c.flat || 0;
+  const to = (stat === 'cd' || stat === 'interval')
+    ? Math.max(mm.dflt, mm.from - flat)
+    : mm.from + flat;
+  return {
+    key: `pencil_${stat}`, scope: 'pencil', name: mm.name,
+    from: mm.from, to, fromText: mm.fmt(mm.from), toText: mm.fmt(to),
+    text: `${mm.fmt(mm.from)} → ${mm.fmt(to)}`,
+  };
+}
+
+export function previewUpgrade(stats, up, wstats = null, weapon = null, golems = null, arrowRain = null, mines = null, latte = null, candle = null, mark = null, board = null, guillotine = null, ringlight = null, pencil = null) {  if (up.golem) {
     const g = up.golem;
     const b = golems ? golems.bonuses() : null;
     return [golemChange(g, b)];
@@ -1302,6 +1383,11 @@ export function previewUpgrade(stats, up, wstats = null, weapon = null, golems =
   if (up.ringlight) {
     const b = ringlight ? ringlight.bonuses() : null;
     return [ringlightChange(up.ringlight, b)];
+  }
+  // 第 129 块：铅笔卡 —— 同一个 pencilChange
+  if (up.pencil) {
+    const b = pencil ? pencil.bonuses() : null;
+    return [pencilChange(up.pencil, b)];
   }
   if (up.sword) {
     const n = weapon ? weapon.count : 0;

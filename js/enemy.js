@@ -25,15 +25,15 @@
 // 第四关三只（wraith/leaper/mender，第 35 块，第 52 块换模型），
 // 各自在下面 ENEMY_TYPES 里有详细注释。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=145';
-import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=145';
-import { clone as cloneSkinned } from '../lib/jsm/utils/SkeletonUtils.js?v=145';
-import { distance2D } from './stats.js?v=145';
-import { createRangeRing } from './rangeRing.js?v=145';
-import { withV } from './assetUrl.js?v=145';
+import * as THREE from '../lib/three.module.js?v=146';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=146';
+import { clone as cloneSkinned } from '../lib/jsm/utils/SkeletonUtils.js?v=146';
+import { distance2D } from './stats.js?v=146';
+import { createRangeRing } from './rangeRing.js?v=146';
+import { withV } from './assetUrl.js?v=146';
 // 第 114 块：誊录员落笔 / 收账人翻账簿的提示音（以前这个文件不放音效，
 // 忘了 import 会在落笔那一帧抛 ReferenceError，整帧 AI 全断 —— 别省这一行）
-import audio from './audio.js?v=145';
+import audio from './audio.js?v=146';
 
 // KayKit 模型正面朝 +Z；如果哪天换模型发现怪倒着走，把这里改成 Math.PI
 export const ENEMY_MODEL_YAW = 0;
@@ -1744,6 +1744,78 @@ export const ENEMY_TYPES = {
     clipOverrides: { cast: 'Jump' },   // 团块家族没有读条，原地一蹦 = 张嘴宣判
     anim: { walk: 'walk', idle: 'idle', cast: 'cast', death: 'death', spawn: 'spawn' },
   },
+
+  // ---------------- 第十六关 · 纸屑（第 129 块） ----------------
+  // 画室里被擦下来的纸屑。模型是 Quaternius 的「Debris Papers」（CC0，poly.pizza），
+  // 摊在地上的一小片纸 —— 所以 sourceHeight 取**包围盒最大边** 1.24，
+  // 再给一点前倾（tiltX）把纸面抬给 45° 俯视的相机（和收件人同一套坑）。
+  // 行为照小兵：直线冲脸、碰到主角自爆。区别是它更快、更脆、数量更多 ——
+  // 它不是威胁，是**噪音**：逼你在「线稿要定稿了」的时候还要腾手清场。
+  paper: {
+    name: '纸屑',
+    file: 'assets/monsters/paper-scrap.glb',
+    sourceHeight: 1.24,    // 实测：包围盒最大边（平摊的一小片纸）
+    height: 0.85,
+    tiltX: -0.42,          // 平摊 → 前倾，纸面朝向相机
+    hover: 0.14,
+    radius: 0.36,
+    hp: 1.0,
+    armor: 0,
+    speed: 2.55,
+    contactRange: 0.55,
+    damage: 1,
+    spawnTime: 0.7,
+    deathTime: 0.35,
+    selfDestruct: true,
+    scrap: true,           // 图鉴 / 文案用的标记：脆皮自爆群
+    color: 0xe8e2cc,
+    tint: 0xe8e2cc,
+    doubleSided: true,     // 平摊的一片纸：从下往上看会只剩背面，双面都画
+    animFamily: null,      // 静态网格，没有骨骼动画
+    anim: { walk: 'idle', idle: 'idle', death: 'death', spawn: 'spawn' },
+  },
+
+  // ---------------- 第十六关 · 画框（第 129 块） ----------------
+  // 墙上那幅空画框自己走下来了。模型是 CreativeTrio 的「Painting」（CC0，poly.pizza），
+  // 原模型也是**平摊**的：包围盒 0.191 × 0.010 × 0.268，画作高度在 Z 轴上。
+  // 所以 tiltX = -π/2 把它立起来（R_x(-90°) 把 +Z 映射到 +Y），
+  // sourceHeight 取最大边 0.268 —— 竖起来之后正好就是它的视觉高度。
+  // 行为：不打人（damage 0）。它走到中距离读条，读条完成时把一个**方框**扣在
+  // 主角脚下：框消失前主角出不去（main.js 的 sketch.clampPoint 按轴钳制）。
+  // 框里还有别的怪 —— 这才是它的杀招：不是框住你，是让你在框里被围住。
+  frame: {
+    name: '画框',
+    file: 'assets/monsters/picture-frame.glb',
+    sourceHeight: 0.268,   // 实测：包围盒最大边（竖立后的画作高度）
+    height: 1.75,
+    tiltX: -Math.PI / 2,   // 平摊 → 竖起来
+    hover: 0.18,
+    radius: 0.55,
+    hp: 4.0,
+    armor: 0.05,
+    speed: 1.15,
+    attackRange: 6.4,
+    keepDistance: 4.6,
+    damage: 0,
+    attackInterval: 8.5,
+    windup: 0.85,
+    attackDuration: 1.2,
+    // 囚笼：half = 半边长（世界单位），life = 框存在几秒
+    cage: {
+      half: 1.8,
+      life: 3.2,
+      color: 0xd8c79a,
+      ringColor: 0xffe9a8,
+    },
+    spawnTime: 0.9,
+    deathTime: 1.2,
+    selfDestruct: false,
+    color: 0xd8c79a,
+    tint: 0xcfc2a2,
+    doubleSided: true,     // 竖起来的一张画：从背后看要还是那副画框，不能凭空消失
+    animFamily: null,
+    anim: { walk: 'idle', idle: 'idle', cast: 'idle', death: 'death', spawn: 'spawn' },
+  },
 };
 
 // ------------------------------------------------------------
@@ -2226,6 +2298,7 @@ export async function buildPreviewModel(type) {
     o.frustumCulled = false;
     if (o.userData.isTag) return;   // 木牌保持自己的 Basic 材质（第 81 块）
     o.material = o.material.clone();
+    if (cfg.doubleSided) o.material.side = THREE.DoubleSide;   // 第 129 块：平摊道具
   });
   if (cfg.skin) applyWizardSkin(model, cfg.skin);
   if (cfg.tint) {
@@ -2523,6 +2596,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
       // 否则 tint 一覆盖就渲染成深棕近黑的小方片（= 等于没挂）。
       if (o.userData.isTag) return;
       o.material = o.material.clone(); // 独立材质，受击闪光才不会全队一起亮
+      if (cfg.doubleSided) o.material.side = THREE.DoubleSide;   // 第 129 块：平摊道具
       mats.push(o.material);
     });
     // 巫师换肤（帽子/眼睛/骨体/骨冠）—— 必须在材质 clone 之后、渲染之前
@@ -2707,6 +2781,10 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
       // 共用一套字段会让「加急 + 批注」叠不上去，也会让调试口读不出谁挂了什么。
       proofed: null,
       proofRing: null,    // 批注的红笔圈（按需建，挂在 root 上）
+      // 第 129 块：「描红」—— 铅笔画的红线。和 proofed 分开两个字段：
+      // 批注是校对的挂的（还改移速），描红只改**受到的伤害**，来源和数值都不同。
+      redlined: null,     // { t, dmgMul }
+      redlineRing: null,  // 描红的红圈（按需建，挂在 root 上）
       splitDone: false,   // 错版：分裂过了没有（只分一代）
       guillotineHits: 0,  // 裁纸刀：这一局被切过几次（伤害递减用，见 guillotine.js）
       mirrorT: 0,         // 照影：下一次「重照」的倒计时
@@ -2841,6 +2919,16 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
       root.add(e.waitRing.mesh);
       e.waitRing.setVisible(false);
     }
+    // 第 129 块：画框 —— 读条环比超管小一点（它读得快、扣的是方框不是全场）
+    if (cfg.cage) {
+      e.waitRing = createRangeRing({
+        radius: 1.5, color: cfg.cage.color,
+        opacity: 0.55, pulse: 0.0, y: cfg.hover + cfg.height + 0.28,
+      });
+      e.waitRing.setOnTop(true);
+      root.add(e.waitRing.mesh);
+      e.waitRing.setVisible(false);
+    }
     // 第 55 块：新怪第一次上场时通报一声 —— main.js 据此冻结世界、弹「它怎么打人」的信息卡。
     // 放在 push 之后：回调里就看得见这只怪已经在场上了（测试也靠这点断言）。
     if (onSpawn) onSpawn(e);
@@ -2921,6 +3009,8 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     // （折进去会被 0.95 的上限吃掉，也会和护甲互相干扰）。
     let dealt = (red > 0 ? amount * (1 - red) : amount);
     if (e.proofed && e.proofed.t > 0) dealt *= e.proofed.dmgMul;
+    // 第 129 块：「描红」—— 和批注一样是乘法，作用在减伤之后。
+    if (e.redlined && e.redlined.t > 0) dealt *= e.redlined.dmgMul;
     e.hp -= dealt;
     if (!opts.dot) e.flashT = 0.1;
     e.bar.spr.visible = true;
@@ -4540,6 +4630,27 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
       if (e.proofed.t <= 0) clearProof(e);
     }
 
+    // ---- 第 129 块：描红倒计时（铅笔标红）----
+    // 红圈和批注圈同一套做法（挂在 root 上、置顶），到期一起收掉。
+    if (e.redlined) {
+      e.redlined.t -= dt;
+      if (e.redlined.t > 0) {
+        if (!e.redlineRing) {
+          const ring = createRangeRing({
+            radius: (e.cfg.radius || 0.42) + 0.30, color: 0xff5a5a,
+            opacity: 0.85, pulse: 0.5, y: 0.06,
+          });
+          ring.setOnTop(true);
+          e.root.add(ring.mesh);
+          e.redlineRing = ring;
+        }
+        e.redlineRing.setVisible(true);
+        e.redlineRing.update(dt);
+      } else {
+        clearRedline(e);
+      }
+    }
+
     // ---- 冰缓：减速倒计时（移速在 moveToward 里按 slowT 折算） ----
     if (e.slowT > 0) e.slowT -= dt;
 
@@ -4780,6 +4891,11 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     // ---- 第十五关 · 超管（第 128 块）----
     // 和校对的同一性质：damage 是 0（它不打人），必须排在通用近战之前。
     if (e.cfg.mute) { handleModerator(e, dt, ctx, dx, dz, dist); return; }
+
+    // ---- 第十六关 · 画框（第 129 块）----
+    // 和超管同一性质：damage 是 0（它不打人），必须排在通用近战之前。
+    // 它读条完成时把囚笼扣在主角脚下（ctx.trapFrame）。
+    if (e.cfg.cage) { handleFrame(e, dt, ctx, dx, dz, dist); return; }
 
     // ---- 雾鬼：隐身 / 显形循环（第 35 块；第 61 块改规则）----
     // 隐身时不可被索敌、打不着；**但贴脸不再强制显形**，只能等它自己露头。
@@ -6107,6 +6223,12 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     }
   }
 
+  // 第 129 块：描红到期把红圈一起收掉（和 clearProof 同一套）
+  function clearRedline(e) {
+    e.redlined = null;
+    if (e.redlineRing) e.redlineRing.setVisible(false);
+  }
+
   function performProofread(e, ctx) {
     const m = e.cfg.proof;
     // 只批注「血最厚且此刻没被批注」的活怪（不含自己、不含 Boss）
@@ -6245,6 +6367,88 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
       if (e.waitRing) e.waitRing.setVisible(true);
       if (fx) fx.ring(e.pos, { from: 0.2, to: 1.7, color: m.color, life: 0.34, opacity: 0.6, y: 1.5 });
       audio.sfx('curse', { vol: 0.2 });
+      return;
+    }
+    if (e.currentAnim !== e.cfg.anim.idle) {
+      e.currentAnim = e.cfg.anim.idle;
+      e.play(e.cfg.anim.idle, { fade: 0.2 });
+    }
+  }
+
+  // ------------------------------------------------------------
+  // 第十六关 · 画框：读条 → 把方框扣在主角脚下（第 129 块）
+  // ------------------------------------------------------------
+  // 和超管同一套骨架（damage 0、躲中距离、读条完成才生效），差别只在结果：
+  // 超管锁技能，画框锁**腿**。框是 draw 在主角脚下、不是画框怪脚下 ——
+  // 它自己站在框外，看着你在里面被别的怪围住。
+  // 框的生命周期与钳制在 sketch.js（trapFrame / clampPoint），这里只负责触发。
+  function handleFrame(e, dt, ctx, dx, dz, dist) {
+    const m = e.cfg.cage;
+    if (e.state === 'attack') {
+      if (e.waitRing) {
+        const k = Math.min(1, e.t / Math.max(0.01, e.cfg.windup));
+        e.waitRing.setRadius(1.5 * (0.35 + 0.65 * (1 - k)));
+        e.waitRing.setVisible(true);
+      }
+      if (!e.hitDone && e.t >= e.cfg.windup) {
+        e.hitDone = true;
+        if (e.waitRing) e.waitRing.setVisible(false);
+        // 同一个主角脚下只落一个框（main 那边会拒绝叠框）
+        if (ctx.trapFrame) {
+          const ok = ctx.trapFrame({
+            x: ctx.playerPos.x, z: ctx.playerPos.z,
+            half: m.half, life: m.life,
+          });
+          if (ok === false) {
+            if (fx) fx.text({ x: ctx.playerPos.x, z: ctx.playerPos.z }, '框满了', {
+              color: '#d8c79a', y: 1.8, size: 0.5,
+            });
+          }
+        }
+        if (fx) {
+          fx.ring({ x: ctx.playerPos.x, z: ctx.playerPos.z }, {
+            from: 0.3, to: m.half * 1.5, color: m.color, life: 0.45, opacity: 0.7, y: 0.07,
+          });
+          fx.text({ x: ctx.playerPos.x, z: ctx.playerPos.z }, '框中', {
+            color: '#ffe9a8', y: 1.85, size: 0.66,
+          });
+        }
+        audio.sfx('curse', { vol: 0.22 });
+      }
+      if (e.t >= e.cfg.attackDuration) {
+        e.state = 'chase';
+        e.t = 0;
+        e.attackCd = cdOf(e, e.cfg.attackInterval, 1.2, true);
+      }
+      return;
+    }
+    // 它自己不打人：贴太近就退（和超管完全一样）
+    if (dist < e.cfg.keepDistance) {
+      moveToward(e, -dx, -dz, dist, dt, ctx);
+      if (e.currentAnim !== e.cfg.anim.walk) {
+        e.currentAnim = e.cfg.anim.walk;
+        e.play(e.cfg.anim.walk, { fade: 0.2 });
+      }
+      return;
+    }
+    if (dist > e.cfg.attackRange) {
+      moveToward(e, dx, dz, dist, dt, ctx);
+      if (e.currentAnim !== e.cfg.anim.walk) {
+        e.currentAnim = e.cfg.anim.walk;
+        e.play(e.cfg.anim.walk, { fade: 0.2 });
+      }
+      return;
+    }
+    e.attackCd -= dt;
+    if (e.attackCd <= 0) {
+      e.state = 'attack';
+      e.t = 0;
+      e.hitDone = false;
+      e.currentAnim = e.cfg.anim.cast;
+      e.play(e.cfg.anim.cast, { once: true, fade: 0.1, duration: e.cfg.attackDuration });
+      if (e.waitRing) e.waitRing.setVisible(true);
+      if (fx) fx.ring(e.pos, { from: 0.2, to: 1.5, color: m.color, life: 0.32, opacity: 0.6, y: 1.4 });
+      audio.sfx('curse', { vol: 0.18 });
       return;
     }
     if (e.currentAnim !== e.cfg.anim.idle) {

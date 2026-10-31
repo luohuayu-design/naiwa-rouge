@@ -61,8 +61,8 @@ const typeNames = TYPES.map(([k]) => k);
 // 第 116 块：+加急袋鼠 → 28 条
 // 第 123 块：+立牌 / 取景的 → 30 条；**四只手搓的（收件人 / 誊录员 / 收账人 / 袋鼠）全换成下载资产**，
 //            从此「零个没模型的怪」—— 这条断言从「四只没有 glb」翻成「一只都没有」。
-sec('一、31 只怪 · 零复用（每条一个独立模型）');
-ok(TYPES.length === 31, `怪物条目 31 只（实际 ${TYPES.length}）`);   // 第 97 块 +stamper，第 107 块 +4，第 114 块 +2，第 116 块 +1，第 123 块 +2
+sec('一、35 只怪 · 零复用（每条一个独立模型）');
+ok(TYPES.length === 35, `怪物条目 35 只（实际 ${TYPES.length}）`);   // 第 97 块 +stamper，第 107 块 +4，第 114 块 +2，第 116 块 +1，第 123 块 +2，第 128 块 +2，第 129 块 +2
 const noModel = TYPES.filter(([, t]) => !t.file);
 ok(noModel.length === 0, '没有一只怪缺 glb（第 123 块起彻底告别手搓模型）', noModel.map((x) => x[0]).join(','));
 const files = TYPES.map(([, t]) => t.file).filter(Boolean);
@@ -70,7 +70,7 @@ ok(files.every((f) => typeof f === 'string' && f.startsWith('assets/monsters/'))
 const dupFiles = files.filter((f, i) => files.indexOf(f) !== i);
 // 第 97 块起称量官也换了模型，历史上有意复用（无名者 / 旗手 / 称量官）已全部消除
 const ALLOWED_DUP = new Set([]);
-ok(dupFiles.every((f) => ALLOWED_DUP.has(f)) && new Set(files).size === 31,
+ok(dupFiles.every((f) => ALLOWED_DUP.has(f)) && new Set(files).size === 35,
   `${files.length} 条目 / ${new Set(files).size} 文件，零复用`,
   `重复：${dupFiles.join(', ')}`);
 const names = TYPES.map(([, t]) => t.name);
@@ -83,7 +83,8 @@ for (const k of ['minion', 'warrior', 'archer', 'bowman']) {
 // 第 123 块：静态道具模型（一张纸 / 一支笔 / 一本摊开的书 / 一块牌子 / 一台三脚架相机）
 // 几何本来就极简，slip.glb 只有 3.4KB —— 门槛按「静态 2KB / 带骨架 8KB」分两档。
 // 第 126 块：照影换成主角模型后也是静态单网格（0 段动画，靠 bounce 一跳一跳）。
-const STATIC_MODELS = new Set(['arc', 'addressee', 'clerk', 'collector', 'kangaroo', 'standee', 'camera', 'proofreader', 'mirror']);
+// 第 129 块：纸屑 / 画框也是**静态道具模型**（纸片 / 一幅画，都没有骨架）。
+const STATIC_MODELS = new Set(['arc', 'addressee', 'clerk', 'collector', 'kangaroo', 'standee', 'camera', 'proofreader', 'mirror', 'paper', 'frame']);
 sec('二、模型文件真的在，且是合法 glb');
 for (const [k, t] of TYPES) {
   const abs = path.join(ROOT, t.file);

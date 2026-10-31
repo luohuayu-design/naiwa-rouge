@@ -13,13 +13,13 @@
 // （击杀 / 弹事件卡 / 选升级卡）。
 // ============================================================
 
-import { ENEMY_TYPES } from './enemy.js?v=145';
-import { SWORD_KINDS } from './swordKinds.js?v=145';
-import { RELIC_DEFS } from './relics.js?v=145';
-import { UPGRADES } from './upgrade.js?v=145';
-import { ALL_EVENTS } from './events.js?v=145';
-import { RARITIES } from './rarity.js?v=145';
-import { codexAll, codexCount } from './profile.js?v=145';
+import { ENEMY_TYPES } from './enemy.js?v=146';
+import { SWORD_KINDS } from './swordKinds.js?v=146';
+import { RELIC_DEFS } from './relics.js?v=146';
+import { UPGRADES } from './upgrade.js?v=146';
+import { ALL_EVENTS } from './events.js?v=146';
+import { RARITIES } from './rarity.js?v=146';
+import { codexAll, codexCount } from './profile.js?v=146';
 
 export const CODEX_TABS = [
   { id: 'enemies', name: '怪物' },
@@ -101,6 +101,18 @@ function enemySub(cfg) {
   if (cfg.projectile && cfg.projectile.word) {
     return statLine([['生命', cfg.hp], ['伤害', cfg.damage], ['速度', cfg.speed]])
       + ` · 每 ${cfg.attackInterval} 秒吐一块字牌`;
+  }
+  // ---- 第十六关两只（第 129 块）----
+  // 画框：伤害恒 0（它不碰你，它框你），写「伤害 0」会像漏填，整行重写并写清周期。
+  if (cfg.cage) {
+    const c = cfg.cage;
+    return `生命 ${cfg.hp} · 速度 ${cfg.speed} · 从不上手`
+      + ` · 每 ${cfg.attackInterval} 秒框你一次 · 画框 ${c.half * 2} 格宽、留 ${c.life} 秒`;
+  }
+  // 纸屑：脆皮自爆群 —— 数值行要把「1 血」和速度写出来，玩家才知道该用范围伤害扫。
+  if (cfg.scrap) {
+    return statLine([['生命', cfg.hp], ['伤害', cfg.damage], ['速度', cfg.speed]])
+      + ' · 碰到就自爆 · 永远一群一群来';
   }
   const line = statLine([['生命', cfg.hp], ['伤害', cfg.damage], ['速度', cfg.speed]]);
   // 并联体（第 80 块）：真正伤人的是电弧，不从这条线上说清楚，玩家会拿它当普通近战
@@ -254,6 +266,23 @@ function enemyDesc(cfg) {
   if (cfg.spell && cfg.spell.kind === 'burn') return '空间压力：地上留一片灼地烧几秒 —— 好位置会被一点点烧掉';
   if (cfg.aura) return '目标选择压力：霜牢环钉在你脚下跟着你走，环里的怪加攻速、减伤还泛青光 —— 它还会放石刺、召卫队，优先点掉它';
   if (cfg.volley) return '远程型：钉住你脚下的红圈，倒计时结束落箭';
+  // ---- 第十六关两只（第 129 块）----
+  // 画框：它和第九关的盖章人最容易混（都是「在你脚下放一块东西」），
+  // 但盖章人是扣血封步、它是**把你关起来**，文案必须把两者的区别说穿。
+  if (cfg.cage) {
+    const c = cfg.cage;
+    return `位置压力：它一次都不打人，只在你此刻站的地方罩下一个画框 —— `
+      + `${c.half * 2} 格见方、留 ${c.life} 秒，框消失前你一步都出不去。它抬手时头顶会亮一圈金环，`
+      + `提示它要框哪里（就是你脚下）。框里照样有别的东西在打你，所以它不是伤害，是「关住」：`
+      + `被框在怪堆正中，就等于站着挨三秒。看到金环先往开阔处走，或者干脆先把它点掉（4 血）。`
+      + `和第九关盖章人的区别：盖章人是扣血 + 减速，绕不掉但还能挪；画框是彻底走不动。`;
+  }
+  // 纸屑：它便宜、快、脆 —— 三个词都要写出来，否则玩家会拿打战士的办法去追它。
+  if (cfg.scrap) {
+    return `数量压力：地上扫起来的一把纸屑 —— 1 血、移速快、碰到你就自爆。`
+      + `它单个不吓人，但永远是一群一群倒下来：追着打只会被围住，范围伤害一次扫掉一片才是正解。`
+      + `也正因为脆，它是第十六关最划算的「描红」目标 —— 一条线扫过去，整片纸屑一起变红。`;
+  }
   return '远程型：躲在后面朝你扔东西';
 }
 

@@ -32,7 +32,7 @@
 //
 // ctx 由 main.js 每帧拼好传进来：{ playing, weapon, playerPos, stats, coins }
 // ============================================================
-import audio from './audio.js?v=145';
+import audio from './audio.js?v=146';
 
 // 冷却数字统一两位小数（第 64 块用户需求：倒计时精确到两位小数）。
 // 不补零会跳字（3.4 → 3.35 期间宽度变化），toFixed(2) 宽度恒定。
@@ -536,6 +536,52 @@ export const SKILLS = [
     press(ctx) {
       if (!ctx.broadcast) return false;
       return ctx.broadcast.cast(ctx.playerPos);
+    },
+  },
+
+  // ---- 第 18 件法器「铅笔」·技能「描红」（第 129 块，第十六关专属） ----
+  // 场地机制是「线稿 → 定稿」：怪画圈把你钉在地上。描红是把标记按回怪身上 ——
+  // 朝面前一条线扫过去，被扫到的怪 5 秒内受到的伤害 +25%，打它反而更快。
+  // id 跟法器同名（pencil），和 mine / latte / candle / mark / board / guillotine /
+  // ringlight 一样 —— 卡池守卫靠这个 id 找专属卡。
+  {
+    id: 'pencil',
+    name: '描红',
+    // 内联 SVG：一支铅笔 + 一道扫出去的红线
+    art: '<svg viewBox="0 0 40 40" aria-hidden="true">'
+      + '<rect x="6" y="26" width="22" height="6" rx="1.4" fill="#e8c46a" stroke="#b08a34" stroke-width="1.2"/>'
+      + '<path d="M28 27.2 l5.4 1.8 -5.4 1.8 z" fill="#f2e6c8"/>'
+      + '<circle cx="33" cy="29" r="0.9" fill="#3a3630"/>'
+      + '<path d="M8 22 q7 -9 16 -10" fill="none" stroke="#ff5a5a" stroke-width="2.4" stroke-linecap="round" opacity=".85"/>'
+      + '<path d="M31 10 q4 1 6 4" fill="none" stroke="#ffb0b0" stroke-width="1.4" opacity=".7"/>'
+      + '</svg>',
+    ring: true,
+    hint: '朝面前扫一条线：被扫到的怪 5 秒内受到的伤害 +25%。冷却 30 秒',
+    key: 'r',
+    cd: 30.0,
+    cdNow: (ctx) => (ctx.pencil ? ctx.pencil.cdMax() : 30.0),
+    desc: '描红：按下之后铅笔朝你面朝的方向扫出一条 7.5 格的线，'
+      + '被扫到的怪在 5 秒内受到的所有伤害 +25%（近战、环剑、法器、场地伤害都算）。'
+      + '冷却 30 秒；铅笔三级冷却 22 秒。它和场地上的线稿圈刚好互补：'
+      + '圈是怪画在地上钉你，描红是你把圈按回怪身上 —— 屏幕上被标红的怪，先打它。',
+    unlockNote: '夜行商店买到「铅笔」（第十六关起上架）后拥有',
+    visible: (ctx) => ctx.playing && !!ctx.pencil && ctx.pencil.owned,
+    state: (ctx) => {
+      if (!ctx.pencil || !ctx.pencil.owned) return 'lock';
+      return ctx.pencil.ready ? 'ready' : 'cd';
+    },
+    ready: (ctx) => !!ctx.pencil && ctx.pencil.owned && ctx.playing && ctx.pencil.ready,
+    progress: (ctx) => (ctx.pencil ? ctx.pencil.progress : 0),
+    cdText: (ctx) => {
+      if (!ctx.pencil || !ctx.pencil.owned) return '';
+      return ctx.pencil.ready ? '' : fmtCd(ctx.pencil.cdLeft);
+    },
+    press(ctx) {
+      if (!ctx.pencil) return false;
+      const yaw = ctx.playerYaw ? ctx.playerYaw() : 0;
+      const ok = ctx.pencil.mark(ctx.playerPos, yaw);
+      if (ok) audio.sfx('swordFire', { vol: 0.3 });
+      return ok;
     },
   },
 

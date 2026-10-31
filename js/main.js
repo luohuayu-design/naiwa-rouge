@@ -5,55 +5,58 @@
 // 目标是把三件事调顺：摇杆输入 → 角色速度/朝向 → 相机跟随。
 // 后续叠战斗时，只需要在 tick() 里加敌人更新与自动攻击，不用动输入层。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=145';
-import { buildNightScene } from './scene.js?v=145';
-import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=145';
+import * as THREE from '../lib/three.module.js?v=146';
+import { buildNightScene } from './scene.js?v=146';
+import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=146';
 // 第 80 块：给 glb 拼上版本号 → SW 缓存优先（详见 assetUrl.js）
-import { withV } from './assetUrl.js?v=145';
-import { createInput } from './input.js?v=145';
-import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=145';
-import { createStatView } from './statView.js?v=145';
-import { createWeaponStats } from './weaponStats.js?v=145';
-import { createFx } from './fx.js?v=145';
-import { createEnemySystem, ENEMY_TYPES } from './enemy.js?v=145';
+import { withV } from './assetUrl.js?v=146';
+import { createInput } from './input.js?v=146';
+import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=146';
+import { createStatView } from './statView.js?v=146';
+import { createWeaponStats } from './weaponStats.js?v=146';
+import { createFx } from './fx.js?v=146';
+import { createEnemySystem, ENEMY_TYPES } from './enemy.js?v=146';
 import {
-  createLevel, LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVEL_5, LEVEL_6, LEVEL_7, LEVEL_8, LEVEL_9, LEVEL_10, LEVEL_11, LEVEL_12, LEVEL_13, LEVEL_14, LEVEL_15, LEVELS_BY_ID, DIFFS, setDifficulty, getDifficulty, roundScale, levelStats, levelTypes,
-} from './wave.js?v=145';
-import { createRangeRing } from './rangeRing.js?v=145';
-import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=145';
-import { createWeaponSystem } from './weapon.js?v=145';
-import { createArrowRainSystem } from './arrowRain.js?v=145';
-import { SWORD_KINDS } from './swordKinds.js?v=145';
-import { createGoldSystem } from './gold.js?v=145';
-import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW, SHOP_PINNED, shopRefreshCost } from './shop.js?v=145';
-import { createTurretSystem, TURRET } from './turret.js?v=145';
-import { createRelicSystem, RELIC_DEFS } from './relics.js?v=145';
-import { createGolemSystem } from './golem.js?v=145';   // 第 107 块：法器「傀儡术」的铁 / 雪傀儡
-import { createHazards } from './hazards.js?v=145';
-import { createFogSystem } from './fog.js?v=145';    // 第 114 块：第十一关的雾
-import { createMineSystem } from './mine.js?v=145';  // 第 114 块：第 11 件法器「墨丸」
-import { createTrafficSystem } from './traffic.js?v=145';  // 第 116 块：第十二关的车流
-import { createTrackSystem } from './track.js?v=145';      // 第 123 块：第十三关的环形跑道
-import { createLatteSystem } from './latte.js?v=145';      // 第 116 块：第 12 件法器「苔藓拿铁」
-import { createCandleSystem } from './candle.js?v=145';    // 第 118 块：第 13 件法器「守夜烛」（第十一关）
-import { createMarkSystem } from './mark.js?v=145';        // 第 118 块：第 14 件法器「落款」（第十一关）
-import { createBoardSystem } from './board.js?v=145';      // 第 123 块：第 15 件法器「纸立牌」（第十三关）
-import { createCutterSystem } from './cutter.js?v=145';    // 第 124 块：第十四关的裁切刀
-import { createGuillotineSystem } from './guillotine.js?v=145';  // 第 124 块：第 16 件法器「裁纸刀」（第十四关）
+  createLevel, LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVEL_5, LEVEL_6, LEVEL_7, LEVEL_8, LEVEL_9, LEVEL_10, LEVEL_11, LEVEL_12, LEVEL_13, LEVEL_14, LEVEL_15, LEVEL_16, LEVELS_BY_ID, DIFFS, setDifficulty, getDifficulty, roundScale, levelStats, levelTypes,
+} from './wave.js?v=146';
+import { createRangeRing } from './rangeRing.js?v=146';
+import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=146';
+import { createWeaponSystem } from './weapon.js?v=146';
+import { createArrowRainSystem } from './arrowRain.js?v=146';
+import { SWORD_KINDS } from './swordKinds.js?v=146';
+import { createGoldSystem } from './gold.js?v=146';
+import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW, SHOP_PINNED, shopRefreshCost } from './shop.js?v=146';
+import { createTurretSystem, TURRET } from './turret.js?v=146';
+import { createRelicSystem, RELIC_DEFS } from './relics.js?v=146';
+import { createGolemSystem } from './golem.js?v=146';   // 第 107 块：法器「傀儡术」的铁 / 雪傀儡
+import { createHazards } from './hazards.js?v=146';
+import { createFogSystem } from './fog.js?v=146';    // 第 114 块：第十一关的雾
+import { createMineSystem } from './mine.js?v=146';  // 第 114 块：第 11 件法器「墨丸」
+import { createTrafficSystem } from './traffic.js?v=146';  // 第 116 块：第十二关的车流
+import { createTrackSystem } from './track.js?v=146';      // 第 123 块：第十三关的环形跑道
+import { createLatteSystem } from './latte.js?v=146';      // 第 116 块：第 12 件法器「苔藓拿铁」
+import { createCandleSystem } from './candle.js?v=146';    // 第 118 块：第 13 件法器「守夜烛」（第十一关）
+import { createMarkSystem } from './mark.js?v=146';        // 第 118 块：第 14 件法器「落款」（第十一关）
+import { createBoardSystem } from './board.js?v=146';      // 第 123 块：第 15 件法器「纸立牌」（第十三关）
+import { createCutterSystem } from './cutter.js?v=146';    // 第 124 块：第十四关的裁切刀
+import { createGuillotineSystem } from './guillotine.js?v=146';  // 第 124 块：第 16 件法器「裁纸刀」（第十四关）
 // 第 128 块：第十五关的补光曝光区 + 第 17 件法器「环形灯」+ 技能「开播」
-import { createSpotlightSystem } from './spotlight.js?v=145';
-import { createRingLightSystem } from './ringlight.js?v=145';
-import { createBroadcastSystem } from './broadcast.js?v=145';
-import { createDeposit, tagChance } from './deposit.js?v=145';   // 第 81 块：寄存柜；第 84 块：掉牌概率
-import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=145';
-import audio from './audio.js?v=145';
-import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=145';
+import { createSpotlightSystem } from './spotlight.js?v=146';
+import { createRingLightSystem } from './ringlight.js?v=146';
+import { createBroadcastSystem } from './broadcast.js?v=146';
+// 第 129 块：第十六关的线稿定稿圈 / 囚笼 + 第 18 件法器「铅笔」
+import { createSketchSystem } from './sketch.js?v=146';
+import { createPencilSystem } from './pencil.js?v=146';
+import { createDeposit, tagChance } from './deposit.js?v=146';   // 第 81 块：寄存柜；第 84 块：掉牌概率
+import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=146';
+import audio from './audio.js?v=146';
+import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=146';
 // 第 62 块：回血技能（第四关通关后永久解锁，回 5 点 / CD 25 秒）
-import { createHealSkill, HEAL_AMOUNT, HEAL_CD } from './healSkill.js?v=145';
+import { createHealSkill, HEAL_AMOUNT, HEAL_CD } from './healSkill.js?v=146';
 // 第 62 块：民心专属事件（升档走良性池、掉档走恶性池）
-import { repPoolForTier, REP_GOOD, REP_BAD } from './repEvents.js?v=145';
+import { repPoolForTier, REP_GOOD, REP_BAD } from './repEvents.js?v=146';
 // 第 62 块：攻略面板（战败提示上的「查看攻略」，手风琴三组）
-import { renderGuide, GUIDE_SECTIONS } from './guide.js?v=145';
+import { renderGuide, GUIDE_SECTIONS } from './guide.js?v=146';
 import {
   settings as readSettings, setSetting, save as saveProfile, profile,
   bumpStat, setStatMax, codexAdd, codexCount, countCard, unlockAch, hasAch, addBones, bones, resetAll,
@@ -68,37 +71,37 @@ import {
   hintSeen, markHintSeen,                  // 第 65 块：一次性提示卡
   markLevelClear, levelCleared, clearCount, // 第 94 块：通关过哪些关（成就用）
   getStatAdmin, setStatAdmin, resetStatAdmin, // 第 95 / 98 块：管理员模式二（手改最终值 → 存追加项，基础值不动）
-} from './profile.js?v=145';
+} from './profile.js?v=146';
 // 第 44 块：礼包兑换（码表只有哈希，明细在 gift.js 顶部注释）
-import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=145';
+import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=146';
 // 第 46 块：音效包（抽象奶蛙音效包 —— 4 段奶蛙叫声，通关第一关解锁）
-import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=145';
-import * as runSave from './runSave.js?v=145';
+import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=146';
+import * as runSave from './runSave.js?v=146';
 // 第 78 块：存档导出 / 导入。数据逻辑全在这个模块里（不碰 DOM），这里只接按钮
-import * as saveIO from './saveIO.js?v=145';
+import * as saveIO from './saveIO.js?v=146';
 import {
   CAMPFIRE, CAMP_CORE, CAMP_STEP, campBuy, campOwned, campLevel, campRelicAmp,
   campCost, campApply, bonesFor, diffBoneMul, levelBoneMul, coinBones, BONE,
-} from './campfire.js?v=145';
+} from './campfire.js?v=146';
 // 第 23 块：永夜火种（通关白给的 3 次永久三选一）
 import {
   BOONS, BOON_BY_ID, BOON_PICKS, boonOwned, boonStacks, boonPending, boonTotalStacks,
   grantBoons, rollBoons, takeBoon, applyBoons, boonStackText,
-} from './boons.js?v=145';
+} from './boons.js?v=146';
 // 第 21 块：夜行诅咒（自选 debuff 换骨币倍率）
-import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames, BOX_CURSES, BOX_CURSE_BY_ID, applyBoxCurses, boxCurseNames } from './curses.js?v=145';
+import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames, BOX_CURSES, BOX_CURSE_BY_ID, applyBoxCurses, boxCurseNames } from './curses.js?v=146';
 // 第 122 块：回合挑战（每关随机 2 个回合，回合前弹；打完给三选一奖励）
 import {
   CHALLENGES, CHAL_PER_LEVEL, CHAL_FIRST_ROUND, CHAL_LAST_GAP,
   chalById, planRounds, rollChallenge, REWARDS, REWARD_BY_ID, rollBoosts, boostSummary,
-} from './challenge.js?v=145';
+} from './challenge.js?v=146';
 // 第 22 块：种子与每日挑战
 import {
   DAILY_RULES, dayKey, dayText, dailySeed, seedCode, pickDailyCurses,
   seedFromText, pickSeedRules, loadSeedRecords, saveSeedRecord, pruneSeeds,
   dailyRecord, saveDailyRecord, pruneDaily, makeRng,
-} from './seed.js?v=145';
-import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=145';
+} from './seed.js?v=146';
+import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=146';
 // 第 58 块：局外商店 · 宝箱（花骨币买，开箱随机给永久属性 / 永久法器 / 技能CD缩短）
 import {
   BOXES, BOX_BY_ID, buyBox, rollBox, metaApplyStats, applyMeta,
@@ -110,45 +113,45 @@ import {
   boxMag,
   // 第 118 块：盲盒里的法器属性 → 开局注入法器系统
   metaRelicAmp,
-} from './metaShop.js?v=145';
+} from './metaShop.js?v=146';
 // 第 59 块：每日签到（以周为单位，周一 00:00 重置）
 // 第 105 块：固定 +20 改成每天随机 0~100；里程碑 3/5/7 天 → 100 / 150 骨币 + 一次永夜火种
 import {
   SIGN_BONES_MIN, SIGN_BONES_MAX, weekCells, signSummary, signToday, signedToday,
-} from './signin.js?v=145';
+} from './signin.js?v=146';
 // 第 94 块：成就（八类 × 三档骨币奖励）
 // 第 94-2 块：骨币改成**手动领取**（achPending / achClaim），老用户补发走 achMigrate
 import {
   ACHS, ACH_CATS, ACH_TIERS, ACH_COUNT, achById, achsByCat, achTier,
   achPending, achPendingBones, achClaim, achClaimAll, achClaimed, achMigrate,
-} from './achievements.js?v=145';
+} from './achievements.js?v=146';
 // 第 94 块：通用手风琴（盲盒奖池与成就面板共用，不复制第三份引擎）
-import { renderAccordion } from './accordion.js?v=145';
+import { renderAccordion } from './accordion.js?v=146';
 // 第 94 块：每日任务（简单 3 + 中等 1 + 困难 1，每天 0 点刷新）
 import {
   DQ_TIERS, DQ_BONES, dqTasks, dqPump, dqSave, dqClaim, dqClaimAll,
   dqPending, dqGained, dqMsLeft, dayKeyOf, dqTier, dqTaskName,
   dqState, dqForceReroll, dqReset,   // 调试口：跨天重掷 / 整条重置
-} from './dailyQuest.js?v=145';
+} from './dailyQuest.js?v=146';
 import {
   EVENTS, ALL_EVENTS, getEventById, pickEvent, effectLines,
   choiceHint, canAfford, costShort, REP_MIN, REP_MAX, REP_START,
   isTalk, eventChoices, resolveRoll, mergeEffects,
-} from './events.js?v=145';
+} from './events.js?v=146';
 // 第 32 块：主线《笑不出来的那一夜》（18 夜，一夜一关，前 3 夜已有关卡）
 import {
   STORY_ARC, STORY_CHAPTERS, STORY_ENDINGS, MARK_INFO,
   storyChapterAt, storyChapterById, storyEndingKey,
-} from './story.js?v=145';
+} from './story.js?v=146';
 // 第 115 块：九套玩法系统引擎（合成台 / 元素反应 / 精英怪 / 天气 / 音乐盒 / 手感四件套）
-import { createCraftingSystem } from './crafting.js?v=145';
-import { createReactionSystem } from './elementReaction.js?v=145';
-import { createEliteSystem } from './elite.js?v=145';
-import { createWeatherSystem } from './weather.js?v=145';
-import { createMusicboxSystem } from './musicbox.js?v=145';
-import { createDash } from './dash.js?v=145';
-import { createHeat } from './heat.js?v=145';
-import { pickLastWords, winLine } from './lastwords.js?v=145';
+import { createCraftingSystem } from './crafting.js?v=146';
+import { createReactionSystem } from './elementReaction.js?v=146';
+import { createEliteSystem } from './elite.js?v=146';
+import { createWeatherSystem } from './weather.js?v=146';
+import { createMusicboxSystem } from './musicbox.js?v=146';
+import { createDash } from './dash.js?v=146';
+import { createHeat } from './heat.js?v=146';
+import { pickLastWords, winLine } from './lastwords.js?v=146';
 
 // 标记模块已经跑起来了：index.html 的兜底自检靠它判断
 // 「模块根本没执行」还是「执行了但加载慢」。
@@ -1107,6 +1110,17 @@ async function boot() {
     },
   });
 
+  // ---------------- 第 129 块：第十六关的三件新东西 ----------------
+  // sketch 是场地（线稿圈 → 2 秒定稿 → 站圈内被钉；画框怪的囚笼也走它），
+  // pencil 是第 18 件法器（自动划线 + 描红），描红的技能壳在 skills.js。
+  const sketch = createSketchSystem({ scene, arena: ARENA_R });
+  const pencil = createPencilSystem({
+    scene, fx, enemies,
+    onCast: (id, hit) => {
+      if (hit > 0) audio.sfx('upgrade', { vol: 0.4 });
+    },
+  });
+
   // 第 114 块：击杀时的第十一关专属记账。
   // 从 onDeath 里抽出来是**为了避让**：另一组（合成台）要重写 onDeath 那一段，
   // 主干上只留一行调用，谁改都不容易撞车。
@@ -2059,6 +2073,8 @@ async function boot() {
       guillotineOwned: relics.levels().guillotine > 0,
       // 第 128 块：买到环形灯后环形灯卡才进池子
       ringlightOwned: relics.levels().ringlight > 0,
+      // 第 129 块：买到铅笔后铅笔卡才进池子
+      pencilOwned: relics.levels().pencil > 0,
     });
   }
 
@@ -2127,7 +2143,7 @@ async function boot() {
       // 精确的「原值 → 选后值」：用 stats.preview 算，和真选下去的数字完全一致
       const delta = document.createElement('div');
       delta.className = 'up-delta';
-      for (const c of previewUpgrade(stats, up, wstats, weapon, golems, arrowRain, mines, latte, candle, mark, board, guillotine, ringlight)) {
+      for (const c of previewUpgrade(stats, up, wstats, weapon, golems, arrowRain, mines, latte, candle, mark, board, guillotine, ringlight, pencil)) {
         const row = document.createElement('span');
         row.className = 'up-chg';
         const label = document.createElement('i');
@@ -2250,7 +2266,7 @@ async function boot() {
 
     upSerial++;
     upgradesTaken++;
-    const res = applyUpgrade(stats, up, upSerial, wstats, weapon, golems, arrowRain, mines, latte, candle, mark, board, guillotine, ringlight);
+    const res = applyUpgrade(stats, up, upSerial, wstats, weapon, golems, arrowRain, mines, latte, candle, mark, board, guillotine, ringlight, pencil);
     takenUpgrades.push(up);
     // 图鉴 / 战绩 / 成就（第 18 块）：拿到的卡记一笔，本局品质集合也记一笔
     const rIdx = up.rarity ?? 0;
@@ -2383,6 +2399,7 @@ async function boot() {
     const lvBoard = relics.levels().board;
     const lvGuillotine = relics.levels().guillotine;
     const lvRinglight = relics.levels().ringlight;
+    const lvPencil = relics.levels().pencil;   // 第 129 块：铅笔
     return {
       playing: gameState === 'playing' || gameState === 'wtut' || gameState === 'tutorial',
       // 第 123 块：纸立牌要知道「往哪立」—— 朝向是个变量，所以给函数不给值
@@ -2485,6 +2502,15 @@ async function boot() {
         get cdMax() { return broadcast.cdMax; },
         get progress() { return broadcast.progress; },
         cast: (p) => broadcast.cast(p || pos),
+      } : null,
+      // 第 129 块：铅笔（第 18 件法器）。owned 由法器等级决定，描红交给 pencil.js。
+      pencil: pencil && lvPencil > 0 ? {
+        get owned() { return true; },
+        get ready() { return pencil.ready; },
+        get cdLeft() { return pencil.cdLeft; },
+        get progress() { return pencil.progress; },
+        cdMax: () => pencil.cdMax,
+        mark: (p, yaw) => pencil.mark(p || pos, yaw),
       } : null,
       // 第 128 块：超管的禁言（和「禁术挑战」的 muted 叠着看）
       silenced: silenceT > 0,
@@ -2786,6 +2812,23 @@ async function boot() {
           + '灯圈里是减速 + 小额打赏。想贪就钻进光斑，想稳就把灯打开。',
         '法器三级：半径 4.8 格、持续 8 秒、减速 40%、冷却 18 秒。'
           + '商人那儿还有「强光灯管」「落地支架」两件货。',
+      ],
+    },
+    // 第 129 块：第十六关的新法器。它是「场地线稿圈」的反面 ——
+    // 地上的圈是怪画来钉你的，铅笔是你在自己身前划线、把标记按回怪身上。
+    pencil: {
+      kicker: '新法器 · 铅笔',
+      title: '技能栏多了一支笔（按 R 描红）',
+      text: [
+        '买下之后铅笔就开始<b>自动划线</b>：每隔几秒在<b>你面朝的方向</b>划一道约 5 格的线，'
+          + '在地上留 8 秒。踩线的怪<b>移速 −30%</b>，并且一直掉血（0.60 伤/秒）。',
+        '技能栏那颗「描红」（<b>R</b>）：朝面前扫一条线，被扫到的怪 <b>5 秒内受到的所有伤害 +25%</b>'
+          + '（近战、环剑、法器、场地伤害都算）。冷却 <b>30 秒</b>。被描红的怪身上会亮一圈红环。',
+        '场地上的<b>线稿圈</b>是怪画在地上钉你的 —— 看到浅灰的圈先挪出去，'
+          + '它定稿之后就变成实心，站里面会被钉住 1.2 秒还扣血。'
+          + '描红就是把这件事反过来：你画线，怪踩进去。',
+        '法器三级：线长 7 格、每 6 秒划一道、线上 1.00 伤/秒、描红冷却 22 秒。'
+          + '商人那儿还有「加长笔杆」「双头铅笔」两件货。',
       ],
     },
   };
@@ -3096,6 +3139,9 @@ async function boot() {
     ringlight.reset();
     broadcast.reset();
     spotlight.reset();
+    // 第 129 块：铅笔 / 线稿圈 / 囚笼一局一清
+    pencil.reset();
+    sketch.reset();
     silenceT = 0;
     clearSteal();            // 第 114 块：收账人没收完的东西不带进新局（属性 mod 必须当场摘掉）
     // 第 115 块：九套玩法系统的本局状态一局一清（音乐盒是局外档案，不在这里 reset）
@@ -3306,7 +3352,7 @@ async function boot() {
     const per = campRelicAmp();
     const b = boost || null;
     const ids = ['spikes', 'frost', 'bell', 'thorns', 'stove', 'lantern', 'insulator',
-      'woodfish', 'seal', 'puppet', 'mine', 'latte', 'candle', 'mark', 'board', 'guillotine', 'ringlight'];
+      'woodfish', 'seal', 'puppet', 'mine', 'latte', 'candle', 'mark', 'board', 'guillotine', 'ringlight', 'pencil'];
     const table = {};
     for (const id of ids) {
       const e = per[id] || {};
@@ -3327,6 +3373,7 @@ async function boot() {
     if (board.setRelicAmp) board.setRelicAmp(table.board);
     if (guillotine.setRelicAmp) guillotine.setRelicAmp(table.guillotine);
     if (ringlight.setRelicAmp) ringlight.setRelicAmp(table.ringlight);
+    if (pencil.setRelicAmp) pencil.setRelicAmp(table.pencil);
     return table;
   }
 
@@ -3452,6 +3499,7 @@ async function boot() {
     { id: 13, name: LEVEL_13.name, playable: true },  // 第 123 块：第十三关 · 焦土操场
     { id: 14, name: LEVEL_14.name, playable: true },  // 第 124 块：第十四关 · 钟楼打样间
     { id: 15, name: LEVEL_15.name, playable: true },  // 第 128 块：第十五关 · 钟楼直播间
+    { id: 16, name: LEVEL_16.name, playable: true },  // 第 129 块：第十六关 · 钟楼画室
     // ⚠️ 第 123 块补的：第 116 块只写了 LEVEL_12 的数据和车流 / 袋鼠 / 拿铁，
     // 忘了往这张表里加一行 —— 结果第十二关整整七版都没有入口，玩家最多玩到第十一关。
     // 加关卡时**两处都要改**：wave.js 的 LEVELS_BY_ID + 这里的选关表。
@@ -5564,6 +5612,10 @@ async function boot() {
       ringlightLevel: relics.levels().ringlight,
       ringBulb: ringlight.hasBulb(),
       ringStand: ringlight.hasStand(),
+      // 第 129 块：铅笔的「先有法器才能买强化」+ 两件一次性货物
+      pencilLevel: relics.levels().pencil,
+      pencilLong: pencil.hasLong(),
+      pencilTwin: pencil.hasTwin(),
     };
     for (const item of shopStock) {
       const rar = rarityInfo(item);
@@ -5655,6 +5707,10 @@ async function boot() {
       ringlightLevel: relics.levels().ringlight,
       ringBulb: ringlight.hasBulb(),
       ringStand: ringlight.hasStand(),
+      // 第 129 块：铅笔同理
+      pencilLevel: relics.levels().pencil,
+      pencilLong: pencil.hasLong(),
+      pencilTwin: pencil.hasTwin(),
     });
     if (locked) return;
     if (adminOn) coins = ADMIN_GOLD; else coins -= price;
@@ -5739,6 +5795,11 @@ async function boot() {
         ringlight.setRelicLevel(relics.levels().ringlight);
         queueHint('ringlight');
       }
+      // 第 129 块：铅笔同理 —— 买到的那一秒就把等级同步给 pencil.js
+      if (item.relic === 'pencil') {
+        pencil.setRelicLevel(relics.levels().pencil);
+        queueHint('pencil');
+      }
       showToast(`${def.name} ${lv} 级`, def.desc[lv - 1] + (lv < def.maxLevel ? ' · 再买可升级' : ' · 已满级'));
     } else if (item.type === 'ink') {
       // 第 114 块：墨丸的两件一次性强化（买了就一局有效，itemLocked 已拦重复）
@@ -5788,6 +5849,16 @@ async function boot() {
       } else {
         ringlight.buyStand();
         showToast('加长支架', `环形灯持续 ${ringlight.bonuses().duration.toFixed(1)} 秒 · 冷却 ${ringlight.bonuses().cdMax.toFixed(1)} 秒 · 一局一次`);
+      }
+      renderSkill();
+    } else if (item.type === 'pencil') {
+      // 第 129 块：铅笔的两件一次性强化（买了就一局有效，itemLocked 已拦重复）
+      if (item.pencil === 'long') {
+        pencil.buyLong();
+        showToast('加长笔杆', `铅笔线长 ${pencil.bonuses().len.toFixed(1)} 格 · 一局一次`);
+      } else {
+        pencil.buyTwin();
+        showToast('双头铅笔', `每道线同时划十字两道 · 一局一次`);
       }
       renderSkill();
     } else if (item.type === 'quiver') {
@@ -6308,6 +6379,11 @@ async function boot() {
     silenceT = 0;            // 换关不该带着上一关超管的禁言
     spotlight.build(level.level.spotlight || null);
     spotlight.setRound(level.roundNo || 1);
+    // 第 129 块：线稿定稿圈（只有第十六关有）。别的关传 null → 关掉；
+    // 换关时场上的囚笼也必须清掉，不然会带着上一关的方框进新关。
+    sketch.build(level.level.sketch || null);
+    sketch.setRound(level.roundNo || 1);
+    sketch.clearFrames();
     // 雾里只留判定环：把脚下那个环置顶（depthTest:false）。没雾的关卡要还原，
     // 否则环会穿过井壁 / 柜子，看起来像画在空气里。
     playerRing.setOnTop(!!level.level.fog);
@@ -6436,6 +6512,8 @@ async function boot() {
       // 第 128 块：环形灯的卡片加成与两件商店买断；开播只剩冷却
       ringlight: ringlight.snapshot(),
       broadcast: broadcast.snapshot(),
+      // 第 129 块：铅笔的卡片加成与两件商店买断（等级在 relics 里）
+      pencil: pencil.snapshot(),
       bag: { ...bag },
       diff: getDifficulty() === DIFFS.normal ? null : (profile().difficulty || 'normal'),
       rarities: [...runRarities],
@@ -6572,6 +6650,7 @@ async function boot() {
       // 第 128 块：环形灯 / 开播的冷却也吃局外那条「技能CD缩短」
       if (ringlight.setCdMul) ringlight.setCdMul(m);
       if (broadcast.setCdMul) broadcast.setCdMul(m);
+      if (pencil.setCdMul) pencil.setCdMul(m);   // 第 129 块：描红的冷却同理
     }
     // 第 118 块：读档时也要把火种 / 盲盒的法器增幅灌回去（globals 不在存档里，按档案重算）
     applyRelicAmp();
@@ -6595,6 +6674,9 @@ async function boot() {
     ringlight.restore(saved.ringlight);
     ringlight.setRelicLevel(relics.levels().ringlight);
     broadcast.restore(saved.broadcast);
+    // 第 129 块：铅笔的卡片加成与商店买断跟着存档回来；等级读 relics（含局外永久法器）
+    pencil.restore(saved.pencil);
+    pencil.setRelicLevel(relics.levels().pencil);
     // 第 122 块：挑战 / 大涨都是「只活一回合」的东西，**不进档** ——
     // 存档里的 playerMods 会把它们一起带回来（dumpMods 不区分 src），这里成对抹掉。
     // 顺序：先撤属性表上的，再把 CD 倍率与法器增幅复位（这两样不在属性表里）。
@@ -9757,6 +9839,41 @@ async function boot() {
           cast: () => !!broadcast.cast(pos),
           reset: () => { broadcast.reset(); return 1; },
         },
+        // 第 129 块：第十六关的线稿定稿圈 + 囚笼。
+        // 测试不必真等 2 秒：debugInk() 直接把草稿推到定稿。
+        sketch: {
+          on: () => !!sketch.enabled,
+          count: () => sketch.count,
+          state: () => sketch.state(),
+          list: () => sketch.list(),
+          inkNow: () => sketch.debugInk(),
+          frames: () => sketch.frameCount,
+          frame: (x, z, half, life) => sketch.trapFrame({ x, z, half, life }),
+          clearFrames: () => { sketch.clearFrames(); return 0; },
+          clamp: (x, z) => sketch.clampPoint(x, z),
+          reset: () => { sketch.reset(); return 1; },
+        },
+        // 第 129 块：铅笔（第 18 件法器）。
+        pencil: {
+          owned: () => !!pencil.owned,
+          ready: () => !!pencil.ready,
+          cdLeft: () => +pencil.cdLeft.toFixed(2),
+          cdMax: () => +pencil.cdMax.toFixed(2),
+          progress: () => +pencil.progress.toFixed(3),
+          bonuses: () => pencil.bonuses(),
+          list: () => pencil.list(),
+          line: (x = 0, z = 0, yaw = 0) => pencil.debugLine(x, z, yaw),
+          mark: (x = 0, z = 0, yaw = 0) => pencil.debugMark(x, z, yaw),
+          long: () => pencil.buyLong(),
+          twin: () => pencil.buyTwin(),
+          reset: () => { pencil.reset(); return 1; },
+        },
+        grantPencil: (lv = 1) => {
+          let n = 0;
+          while (relics.levels().pencil < lv && n < 5) { relics.buy('pencil'); n++; }
+          pencil.setRelicLevel(relics.levels().pencil);
+          return relics.levels().pencil;
+        },
         // 超管禁言：读秒 / 直接设一个秒数（测试不必真等它读完条）
         silence: () => +silenceT.toFixed(2),
         silenceNow: (sec = 3) => {
@@ -11281,6 +11398,9 @@ async function boot() {
     // 第 123 块：纸立牌挡弹道。enemy.js 的弹道每帧推进前先问一句 ——
     // 命中就消掉并播一朵火花，所以「挡」是**判定**而不是减伤。
     blockShot: (x, z) => board.hitAt(x, z),
+    // 第 129 块：画框怪的囚笼（sketch.js）。half 是半边长，life 是存在秒数。
+    // 同屏最多两个框 —— 再多就不是「位置压力」而是单纯挨打，返回 false 让它飘「框满了」。
+    trapFrame: (o) => (sketch.frameCount >= 2 ? false : sketch.trapFrame(o || {})),
     playerRadius: BODY_R,
     onScreen,                                 // 第 69 块：擦名者起手前先问「玩家看得见吗」
     get arenaRadius() { return ARENA_R; },   // 随关卡变（第三关 19，第 33 块）
@@ -11453,6 +11573,13 @@ async function boot() {
           vel.z -= nz * outward;
         }
       }
+      // 第 129 块：画框怪的囚笼 —— 必须在圆形钳制**之后**再做轴分离钳制，
+      // 否则先钳回框里、又被圆形边界推出去，框就形同虚设。
+      if (sketch.frameCount) {
+        const c = sketch.clampPoint(pos.x, pos.z);
+        if (c.xClamped) { pos.x = c.x; vel.x = 0; }
+        if (c.zClamped) { pos.z = c.z; vel.z = 0; }
+      }
 
       // 3) 朝向：只在真的在走的时候转身，停下保持原朝向
       speed = Math.hypot(vel.x, vel.z);
@@ -11492,6 +11619,20 @@ async function boot() {
       ringlight.update(dt, { playerPos: pos });
       // 第 128 块：开播（攻击/移速 mod 的到期撤销与冷却走表）
       broadcast.update(dt);
+      // 第 129 块：线稿定稿圈（只有第十六关有；enabled=false 时 update 第一行就 return）
+      sketch.setRound(level.roundNo);
+      sketch.update(dt, { playerPos: pos });
+      sketch.updateFrames(dt);
+      for (const ev of sketch.takeEvents()) {
+        // 定稿那一下：站在圈里就钉住 + 按最大生命的百分比扣血（场地伤害）
+        if (ev.kind !== 'pin') continue;
+        rootPlayer(ev.sec || 1.2);
+        hurtPlayer(stats.get('maxHp') * (ev.damage || 0.06), 'hazard');
+        if (fx) fx.ring({ x: ev.x, z: ev.z }, { from: 0.4, to: 2.2, color: 0x4a4440, life: 0.4, opacity: 0.7, y: 0.07 });
+      }
+      // 第 129 块：铅笔（自动划线 + 描红冷却）。法器等级每帧对账。
+      pencil.setRelicLevel(relics.levels().pencil);
+      pencil.update(dt, { playerPos: pos, yaw });
       // 第 124 块：裁切刀（只有第十四关有）—— 预警走表 + 落刀那一瞬结算。
       // 玩家伤害传的是**最大生命**（cutter 内部按 playerPct 折算），不是当前血。
       cutter.update(dt, {

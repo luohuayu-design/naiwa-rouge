@@ -8,7 +8,7 @@
 // 两套配色集中在 THEMES 里，buildNightScene({ theme }) 建哪套，
 // 局中要换就调返回的 setTheme('crypt')（不改几何，只改颜色和贴图）。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=145';
+import * as THREE from '../lib/three.module.js?v=146';
 
 export const THEMES = {
   // 第一关 · 荒草地：冷月光 + 青绿边圈 + 萤火虫
@@ -241,6 +241,22 @@ export const THEMES = {
     tuft: 0x333a46, tuftVisible: false,     // 室内地胶上不长草
     fly: 0xffd0f0, flyCount: 96,            // 灯下的浮尘 / 手机反光
     ground: 'studio',
+  },
+  // 第十六关 · 钟楼顶画室（第 129 块）：圆形房间、四面窗、桌上旧电脑与一叠纸。
+  // 配色思路：这里终于是「白天结束、灯还亮着」的一间屋 —— 纸白反光 + 铅笔灰 +
+  // 台灯的暖黄。底色比直播间亮一点点（纸把光反回来），边缘那圈改成铅笔的暖灰，
+  // 不抢戏；萤火换成台灯光里的纸屑（慢慢飘，像有人在擦橡皮）。
+  atelier: {
+    bg: 0x111014,
+    fog: 0x24221f, fogDensity: 0.0122,
+    hemiSky: 0xd8d0bc, hemiGround: 0x1a1712, hemiIntensity: 1.46,
+    moon: 0xfff2d8, moonIntensity: 2.96, moonBase: 2.80,
+    rim: 0x8a7448, rimIntensity: 0.78,      // 台灯的暖黄
+    edge: 0xe8d8a8, edgeOpacity: 0.26,      // 纸边 / 铅笔灰的暖白
+    stone: 0x3a3630,
+    tuft: 0x4a4436, tuftVisible: false,     // 室内不长草
+    fly: 0xf0e6cc, flyCount: 88,            // 台灯光里的纸屑
+    ground: 'atelier',
   },
 };
 
@@ -780,6 +796,99 @@ function makeStudioTexture() {
   return tex;
 }
 
+// 第十六关 · 钟楼画室的地台（第 129 块）
+// 钟楼顶改成的画室：老木地板 + 满地铅笔草稿 + 橡皮屑 + 台灯漏下来的暖黄。
+// 和直播间的区别：那边是冷灰蓝的人造地胶，这边是**暖木头**。地上的灰草稿线
+// 和 sketch.js 的线稿圈是同一个「石墨」色系 —— 草稿灰、定稿深，一眼能分开。
+function makeAtelierTexture() {
+  const S = 512;
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = S;
+  const g = cv.getContext('2d');
+
+  g.fillStyle = '#332a21';
+  g.fillRect(0, 0, S, S);
+
+  let seed = 129129;
+  const rnd = () => {
+    seed = (seed * 1103515245 + 12345) % 2147483648;
+    return seed / 2147483648;
+  };
+
+  // ① 木地板：一条一条横板，每块色差一点点（画室是老楼，木头早被踩得发白）
+  for (let y = 0; y < S; y += 64) {
+    g.fillStyle = `rgba(${56 + rnd() * 24 | 0},${43 + rnd() * 18 | 0},${31 + rnd() * 15 | 0},0.62)`;
+    g.fillRect(0, y, S, 60);
+    // 板缝（暗，不能太黑 —— 太黑会像瓷砖缝）
+    g.fillStyle = 'rgba(16,11,8,0.46)';
+    g.fillRect(0, y + 60, S, 4);
+    // 木纹：每条板上几道横向浅丝
+    for (let i = 0; i < 8; i++) {
+      const gy = y + 4 + rnd() * 54;
+      g.strokeStyle = `rgba(${92 + rnd() * 30 | 0},${72 + rnd() * 24 | 0},${52 + rnd() * 20 | 0},${0.05 + rnd() * 0.10})`;
+      g.lineWidth = 0.8 + rnd() * 1.6;
+      g.beginPath();
+      g.moveTo(0, gy);
+      for (let x = 0; x <= S; x += 32) g.lineTo(x, gy + (rnd() - 0.5) * 3.4);
+      g.stroke();
+    }
+    // 板端接缝：每条板的位置错开，别让所有缝对齐成一条直线
+    const joint = rnd() * S;
+    g.fillStyle = 'rgba(14,10,7,0.34)';
+    g.fillRect(joint, y, 3.2, 60);
+  }
+
+  // ② 铅笔屑 + 草稿线：地板上到处是画废的线 —— 直线、弧、打了叉的圈
+  for (let i = 0; i < 26; i++) {
+    const x = rnd() * S, y = rnd() * S;
+    g.strokeStyle = `rgba(${128 + rnd() * 34 | 0},${126 + rnd() * 30 | 0},${120 + rnd() * 28 | 0},${0.10 + rnd() * 0.16})`;
+    g.lineWidth = 1.1 + rnd() * 1.4;
+    if (rnd() < 0.55) {
+      // 一道草稿直线
+      const len = 22 + rnd() * 60;
+      const a = rnd() * Math.PI;
+      g.beginPath();
+      g.moveTo(x, y);
+      g.lineTo(x + Math.cos(a) * len, y + Math.sin(a) * len);
+      g.stroke();
+    } else {
+      // 一个画了一半的圈（画室地上最多的就是这种）
+      g.beginPath();
+      g.arc(x, y, 10 + rnd() * 26, rnd() * Math.PI, rnd() * Math.PI + 1.4 + rnd() * 3.2);
+      g.stroke();
+    }
+  }
+
+  // ③ 橡皮屑：一小撮一小撮的白色碎屑，堆在板缝附近
+  for (let i = 0; i < 34; i++) {
+    const x = rnd() * S, y = rnd() * S;
+    for (let k = 0; k < 4; k++) {
+      g.fillStyle = `rgba(${208 + rnd() * 26 | 0},${204 + rnd() * 24 | 0},${192 + rnd() * 22 | 0},${0.16 + rnd() * 0.20})`;
+      const r = 0.9 + rnd() * 2.0;
+      g.beginPath();
+      g.arc(x + (rnd() - 0.5) * 10, y + (rnd() - 0.5) * 10, r, 0, Math.PI * 2);
+      g.fill();
+    }
+  }
+
+  // ④ 台灯漏下来的暖黄（和 atelier 主题的 moon/hemi 是同一个色系，别换成冷白）
+  for (let i = 0; i < 6; i++) {
+    const x = rnd() * S, y = rnd() * S;
+    const r = 44 + rnd() * 66;
+    const grd = g.createRadialGradient(x, y, 0, x, y, r);
+    grd.addColorStop(0, 'rgba(255,236,196,0.11)');
+    grd.addColorStop(1, 'rgba(255,236,196,0)');
+    g.fillStyle = grd;
+    g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+  }
+
+  const tex = new THREE.CanvasTexture(cv);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(16, 16);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
 function makeGroundTexture(kind) {
   if (kind === 'crypt') return makeCryptTexture();
   if (kind === 'ash') return makeAshTexture();
@@ -795,6 +904,7 @@ function makeGroundTexture(kind) {
   if (kind === 'campus') return makeCampusTexture();
   if (kind === 'press') return makePressTexture();
   if (kind === 'studio') return makeStudioTexture();
+  if (kind === 'atelier') return makeAtelierTexture();
   return makeGrassTexture();
 }
 

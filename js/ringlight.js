@@ -11,7 +11,7 @@
 // 所有临时属性 mod 都带 src，离场 / 到期 / reset 必须撤掉。
 // 灯圈**跟着玩家**，所以同屏只有一圈（cap 固定 1，靠卡加不了第二盏）。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=145';
+import * as THREE from '../lib/three.module.js?v=146';
 
 export const RING_BASE = {
   cd: 24.0,

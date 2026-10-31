@@ -109,7 +109,10 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
         if (pv.center) g.position.set(-pv.center.x, 0, -pv.center.z);
         scene.add(g);
         // 影子要跟着自动取景走，先建好、每轮重摆
-        const disc = new THREE.Mesh(new THREE.CircleGeometry(h * 0.5, 40), shadowMat);
+        // 第 129 块：纸屑的影子按身高半径建太大，自动取景会把镜头拉远、
+        // 纸片缩成一条线；平摊道具的影子改按「横向宽度」给。
+        const SHADOW_K = { paper: 0.28 }[${JSON.stringify(type)}] ?? 0.5;
+        const disc = new THREE.Mesh(new THREE.CircleGeometry(h * SHADOW_K, 40), shadowMat);
         disc.rotation.x = -Math.PI / 2;
         // 第 80 块：影子摆在模型的水平中心。Kenney 的模型原点常常不在正中，
         // 摆在组原点时并联体的影子会飘到它左边半个身位（缩略图看起来像两截）。
@@ -145,8 +148,11 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
         let aimY = h * 0.5;
         let aimX = 0;
         let done = false;
+        // 第 129 块：平摊在地上的道具（纸屑）从默认的 5.7° 俯角看会塌成一条线，
+        // 得把相机抬高才看得见纸面；竖起来的画框多抬一点能看清整幅画。
+        const ELEV = { paper: 0.62, frame: 0.30 }[${JSON.stringify(type)}] ?? 0.10;
         for (let pass = 0; pass < 9 && !done; pass++) {
-          cam.position.set(aimX, aimY + dist * 0.10, dist);
+          cam.position.set(aimX, aimY + dist * ELEV, dist);
           cam.lookAt(aimX, aimY, 0);
           cam.updateProjectionMatrix();
           rd.render(scene, cam);

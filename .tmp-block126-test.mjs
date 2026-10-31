@@ -186,8 +186,8 @@ ok(cb2 > cr2 && cr2 > cg2, '图鉴缩略图本体是紫的（已经重出过）'
   `R${(cr2 / 1).toFixed(0)} G${(cg2 / 1).toFixed(0)} B${(cb2 / 1).toFixed(0)}`);
 
 ok(!/^\s*frogbeast\s*:/m.test(enemySrc), 'CLIP_FAMILIES 里的 frogbeast 族已删（只服务过照影）');
-ok(fs.readdirSync(path.join(ROOT, 'assets/monsters')).filter((f) => f.endsWith('.glb')).length === 33,
-  '怪物 glb 共 33 个（第 128 块的 glub / yeti 是新文件，不是换文件）');
+ok(fs.readdirSync(path.join(ROOT, 'assets/monsters')).filter((f) => f.endsWith('.glb')).length === 35,
+  '怪物 glb 共 35 个（第 129 块的 paper-scrap / picture-frame 是新文件，不是换文件）');
 
 // ============================================================
 console.log('\n' + '='.repeat(52));

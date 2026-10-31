@@ -40,7 +40,7 @@ const L10 = W.LEVELS_BY_ID[10];
 sec('① 等的那个：彻底删干净');
 // ============================================================
 ok(!E.ENEMY_TYPES.waiter, 'ENEMY_TYPES 里没有 waiter');
-ok(Object.keys(E.ENEMY_TYPES).length === 33, '怪物总数 33 只（第 128 块加了超管 / 弹幕）', String(Object.keys(E.ENEMY_TYPES).length));
+ok(Object.keys(E.ENEMY_TYPES).length === 35, '怪物总数 35 只（第 128 块 +2，第 129 块 +2）', String(Object.keys(E.ENEMY_TYPES).length));
 
 // 机制代码（不是注释）必须一起消失 —— 只删 cfg 会留下一条永远进不来的分支
 const enemyCode = enemySrc.replace(/^\s*\/\/.*$/gm, '');

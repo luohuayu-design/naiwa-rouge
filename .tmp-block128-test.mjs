@@ -389,13 +389,13 @@ ok(shopSrc.includes("if (item.type === 'ringlight')"), 'itemLocked 认识 ringli
 ok(['ringDur', 'ringRad', 'ringSlow', 'ringCd', 'ringSet'].every((id) => upgSrc.includes(`id: '${id}'`)),
   '五张环形灯卡都在');
 ok(upgSrc.includes('if (up.ringlight && !opts.ringlightOwned) return 0;'), '没买到法器前卡片不进池子');
-ok(/export function applyUpgrade\([^)]*ringlight = null\)/.test(upgSrc), 'applyUpgrade 末参加 ringlight');
-ok(/export function previewUpgrade\([^)]*ringlight = null\)/.test(upgSrc), 'previewUpgrade 末参加 ringlight');
+ok(/export function applyUpgrade\([^)]*ringlight = null, pencil = null\)/.test(upgSrc), 'applyUpgrade 末参加 ringlight（第 129 块尾随 pencil）');
+ok(/export function previewUpgrade\([^)]*ringlight = null, pencil = null\)/.test(upgSrc), 'previewUpgrade 末参加 ringlight（第 129 块尾随 pencil）');
 ok(upgSrc.includes('function ringlightChange(c, b)'), '升级卡有 changes 文案翻译');
 // 技能名与卡池门闩
 ok(/if \(up\.ringlight && !opts\.ringlightOwned\) return 0;/.test(upgSrc), '专属卡带「没买到本体就不进池」门控');
 // 接线
-ok(/LEVEL_14, LEVEL_15, LEVELS_BY_ID/.test(mainSrc), 'main.js 从 wave.js 引入了 LEVEL_15');
+ok(/LEVEL_14, LEVEL_15, LEVEL_16, LEVELS_BY_ID/.test(mainSrc), 'main.js 从 wave.js 引入了 LEVEL_15（第 129 块尾随 LEVEL_16）');
 ok(/\{ id: 15, name: LEVEL_15\.name, playable: true \}/.test(mainSrc), '选关表里有第 15 关');
 ok(mainSrc.includes("from './spotlight.js?v=") && mainSrc.includes("from './ringlight.js?v=")
   && mainSrc.includes("from './broadcast.js?v="), 'main.js 引入了三个新模块');
@@ -427,12 +427,12 @@ ok(/id: 's15', no: 15, act: 3, levelId: 15/.test(storySrc), '第十五夜绑上�
 
 // 总量口径
 const relicCount = Object.keys(R.RELIC_DEFS).length;
-ok(relicCount === 17, '法器总数 17（环形灯是第 17 件）', String(relicCount));
-ok(SK.SKILLS.length === 12, '技能格 12（环形灯 Q + 开播 E）', String(SK.SKILLS.length));
-ok(S.SHOP_ITEMS.length === 49, '商店货 49', String(S.SHOP_ITEMS.length));
-ok(U.UPGRADES.length === 122, '升级卡 122 张', String(U.UPGRADES.length));
-ok(Object.keys(E.ENEMY_TYPES).length === 33, '怪物种类 33', String(Object.keys(E.ENEMY_TYPES).length));
-ok(Object.keys(W.LEVELS_BY_ID).length === 15, '关卡 15 张表', String(Object.keys(W.LEVELS_BY_ID).length));
+ok(relicCount === 18, '法器总数 18（第 129 块 +铅笔）', String(relicCount));
+ok(SK.SKILLS.length === 13, '技能格 13（第 129 块 +描红）', String(SK.SKILLS.length));
+ok(S.SHOP_ITEMS.length === 52, '商店货 52', String(S.SHOP_ITEMS.length));
+ok(U.UPGRADES.length === 127, '升级卡 127 张', String(U.UPGRADES.length));
+ok(Object.keys(E.ENEMY_TYPES).length === 35, '怪物种类 35', String(Object.keys(E.ENEMY_TYPES).length));
+ok(Object.keys(W.LEVELS_BY_ID).length === 16, '关卡 16 张表', String(Object.keys(W.LEVELS_BY_ID).length));
 
 // 守卫：加关卡 = 法器 + 技能 + 卡池一起加（用户 2026-10-31 定下的铁律）
 const NO_CARD_SKILLS = new Set(['swordRain', 'broadcast']);
@@ -462,7 +462,7 @@ ok(glbs.includes('glub.glb') && glbs.includes('yeti.glb'), '两份新模型在�
 ok(readFileSync(path.join(mdir, 'glub.glb')).length > 2048 && readFileSync(path.join(mdir, 'yeti.glb')).length > 2048,
   '两份模型都不是空文件',
   `${Math.round(readFileSync(path.join(mdir, 'glub.glb')).length / 1024)}KB / ${Math.round(readFileSync(path.join(mdir, 'yeti.glb')).length / 1024)}KB`);
-ok(glbs.length === 33, '怪物模型总数 33', String(glbs.length));
+ok(glbs.length === 35, '怪物模型总数 35', String(glbs.length));
 
 // textContent 渲染的文案不许有 ** 或 HTML
 ok(!/desc: '[^']*\*\*/.test(shopSrc.slice(shopSrc.indexOf("id: 'buyRinglight'"), shopSrc.indexOf("id: 'buyRinglight'") + 900)),

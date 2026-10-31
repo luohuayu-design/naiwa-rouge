@@ -16,12 +16,12 @@
 // 与环剑（自动索敌、消耗制）和炮台（固定点位）互补；价格定在
 // 商店里「买得起但要攒一攒」的档，让 9/12/15/18 回合的商店有取舍。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=145';
-import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=145';
-import { withV } from './assetUrl.js?v=145';   // 第 80 块：glb 带版本号，SW 才走缓存优先
-import { distance2D } from './stats.js?v=145';
-import { TAG_BASE, TAG_SEAL } from './deposit.js?v=145';   // 第 84 块：掉牌概率的真相源
-import audio from './audio.js?v=145';
+import * as THREE from '../lib/three.module.js?v=146';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=146';
+import { withV } from './assetUrl.js?v=146';   // 第 80 块：glb 带版本号，SW 才走缓存优先
+import { distance2D } from './stats.js?v=146';
+import { TAG_BASE, TAG_SEAL } from './deposit.js?v=146';   // 第 84 块：掉牌概率的真相源
+import audio from './audio.js?v=146';
 
 // 百分比文案（概率表里存的是 0.5 这种小数）
 const pct = (v) => `${Math.round(v * 100)}%`;
@@ -285,11 +285,24 @@ export const RELIC_DEFS = {
       '满功率开灯：半径 4.8 格、持续 8 秒、减速 40%、冷却 18 秒 —— 走到哪儿，哪儿就是你的直播间',
     ],
   },
+  // ---------------- 第十六关新增（第 129 块）：铅笔 ----------------
+  // 钟楼画室桌上那支铅笔。本体（划线 / 描红）全在 pencil.js，这里只管
+  // 「买没买 / 几级」—— 和环形灯同一套接法（等级由 relics 记账，系统自己查表）。
+  pencil: {
+    name: '铅笔',
+    maxLevel: 3,
+    radius: [1.55, 1.55, 1.55],   // 仅占位（铅笔的线宽 / 扫宽写在 pencil.js 的 PENCIL_BASE）
+    desc: [
+      '小满桌上那支铅笔：你走到哪儿，它就在你面朝的方向划一道 5 格的线 —— 踩线的怪移速 −30%、一直掉血。技能栏多一颗「描红」：朝面前扫一条线，被扫到的怪 5 秒内受到的伤害 +25%。冷却 30 秒',
+      '笔芯削得更长：线长 6 格、每 7 秒划一道、线上 0.80 伤/秒；描红冷却 26 秒',
+      '满级铅笔：线长 7 格、每 6 秒划一道、线上 1.00 伤/秒；描红冷却 22 秒 —— 地上永远横着两道你的线',
+    ],
+  },
 };
 
 export function createRelicSystem({ scene, fx, enemies, onLanternReveal }) {
-  const levels = { spikes: 0, frost: 0, bell: 0, thorns: 0, stove: 0, lantern: 0, insulator: 0, woodfish: 0, seal: 0, puppet: 0, mine: 0, latte: 0, candle: 0, mark: 0, board: 0, guillotine: 0, ringlight: 0 };
-  const cds = { spikes: 0, frost: 0, bell: 0, thorns: 0, stove: 0, lantern: 0, insulator: 0, woodfish: 0, seal: 0, puppet: 0, mine: 0, latte: 0, candle: 0, mark: 0, board: 0, guillotine: 0, ringlight: 0 };
+  const levels = { spikes: 0, frost: 0, bell: 0, thorns: 0, stove: 0, lantern: 0, insulator: 0, woodfish: 0, seal: 0, puppet: 0, mine: 0, latte: 0, candle: 0, mark: 0, board: 0, guillotine: 0, ringlight: 0, pencil: 0 };
+  const cds = { spikes: 0, frost: 0, bell: 0, thorns: 0, stove: 0, lantern: 0, insulator: 0, woodfish: 0, seal: 0, puppet: 0, mine: 0, latte: 0, candle: 0, mark: 0, board: 0, guillotine: 0, ringlight: 0, pencil: 0 };
 
   // ---------------- 逐件法器增幅（第 118 块）----------------
   // 火种（逐件法器各一簇）与盲盒（法器属性）都往这张表里灌：

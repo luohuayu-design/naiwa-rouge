@@ -365,7 +365,7 @@ ok(glbs.includes('misprint.glb') && glbs.includes('proofreader.glb'), '两份新
 const misSize = readFileSync(path.join(mdir, 'misprint.glb')).length;
 const prfSize = readFileSync(path.join(mdir, 'proofreader.glb')).length;
 ok(misSize > 2048 && prfSize > 2048, '两份模型都不是空文件', `${Math.round(misSize / 1024)}KB / ${Math.round(prfSize / 1024)}KB`);
-ok(glbs.length === 33, '怪物模型总数 33（第 128 块加了 glub / yeti）', String(glbs.length));
+ok(glbs.length === 35, '怪物模型总数 35（第 128 块 +2，第 129 块 +2）', String(glbs.length));
 
 // 源码里不该再有任何「手搓模型」的构建函数
 ok(!/function build(Standee|Camera|Slip|Quill|Ledger|Kangaroo|Misprint|Proofreader)Model/.test(enemySrc),
@@ -374,7 +374,7 @@ ok(!/function build(Standee|Camera|Slip|Quill|Ledger|Kangaroo|Misprint|Proofread
 // ============================================================
 sec('⑥ 接线');
 // ============================================================
-ok(/LEVEL_14, LEVEL_15, LEVELS_BY_ID/.test(mainSrc), 'main.js 从 wave.js 引入了 LEVEL_14（第 128 块尾随 LEVEL_15）');
+ok(/LEVEL_14, LEVEL_15, LEVEL_16, LEVELS_BY_ID/.test(mainSrc), 'main.js 从 wave.js 引入了 LEVEL_14（第 128 块尾随 LEVEL_15、第 129 块尾随 LEVEL_16）');
 ok(/\{ id: 14, name: LEVEL_14\.name, playable: true \}/.test(mainSrc), '选关表里有第 14 关（第 123 块漏过一次）');
 ok(mainSrc.includes("from './cutter.js?v="), 'main.js 引入 cutter.js');
 ok(mainSrc.includes("from './guillotine.js?v="), 'main.js 引入 guillotine.js');
@@ -413,12 +413,12 @@ ok(/HINTS = \{[\s\S]*guillotine: \{/.test(mainSrc), '首次拿到裁纸刀有教
 
 // 总量口径（这一块动了四个数字，老套件都靠它们）
 const relicCount = Object.keys(R.RELIC_DEFS).length;
-ok(relicCount === 17, '法器总数 17（第 128 块加了环形灯）', String(relicCount));
-ok(SK.SKILLS.length === 12, '技能格 12（第 128 块加了环形灯 / 开播）', String(SK.SKILLS.length));
-ok(S.SHOP_ITEMS.length === 49, '商店货 49', String(S.SHOP_ITEMS.length));
-ok(U.UPGRADES.length === 122, '升级卡 122 张', String(U.UPGRADES.length));
-ok(Object.keys(E.ENEMY_TYPES).length === 33, '怪物种类 33', String(Object.keys(E.ENEMY_TYPES).length));
-ok(Object.keys(W.LEVELS_BY_ID).length === 15, '关卡 15 张表', String(Object.keys(W.LEVELS_BY_ID).length));
+ok(relicCount === 18, '法器总数 18（第 128 块 +环形灯，第 129 块 +铅笔）', String(relicCount));
+ok(SK.SKILLS.length === 13, '技能格 13（第 128 块加了环形灯 / 开播，第 129 块加了铅笔 / 描红）', String(SK.SKILLS.length));
+ok(S.SHOP_ITEMS.length === 52, '商店货 52', String(S.SHOP_ITEMS.length));
+ok(U.UPGRADES.length === 127, '升级卡 127 张', String(U.UPGRADES.length));
+ok(Object.keys(E.ENEMY_TYPES).length === 35, '怪物种类 35', String(Object.keys(E.ENEMY_TYPES).length));
+ok(Object.keys(W.LEVELS_BY_ID).length === 16, '关卡 16 张表', String(Object.keys(W.LEVELS_BY_ID).length));
 
 // ---- 守卫：加关卡 = 法器 + 技能 + **卡池** 一起加（用户 2026-10-31 定下的铁律）----
 // 最容易漏的一环：技能栏加了格子、卡池没加卡 → 抽卡永远抽不到，成长线断在商店里。
