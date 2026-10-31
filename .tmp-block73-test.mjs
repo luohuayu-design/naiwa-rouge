@@ -35,16 +35,16 @@ ok('每族都有 title/desc 生成函数', FAMILIES.every((f) => typeof f.title 
 ok('族 id 不重复', new Set(FAMILIES.map((f) => f.id)).size === FAMILIES.length);
 
 // 22 族 × 3 + 47 张拆不动的整卡 = 113（第 107 块 +4 傀儡；第 108 块 +4 傀儡 +8 箭雨；第 114 块 +6 墨丸；第 116 块 +6 拿铁；第 118 块 +10 守夜烛/落款；第 123 块 +4 纸立牌）
-ok('卡池 113 张', UPGRADES.length === 113, `实际 ${UPGRADES.length}`);
+ok('卡池 117 张', UPGRADES.length === 117, `实际 ${UPGRADES.length}`);
 ok('id 不重复', new Set(UPGRADES.map((u) => u.id)).size === UPGRADES.length);
 ok('每族恰好生成 3 张', FAMILIES.every((f) => UPGRADES.filter((u) => u.family === f.id).length === 3));
-ok('整卡 family 为 null（拆不成档）', UPGRADES.filter((u) => u.family === null).length === 47);
+ok('整卡 family 为 null（拆不成档）', UPGRADES.filter((u) => u.family === null).length === 51);
 // 拆不成三档的 47 张：给的是「+1 只 / +1 把 / 一组效果 / 傀儡加成 / 箭雨加成 / 墨丸加成 / 拿铁加成 / 法器加成」这种结构性的东西
 const UNIQ = UPGRADES.filter((u) => u.family === null).map((u) => u.id).sort().join(',');
-ok('整卡就是那 47 张结构卡（原 5 + 傀儡 8 + 箭雨 8 + 墨丸 6 + 拿铁 6 + 守夜烛 5 + 落款 5 + 纸立牌 4）',
-  UNIQ === 'aegisUp,arrowCdL,arrowCdS,arrowCountL,arrowCountS,arrowDmgL,arrowDmgS,arrowZoneL,arrowZoneS,boardCd,boardDur,boardExtra,boardWide,candleCd,candleDps,candleDur,candleRad,candleSet,doublePalm,golemCap,golemCd,golemIronAtk,golemIronHp,golemIronSpd,golemSnowHp,golemSnowKnock,golemSnowSlow,latteCd,latteDur,latteHaste,latteRad,latteSet,latteSlow,luckStar,markBoom,markCd,markDps,markSet,markTarget,mineCdS,mineDmgL,mineDmgS,mineMaxS,mineRadiusS,mineSetL,swordArray,undying', UNIQ);
+ok('整卡就是那 51 张结构卡（原 5 + 傀儡 8 + 箭雨 8 + 墨丸 6 + 拿铁 6 + 守夜烛 5 + 落款 5 + 纸立牌 4 + 裁纸刀 4）',
+  UNIQ === 'aegisUp,arrowCdL,arrowCdS,arrowCountL,arrowCountS,arrowDmgL,arrowDmgS,arrowZoneL,arrowZoneS,boardCd,boardDur,boardExtra,boardWide,candleCd,candleDps,candleDur,candleRad,candleSet,doublePalm,golemCap,golemCd,golemIronAtk,golemIronHp,golemIronSpd,golemSnowHp,golemSnowKnock,golemSnowSlow,guillotineCd,guillotineDeep,guillotineLong,guillotineWide,latteCd,latteDur,latteHaste,latteRad,latteSet,latteSlow,luckStar,markBoom,markCd,markDps,markSet,markTarget,mineCdS,mineDmgL,mineDmgS,mineMaxS,mineRadiusS,mineSetL,swordArray,undying', UNIQ);
 ok('整卡都给「结构」而非一个可缩放的数值',
-  UPGRADES.filter((u) => u.family === null).every((u) => u.sword || u.golem || u.arrow || u.mine || u.latte || u.candle || u.mark || u.board || u.extra || u.extras
+  UPGRADES.filter((u) => u.family === null).every((u) => u.sword || u.golem || u.arrow || u.mine || u.latte || u.candle || u.mark || u.board || u.guillotine || u.extra || u.extras
     || u.stat === 'multiHit' || u.stat === 'aegis'));
 
 // 小档沿用旧 id —— 老存档、老测试、老统计照旧认得
@@ -200,7 +200,7 @@ ok('chanceTable 里的 rarity 和卡一致',
   const weapon = { count: 0, addSword() { this.count++; }, granted: true };
   let bad = 0;
   for (const up of UPGRADES) {
-    if (up.golem || up.arrow || up.mine || up.latte || up.candle || up.mark || up.board) continue;   // 第 107/108/114/116/118/123 块：傀儡 / 箭雨 / 墨丸 / 拿铁 / 守夜烛 / 落款 / 纸立牌卡不进属性表，各有专项套件
+    if (up.golem || up.arrow || up.mine || up.latte || up.candle || up.mark || up.board || up.guillotine) continue;   // 第 107/108/114/116/118/123/124 块：傀儡 / 箭雨 / 墨丸 / 拿铁 / 守夜烛 / 落款 / 纸立牌 / 裁纸刀卡不进属性表，各有专项套件
     const s = createStats();
     const w = createWeaponStats();
     const wp = up.sword ? { count: 0, addSword() { this.count++; } } : null;
@@ -214,7 +214,7 @@ ok('chanceTable 里的 rarity 和卡一致',
       }
     }
   }
-  ok('113 张卡里非傀儡/箭雨/墨丸/拿铁/法器卡的「卡片预览」与「选完实际值」完全一致', bad === 0, `${bad} 处不一致`);
+  ok('117 张卡里非傀儡/箭雨/墨丸/拿铁/法器卡的「卡片预览」与「选完实际值」完全一致', bad === 0, `${bad} 处不一致`);
 }
 // 生命上限档位要同步补血
 {

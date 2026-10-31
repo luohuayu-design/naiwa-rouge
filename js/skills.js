@@ -32,7 +32,7 @@
 //
 // ctx 由 main.js 每帧拼好传进来：{ playing, weapon, playerPos, stats, coins }
 // ============================================================
-import audio from './audio.js?v=140';
+import audio from './audio.js?v=141';
 
 // 冷却数字统一两位小数（第 64 块用户需求：倒计时精确到两位小数）。
 // 不补零会跳字（3.4 → 3.35 期间宽度变化），toFixed(2) 宽度恒定。
@@ -403,6 +403,53 @@ export const SKILLS = [
       // 朝向拿不到就按 +Z 立（不至于让按键完全没反应）
       const yaw = ctx.playerYaw ? ctx.playerYaw() : 0;
       return ctx.board.drop(ctx.playerPos, yaw);
+    },
+  },
+
+  // ---- 第 16 件法器「裁纸刀」（第 124 块，第十四关专属） ----
+  // 第十四关的场地是一把按时落下的裁切刀；这一格是**你手里的那一把**。
+  // 和纸立牌（第十三关）正好相反：那个是防、这个是攻，而且只打一条直线。
+  {
+    id: 'guillotine',
+    name: '裁纸刀',
+    // 内联 SVG：一柄铡刀 + 一张被切开的纸 + 断口的两道白线
+    art: '<svg viewBox="0 0 40 40" aria-hidden="true">'
+      + '<rect x="7" y="24" width="26" height="9" rx="1" fill="#f2ead6"/>'
+      + '<path d="M7 28.5 h26" stroke="#b9a479" stroke-width="1.2" stroke-dasharray="2 2"/>'
+      + '<path d="M6 20 L34 14" stroke="#cfd6db" stroke-width="3.2" stroke-linecap="round"/>'
+      + '<path d="M6 20 L34 14" stroke="#ffffff" stroke-width="1.1" stroke-linecap="round" opacity=".85"/>'
+      + '<path d="M8 22 v7 M32 17 v7" stroke="#8a7248" stroke-width="2" stroke-linecap="round"/>'
+      + '<path d="M17 10 l3 3 M23 8 l2 4" stroke="#9fe0e8" stroke-width="1.6" stroke-linecap="round" opacity=".8"/>'
+      + '</svg>',
+    ring: true,
+    hint: '身前横切一刀：命中的怪掉 30% 最大生命并被击退。冷却 30 秒',
+    key: '0',
+    cd: 30.0,
+    cdNow: (ctx) => (ctx.guillotine ? ctx.guillotine.cdMax : 30.0),
+    desc: '裁纸刀：按下把身前 6 格、宽 3.4 格里的怪横切一刀。'
+      + '命中掉它**最大生命的 30%**（减伤仍然生效，但基数不是你的攻击力）——'
+      + '所以它专治「打不动的大块头」：立牌的正面减伤、称量官的叠层、精英血量都拦不住这一刀。'
+      + '同一只怪在一局里被反复切，第二刀起只算 55%，最低 25%（防止一直按把 BOSS 削成纸）。'
+      + '冷却 30 秒；法器三级切 50% 最大生命、射程 8 格。',
+    unlockNote: '夜行商店买到「裁纸刀」（第十四关起上架）后拥有',
+    visible: (ctx) => ctx.playing && !!ctx.guillotine && ctx.guillotine.owned,
+    state: (ctx) => {
+      if (!ctx.guillotine || !ctx.guillotine.owned) return 'lock';
+      return ctx.guillotine.ready ? 'ready' : 'cd';
+    },
+    ready: (ctx) => !!ctx.guillotine && ctx.guillotine.owned && ctx.playing && ctx.guillotine.ready,
+    progress: (ctx) => (ctx.guillotine ? ctx.guillotine.progress : 0),
+    cdText: (ctx) => {
+      if (!ctx.guillotine || !ctx.guillotine.owned) return '';
+      return ctx.guillotine.ready ? '' : fmtCd(ctx.guillotine.cdLeft);
+    },
+    press(ctx) {
+      if (!ctx.guillotine) return false;
+      const yaw = ctx.playerYaw ? ctx.playerYaw() : 0;
+      const ok = ctx.guillotine.drop(ctx.playerPos, yaw);
+      // 挥空了也要有声音：刀落在地上和刀切到东西是两种手感（见 guillotine.hits）
+      if (ok) audio.sfx('swordFire', { vol: 0.35 });
+      return ok;
     },
   },
 

@@ -34,9 +34,9 @@
 //   标了 scope:'weapon' 的项改的是武器表（剑系 / 元素系），其余改主角表。
 //   两块表都要传进来，没传 wstats 时武器项会退化到主角表（只为兼容老调用）。
 // ============================================================
-import { STAT_DEFS } from './stats.js?v=140';
-import { WEAPON_STAT_DEFS } from './weaponStats.js?v=140';
-import { RARITIES, rarityWeight, oddsOf } from './rarity.js?v=140';
+import { STAT_DEFS } from './stats.js?v=141';
+import { WEAPON_STAT_DEFS } from './weaponStats.js?v=141';
+import { RARITIES, rarityWeight, oddsOf } from './rarity.js?v=141';
 
 // 一张卡改的是哪块表
 function tableFor(scope, stats, wstats) {
@@ -674,6 +674,41 @@ const UNIQUE = [
     title: '纸立牌同时 +1 块',
     desc: '手里多一块牌（能重复拿）—— 一面挡正面、一面挡侧面，站定打也不怕被两边夹',
   },
+  // ---------------- 裁纸刀卡（第 124 块，第十四关专属法器） ----------------
+  // 买到「裁纸刀」后才会进池子（weightOf 里拦：opts.guillotineOwned）。
+  // 四个通道：切的比例 / 射程 / 冷却 / 刀口宽度；up.guillotine 转交 guillotine.applyCard()。
+  {
+    id: 'guillotineDeep', tag: 'atk', glyph: '🗡', name: '再磨一磨',
+    rarity: 0,
+    w0: 0.58, gw: +0.015,
+    guillotine: { stat: 'cut', flat: 0.05 },
+    title: '裁纸刀切的百分比 +5%',
+    desc: '刀口更深（能重复拿）—— 从 30% 磨到 35%、40%，对大块头是纯收益',
+  },
+  {
+    id: 'guillotineLong', tag: 'mov', glyph: '📏', name: '接长刀柄',
+    rarity: 1,
+    w0: 0.50, gw: +0.016,
+    guillotine: { stat: 'range', flat: 1.0 },
+    title: '裁纸刀射程 +1 格',
+    desc: '够得更远（能重复拿）—— 站在近战范围外切它一刀，比贴脸安全得多',
+  },
+  {
+    id: 'guillotineCd', tag: 'mov', glyph: '⏱', name: '磨快了',
+    rarity: 2,
+    w0: 0.38, gw: +0.020,
+    guillotine: { stat: 'cd', flat: 3.0 },
+    title: '裁纸刀冷却 −3 秒',
+    desc: '下刀更快（能重复拿，最低 12 秒）—— 一轮围上来能切第二次',
+  },
+  {
+    id: 'guillotineWide', tag: 'atk', glyph: '📐', name: '加宽刀口',
+    rarity: 1,
+    w0: 0.48, gw: +0.016,
+    guillotine: { stat: 'width', flat: 0.6 },
+    title: '刀口宽度 +0.6 格',
+    desc: '一刀切得更宽（能重复拿）—— 排成一片冲过来的怪，一刀全在刀口里',
+  },
 ];
 
 // 把「族 × 三档」摊平成一张张卡。小档沿用原来的 id（老存档 / 老测试照旧认得）。
@@ -739,6 +774,8 @@ export function weightOf(up, round = 1, opts = {}) {
   if (up.mark && !opts.markOwned) return 0;
   // 第 123 块：纸立牌卡同理
   if (up.board && !opts.boardOwned) return 0;
+  // 第 124 块：裁纸刀卡同理
+  if (up.guillotine && !opts.guillotineOwned) return 0;
   if (up.needsWeapon && !opts.hasWeapon) return 0;
   const r = Math.max(1, round);
   return Math.max(0, (up.w0 ?? 1) + (up.gw ?? 0) * (r - 1));
@@ -787,7 +824,7 @@ export function rollChoices(rng = Math.random, opts = {}) {
 // wstats = 武器属性表：scope:'weapon' 的条目改它，其余改主角 stats。
 // weapon = 武器系统本身：只有「直接给一把剑」的卡（sword 字段）才需要它。
 // 返回 { src, changes }：changes 是精确的「选前 → 选后」（用于卡片/提示文案）。
-export function applyUpgrade(stats, up, serial = 0, wstats = null, weapon = null, golems = null, arrowRain = null, mines = null, latte = null, candle = null, mark = null, board = null) {
+export function applyUpgrade(stats, up, serial = 0, wstats = null, weapon = null, golems = null, arrowRain = null, mines = null, latte = null, candle = null, mark = null, board = null, guillotine = null) {
   // 第 107 块：傀儡卡不碰属性表，交给傀儡系统记账（golem.applyCard）
   if (up.golem) {
     const g = up.golem;
@@ -855,6 +892,16 @@ export function applyUpgrade(stats, up, serial = 0, wstats = null, weapon = null
     return {
       src: `upg:${up.id}:${serial}`,
       changes: [boardChange(bd, before)],
+    };
+  }
+  // 第 124 块：裁纸刀卡交给 guillotine.js 记账
+  if (up.guillotine) {
+    const gl = up.guillotine;
+    const before = guillotine ? guillotine.bonuses() : null;
+    if (guillotine) guillotine.applyCard(gl);
+    return {
+      src: `upg:${up.id}:${serial}`,
+      changes: [guillotineChange(gl, before)],
     };
   }
   // 剑阵这类「直接加一把剑」的卡：不碰属性表，交给武器系统上环
@@ -1110,8 +1157,29 @@ function boardChange(c, b) {
   };
 }
 
-export function previewUpgrade(stats, up, wstats = null, weapon = null, golems = null, arrowRain = null, mines = null, latte = null, candle = null, mark = null, board = null) {
-  if (up.golem) {
+// ---- 第 124 块：裁纸刀卡的 changes 文案（apply 与 preview 共用）----
+// 卡里的键（cut/range/width/cd）和 bonuses() 里的键同名，但 cut 在卡里是
+// **小数**（0.05）、在 bonuses() 里是**百分数**（30）。这里统一按百分数显示。
+function guillotineChange(c, b) {
+  const b0 = b || { cut: 30, range: 6.0, width: 3.4, cdMax: 30.0 };
+  const meta = {
+    cut: { name: '裁纸刀切口', from: b0.cut, fmt: (v) => `${v.toFixed(0)}%`, dflt: 0, scale: 100 },
+    range: { name: '裁纸刀射程', from: b0.range, fmt: (v) => `${v.toFixed(1)} 格`, dflt: 0, scale: 1 },
+    width: { name: '刀口宽度', from: b0.width, fmt: (v) => `${v.toFixed(1)} 格`, dflt: 0, scale: 1 },
+    cd: { name: '裁纸刀冷却', from: b0.cdMax, fmt: (v) => `${v.toFixed(1)} 秒`, dflt: 12.0, scale: 1 },
+  };
+  const stat = meta[c.stat] ? c.stat : 'cut';
+  const mm = meta[stat];
+  const flat = (c.flat || 0) * mm.scale;
+  const to = stat === 'cd' ? Math.max(mm.dflt, mm.from - flat) : mm.from + flat;
+  return {
+    key: `guillotine_${stat}`, scope: 'guillotine', name: mm.name,
+    from: mm.from, to, fromText: mm.fmt(mm.from), toText: mm.fmt(to),
+    text: `${mm.fmt(mm.from)} → ${mm.fmt(to)}`,
+  };
+}
+
+export function previewUpgrade(stats, up, wstats = null, weapon = null, golems = null, arrowRain = null, mines = null, latte = null, candle = null, mark = null, board = null, guillotine = null) {  if (up.golem) {
     const g = up.golem;
     const b = golems ? golems.bonuses() : null;
     return [golemChange(g, b)];
@@ -1146,6 +1214,11 @@ export function previewUpgrade(stats, up, wstats = null, weapon = null, golems =
   if (up.board) {
     const b = board ? board.bonuses() : null;
     return [boardChange(up.board, b)];
+  }
+  // 第 124 块：裁纸刀卡 —— 同一个 guillotineChange
+  if (up.guillotine) {
+    const b = guillotine ? guillotine.bonuses() : null;
+    return [guillotineChange(up.guillotine, b)];
   }
   if (up.sword) {
     const n = weapon ? weapon.count : 0;

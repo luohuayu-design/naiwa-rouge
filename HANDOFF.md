@@ -1,11 +1,11 @@
 # 蛙步 · 夜行 —— 交接文档
 
 > 新对话从这里开始读，**别翻聊天记录**。要动手只读 §1 铁律 + §2 当前状态 + §3 坑。
-> 最后更新 2026-10-30 · 线上 **v=139** · 第 122 块。更早的细节查 `git log` / `git show`，本文件不重复。
+> 最后更新 2026-10-31 · 线上 **v=141** · 第 124 块。更早的细节查 `git log` / `git show`，本文件不重复。
 
 ## 0. 一句话
 
-Three.js r160 的单摇杆幸存者肉鸽《蛙步 · 夜行》：纯静态站点（无构建、无 CDN、零依赖、无 importmap），GitHub Pages 发布，**手机浏览器兼容是硬约束**。玩家是一只会走路的奶蛙，**十二关 × 20 回合**。
+Three.js r160 的单摇杆幸存者肉鸽《蛙步 · 夜行》：纯静态站点（无构建、无 CDN、零依赖、无 importmap），GitHub Pages 发布，**手机浏览器兼容是硬约束**。玩家是一只会走路的奶蛙，**十四关 × 20 回合**。
 
 | 项 | 值 |
 | --- | --- |
@@ -30,7 +30,7 @@ Three.js r160 的单摇杆幸存者肉鸽《蛙步 · 夜行》：纯静态站�
 6. **品质是抽签权重**（`rarity.js` 唯一真相源），不是先摇档再挑卡。
 7. **`handleRoundClear` 只能存在一份**（重复声明静默覆盖）。
 8. **一切局内成长必须在 `resetRunState()` 里有一条**；但 `resetRunState` 只在 `beginGame` 调，`resumeGame` 绝不调（读档是整表覆盖）。
-9. **发版同时 bump 两处版本号**：`index.html` 与所有 `js/*.js` 的 `?v=N`（本轮 149 处），漏一处 = 本地好线上炸。
+9. **发版同时 bump 两处版本号**：`index.html` 与所有 `js/*.js` 的 `?v=N`（本轮 159 处），漏一处 = 本地好线上炸。
 10. **新内容「先推送再交给用户测」**：本地回归绿 → 立刻 commit & push → 交「线上链接 + 改了什么 / 怎么试」。
 11. **`README.md` 与 `HANDOFF.md` 必须与实况同步。**
 12. **数值改动必须跑回归**（§6）；改用户可见文案同样要跑（老套件正则写死了数字）。
@@ -39,9 +39,28 @@ Three.js r160 的单摇杆幸存者肉鸽《蛙步 · 夜行》：纯静态站�
 
 ---
 
-## 2. 当前状态（v=139 · 第 122 块）
+## 2. 当前状态（v=141 · 第 124 块）
 
-### 2.1 第 122 块：回合挑战 + 三选一刷新
+### 2.1 第 124 块：第十四关「钟楼打样间」+ 裁切刀 + 裁纸刀
+
+**场地「裁切刀」**（`js/cutter.js`，零 import 引擎，和 `traffic / track / fog` 同款）
+- 相位机 `idle → warn(1.25s) → slice(0.22s) → recover(0.55s)`；`slots = [-7, -2.3, 2.3, 7]` 轮换 + 每换位翻一次横竖（八种组合）；`gap 5.2 → gapMin 3.1` 随回合加速；`roundNo >= 15` 起偶尔一次落两刀。
+- 判定与画面同源：`cutterBandHit(x, z, axis, slot, width, radius)` 是导出纯函数，预警带、刀光、夹具全用它；**`place(s, w)` 只读 `s.axis / s.slot`，不读全局** —— 双刀时读全局两条会叠成一条（本块自己抓到的坑）。
+- 伤害：玩家 `hurtPlayer(maxHp * 0.12, 'cut')` —— **用 `'cut'` 不用 `'hazard'`**，否则「绝缘体」法器会顺带免疫掉整关机制；怪 `max(enemyBase + round*1.4, maxHp * 0.22)`，**怪也吃这一刀**。
+
+**两只新怪**（`enemy.js`）
+- **错版** `misprint`：死时 `die()` 里**先 `spawnSplitlings` 再 `onDeath`**（反过来先记账，收尾那一下会看到「场上空了」提前放下一波）。孩子 `splitDone = true` + 45% 血 + 0.62 体型，**只分一代**。
+- **校对的** `proofreader`：`damage: 0`，读条完给「**血最厚且没被批注**」的怪挂 `proofed = {t: 8, dmgMul: 1.35, speedMul: 1.2}`；和加急袋鼠正好相反（袋鼠挑「离玩家最近」，惩罚你正在打的）。键名是 `proof` **不是 `mark`** —— 项目里已有一件叫「落款」的法器（`mark.js`）。
+- 减伤链：批注是**乘法、乘在 `red` 之后**（`dealt = amount * (1 - red)` 之后再 `*= dmgMul`），折进加法链会被 0.95 上限吃掉。
+
+**第 16 件法器「裁纸刀」**（`js/guillotine.js`，键 `0` —— 技能栏 1~9 已满）
+- 面前 6/7/8 格、宽 3.4 的直线横切，CD 30/26/22；伤害 `max(6, maxHp * 0.30/0.40/0.50 * decay) * amp.dmg` —— **按最大生命百分比**，固定伤害会被立牌正面减伤 / 称量官叠层吃掉。
+- 同一目标重复命中 `Math.pow(0.55, n-1)`、下限 25%（`e.guillotineHits`），防「一直按把 BOSS 削成纸」。
+- 接口与 `board.js` 同签名（`drop / update / reset / ready / cdLeft / range / cutPct / hits / totalCuts / snapshot / restore`），商店 34 币买断 + 磨刀石 +8% + 握柄 +0.8 格。
+
+**接线**：`wave.js` 的 `LEVEL_14`（arena 19、`scale 1.65 / 2.00`、18 种怪、`cutter` 字段）+ `LEVELS_BY_ID[14]`；`main.js` 的 `LEVELS` 表 + import；`scene.js` 新增 `press` 主题（`makePressTexture()`）；`story.js` 的 s14 绑第十四关；`skills.js` 第 10 格；`upgrade.js` 四张卡 + `guillotineChange()`；`shop.js` 三件货。
+
+### 2.2 上一块：第 122 块（回合挑战 + 三选一刷新，细节见 git log）
 
 **回合挑战**（`js/challenge.js` 纯数据纯函数，零 DOM 零业务 import；接线全在 `main.js`）
 - 每关 `planRounds()` 从 `[3, rounds-1]` 无放回抽 **2 个回合**（独立 `chal` 随机流），**回合开始前**弹卡。
@@ -56,8 +75,9 @@ Three.js r160 的单摇杆幸存者肉鸽《蛙步 · 夜行》：纯静态站�
 
 **生命周期**：效果 src 分别是 `chal` / `boost`，`clearRoundBuffs()` 里成对撤；`resumeGame` 成对抹 + `weapon.setMuted(false)` + `applySkillCdFactor(1)`；`resetRunState` 归零全部计数。存档带 `chal: {plan, used, seen}`。
 
-### 2.2 最近几块（一行一块）
+### 2.3 最近几块（一行一块）
 
+- **124 v=141**：第十四关「钟楼打样间」—— 裁切刀（`cutter.js`，全宽横切 + 怪也吃）+ 错版（死后裂两只，只分一代）/ 校对的（批注血最厚的怪）+ 第 16 件法器「裁纸刀」（`guillotine.js`，按最大生命百分比）；怪 32 / 卡 117 / 商店 46 / 法器 16 / 技能 10 / 模块 68。
 - **123 v=140**：第十三关「焦土操场」—— 环形跑道（`track.js`，玩家 ×1.35 / 怪 ×1.25 + 轻推力）+ 立牌（正面 −75%，`turnRate` 0.9）+ 取景的（锥形快门 ±0.78）+ 第 15 件法器「纸立牌」（`board.js`，挡投掷物 + 挡快门）；四只手搓怪全换成下载 glb（`sourceHeight` 改**包围盒最大边**、平摊模型加 `tiltX`）；补上第 12 关漏的 `main.js` 选关入口。
 - **122 v=138**：回合挑战 + 三选一刷新（见上）。数量未变，老套件只改 4 处源码正则（56/76/85/91）。
 - **121 v=137**：连杀断连改接战斗秒表 `elapsed`（`createHeat({now: () => elapsed})`），商店 / 对话 / 背包停多久都不再掉热度。
@@ -67,9 +87,9 @@ Three.js r160 的单摇杆幸存者肉鸽《蛙步 · 夜行》：纯静态站�
 - **116/117**：第十二关「三幻神驿站」+ 车流 + 加急袋鼠 + 拿铁；声音开关移设置、删剑转、连杀改屏幕中央浮现。
 - 更早：查 `git log --oneline`。
 
-### 2.3 规模数字（改数值断言必看）
+### 2.4 规模数字（改数值断言必看）
 
-关卡 **13** · 怪 **30**（**30 个 glb，零复用，没有一只是手搓的**；图鉴 **30** webp）· 升级卡 **113** · 商店 **43** · 法器 **15** · 技能键 **9** · 火种簇 **23**（核心 9）· 成就 **118**（全清 8280）· 事件 **131** · 每日任务池 **39** · 礼包码 51 · 火种卡 16 · 诅咒 6。
+关卡 **14** · 怪 **32**（**32 个 glb，零复用，没有一只是手搓的**；图鉴 **32** webp）· 升级卡 **117** · 商店 **46** · 法器 **16** · 技能键 **10** · 火种簇 **23**（核心 9）· 成就 **118**（全清 8280）· 事件 **131** · 每日任务池 **39** · 礼包码 51 · 火种卡 16 · 诅咒 6。
 
 ---
 
@@ -139,23 +159,23 @@ Three.js r160 的单摇杆幸存者肉鸽《蛙步 · 夜行》：纯静态站�
 
 ---
 
-## 4. 文件地图（js/，66 个模块，只列要动的）
+## 4. 文件地图（js/，68 个模块，只列要动的）
 
 | 文件 | 职责 |
 | --- | --- |
 | `main.js`（~1 万行） | 主循环 + 所有 UI 面板 + 各系统接线 + `__game` 钩子。**改前先 grep 定位** |
 | `wave.js` | 20 回合编排、`roundScale`、`DIFFS`、升级/商店节点、吃 `roundMod` 四项（hp/dmg/speed/haste） |
 | `stats.js` / `weaponStats.js` | 两套属性引擎（`(base+Σflat)×(1+Σpct)×Πmul`） |
-| `enemy.js` | 28 只怪的行为、`CLIP_FAMILIES`、`cdOf`、`haste`、冰冻/定身、并联体、称量官、看守五招、墨线、加急袋鼠、`moveToward`（嘲讽收口） |
+| `enemy.js` | 32 只怪的行为、`CLIP_FAMILIES`、`cdOf`、`haste`、冰冻/定身、并联体、称量官、看守五招、墨线、加急袋鼠、错版分裂、校对批注、`moveToward`（嘲讽收口） |
 | `weapon.js` | 环剑 3 把 + 6 元素剑（除铁剑外群伤 7 格）+ 万剑齐发；`setMuted()` / `holdOrbit()` |
-| `skills.js` | 技能注册表 8 格（万剑 / 箭雨 / 回血 / 傀儡 / 墨丸 / 拿铁 / 守夜烛 / 落款） |
-| `upgrade.js` | 109 张升级卡、`weightOf` 门控、`*Change()` 文案函数 |
+| `skills.js` | 技能注册表 10 格（万剑 / 箭雨 / 回血 / 傀儡 / 墨丸 / 拿铁 / 守夜烛 / 落款 / 纸立牌 / 裁纸刀，最后两格的键是 `9` / `0`） |
+| `upgrade.js` | 117 张升级卡、`weightOf` 门控、`*Change()` 文案函数 |
 | `challenge.js` | **第 122 块**：挑战九条 + 规划 + 奖励池，纯数据纯函数 |
-| `relics.js` + `mine/latte/golem/candle/mark.js` | 14 件法器引擎（各 3 级，独立 `reset / applyCard / snapshot`） |
-| `shop.js` / `campfire.js` / `boons.js` / `curses.js` / `metaShop.js` | 商店 40 件 / 篝火 9 簇 / 火种 16 卡 / 诅咒（夜行 6 + 刷新减成 10）/ 盲盒 |
+| `relics.js` + `mine/latte/golem/candle/mark/board/guillotine.js` | 16 件法器引擎（各 3 级，独立 `reset / applyCard / snapshot`） |
+| `shop.js` / `campfire.js` / `boons.js` / `curses.js` / `metaShop.js` | 商店 46 件 / 篝火 9 簇 / 火种 16 卡 / 诅咒（夜行 6 + 刷新减成 10）/ 盲盒 |
 | `events.js + eventsExtra + eventsSide + repEvents` | 131 个事件（99 随机 + 10 番外 + 13 连锁 + 9 民心），`TEMP_SCALE` |
-| `deposit.js` / `hazards.js` / `traffic.js` / `fog.js` | 第八关寄存柜 / 场地机关 / 第十二关车流 / 第十一关雾（后三者零 import，纯注入） |
-| `achievements.js` / `dailyQuest.js` / `signin.js` / `codex.js` / `story.js` | 118 成就（手动领取）/ 每日 39 条 / 签到 / 图鉴 / 18 夜主线（12 夜已绑关） |
+| `deposit.js` / `hazards.js` / `traffic.js` / `fog.js` / `track.js` / `cutter.js` | 第八关寄存柜 / 场地机关 / 第十二关车流 / 第十一关雾 / 第十三关跑道 / 第十四关裁切刀（车流之后全是零 import，纯注入） |
+| `achievements.js` / `dailyQuest.js` / `signin.js` / `codex.js` / `story.js` | 118 成就（手动领取）/ 每日 39 条 / 签到 / 图鉴 / 18 夜主线（14 夜已绑关） |
 | `profile.js` / `runSave.js` / `saveIO.js` / `assetUrl.js` / `sw.js`(根目录) | 档案聚合 / 存档读 / 导入导出（`NWSZ1:` 压缩码）/ 给 glb 拼 `?v=` / Service Worker |
 
 ---
@@ -174,6 +194,8 @@ chal.list() / plan() / used() / active / force(id,round) / accept() / refuse() /
 chal.ask{open,round,id} / reward{open,round,items} / takeReward('coin'|'card'|'boost')
 chal.dmg / chal.noSkill / chal.boost{round,info,n}        ← n 是条数（info 名字自带「·」）
 traffic.list/config/spawn · latte.drop/count/bonuses · fog{on,count,spawn,heat,clearPatches}
+track{on,spec,at,enemyMul} · board{owned,count,blockShot,drop} · grantBoard(lv)
+cutter{on,spec,state,trigger,hits,reset} · guillotine{owned,ready,cdLeft,cdMax,range,width,cutPct,progress,hits,totalCuts,drop} · grantGuillotine(lv)
 ```
 > `chal.plan()` / `used()` 是**函数**不是属性；调试口一律回扁平值（见坑 35）。
 
@@ -182,7 +204,7 @@ traffic.list/config/spawn · latte.drop/count/bonuses · fog{on,count,spawn,heat
 ## 6. 发版与测试
 
 - **推送**：`git -c http.proxy=http://127.0.0.1:7897 push` → `git status -sb` 验证 → `curl --noproxy '*'` 连查两次版本号（Pages 约 1 分钟生效）。
-- **回归**：`sh .tmp-94-runall.sh`（**62 套 Node**，只报挂了的）；CDP 按需单套串行（第 122 块为 `.tmp-122-cdp.js` 59 项）。
+- **回归**：`sh .tmp-94-runall.sh`（**64 套 Node**，只报挂了的）；CDP 按需单套串行（第 124 块为 `.tmp-124-cdp.js` 47 项）。
 - **已知黄账（别浪费时间）**：`camp-test` 84/22、`boon-test` 133/13、`eventui-test` 35/2、`block18` 34/1、`start-test` 33/15、`block30-cdp` 42/8、`ui-test` 15/7、`block54-cdp` 签到浮层 z-index。
 - 老套件 `ok()` 签名不统一：`block41` 是 `ok(name, cond)`，`block59/64/65/66/67/70` 是 `ok(cond, name)` —— 写新套件先看日志格式。
 
@@ -192,7 +214,7 @@ traffic.list/config/spawn · latte.drop/count/bonuses · fog{on,count,spawn,heat
 
 用户 2026-10-21 定：**不做多角色，其他都能做，只要局外因素对局内影响不过大**。
 
-- [ ] **第十四关起**（`story.js` 还有 5 夜 `levelId:null`；模板照 `LEVEL_13` 抄，带场地机制的关加 `track` / `traffic` / `fog` 字段，**并且 `wave.js` 与 `main.js` 两处都要加**）
+- [ ] **第十五关起**（`story.js` 还有 4 夜 `levelId:null`；模板照 `LEVEL_14` 抄，带场地机制的关加 `track` / `traffic` / `fog` / `cutter` 字段，**并且 `wave.js` 与 `main.js` 两处都要加**）
 - [ ] 更多武器 / 技能（技能栏还剩几格）
 - [ ] 性能优化（怪物合批 / 假阴影 / 视锥剔除）—— **等用户点头再动**
 - [x] 主菜单 3D 背景 —— 用户 2026-10-28 明确「暂时不做了」

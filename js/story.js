@@ -1704,7 +1704,7 @@ export const STORY_CHAPTERS = [
   },
 
   {
-    id: 's14', no: 14, act: 3, levelId: null, atRound: null,
+    id: 's14', no: 14, act: 3, levelId: 14, atRound: 2,   // 第 124 块：接第十四关「钟楼打样间」
     icon: '⚙', title: '钟楼里没有钟', who: '旧机器', place: '钟楼一层',
     story:
       '钟楼里没有钟。\n'

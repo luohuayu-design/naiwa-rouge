@@ -26,9 +26,9 @@
 // 第 11 块：每件货都带 rarity（0 普通 ~ 4 传说），店里按品质加权抽取 ——
 // 幸运越高，摆出来的货越往金/红那一头走（见 rarity.js）。
 // ============================================================
-import { rarityWeight } from './rarity.js?v=140';
-import { TURRET } from './turret.js?v=140';
-import { RELIC_DEFS } from './relics.js?v=140';
+import { rarityWeight } from './rarity.js?v=141';
+import { TURRET } from './turret.js?v=141';
+import { RELIC_DEFS } from './relics.js?v=141';
 
 export const SHOP_ITEMS = [
   // ---------------- 生命药水（第 13 块起：买进背包，作战中随时用） ----------------
@@ -348,6 +348,30 @@ export const SHOP_ITEMS = [
     glyph: '🔩', name: '三角支架',
     desc: '纸立牌同时多立一块（+1 上限，冷却不变）。一局只能买一次 —— 一面挡箭、一面挡骨刀。',
   },
+  // ---------------- 第十四关新增（第 124 块）：裁纸刀 ----------------
+  // 场地是「按时落下的裁切刀」，这一件是「你手里那把」：主动、直线、按百分比切。
+  // 同样 relic 本体 + 两件一局一次的买断。
+  {
+    id: 'buyGuillotine', type: 'relic', relic: 'guillotine', price: 34, needRound: 8, needLevel: 14,
+    rarity: 3,
+    glyph: '🗡', name: '裁纸刀',
+    desc: '抢下机器裁纸的那把刀：技能栏多一颗「裁纸刀」。按下把身前 6 格、宽 3.4 格里的怪横切一刀，'
+      + '命中掉它最大生命的 30% 并打退 —— 减伤再高也拦不住（基数是血量，不是你的攻击）。'
+      + '冷却 30 秒。再买可升级（最多 3 级，三级切 50%、射程 8 格）。',
+  },
+  // 裁纸刀的两件买断强化
+  {
+    id: 'buyHone', type: 'guillotine', guillotine: 'hone', price: 22, needRound: 5, needLevel: 14,
+    rarity: 2,
+    glyph: '🪨', name: '磨刀石',
+    desc: '裁纸刀的切口更深：切的百分比 +8%（30% → 38%）。一局只能买一次。',
+  },
+  {
+    id: 'buyGrip', type: 'guillotine', guillotine: 'grip', price: 24, needRound: 9, needLevel: 14,
+    rarity: 2,
+    glyph: '🧤', name: '缠柄皮',
+    desc: '裁纸刀的射程 +0.8 格（6 → 6.8），站在更远的地方也能切到。一局只能买一次。',
+  },
 ];
 
 // 第 118 块：付**夜行骨币**刷新（用户定案「本次进店递增、离店重置」）。
@@ -413,6 +437,12 @@ export function itemLocked(item, ctx = {}) {
     if (!ctx.boardLevel) return '要先拥有「纸立牌」';
     if (item.board === 'oil' && ctx.boardOil) return '这一局已经买过了';
     if (item.board === 'brace' && ctx.boardBrace) return '这一局已经买过了';
+  }
+  // 第 124 块：裁纸刀的两件买断货
+  if (item.type === 'guillotine') {
+    if (!ctx.guillotineLevel) return '要先拥有「裁纸刀」';
+    if (item.guillotine === 'hone' && ctx.guillotineHone) return '这一局已经买过了';
+    if (item.guillotine === 'grip' && ctx.guillotineGrip) return '这一局已经买过了';
   }
   return null;
 }

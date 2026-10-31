@@ -25,15 +25,15 @@
 // 第四关三只（wraith/leaper/mender，第 35 块，第 52 块换模型），
 // 各自在下面 ENEMY_TYPES 里有详细注释。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=140';
-import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=140';
-import { clone as cloneSkinned } from '../lib/jsm/utils/SkeletonUtils.js?v=140';
-import { distance2D } from './stats.js?v=140';
-import { createRangeRing } from './rangeRing.js?v=140';
-import { withV } from './assetUrl.js?v=140';
+import * as THREE from '../lib/three.module.js?v=141';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=141';
+import { clone as cloneSkinned } from '../lib/jsm/utils/SkeletonUtils.js?v=141';
+import { distance2D } from './stats.js?v=141';
+import { createRangeRing } from './rangeRing.js?v=141';
+import { withV } from './assetUrl.js?v=141';
 // 第 114 块：誊录员落笔 / 收账人翻账簿的提示音（以前这个文件不放音效，
 // 忘了 import 会在落笔那一帧抛 ReferenceError，整帧 AI 全断 —— 别省这一行）
-import audio from './audio.js?v=140';
+import audio from './audio.js?v=141';
 
 // KayKit 模型正面朝 +Z；如果哪天换模型发现怪倒着走，把这里改成 Math.PI
 export const ENEMY_MODEL_YAW = 0;
@@ -1580,6 +1580,12 @@ export const ENEMY_TYPES = {
   // 走出它的取景框它就空拍一次（冷却缩一半，它还得重新对焦）。
   // 和弓手的区别：弓手的红圈钉在地上、惩罚「站着不动」；
   // 取景的锥子钉在它的朝向上、惩罚「一直站在它对面」。
+  // 取景的 —— 操场上那台架在三脚架上的机器，一直在对着你拍。
+  // 它不追人：进 7.5~12 格这个环带就站定，举机取景 1.5 秒，
+  // 读满时**只打正前方 45° 锥内**的目标。所以躲法很明确 —— 往侧面走，
+  // 走出它的取景框它就空拍一次（冷却缩一半，它还得重新对焦）。
+  // 和弓手的区别：弓手的红圈钉在地上、惩罚「站着不动」；
+  // 取景的锥子钉在它的朝向上、惩罚「一直站在它对面」。
   camera: {
     name: '取景的',
     file: 'assets/monsters/camera.glb',
@@ -1607,6 +1613,88 @@ export const ENEMY_TYPES = {
     selfDestruct: false,
     color: 0xdfd6bd,
     glow: { color: 0x4a4430, intensity: 0.30 },
+    anim: { walk: 'idle', idle: 'idle', cast: 'attack', death: 'death', spawn: 'spawn' },
+  },
+
+  // ============================================================
+  // 第十四关「钟楼打样间」（第 124 块）两只
+  // ============================================================
+  // 错版 —— 机器吐出来的第一百零四张：圆肚子、腿短、嘴咧得太开，
+  // 眼睛位置偏了两个像素。它和别的怪唯一的不同是**死法**：
+  // 一刀砍下去，它从中间裂成两张半成品，两张都还活着。
+  // 所以「先点掉它」这个直觉在它身上是错的 —— 你砍得越快，场上越多。
+  // 解法是**别用刀背砍**：分裂出来的小错版只有 45% 的血、0.62 倍体型，
+  // 一刀能带走；真正难缠的是「用它当挡箭牌冲进来」的那一群。
+  misprint: {
+    name: '错版',
+    file: 'assets/monsters/misprint.glb',
+    // 源模型：Quaternius 的「Squidle」（CC0，poly.pizza）—— 圆肚子、一对长歪的角、
+    // 多印出来的肉翼、嘴里还吐着舌头。它本来就是「一只长错了的圆胖生物」，
+    // 正好对上剧情那句「纸上是一只奶龙。不太对的那种奶龙」。
+    // 归一化：它是蒙皮模型（KayKit 系骨骼 + Flying_Idle 动画），
+    // sourceHeight 用正交相机实测的 Idle 身高（.tmp-codex-shots.js 打印的 maxY 反推）。
+    sourceHeight: 2.80,
+    height: 1.35,
+    footY: 0.0,
+    hover: 0.42,           // 它一直在飞（Flying_Idle），贴着地面浮起来才对
+    radius: 0.44,
+    hp: 7.0,
+    armor: 0.02,
+    speed: 1.12,
+    attackRange: 1.75,
+    keepDistance: 0,
+    damage: 2,
+    attackInterval: 2.0,
+    windup: 0.45,
+    attackDuration: 0.85,
+    // 分裂：只在第一代分裂（splitDone 一置就不再分），
+    // 小的用 0.62 倍体型 + 45% 血 —— 不至于变成「砍一刀变四只」的雪球。
+    split: { type: 'misprint', count: 2, hpPct: 0.45, scale: 0.62, radius: 1.15, color: 0xd8c7a0 },
+    spawnTime: 0.7,
+    deathTime: 1.0,
+    selfDestruct: false,
+    color: 0xd8c7a0,       // 纸浆本色
+    tint: 0xf0e4c8,
+    glow: { color: 0x3c3626, intensity: 0.30 },
+    anim: { walk: 'idle', idle: 'idle', cast: 'attack', death: 'death', spawn: 'spawn' },
+  },
+
+  // 校对的 —— 打样间里那个拿着红笔的人：它不打人，它给别的怪**批注**。
+  // 被批注的怪伤害 ×1.35、移速 ×1.20，持续 8 秒，头上顶一圈红笔圈。
+  // 它和加急袋鼠的区别在「挑谁」：袋鼠挑**离你最近**的（惩罚你正在打的那只），
+  // 校对的挑**场上血最厚的**（惩罚你放着不管的那只），所以清场顺序不同。
+  // 打断方式一样：走出它的作业半径 / 把它打死 —— 读条立刻断。
+  proofreader: {
+    name: '校对的',
+    file: 'assets/monsters/proofreader.glb',
+    sourceHeight: 12.96,   // 源模型（obj，单位是厘米级）包围盒高
+    height: 1.95,
+    footY: 0.0,
+    radius: 0.50,
+    hp: 5.5,
+    armor: 0.06,
+    speed: 0.98,
+    attackRange: 8.5,
+    keepDistance: 5.0,
+    damage: 0,
+    attackInterval: 5.8,
+    windup: 1.10,
+    attackDuration: 1.75,
+    // 批注：给场上「血最厚且没被批注」的那只挂红圈。
+    // ⚠️ 键名叫 proof 不叫 mark —— 项目里已经有一件叫「落款」的法器（mark.js），
+    // 两个东西都跟「标记」有关但语义完全不同（那个是你给怪盖印，这个是怪给怪批注）。
+    proof: {
+      time: 8.0,
+      dmgMul: 1.35,
+      speedMul: 1.20,
+      color: 0xd8412f,
+      ringColor: 0xff5a44,
+    },
+    spawnTime: 0.9,
+    deathTime: 1.2,
+    selfDestruct: false,
+    color: 0xe8e2d4,       // 白衬衫
+    glow: { color: 0x40382a, intensity: 0.28 },
     anim: { walk: 'idle', idle: 'idle', cast: 'attack', death: 'death', spawn: 'spawn' },
   },
 };
@@ -2567,6 +2655,13 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
       filled: null,       // 收件人填的名：{ cls: 'phys'|'elem', t }（t = 剩余秒数）
       filledRing: null,   // 被填名的怪头上那个空白框（程序化）
       hasted: null,       // 袋鼠挂的「加急」：{ t, hasteMul, speedMul }（t = 剩余秒数）
+      // 第 124 块：校对的挂的「批注」：{ t, dmgMul, speedMul }。
+      // 和 hasted 分开两个字段（一个改出手/移速、一个改**受到的伤害**），
+      // 共用一套字段会让「加急 + 批注」叠不上去，也会让调试口读不出谁挂了什么。
+      proofed: null,
+      proofRing: null,    // 批注的红笔圈（按需建，挂在 root 上）
+      splitDone: false,   // 错版：分裂过了没有（只分一代）
+      guillotineHits: 0,  // 裁纸刀：这一局被切过几次（伤害递减用，见 guillotine.js）
       mirrorT: 0,         // 照影：下一次「重照」的倒计时
       waitT: null,        // 等的那个：还剩多少秒活过来
       waitCalls: 0,       // 等的那个：已经报过几次时
@@ -2690,6 +2785,16 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
       root.add(e.waitRing.mesh);
       e.waitRing.setVisible(false);
     }
+    // 第 124 块：校对的 —— 同一套读条环，颜色换成红笔的红
+    if (cfg.proof) {
+      e.waitRing = createRangeRing({
+        radius: 1.5, color: cfg.proof.color,
+        opacity: 0.55, pulse: 0.0, y: cfg.hover + cfg.height + 0.32,
+      });
+      e.waitRing.setOnTop(true);
+      root.add(e.waitRing.mesh);
+      e.waitRing.setVisible(false);
+    }
     // 第 55 块：新怪第一次上场时通报一声 —— main.js 据此冻结世界、弹「它怎么打人」的信息卡。
     // 放在 push 之后：回调里就看得见这只怪已经在场上了（测试也靠这点断言）。
     if (onSpawn) onSpawn(e);
@@ -2765,7 +2870,11 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     }
     const red = Math.min(0.95, (e.auraArmor || 0) + (e.namedArmor || 0) + faceArmor
       + (e.shieldUp && e.cfg.shield ? e.cfg.shield.reduce : 0));
-    const dealt = (red > 0 ? amount * (1 - red) : amount);
+    // 第 124 块：被校对的批注过的怪**吃更多伤害**（乘法，作用在减伤之后）——
+    // 批注改的是「你打它有多疼」，不是「它有多硬」，所以不能折进 red 那条加法链
+    // （折进去会被 0.95 的上限吃掉，也会和护甲互相干扰）。
+    let dealt = (red > 0 ? amount * (1 - red) : amount);
+    if (e.proofed && e.proofed.t > 0) dealt *= e.proofed.dmgMul;
     e.hp -= dealt;
     if (!opts.dot) e.flashT = 0.1;
     e.bar.spr.visible = true;
@@ -2829,10 +2938,17 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     if (e.cfg.weigh) clearWeigh(e);
     // 跟随玩家的霜牢环：主祭一倒环就消（不挂在它身上，得手动收）
     if (e.auraRing && e.cfg.aura && e.cfg.aura.followPlayer) e.auraRing.mesh.visible = false;
+    // 第 124 块：批注的红圈随手收掉 —— 尸体上留一圈红环会让人以为它还没死
+    if (e.proofRing) e.proofRing.setVisible(false);
     hideChargeLine(e);   // 骨骑死在蓄力里：预警线立刻收掉（第 29 块）
     hideLeapRing(e);     // 雾猎狼死在蓄力里：落点红圈立刻收掉（第 35 块）
     if (e.cfg.leap) e.root.position.y = 0;   // 滞空时被打死：尸体落回地面
     if (fx) fx.death(e.pos, e.cfg.color);
+    // 第 124 块：错版死时分两张（只分一代，见 spawnSplitlings 的注释）。
+    // ⚠️ 必须排在 onDeath **之前**：onDeath 里会写击杀记账、算「这一波清完了吗」，
+    // 先分裂能保证那一刻场上还站着两只小的 —— 反过来先记账再分裂，
+    // 收尾的那一下会看到「场上空了」，把下一波提前放出来，孩子落进新一波里。
+    if (e.cfg.split && !e.splitDone) spawnSplitlings(e);
     if (onDeath) onDeath(e);
 
     if (e.cfg.selfDestruct) {
@@ -4309,6 +4425,13 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
       if (e.hasted.t <= 0) e.hasted = null;
     }
 
+    // ---- 第 124 块：校对的挂的「批注」倒计时 ----
+    // 到期把红圈一起收掉；圈是挂在 root 上的子节点，不手动 dispose 会跟着尸体留着。
+    if (e.proofed) {
+      e.proofed.t -= dt;
+      if (e.proofed.t <= 0) clearProof(e);
+    }
+
     // ---- 冰缓：减速倒计时（移速在 moveToward 里按 slowT 折算） ----
     if (e.slowT > 0) e.slowT -= dt;
 
@@ -4542,6 +4665,10 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     // 和收账人同一性质：damage 是 0（不打人），必须排在通用近战之前，
     // 否则掉进通用分支会贴脸近战。它躲在中距离给队友挂「加急」。
     if (e.cfg.rush) { handleKangaroo(e, dt, ctx, dx, dz, dist); return; }
+
+    // ---- 第十四关 · 校对的（第 124 块）----
+    // 和袋鼠同一性质：damage 是 0（它不打人），必须排在通用近战之前。
+    if (e.cfg.proof) { handleProofreader(e, dt, ctx, dx, dz, dist); return; }
 
     // ---- 雾鬼：隐身 / 显形循环（第 35 块；第 61 块改规则）----
     // 隐身时不可被索敌、打不着；**但贴脸不再强制显形**，只能等它自己露头。
@@ -5791,6 +5918,154 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     }
   }
 
+  // ============================================================
+  // 第十四关 · 错版（第 124 块）：死时分两张
+  // ============================================================
+  // 只在**第一代**分裂：老的一死立刻在脚下生两只小的（45% 血 / 0.62 体型），
+  // 小的 `splitDone = true`，再死就是真的死。
+  // 为什么给「一代」而不是无限分裂：无限分裂会让「清群」这件事在这个怪身上
+  // 变成反效果 —— 你打得越快，场上越多，最后整关被自己的输出淹掉。
+  // 一代 + 小体型的结果是：单只错版 = 三份血，但三份都很薄，
+  // 一刀（近战 AOE / 环剑）能一起带走，只有「留着不打」才会被它堆起来。
+  function spawnSplitlings(e) {
+    const sp = e.cfg.split;
+    const n = sp.count || 2;
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2 + Math.random() * 0.6;
+      const r = sp.radius || 1.1;
+      const m = spawn(sp.type, {
+        x: e.pos.x + Math.cos(a) * r,
+        z: e.pos.z + Math.sin(a) * r,
+      }, {
+        hpScale: (e.spawnScale && e.spawnScale.hp) ?? 1,
+        damageScale: (e.spawnScale && e.spawnScale.dmg) ?? 1,
+        hasteScale: (e.spawnScale && e.spawnScale.haste) ?? 1,
+        scale: sp.scale || 0.62,
+      });
+      if (!m) continue;
+      m.splitDone = true;
+      // 血量按「当前这只的**原始上限** × 45%」定，不按它掉到 0 的那一下算 ——
+      // 已经残血的老错版分出来的孩子不该更瘦（玩家看不出差别，只会觉得随机）。
+      const base = e.maxHp || e.cfg.hp || 7;
+      m.maxHp = Math.max(1, base * (sp.hpPct || 0.45));
+      m.hp = m.maxHp;
+      m.summonedBy = e;
+    }
+    if (fx) {
+      fx.ring(e.pos, { from: 0.2, to: (sp.radius || 1.1) + 0.9, color: sp.color, life: 0.4, opacity: 0.6, y: 0.05 });
+      fx.burst(e.pos, { color: sp.color, count: 12, speed: 2.4, life: 0.45, size: 0.12, y: 0.4, up: 1.5 });
+      fx.text({ x: e.pos.x, z: e.pos.z }, '印错', { color: '#f0e4c8', y: 1.7, size: 0.5 });
+    }
+  }
+
+  // ============================================================
+  // 第十四关 · 校对的（第 124 块）：不打你，它批注队友
+  // ============================================================
+  // 和加急袋鼠（第十二关）共用「读条 → 给另一只挂 buff」的骨架，但挑法不同：
+  //   袋鼠挑**离玩家最近**的 —— 惩罚你正在打的那只；
+  //   校对的挑**血最厚且没被批注**的 —— 惩罚你放着不管的那只。
+  // 于是清场顺序反过来：袋鼠逼你先杀袋鼠，校对的逼你先杀「大块头」。
+  function applyProof(target, m) {
+    if (!target || !hittable(target)) return false;
+    target.proofed = { t: m.time, dmgMul: m.dmgMul, speedMul: m.speedMul };
+    if (!target.proofRing) {
+      const ring = createRangeRing({
+        radius: (target.cfg.radius || 0.42) + 0.34, color: m.ringColor,
+        opacity: 0.85, pulse: 0.6, y: 0.06,
+      });
+      ring.setOnTop(true);
+      target.root.add(ring.mesh);
+      target.proofRing = ring;
+    }
+    if (target.proofRing) target.proofRing.setVisible(true);
+    if (fx) {
+      fx.ring({ x: target.pos.x, z: target.pos.z }, {
+        from: 0.3, to: 1.6, color: m.ringColor, life: 0.4, opacity: 0.7, y: 0.05,
+      });
+      fx.text({ x: target.pos.x, z: target.pos.z }, '批注', {
+        color: '#ff6a52', y: target.height * 1.15, size: 0.52,
+      });
+    }
+    return true;
+  }
+
+  function clearProof(e) {
+    e.proofed = null;
+    if (e.proofRing) {
+      e.proofRing.setVisible(false);
+    }
+  }
+
+  function performProofread(e, ctx) {
+    const m = e.cfg.proof;
+    // 只批注「血最厚且此刻没被批注」的活怪（不含自己、不含 Boss）
+    const pool = list.filter((o) => o !== e && hittable(o) && !o.proofed && !o.cfg.boss);
+    if (!pool.length) {
+      if (fx) fx.ring(e.pos, { from: 0.3, to: 1.1, color: m.color, life: 0.3, opacity: 0.4, y: 0.06 });
+      return null;
+    }
+    let best = pool[0];
+    for (const o of pool) if ((o.maxHp || 0) > (best.maxHp || 0)) best = o;
+    applyProof(best, m);
+    return best;
+  }
+
+  function handleProofreader(e, dt, ctx, dx, dz, dist) {
+    const m = e.cfg.proof;
+    if (e.state === 'attack') {
+      // 读条环：从大缩到小（和袋鼠 / 收账人一致的手感）
+      if (e.waitRing) {
+        const k = Math.min(1, e.t / Math.max(0.01, e.cfg.windup));
+        e.waitRing.setRadius(1.5 * (0.35 + 0.65 * (1 - k)));
+        e.waitRing.setVisible(true);
+      }
+      if (!e.hitDone && e.t >= e.cfg.windup) {
+        e.hitDone = true;
+        performProofread(e, ctx);
+        if (e.waitRing) e.waitRing.setVisible(false);
+      }
+      if (e.t >= e.cfg.attackDuration) {
+        e.state = 'chase';
+        e.t = 0;
+        e.attackCd = cdOf(e, e.cfg.attackInterval, 1.0, true);
+      }
+      return;
+    }
+    // 它自己不打人：贴太近就退（和袋鼠一样靠站位，不靠贴身）
+    if (dist < e.cfg.keepDistance) {
+      moveToward(e, -dx, -dz, dist, dt, ctx);
+      if (e.currentAnim !== e.cfg.anim.walk) {
+        e.currentAnim = e.cfg.anim.walk;
+        e.play(e.cfg.anim.walk, { fade: 0.2 });
+      }
+      return;
+    }
+    if (dist > e.cfg.attackRange) {
+      moveToward(e, dx, dz, dist, dt, ctx);
+      if (e.currentAnim !== e.cfg.anim.walk) {
+        e.currentAnim = e.cfg.anim.walk;
+        e.play(e.cfg.anim.walk, { fade: 0.2 });
+      }
+      return;
+    }
+    e.attackCd -= dt;
+    if (e.attackCd <= 0) {
+      e.state = 'attack';
+      e.t = 0;
+      e.hitDone = false;
+      e.currentAnim = e.cfg.anim.cast;
+      e.play(e.cfg.anim.cast, { once: true, fade: 0.1, duration: e.cfg.attackDuration });
+      if (e.waitRing) e.waitRing.setVisible(true);
+      if (fx) fx.ring(e.pos, { from: 0.2, to: 1.5, color: m.color, life: 0.3, opacity: 0.6, y: 1.4 });
+      audio.sfx('curse', { vol: 0.18 });
+      return;
+    }
+    if (e.currentAnim !== e.cfg.anim.idle) {
+      e.currentAnim = e.cfg.anim.idle;
+      e.play(e.cfg.anim.idle, { fade: 0.2 });
+    }
+  }
+
   function handleWeigher(e, dt, ctx, dx, dz, dist) {
     const cfg = e.cfg.weigh;
     // 第 91 块：它的上称节奏只吃**一半**的攻速成长（开方）。
@@ -6785,7 +7060,9 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     // 第 82 块：第九关「记名」叠层也给移速（每层 per.speed，见 cfg.weigh）
     const namedBoost = 1 + (e.named || 0) * ((WEIGH() && WEIGH().per.speed) || 0);
     // 第 116 块：袋鼠的「加急」给移速（独立乘数，到期在 updateOne 摘掉）
-    const hasteBoost = (e.hasted && e.hasted.speedMul) || 1;
+    // 第 124 块：校对的「批注」也给移速 —— 被圈住的怪追得更急
+    const hasteBoost = ((e.hasted && e.hasted.speedMul) || 1)
+      * ((e.proofed && e.proofed.t > 0 && e.proofed.speedMul) || 1);
     // 第 123 块：第十三关的环形跑道 —— 站上去的怪也更快（×1.25）。
     // 只给玩家加速的话，最优解会退化成「永远绕着跑道跑」，这条带就没有意义了。
     const trackBoost = (ctx && ctx.trackMul) ? ctx.trackMul(e.pos.x, e.pos.z) : 1;

@@ -8,7 +8,7 @@
 // 两套配色集中在 THEMES 里，buildNightScene({ theme }) 建哪套，
 // 局中要换就调返回的 setTheme('crypt')（不改几何，只改颜色和贴图）。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=140';
+import * as THREE from '../lib/three.module.js?v=141';
 
 export const THEMES = {
   // 第一关 · 荒草地：冷月光 + 青绿边圈 + 萤火虫
@@ -210,6 +210,21 @@ export const THEMES = {
     tuft: 0x3a4432, tuftVisible: true,      // 跑道边的野草还活着
     fly: 0xffd08a, flyCount: 80,            // 灯下的飞蛾
     ground: 'campus',
+  },
+  // 第十四关 · 钟楼打样间（第 124 块）：钟楼一层，那台一直在吐纸的旧机器。
+  // 配色思路：屋里没有天光，只有机器上一排冷青指示灯 + 纸堆反出来的白；
+  // 地面是水泥 + 一地裁掉的纸边角，所以 tuft（草）直接关掉 —— 室内不长草。
+  press: {
+    bg: 0x090b0d,
+    fog: 0x191e21, fogDensity: 0.0152,
+    hemiSky: 0x8fa2b0, hemiGround: 0x140f0b, hemiIntensity: 1.24,
+    moon: 0xdfeaf2, moonIntensity: 2.74, moonBase: 2.56,
+    rim: 0x2e6f7a, rimIntensity: 0.68,      // 机器指示灯的青
+    edge: 0x6fd4e0, edgeOpacity: 0.32,      // 电眼的冷青
+    stone: 0x2a2f33,
+    tuft: 0x333a3a, tuftVisible: false,     // 室内地上不长草
+    fly: 0xcfe9f2, flyCount: 64,            // 光柱里飘的纸尘
+    ground: 'press',
   },
 };
 
@@ -605,6 +620,73 @@ function makeCampusTexture() {
   return tex;
 }
 
+// 第十四关 · 打样间的水泥地（第 124 块）
+// 铁灰水泥 + 一地被裁掉的纸边角 + 几滴干掉的墨 + 一道黄黑警戒线。
+// 和第十三关的焦土是两个极端：那边全是暖橙的土，这边几乎是冷灰的石头，
+// 玩家一进关就知道「这一次是在屋里」。
+function makePressTexture() {
+  const S = 512;
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = S;
+  const g = cv.getContext('2d');
+
+  g.fillStyle = '#24282c';
+  g.fillRect(0, 0, S, S);
+
+  let seed = 90817;
+  const rnd = () => {
+    seed = (seed * 1103515245 + 12345) % 2147483648;
+    return seed / 2147483648;
+  };
+
+  // ① 水泥颗粒（冷灰细点）
+  for (let i = 0; i < 2600; i++) {
+    const x = rnd() * S, y = rnd() * S;
+    g.fillStyle = `rgba(${60 + rnd() * 30 | 0},${66 + rnd() * 30 | 0},${70 + rnd() * 32 | 0},${0.05 + rnd() * 0.12})`;
+    g.beginPath(); g.arc(x, y, 0.3 + rnd() * 1.1, 0, Math.PI * 2); g.fill();
+  }
+
+  // ② 地板缝：四等分的浅暗线（水泥地浇出来的分块）
+  g.strokeStyle = 'rgba(12,14,16,0.42)';
+  g.lineWidth = 2.4;
+  for (let k = 1; k < 4; k++) {
+    g.beginPath(); g.moveTo((S / 4) * k, 0); g.lineTo((S / 4) * k, S); g.stroke();
+    g.beginPath(); g.moveTo(0, (S / 4) * k); g.lineTo(S, (S / 4) * k); g.stroke();
+  }
+
+  // ③ 纸边角：浅色小方片，随机朝向（裁下来的废料）
+  for (let i = 0; i < 46; i++) {
+    const x = rnd() * S, y = rnd() * S;
+    const w = 3 + rnd() * 9, h = 2 + rnd() * 7;
+    g.save();
+    g.translate(x, y);
+    g.rotate(rnd() * Math.PI);
+    g.fillStyle = `rgba(${218 + rnd() * 30 | 0},${214 + rnd() * 28 | 0},${198 + rnd() * 28 | 0},${0.20 + rnd() * 0.34})`;
+    g.fillRect(-w / 2, -h / 2, w, h);
+    g.restore();
+  }
+
+  // ④ 干掉的墨点：几团近黑的圆斑
+  for (let i = 0; i < 12; i++) {
+    const x = rnd() * S, y = rnd() * S;
+    const r = 3 + rnd() * 9;
+    g.fillStyle = `rgba(10,12,14,${0.16 + rnd() * 0.22})`;
+    g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+  }
+
+  // ⑤ 一道黄黑警戒线（裁切刀的起点，和 cutter.js 的端头夹具对得上）
+  g.fillStyle = 'rgba(200,168,72,0.30)';
+  g.fillRect(0, S * 0.70, S, 6);
+  g.fillStyle = 'rgba(16,16,18,0.50)';
+  for (let x = 0; x < S; x += 22) g.fillRect(x, S * 0.70, 11, 6);
+
+  const tex = new THREE.CanvasTexture(cv);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(16, 16);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
 function makeGroundTexture(kind) {
   if (kind === 'crypt') return makeCryptTexture();
   if (kind === 'ash') return makeAshTexture();
@@ -618,6 +700,7 @@ function makeGroundTexture(kind) {
   if (kind === 'fogfield') return makeFogfieldTexture();
   if (kind === 'highway') return makeHighwayTexture();
   if (kind === 'campus') return makeCampusTexture();
+  if (kind === 'press') return makePressTexture();
   return makeGrassTexture();
 }
 

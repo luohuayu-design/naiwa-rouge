@@ -65,10 +65,11 @@ const live = CH.filter((c) => c.levelId != null);
 // 第 82 块：s09 接上第九关（「骨塔登记庭」）→ 9 夜
 // 第 107 块：s10 接上第十关（「塔顶井台」）→ 10 夜
 // 第 114 块：s11 接上第十一关（「钟楼雾原」）→ 11 夜；第 116 块：s12 接上第十二关 → 12 夜；第 123 块：s13 接上第十三关 → 13 夜
-ok('局内有 13 夜', live.length === 13, `实际 ${live.length}`);
-ok('局内十三夜分别绑 1~13 关', live.map((c) => c.levelId).sort((a,b)=>a-b).join() === '1,2,3,4,5,6,7,8,9,10,11,12,13');
+// 第 124 块：s14 接上第十四关（「钟楼打样间」）→ 14 夜
+ok('局内有 14 夜', live.length === 14, `实际 ${live.length}`);
+ok('局内十四夜分别绑 1~14 关', live.map((c) => c.levelId).sort((a,b)=>a-b).join() === '1,2,3,4,5,6,7,8,9,10,11,12,13,14');
 ok('局内每夜都在第 2 回合结束触发', live.every((c) => c.atRound === 2));
-ok('其余 5 夜 levelId 为 null（第十四夜起还没接关）', CH.filter((c) => c.levelId == null).length === 5);
+ok('其余 4 夜 levelId 为 null（第十五夜起还没接关）', CH.filter((c) => c.levelId == null).length === 4);
 
 // ---------------- 4. 调度：storyChapterAt ----------------
 ok('第 1 关第 1 回合不播（还没到 2 回合）', storyChapterAt(1, 1, {}) === null);

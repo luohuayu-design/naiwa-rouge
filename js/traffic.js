@@ -5,7 +5,7 @@
 // 也可以借击退 / 减速把怪留在车道里。预警和碰撞共用 lanes / width，
 // 不许出现「线画在这里、车却撞在那里」。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=140';
+import * as THREE from '../lib/three.module.js?v=141';
 
 export const TRAFFIC_DEFAULTS = {
   lanes: [-4.5, 4.5],

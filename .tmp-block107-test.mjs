@@ -106,7 +106,7 @@ console.log('[§2] 四只新怪 cfg');
   ok(E.keepDistance >= 5, `回声站得远（${E.keepDistance} 格）`);
   ok(!!E.file && fs.existsSync(path.join(ROOT, E.file)), '回声有 glb');
 
-  ok(Object.keys(ENEMY_TYPES).length === 30, 'ENEMY_TYPES 共 30 只（第 114 块 +2 / 第 116 块 +1 / 第 123 块 +2）');
+  ok(Object.keys(ENEMY_TYPES).length === 32, 'ENEMY_TYPES 共 32 只（第 114 块 +2 / 第 116 块 +1 / 第 123 块 +2 / 第 124 块 +2 错版·校对）');
 }
 
 // ============================================================ §3 收件人免疫契约

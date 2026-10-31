@@ -984,10 +984,91 @@ export const LEVEL_13 = {
   ],
 };
 
+// ============================================================
+// 第十四关「钟楼打样间」（第 124 块）
+// ============================================================
+// 剧情接 s14「钟楼里没有钟」：钟楼一层什么都没有，只有一台很大的旧机器。
+// 它一直在响，每响一声就吐出一张纸；纸上是一只奶龙，不太对的那种。
+//
+// **这一关的场地机制是「裁切刀」**（用户 2026-10-31 定案，从三个方案里挑的 A）：
+//   机器按时把整场横着（或竖着）切开一刀 —— 1.25 秒预警，站在带上的
+//   **人和怪一起吃**（玩家 12% 最大生命，怪按血量比例另有保底）。
+//   切位在四条线上轮换、横竖交替，第 15 回合起偶尔一次落两刀。
+//
+// 它和前面三关场地的关系：第十一关是「看不见」，第十二关是「车流横穿」，
+// 第十三关是「让你和怪一起变快的跑道」；这一关把压力搬到了**时间**上 ——
+// 地上那条线一开始就告诉你答案，你只要在它落下来之前站到别处。
+// 站桩在这里第一次被明确惩罚，而且惩罚是「按最大生命百分比」的，
+// 堆血流堆不出一个能站着不动的蛙。
+//
+// 数值：用户定案「抬一档」—— hpMul 1.65 / dmgMul 2.00（第十三关 1.60 / 1.95）。
+export const LEVEL_14 = {
+  id: 14,
+  name: '第十四关 · 钟楼打样间',
+  theme: 'press',           // 夜里的机房：冷灰水泥 + 纸白 + 指示灯的青
+  arena: 19,                // 裁切刀要横跨全场，场地别太大，不然预警看不清
+  order: [
+    ['minion', 1], ['warrior', 1.5], ['misprint', 1.8],
+    ['archer', 2.0], ['bowman', 2.1], ['leaper', 2.2],
+    ['wraith', 2.3], ['shielder', 2.4], ['brood', 2.5],
+    ['charger', 2.6], ['mender', 2.7], ['reboot', 2.8],
+    ['proofreader', 2.9], ['hexer', 3.0], ['clerk', 3.2],
+    ['addressee', 3.3], ['standee', 3.4], ['camera', 3.5],
+  ],
+  spawnRadius: 16.6,
+  spawnJitter: 0.5,
+  minPlayerDistance: 7.4,
+  minSpawnGap: 2.4,
+  gapScale: 1.12,
+  gap: 2.6,
+  upgradeAfter: [1, 2, 3, 4, 5, 8, 10, 12, 15, 17, 19, 20],
+  shopAfter: [3, 6, 9, 12, 15, 18],
+  weaponAt: 4,
+  scale: { hp: 0.34, damage: 0.20, speed: 0.045, haste: 0.0110, curve: 0.28, hpMul: 1.65, dmgMul: 2.00 },
+  // 裁切刀：见 js/cutter.js。arena 变了这里要跟着改（刀横跨整个场地）。
+  cutter: {
+    arena: 19,
+    slots: [-7.0, -2.3, 2.3, 7.0],
+    warn: 1.25,
+    gap: 5.2,
+    gapMin: 3.1,
+    width: 1.30,
+    playerPct: 0.12,
+    doubleFrom: 15,
+  },
+  rounds: [
+    // ---- 第一幕（R1~R4）：先学会看那条白线 ----
+    { minion: 4, warrior: 1, misprint: 0, archer: 0, bowman: 0, leaper: 0, wraith: 0, shielder: 0, brood: 0, charger: 0, mender: 0, reboot: 0, proofreader: 0, hexer: 0, clerk: 0, addressee: 0, standee: 0, camera: 0, gap: 0.86, tip: '地上那条白线是机器要走刀的地方。它亮起一秒多之后才落刀 —— 别站在线上' },
+    { minion: 4, warrior: 2, misprint: 1, archer: 0, bowman: 0, leaper: 0, wraith: 0, shielder: 0, brood: 0, charger: 0, mender: 0, reboot: 0, proofreader: 0, hexer: 0, clerk: 0, addressee: 0, standee: 0, camera: 0, gap: 0.80, tip: '新面孔·错版：它死的时候会从中间裂成两张。别指望砍一刀少一只' },
+    { minion: 5, warrior: 2, misprint: 1, archer: 0, bowman: 1, leaper: 0, wraith: 0, shielder: 0, brood: 0, charger: 0, mender: 0, reboot: 0, proofreader: 0, hexer: 0, clerk: 0, addressee: 0, standee: 0, camera: 0, gap: 0.76, tip: '刀也切怪：把怪推到线上，让它替你挨一下 —— 和第十二关把怪赶进车道一个道理' },
+    { minion: 5, warrior: 2, misprint: 1, archer: 0, bowman: 1, leaper: 0, wraith: 0, shielder: 0, brood: 0, charger: 0, mender: 0, reboot: 0, proofreader: 1, hexer: 0, clerk: 0, addressee: 0, standee: 0, camera: 0, gap: 0.72, tip: '新面孔·校对的：它不打你，它拿红笔圈别的怪。被圈的怪打得更重、跑得更急' },
+    // ---- 第二幕（R5~R8）：刀口轮换 ----
+    { minion: 5, warrior: 3, misprint: 1, archer: 0, bowman: 1, leaper: 0, wraith: 0, shielder: 0, brood: 0, charger: 1, mender: 0, reboot: 0, proofreader: 1, hexer: 0, clerk: 0, addressee: 0, standee: 0, camera: 0, gap: 0.70, tip: '切位在换：这一刀切这条，下一刀换另一条，还会横竖交替 —— 别养成站原地的习惯' },
+    { minion: 6, warrior: 3, misprint: 2, archer: 1, bowman: 1, leaper: 0, wraith: 0, shielder: 0, brood: 0, charger: 1, mender: 0, reboot: 0, proofreader: 1, hexer: 0, clerk: 0, addressee: 0, standee: 0, camera: 0, gap: 0.68, tip: '校对的挑的是「血最厚的那只」：你越放着大块头不管，它越先被批注' },
+    { minion: 6, warrior: 3, misprint: 2, archer: 2, bowman: 1, leaper: 1, wraith: 0, shielder: 0, brood: 0, charger: 1, mender: 0, reboot: 0, proofreader: 1, hexer: 0, clerk: 0, addressee: 0, standee: 0, camera: 1, gap: 0.66, tip: '错版 + 裁刀：它们在刀口上死会分裂，两张纸片照样站得住 —— 先看线，再决定打谁' },
+    { minion: 6, warrior: 4, misprint: 2, archer: 2, bowman: 2, leaper: 1, wraith: 0, shielder: 1, brood: 0, charger: 1, mender: 0, reboot: 0, proofreader: 1, hexer: 0, clerk: 0, addressee: 0, standee: 0, camera: 1, gap: 0.64, tip: '一刀切下去是「最大生命的百分比」：血越厚的怪越疼，所以别把大块头留到最后' },
+    // ---- 第三幕（R9~R12）：纸堆起来了 ----
+    { minion: 6, warrior: 4, misprint: 2, archer: 2, bowman: 2, leaper: 2, wraith: 1, shielder: 1, brood: 0, charger: 2, mender: 1, reboot: 0, proofreader: 1, hexer: 0, clerk: 0, addressee: 0, standee: 0, camera: 1, gap: 0.62, tip: '雾鬼在刀口上隐身：它显形的那一下如果正好在线上，你连补刀都不用' },
+    { minion: 7, warrior: 4, misprint: 2, archer: 2, bowman: 2, leaper: 2, wraith: 1, shielder: 1, brood: 0, charger: 2, mender: 1, reboot: 0, proofreader: 1, hexer: 0, clerk: 1, addressee: 0, standee: 0, camera: 1, gap: 0.60, tip: '誊录员回来了：墨线会横着铺一片，别站在墨上又站在线上，两条伤害一起结算' },
+    { minion: 7, warrior: 4, misprint: 3, archer: 3, bowman: 2, leaper: 2, wraith: 2, shielder: 1, brood: 0, charger: 2, mender: 1, reboot: 0, proofreader: 1, hexer: 0, clerk: 1, addressee: 1, standee: 0, camera: 1, gap: 0.58, tip: '被批注的怪头上有一圈红：打它反而更快，别下意识躲开它' },
+    { minion: 7, warrior: 5, misprint: 3, archer: 3, bowman: 3, leaper: 2, wraith: 2, shielder: 2, brood: 1, charger: 3, mender: 1, reboot: 1, proofreader: 0, hexer: 0, clerk: 1, addressee: 1, standee: 0, camera: 1, gap: 0.56, tip: '第 12 回合：机器的响声变快了。它不是在催你，它是在排版' },
+    // ---- 第四幕（R13~R16）：双刀 ----
+    { minion: 8, warrior: 5, misprint: 3, archer: 3, bowman: 3, leaper: 3, wraith: 2, shielder: 2, brood: 1, charger: 3, mender: 1, reboot: 1, proofreader: 1, hexer: 0, clerk: 2, addressee: 1, standee: 0, camera: 2, gap: 0.54, tip: '立牌来了：正面挡掉七成五的伤害。绕到侧后方打 —— 用裁纸刀切它不吃朝向' },
+    { minion: 8, warrior: 5, misprint: 3, archer: 3, bowman: 3, leaper: 3, wraith: 3, shielder: 2, brood: 2, charger: 3, mender: 2, reboot: 1, proofreader: 1, hexer: 1, clerk: 2, addressee: 1, standee: 1, camera: 2, gap: 0.52, tip: '第 15 回合起会一次落两刀，而且方向不一样 —— 看清楚有几条线' },
+    { minion: 9, warrior: 6, misprint: 4, archer: 4, bowman: 3, leaper: 3, wraith: 3, shielder: 2, brood: 2, charger: 3, mender: 2, reboot: 2, proofreader: 1, hexer: 1, clerk: 2, addressee: 2, standee: 1, camera: 2, gap: 0.50, tip: '两台取景的 + 双刀：横着躲刀、侧着走出取景框，这两件事可以一起做' },
+    { minion: 9, warrior: 6, misprint: 4, archer: 4, bowman: 4, leaper: 4, wraith: 3, shielder: 3, brood: 2, charger: 4, mender: 2, reboot: 2, proofreader: 1, hexer: 1, clerk: 2, addressee: 2, standee: 1, camera: 2, gap: 0.48, tip: '第 16 回合：机器吐出一张纸，纸上是空白的。它停了半秒，又继续响' },
+    // ---- 第五幕（R17~R20）：门前 ----
+    { minion: 10, warrior: 6, misprint: 4, archer: 4, bowman: 4, leaper: 4, wraith: 4, shielder: 3, brood: 2, charger: 4, mender: 2, reboot: 2, proofreader: 2, hexer: 2, clerk: 3, addressee: 2, standee: 1, camera: 2, gap: 0.46, tip: '两只校对的轮流批注：清不掉它们，你就一直在打「变凶的怪」' },
+    { minion: 10, warrior: 7, misprint: 5, archer: 5, bowman: 4, leaper: 4, wraith: 4, shielder: 3, brood: 2, charger: 4, mender: 2, reboot: 2, proofreader: 2, hexer: 2, clerk: 3, addressee: 2, standee: 1, camera: 3, gap: 0.44, tip: '五张纸递了进来：每一张都是你，每一张都不太对' },
+    { minion: 11, warrior: 7, misprint: 5, archer: 5, bowman: 5, leaper: 5, wraith: 4, shielder: 3, brood: 2, charger: 5, mender: 3, reboot: 3, proofreader: 2, hexer: 2, clerk: 3, addressee: 3, standee: 2, camera: 3, gap: 0.42, tip: '倒数第二波：刀口越来越密。记住一件事 —— 线亮起来的那一秒，你还有时间' },
+    { minion: 11, warrior: 8, misprint: 5, archer: 5, bowman: 5, leaper: 5, wraith: 5, shielder: 4, brood: 2, charger: 5, mender: 3, reboot: 3, proofreader: 2, hexer: 2, clerk: 3, addressee: 3, standee: 2, camera: 3, gap: 0.40, tip: '最后一波：机器把最后一张纸推出来 —— 那张纸是空的，它在等有人打字' },
+  ],
+};
+
 // 关卡号 → 关卡表（主流程 / 选关 / 测试都从这里取）
 export const LEVELS_BY_ID = {
   1: LEVEL_1, 2: LEVEL_2, 3: LEVEL_3, 4: LEVEL_4, 5: LEVEL_5, 6: LEVEL_6, 7: LEVEL_7, 8: LEVEL_8,
-  9: LEVEL_9, 10: LEVEL_10, 11: LEVEL_11, 12: LEVEL_12, 13: LEVEL_13,
+  9: LEVEL_9, 10: LEVEL_10, 11: LEVEL_11, 12: LEVEL_12, 13: LEVEL_13, 14: LEVEL_14,
 };
 
 // 第 roundNo 回合（从 1 开始）的怪物属性倍率
