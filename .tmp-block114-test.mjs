@@ -67,7 +67,7 @@ sec('② 两只新怪');
 // ============================================================
 const clerk = E.ENEMY_TYPES.clerk;
 const col = E.ENEMY_TYPES.collector;
-ok(Object.keys(E.ENEMY_TYPES).length === 31, `怪种 31 只（第 125 块 -1，实 ${Object.keys(E.ENEMY_TYPES).length}）`);
+ok(Object.keys(E.ENEMY_TYPES).length === 33, `怪种 33 只（第 128 块 +2，实 ${Object.keys(E.ENEMY_TYPES).length}）`);
 ok(!!clerk && clerk.name === '誊录员', 'clerk = 誊录员');
 ok(!!col && col.name === '收账人', 'collector = 收账人');
 // 模型：第 123 块把两只手搓的换成了下载资产（scaranto 墨笔 / Quaternius 摊开的书）。
@@ -191,7 +191,7 @@ const inkThick = S.SHOP_ITEMS.find((i) => i.id === 'buyInkThick');
 ok(!!buyMine && buyMine.type === 'relic' && buyMine.relic === 'mine', 'buyMine 是法器货');
 ok(buyMine.needLevel === 11, '墨丸只在第十一关起上架');
 ok(!!inkSac && !!inkThick && inkSac.type === 'ink' && inkThick.type === 'ink', '两件墨货 type = ink');
-ok(S.SHOP_ITEMS.length === 46, `商店货 46 件（28 + 3 + 3 + 6 + 3 + 3，实 ${S.SHOP_ITEMS.length}）`);
+ok(S.SHOP_ITEMS.length === 49, `商店货 49 件（28 + 3 + 3 + 6 + 3 + 3 + 3，实 ${S.SHOP_ITEMS.length}）`);
 ok(S.itemLocked(inkSac, {}) === '要先拥有「墨丸」', '没墨丸时墨货锁着');
 ok(S.itemLocked(inkSac, { mineLevel: 1, round: 9, level: 11 }) === null,
   '有墨丸 + 够了回合/关卡后解锁');
@@ -212,7 +212,7 @@ const pv = U.previewUpgrade(
 ok(Array.isArray(pv) && pv.length === 1 && pv[0].fromText && pv[0].toText,
   'previewUpgrade 能给出「原值 → 新值」（不会崩）',
   JSON.stringify(pv && pv[0]));
-ok(U.UPGRADES.length === 117, `卡池 117 张（87 + 6 + 6 + 10 + 4 + 4，实 ${U.UPGRADES.length}）`);
+ok(U.UPGRADES.length === 122, `卡池 122 张（87 + 6 + 6 + 10 + 4 + 4 + 5，实 ${U.UPGRADES.length}）`);
 
 // 技能栏
 const mineSkill = SK.SKILLS.find((s) => s.id === 'mine');

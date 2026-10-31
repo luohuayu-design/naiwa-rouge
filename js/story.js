@@ -1819,7 +1819,7 @@ export const STORY_CHAPTERS = [
   },
 
   {
-    id: 's15', no: 15, act: 3, levelId: null, atRound: null,
+    id: 's15', no: 15, act: 3, levelId: 15, atRound: 2,   // 第 128 块：接第十五关「钟楼直播间」
     icon: '📱', title: '齁一个', who: '主播', place: '钟楼二层直播间',
     story:
       '钟楼二层被改成了一个直播间。环形灯、补光灯、提词器、三部手机架在支架上。\n'

@@ -14,7 +14,7 @@
 // 数值怎么算：与 stats.js 完全同一套 (base + Σflat) × (1 + Σpct)。
 // 面板分组：'剑本体' / '元素'。
 // ============================================================
-import { createStats, mitigate, pct, num1 } from './stats.js?v=144';
+import { createStats, mitigate, pct, num1 } from './stats.js?v=145';
 
 export const WEAPON_STAT_DEFS = [
   // ---------------- 剑本体 ----------------

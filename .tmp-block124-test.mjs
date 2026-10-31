@@ -365,7 +365,7 @@ ok(glbs.includes('misprint.glb') && glbs.includes('proofreader.glb'), '两份新
 const misSize = readFileSync(path.join(mdir, 'misprint.glb')).length;
 const prfSize = readFileSync(path.join(mdir, 'proofreader.glb')).length;
 ok(misSize > 2048 && prfSize > 2048, '两份模型都不是空文件', `${Math.round(misSize / 1024)}KB / ${Math.round(prfSize / 1024)}KB`);
-ok(glbs.length === 31, '怪物模型总数 31（第 125 块删掉等的那个的 goleling.glb）', String(glbs.length));
+ok(glbs.length === 33, '怪物模型总数 33（第 128 块加了 glub / yeti）', String(glbs.length));
 
 // 源码里不该再有任何「手搓模型」的构建函数
 ok(!/function build(Standee|Camera|Slip|Quill|Ledger|Kangaroo|Misprint|Proofreader)Model/.test(enemySrc),
@@ -374,7 +374,7 @@ ok(!/function build(Standee|Camera|Slip|Quill|Ledger|Kangaroo|Misprint|Proofread
 // ============================================================
 sec('⑥ 接线');
 // ============================================================
-ok(/LEVEL_13, LEVEL_14, LEVELS_BY_ID/.test(mainSrc), 'main.js 从 wave.js 引入了 LEVEL_14');
+ok(/LEVEL_14, LEVEL_15, LEVELS_BY_ID/.test(mainSrc), 'main.js 从 wave.js 引入了 LEVEL_14（第 128 块尾随 LEVEL_15）');
 ok(/\{ id: 14, name: LEVEL_14\.name, playable: true \}/.test(mainSrc), '选关表里有第 14 关（第 123 块漏过一次）');
 ok(mainSrc.includes("from './cutter.js?v="), 'main.js 引入 cutter.js');
 ok(mainSrc.includes("from './guillotine.js?v="), 'main.js 引入 guillotine.js');
@@ -404,8 +404,8 @@ ok(shopSrc.includes("id: 'buyGuillotine'") && shopSrc.includes("id: 'buyHone'") 
 ok(shopSrc.includes("if (item.type === 'guillotine')"), 'itemLocked 认识 guillotine 类型');
 ok(upgSrc.includes('guillotineDeep') && upgSrc.includes('guillotineWide'), '升级卡四张都在');
 ok(upgSrc.includes('if (up.guillotine && !opts.guillotineOwned) return 0;'), '没买到法器前卡片不进池子');
-ok(/export function applyUpgrade\([^)]*guillotine = null\)/.test(upgSrc), 'applyUpgrade 末参加 guillotine');
-ok(/export function previewUpgrade\([^)]*guillotine = null\)/.test(upgSrc), 'previewUpgrade 末参加 guillotine');
+ok(/export function applyUpgrade\([^)]*guillotine = null/.test(upgSrc), 'applyUpgrade 参数表里带 guillotine');
+ok(/export function previewUpgrade\([^)]*guillotine = null/.test(upgSrc), 'previewUpgrade 参数表里带 guillotine');
 ok(mainSrc.includes('__game') && mainSrc.includes('cutter: {') && mainSrc.includes('grantGuillotine'),
   '调试口有 cutter / grantGuillotine');
 ok(src('js/story.js').includes("id: 's14', no: 14, act: 3, levelId: 14"), '第十四夜绑上了第十四关');
@@ -413,17 +413,17 @@ ok(/HINTS = \{[\s\S]*guillotine: \{/.test(mainSrc), '首次拿到裁纸刀有教
 
 // 总量口径（这一块动了四个数字，老套件都靠它们）
 const relicCount = Object.keys(R.RELIC_DEFS).length;
-ok(relicCount === 16, '法器总数 16', String(relicCount));
-ok(SK.SKILLS.length === 10, '技能格 10', String(SK.SKILLS.length));
-ok(S.SHOP_ITEMS.length === 46, '商店货 46', String(S.SHOP_ITEMS.length));
-ok(U.UPGRADES.length === 117, '升级卡 117 张', String(U.UPGRADES.length));
-ok(Object.keys(E.ENEMY_TYPES).length === 31, '怪物种类 31', String(Object.keys(E.ENEMY_TYPES).length));
-ok(Object.keys(W.LEVELS_BY_ID).length === 14, '关卡 14 张表', String(Object.keys(W.LEVELS_BY_ID).length));
+ok(relicCount === 17, '法器总数 17（第 128 块加了环形灯）', String(relicCount));
+ok(SK.SKILLS.length === 12, '技能格 12（第 128 块加了环形灯 / 开播）', String(SK.SKILLS.length));
+ok(S.SHOP_ITEMS.length === 49, '商店货 49', String(S.SHOP_ITEMS.length));
+ok(U.UPGRADES.length === 122, '升级卡 122 张', String(U.UPGRADES.length));
+ok(Object.keys(E.ENEMY_TYPES).length === 33, '怪物种类 33', String(Object.keys(E.ENEMY_TYPES).length));
+ok(Object.keys(W.LEVELS_BY_ID).length === 15, '关卡 15 张表', String(Object.keys(W.LEVELS_BY_ID).length));
 
 // ---- 守卫：加关卡 = 法器 + 技能 + **卡池** 一起加（用户 2026-10-31 定下的铁律）----
 // 最容易漏的一环：技能栏加了格子、卡池没加卡 → 抽卡永远抽不到，成长线断在商店里。
 // 除初始武器（万剑齐发，不设专属卡）外，每个技能都必须能在 upgrade.js 里找到自己的卡。
-const NO_CARD_SKILLS = new Set(['swordRain']);
+const NO_CARD_SKILLS = new Set(['swordRain', 'broadcast']);   // 开播是解锁型技能，不挂法器也不设专属卡
 for (const sk of SK.SKILLS) {
   if (NO_CARD_SKILLS.has(sk.id)) continue;
   const n = (upgSrc.match(new RegExp(sk.id, 'g')) || []).length;

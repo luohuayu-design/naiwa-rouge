@@ -5,51 +5,55 @@
 // 目标是把三件事调顺：摇杆输入 → 角色速度/朝向 → 相机跟随。
 // 后续叠战斗时，只需要在 tick() 里加敌人更新与自动攻击，不用动输入层。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=144';
-import { buildNightScene } from './scene.js?v=144';
-import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=144';
+import * as THREE from '../lib/three.module.js?v=145';
+import { buildNightScene } from './scene.js?v=145';
+import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=145';
 // 第 80 块：给 glb 拼上版本号 → SW 缓存优先（详见 assetUrl.js）
-import { withV } from './assetUrl.js?v=144';
-import { createInput } from './input.js?v=144';
-import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=144';
-import { createStatView } from './statView.js?v=144';
-import { createWeaponStats } from './weaponStats.js?v=144';
-import { createFx } from './fx.js?v=144';
-import { createEnemySystem, ENEMY_TYPES } from './enemy.js?v=144';
+import { withV } from './assetUrl.js?v=145';
+import { createInput } from './input.js?v=145';
+import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=145';
+import { createStatView } from './statView.js?v=145';
+import { createWeaponStats } from './weaponStats.js?v=145';
+import { createFx } from './fx.js?v=145';
+import { createEnemySystem, ENEMY_TYPES } from './enemy.js?v=145';
 import {
-  createLevel, LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVEL_5, LEVEL_6, LEVEL_7, LEVEL_8, LEVEL_9, LEVEL_10, LEVEL_11, LEVEL_12, LEVEL_13, LEVEL_14, LEVELS_BY_ID, DIFFS, setDifficulty, getDifficulty, roundScale, levelStats, levelTypes,
-} from './wave.js?v=144';
-import { createRangeRing } from './rangeRing.js?v=144';
-import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=144';
-import { createWeaponSystem } from './weapon.js?v=144';
-import { createArrowRainSystem } from './arrowRain.js?v=144';
-import { SWORD_KINDS } from './swordKinds.js?v=144';
-import { createGoldSystem } from './gold.js?v=144';
-import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW, SHOP_PINNED, shopRefreshCost } from './shop.js?v=144';
-import { createTurretSystem, TURRET } from './turret.js?v=144';
-import { createRelicSystem, RELIC_DEFS } from './relics.js?v=144';
-import { createGolemSystem } from './golem.js?v=144';   // 第 107 块：法器「傀儡术」的铁 / 雪傀儡
-import { createHazards } from './hazards.js?v=144';
-import { createFogSystem } from './fog.js?v=144';    // 第 114 块：第十一关的雾
-import { createMineSystem } from './mine.js?v=144';  // 第 114 块：第 11 件法器「墨丸」
-import { createTrafficSystem } from './traffic.js?v=144';  // 第 116 块：第十二关的车流
-import { createTrackSystem } from './track.js?v=144';      // 第 123 块：第十三关的环形跑道
-import { createLatteSystem } from './latte.js?v=144';      // 第 116 块：第 12 件法器「苔藓拿铁」
-import { createCandleSystem } from './candle.js?v=144';    // 第 118 块：第 13 件法器「守夜烛」（第十一关）
-import { createMarkSystem } from './mark.js?v=144';        // 第 118 块：第 14 件法器「落款」（第十一关）
-import { createBoardSystem } from './board.js?v=144';      // 第 123 块：第 15 件法器「纸立牌」（第十三关）
-import { createCutterSystem } from './cutter.js?v=144';    // 第 124 块：第十四关的裁切刀
-import { createGuillotineSystem } from './guillotine.js?v=144';  // 第 124 块：第 16 件法器「裁纸刀」（第十四关）
-import { createDeposit, tagChance } from './deposit.js?v=144';   // 第 81 块：寄存柜；第 84 块：掉牌概率
-import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=144';
-import audio from './audio.js?v=144';
-import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=144';
+  createLevel, LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVEL_5, LEVEL_6, LEVEL_7, LEVEL_8, LEVEL_9, LEVEL_10, LEVEL_11, LEVEL_12, LEVEL_13, LEVEL_14, LEVEL_15, LEVELS_BY_ID, DIFFS, setDifficulty, getDifficulty, roundScale, levelStats, levelTypes,
+} from './wave.js?v=145';
+import { createRangeRing } from './rangeRing.js?v=145';
+import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=145';
+import { createWeaponSystem } from './weapon.js?v=145';
+import { createArrowRainSystem } from './arrowRain.js?v=145';
+import { SWORD_KINDS } from './swordKinds.js?v=145';
+import { createGoldSystem } from './gold.js?v=145';
+import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW, SHOP_PINNED, shopRefreshCost } from './shop.js?v=145';
+import { createTurretSystem, TURRET } from './turret.js?v=145';
+import { createRelicSystem, RELIC_DEFS } from './relics.js?v=145';
+import { createGolemSystem } from './golem.js?v=145';   // 第 107 块：法器「傀儡术」的铁 / 雪傀儡
+import { createHazards } from './hazards.js?v=145';
+import { createFogSystem } from './fog.js?v=145';    // 第 114 块：第十一关的雾
+import { createMineSystem } from './mine.js?v=145';  // 第 114 块：第 11 件法器「墨丸」
+import { createTrafficSystem } from './traffic.js?v=145';  // 第 116 块：第十二关的车流
+import { createTrackSystem } from './track.js?v=145';      // 第 123 块：第十三关的环形跑道
+import { createLatteSystem } from './latte.js?v=145';      // 第 116 块：第 12 件法器「苔藓拿铁」
+import { createCandleSystem } from './candle.js?v=145';    // 第 118 块：第 13 件法器「守夜烛」（第十一关）
+import { createMarkSystem } from './mark.js?v=145';        // 第 118 块：第 14 件法器「落款」（第十一关）
+import { createBoardSystem } from './board.js?v=145';      // 第 123 块：第 15 件法器「纸立牌」（第十三关）
+import { createCutterSystem } from './cutter.js?v=145';    // 第 124 块：第十四关的裁切刀
+import { createGuillotineSystem } from './guillotine.js?v=145';  // 第 124 块：第 16 件法器「裁纸刀」（第十四关）
+// 第 128 块：第十五关的补光曝光区 + 第 17 件法器「环形灯」+ 技能「开播」
+import { createSpotlightSystem } from './spotlight.js?v=145';
+import { createRingLightSystem } from './ringlight.js?v=145';
+import { createBroadcastSystem } from './broadcast.js?v=145';
+import { createDeposit, tagChance } from './deposit.js?v=145';   // 第 81 块：寄存柜；第 84 块：掉牌概率
+import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=145';
+import audio from './audio.js?v=145';
+import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=145';
 // 第 62 块：回血技能（第四关通关后永久解锁，回 5 点 / CD 25 秒）
-import { createHealSkill, HEAL_AMOUNT, HEAL_CD } from './healSkill.js?v=144';
+import { createHealSkill, HEAL_AMOUNT, HEAL_CD } from './healSkill.js?v=145';
 // 第 62 块：民心专属事件（升档走良性池、掉档走恶性池）
-import { repPoolForTier, REP_GOOD, REP_BAD } from './repEvents.js?v=144';
+import { repPoolForTier, REP_GOOD, REP_BAD } from './repEvents.js?v=145';
 // 第 62 块：攻略面板（战败提示上的「查看攻略」，手风琴三组）
-import { renderGuide, GUIDE_SECTIONS } from './guide.js?v=144';
+import { renderGuide, GUIDE_SECTIONS } from './guide.js?v=145';
 import {
   settings as readSettings, setSetting, save as saveProfile, profile,
   bumpStat, setStatMax, codexAdd, codexCount, countCard, unlockAch, hasAch, addBones, bones, resetAll,
@@ -64,37 +68,37 @@ import {
   hintSeen, markHintSeen,                  // 第 65 块：一次性提示卡
   markLevelClear, levelCleared, clearCount, // 第 94 块：通关过哪些关（成就用）
   getStatAdmin, setStatAdmin, resetStatAdmin, // 第 95 / 98 块：管理员模式二（手改最终值 → 存追加项，基础值不动）
-} from './profile.js?v=144';
+} from './profile.js?v=145';
 // 第 44 块：礼包兑换（码表只有哈希，明细在 gift.js 顶部注释）
-import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=144';
+import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=145';
 // 第 46 块：音效包（抽象奶蛙音效包 —— 4 段奶蛙叫声，通关第一关解锁）
-import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=144';
-import * as runSave from './runSave.js?v=144';
+import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=145';
+import * as runSave from './runSave.js?v=145';
 // 第 78 块：存档导出 / 导入。数据逻辑全在这个模块里（不碰 DOM），这里只接按钮
-import * as saveIO from './saveIO.js?v=144';
+import * as saveIO from './saveIO.js?v=145';
 import {
   CAMPFIRE, CAMP_CORE, CAMP_STEP, campBuy, campOwned, campLevel, campRelicAmp,
   campCost, campApply, bonesFor, diffBoneMul, levelBoneMul, coinBones, BONE,
-} from './campfire.js?v=144';
+} from './campfire.js?v=145';
 // 第 23 块：永夜火种（通关白给的 3 次永久三选一）
 import {
   BOONS, BOON_BY_ID, BOON_PICKS, boonOwned, boonStacks, boonPending, boonTotalStacks,
   grantBoons, rollBoons, takeBoon, applyBoons, boonStackText,
-} from './boons.js?v=144';
+} from './boons.js?v=145';
 // 第 21 块：夜行诅咒（自选 debuff 换骨币倍率）
-import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames, BOX_CURSES, BOX_CURSE_BY_ID, applyBoxCurses, boxCurseNames } from './curses.js?v=144';
+import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames, BOX_CURSES, BOX_CURSE_BY_ID, applyBoxCurses, boxCurseNames } from './curses.js?v=145';
 // 第 122 块：回合挑战（每关随机 2 个回合，回合前弹；打完给三选一奖励）
 import {
   CHALLENGES, CHAL_PER_LEVEL, CHAL_FIRST_ROUND, CHAL_LAST_GAP,
   chalById, planRounds, rollChallenge, REWARDS, REWARD_BY_ID, rollBoosts, boostSummary,
-} from './challenge.js?v=144';
+} from './challenge.js?v=145';
 // 第 22 块：种子与每日挑战
 import {
   DAILY_RULES, dayKey, dayText, dailySeed, seedCode, pickDailyCurses,
   seedFromText, pickSeedRules, loadSeedRecords, saveSeedRecord, pruneSeeds,
   dailyRecord, saveDailyRecord, pruneDaily, makeRng,
-} from './seed.js?v=144';
-import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=144';
+} from './seed.js?v=145';
+import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=145';
 // 第 58 块：局外商店 · 宝箱（花骨币买，开箱随机给永久属性 / 永久法器 / 技能CD缩短）
 import {
   BOXES, BOX_BY_ID, buyBox, rollBox, metaApplyStats, applyMeta,
@@ -106,45 +110,45 @@ import {
   boxMag,
   // 第 118 块：盲盒里的法器属性 → 开局注入法器系统
   metaRelicAmp,
-} from './metaShop.js?v=144';
+} from './metaShop.js?v=145';
 // 第 59 块：每日签到（以周为单位，周一 00:00 重置）
 // 第 105 块：固定 +20 改成每天随机 0~100；里程碑 3/5/7 天 → 100 / 150 骨币 + 一次永夜火种
 import {
   SIGN_BONES_MIN, SIGN_BONES_MAX, weekCells, signSummary, signToday, signedToday,
-} from './signin.js?v=144';
+} from './signin.js?v=145';
 // 第 94 块：成就（八类 × 三档骨币奖励）
 // 第 94-2 块：骨币改成**手动领取**（achPending / achClaim），老用户补发走 achMigrate
 import {
   ACHS, ACH_CATS, ACH_TIERS, ACH_COUNT, achById, achsByCat, achTier,
   achPending, achPendingBones, achClaim, achClaimAll, achClaimed, achMigrate,
-} from './achievements.js?v=144';
+} from './achievements.js?v=145';
 // 第 94 块：通用手风琴（盲盒奖池与成就面板共用，不复制第三份引擎）
-import { renderAccordion } from './accordion.js?v=144';
+import { renderAccordion } from './accordion.js?v=145';
 // 第 94 块：每日任务（简单 3 + 中等 1 + 困难 1，每天 0 点刷新）
 import {
   DQ_TIERS, DQ_BONES, dqTasks, dqPump, dqSave, dqClaim, dqClaimAll,
   dqPending, dqGained, dqMsLeft, dayKeyOf, dqTier, dqTaskName,
   dqState, dqForceReroll, dqReset,   // 调试口：跨天重掷 / 整条重置
-} from './dailyQuest.js?v=144';
+} from './dailyQuest.js?v=145';
 import {
   EVENTS, ALL_EVENTS, getEventById, pickEvent, effectLines,
   choiceHint, canAfford, costShort, REP_MIN, REP_MAX, REP_START,
   isTalk, eventChoices, resolveRoll, mergeEffects,
-} from './events.js?v=144';
+} from './events.js?v=145';
 // 第 32 块：主线《笑不出来的那一夜》（18 夜，一夜一关，前 3 夜已有关卡）
 import {
   STORY_ARC, STORY_CHAPTERS, STORY_ENDINGS, MARK_INFO,
   storyChapterAt, storyChapterById, storyEndingKey,
-} from './story.js?v=144';
+} from './story.js?v=145';
 // 第 115 块：九套玩法系统引擎（合成台 / 元素反应 / 精英怪 / 天气 / 音乐盒 / 手感四件套）
-import { createCraftingSystem } from './crafting.js?v=144';
-import { createReactionSystem } from './elementReaction.js?v=144';
-import { createEliteSystem } from './elite.js?v=144';
-import { createWeatherSystem } from './weather.js?v=144';
-import { createMusicboxSystem } from './musicbox.js?v=144';
-import { createDash } from './dash.js?v=144';
-import { createHeat } from './heat.js?v=144';
-import { pickLastWords, winLine } from './lastwords.js?v=144';
+import { createCraftingSystem } from './crafting.js?v=145';
+import { createReactionSystem } from './elementReaction.js?v=145';
+import { createEliteSystem } from './elite.js?v=145';
+import { createWeatherSystem } from './weather.js?v=145';
+import { createMusicboxSystem } from './musicbox.js?v=145';
+import { createDash } from './dash.js?v=145';
+import { createHeat } from './heat.js?v=145';
+import { pickLastWords, winLine } from './lastwords.js?v=145';
 
 // 标记模块已经跑起来了：index.html 的兜底自检靠它判断
 // 「模块根本没执行」还是「执行了但加载慢」。
@@ -892,6 +896,17 @@ async function boot() {
         showToast('剑拿回来了', `擦名者没跑掉，${nm}又回到环上了`);
         audio.sfx('upgrade');
       }
+      // 第 128 块：第十五关的打赏 —— 补光光斑里 +3、环形灯圈里 +1、开播期间 +1。
+      // 三处叠在一起时一只小怪能多掉 5 枚，这正是「贪」的回报（也对应光里的 ×1.30 受伤）。
+      {
+        const tip = spotlight.coinAt(e.pos.x, e.pos.z)
+          + ringlight.coinAt(e.pos.x, e.pos.z)
+          + broadcast.coinBonus();
+        if (tip > 0) {
+          addCoins(tip);
+          fx.text(e.pos, `打赏 +${tip}`, { color: '#ffd28a', size: 0.5, life: 0.9, y: 1.4 });
+        }
+      }
       // 金币掉落：按 goldRate 掷骰（概率属性，财运升级可提升）
       gold.maybeDrop(e.pos, rngOf('gold'));
     },
@@ -1074,6 +1089,23 @@ async function boot() {
   // enemy.js 的弹道循环每帧问一句 combatCtx.blockShot(x,z)，命中就消掉。
   // 牌本身是纯几何 + 一个 glb，没有伤害逻辑，所以不需要 enemies / wstats。
   const board = createBoardSystem({ scene, fx });
+
+  // ---------------- 第 128 块：第十五关的三件新东西 ----------------
+  // spotlight 是场地（地上漂的补光灯，只负责查询），ringlight 是第 17 件法器，
+  // broadcast 是不挂法器的技能「开播」（通关第十四关后永久可用）。
+  // 三者都以「零业务 import」写在各自的 js 里，这里只注入回调。
+  const spotlight = createSpotlightSystem({ scene, arena: ARENA_R });
+  const ringlight = createRingLightSystem({
+    scene, fx, enemies,
+    onCast: () => { audio.sfx('upgrade', { vol: 0.4 }); },
+  });
+  const broadcast = createBroadcastSystem({
+    stats, fx,
+    onStart: () => {
+      showToast('开播', '6 秒直播状态 · 攻速 +20% · 移速 +15% · 击杀 +1 打赏');
+      audio.sfx('upgrade');
+    },
+  });
 
   // 第 114 块：击杀时的第十一关专属记账。
   // 从 onDeath 里抽出来是**为了避让**：另一组（合成台）要重写 onDeath 那一段，
@@ -1558,6 +1590,9 @@ async function boot() {
                              // 那时机器还停在 gap 里的上一回合，+1 只是巧合正确）
   let chalDmgTaken = 0;      // 受击加重（破防挑战），乘在 hurtPlayer 的 raw 上
   let chalNoSkill = false;   // 禁术挑战：技能栏全锁
+  // 第 128 块：第十五关「超管」的禁言 —— 技能栏整排锁死 N 秒（和 chalNoSkill 叠着看）。
+  // 声明在文首是有原因的：renderSkill / pressSkill 在初始化阶段就会读它（TDZ）。
+  let silenceT = 0;
   let chalPopOpen = false;   // 挑战弹窗开着（防重复点击 / 防重入）
   let chalRewardOpen = false;
   let chalRewardCb = null;
@@ -1894,7 +1929,10 @@ async function boot() {
     // 第 76 块（用户定案）：**场地伤害无视防御** —— 漏电地板 / 井底滴水走 damageTrue；
     // 第 82 块（用户定案）：**电路伤害无视无敌时段但吃防御** —— 电弧走 stats.damage。
     // 第 122 块：破防挑战的「受到的伤害 ×1.6」也乘在这里（和荆棘同类，加法叠在外层）
-    const raw = amount * (1 + runCurseDmg) * (1 + boxCurseDmg) * (1 + chalDmgTaken);
+    // 第 128 块：第十五关的「过曝」与「直播不设防」也乘在这里 ——
+    // 站在补光光斑里受伤 ×1.30、开播那 6 秒受伤 ×1.10，两者可叠。
+    const lightMul = spotlight.takenMulAt(pos.x, pos.z) * broadcast.takenMul();
+    const raw = amount * (1 + runCurseDmg) * (1 + boxCurseDmg) * (1 + chalDmgTaken) * lightMul;
     if (isHazard) stats.damageTrue(raw);
     else stats.damage(raw);
     // 第 94 块：这一回合受了多少伤（成就「一根汗毛都没少」+ 每日任务的无伤回合数）。
@@ -2019,6 +2057,8 @@ async function boot() {
       boardOwned: relics.levels().board > 0,
       // 第 124 块：买到裁纸刀后裁纸刀卡才进池子
       guillotineOwned: relics.levels().guillotine > 0,
+      // 第 128 块：买到环形灯后环形灯卡才进池子
+      ringlightOwned: relics.levels().ringlight > 0,
     });
   }
 
@@ -2087,7 +2127,7 @@ async function boot() {
       // 精确的「原值 → 选后值」：用 stats.preview 算，和真选下去的数字完全一致
       const delta = document.createElement('div');
       delta.className = 'up-delta';
-      for (const c of previewUpgrade(stats, up, wstats, weapon, golems, arrowRain, mines, latte, candle, mark, board, guillotine)) {
+      for (const c of previewUpgrade(stats, up, wstats, weapon, golems, arrowRain, mines, latte, candle, mark, board, guillotine, ringlight)) {
         const row = document.createElement('span');
         row.className = 'up-chg';
         const label = document.createElement('i');
@@ -2210,7 +2250,7 @@ async function boot() {
 
     upSerial++;
     upgradesTaken++;
-    const res = applyUpgrade(stats, up, upSerial, wstats, weapon, golems, arrowRain, mines, latte, candle, mark, board, guillotine);
+    const res = applyUpgrade(stats, up, upSerial, wstats, weapon, golems, arrowRain, mines, latte, candle, mark, board, guillotine, ringlight);
     takenUpgrades.push(up);
     // 图鉴 / 战绩 / 成就（第 18 块）：拿到的卡记一笔，本局品质集合也记一笔
     const rIdx = up.rarity ?? 0;
@@ -2342,6 +2382,7 @@ async function boot() {
     const lvMark = relics.levels().mark;
     const lvBoard = relics.levels().board;
     const lvGuillotine = relics.levels().guillotine;
+    const lvRinglight = relics.levels().ringlight;
     return {
       playing: gameState === 'playing' || gameState === 'wtut' || gameState === 'tutorial',
       // 第 123 块：纸立牌要知道「往哪立」—— 朝向是个变量，所以给函数不给值
@@ -2423,6 +2464,31 @@ async function boot() {
         progress: guillotine.progress(),
         drop: (p, y) => guillotine.drop(p || pos, y || 0),
       } : null,
+      // 第 128 块：环形灯（第 17 件法器）。owned 由法器等级决定，其余交给 ringlight.js。
+      ringlight: ringlight && lvRinglight > 0 ? {
+        owned: true,
+        get count() { return ringlight.count; },
+        get cap() { return ringlight.cap; },
+        get ready() { return ringlight.ready; },
+        get cdLeft() { return ringlight.cdLeft; },
+        get progress() { return ringlight.progress; },
+        cdMax: () => ringlight.cdMax,
+        drop: (p) => ringlight.drop(p || pos),
+      } : null,
+      // 第 128 块：技能「开播」不挂在法器上 —— 通关第十四关后永久可用。
+      // ?debug=1 放开（自动化测试不可能先真的去通一遍第十四关）。
+      broadcast: (levelCleared(14) || DEBUG) ? {
+        get ready() { return broadcast.ready; },
+        get active() { return broadcast.active; },
+        get remain() { return broadcast.remain; },
+        get cdLeft() { return broadcast.cdLeft; },
+        get cdMax() { return broadcast.cdMax; },
+        get progress() { return broadcast.progress; },
+        cast: (p) => broadcast.cast(p || pos),
+      } : null,
+      // 第 128 块：超管的禁言（和「禁术挑战」的 muted 叠着看）
+      silenced: silenceT > 0,
+      silenceLeft: () => silenceT,
       // 第 114 块：被收账人收走的技能 —— skills.js 的 ready 不认识这个字段，
       // 所以「按不动」收在 pressSkill 里，UI 的灰态收在 renderSkill 里（两处都要看一眼）。
       stolenSkill: (id) => (stolenSkills.get(id) || 0) > 0,
@@ -2433,6 +2499,12 @@ async function boot() {
   // （不让人白扔 8 秒 CD），但**静默失败 = 玩家以为按键坏了**。
   // 教程里靠「补靶子」解决（见 ensureRainTargets），教程外至少给一句话。
   function pressSkill(sk) {
+    // 第 128 块：超管禁言 —— 先说清是谁按的，不是键坏了
+    if (silenceT > 0) {
+      showToast('被禁言', `超管把你的技能按下去了 —— ${Math.ceil(silenceT)} 秒后回来`);
+      audio.sfx('uiSwitch');
+      return false;
+    }
     // 第 122 块：禁术挑战 —— 先说清是挑战锁的，不是键坏了
     if (chalNoSkill) {
       showToast('技能被禁', '这是「禁术挑战」的规矩 · 这一回合只能靠走位和巴掌');
@@ -2478,7 +2550,9 @@ async function boot() {
       // 让玩家看技能栏就知道「不是我按错了，是技能在别人手上」。
       const stolen = !!(ctx.stolenSkill && ctx.stolenSkill(sk.id));
       // 第 122 块：禁术挑战期间整栏灰掉，一眼看得出「这一回合放不了」
-      const muted = !!ctx.muted;
+      // 第 128 块：超管禁言同理 —— 数字区显示还剩几秒回来
+      const silenced = !!ctx.silenced;
+      const muted = !!ctx.muted || silenced;
       btn.classList.toggle('ready', ready && !stolen && !muted);
       btn.classList.toggle('spent', !ready || stolen || muted);
       btn.classList.toggle('stolen', stolen);
@@ -2490,6 +2564,8 @@ async function boot() {
       if (num) {
         let txt = (!ready && sk.cdText) ? sk.cdText(ctx) : '';
         if (stolen) txt = String(Math.ceil(stolenSkills.get(sk.id) || 0));
+        // 第 128 块：禁言期间数字区报「还剩几秒」—— 不然整栏灰着，玩家不知道还要等多久
+        if (silenced) txt = String(Math.ceil(ctx.silenceLeft ? ctx.silenceLeft() : 0));
         num.textContent = txt;
         num.style.display = txt ? '' : 'none';
       }
@@ -2696,6 +2772,20 @@ async function boot() {
           + '血越厚的怪吃这一下越疼。',
         '同一只怪被反复切会<b>一次比一次轻</b>（第二刀起只算 55%，最低 25%）。'
           + '把它当<b>开场的破甲键</b>用，而不是按着不放的输出键。',
+      ],
+    },
+    // 第 128 块：第十五关的新法器。它是「场地光斑」的反面 ——
+    // 场地光斑是站进去贪，环形灯是举着走稳。
+    ringlight: {
+      kicker: '新法器 · 环形灯',
+      title: '技能栏多了一盏灯（按 Q）',
+      text: [
+        '按一下把灯打开，持续 <b>6 秒</b>：灯圈<b>跟着你走</b>，半径 3.6 格。冷却 <b>24 秒</b>。',
+        '灯圈里的怪<b>减速 30%</b>；在灯圈里打死的怪，每只额外掉 <b>1 枚打赏金币</b>。',
+        '它和地上那些会漂的补光光斑刚好互补：光斑里击杀 <b>+3 币</b>但受伤 <b>×1.30</b>，'
+          + '灯圈里是减速 + 小额打赏。想贪就钻进光斑，想稳就把灯打开。',
+        '法器三级：半径 4.8 格、持续 8 秒、减速 40%、冷却 18 秒。'
+          + '商人那儿还有「强光灯管」「落地支架」两件货。',
       ],
     },
   };
@@ -3002,6 +3092,11 @@ async function boot() {
     cutterPlayerHits = 0;
     cutterEnemyHits = 0;
     guillotine.reset();      // 第 124 块：裁纸刀的冷却 / 卡片加成 / 商店买断一局一清
+    // 第 128 块：环形灯 / 开播 / 补光光斑 / 禁言一局一清
+    ringlight.reset();
+    broadcast.reset();
+    spotlight.reset();
+    silenceT = 0;
     clearSteal();            // 第 114 块：收账人没收完的东西不带进新局（属性 mod 必须当场摘掉）
     // 第 115 块：九套玩法系统的本局状态一局一清（音乐盒是局外档案，不在这里 reset）
     crafting.reset();
@@ -3211,7 +3306,7 @@ async function boot() {
     const per = campRelicAmp();
     const b = boost || null;
     const ids = ['spikes', 'frost', 'bell', 'thorns', 'stove', 'lantern', 'insulator',
-      'woodfish', 'seal', 'puppet', 'mine', 'latte', 'candle', 'mark', 'board', 'guillotine'];
+      'woodfish', 'seal', 'puppet', 'mine', 'latte', 'candle', 'mark', 'board', 'guillotine', 'ringlight'];
     const table = {};
     for (const id of ids) {
       const e = per[id] || {};
@@ -3231,6 +3326,7 @@ async function boot() {
     if (mark.setRelicAmp) mark.setRelicAmp(table.mark);
     if (board.setRelicAmp) board.setRelicAmp(table.board);
     if (guillotine.setRelicAmp) guillotine.setRelicAmp(table.guillotine);
+    if (ringlight.setRelicAmp) ringlight.setRelicAmp(table.ringlight);
     return table;
   }
 
@@ -3355,6 +3451,7 @@ async function boot() {
     { id: 12, name: LEVEL_12.name, playable: true },  // 第 116 块：第十二关 · 三幻神驿站
     { id: 13, name: LEVEL_13.name, playable: true },  // 第 123 块：第十三关 · 焦土操场
     { id: 14, name: LEVEL_14.name, playable: true },  // 第 124 块：第十四关 · 钟楼打样间
+    { id: 15, name: LEVEL_15.name, playable: true },  // 第 128 块：第十五关 · 钟楼直播间
     // ⚠️ 第 123 块补的：第 116 块只写了 LEVEL_12 的数据和车流 / 袋鼠 / 拿铁，
     // 忘了往这张表里加一行 —— 结果第十二关整整七版都没有入口，玩家最多玩到第十一关。
     // 加关卡时**两处都要改**：wave.js 的 LEVELS_BY_ID + 这里的选关表。
@@ -5463,6 +5560,10 @@ async function boot() {
       guillotineLevel: relics.levels().guillotine,
       guillotineHone: guillotine.hasHone(),
       guillotineGrip: guillotine.hasGrip(),
+      // 第 128 块：环形灯的「先有法器才能买强化」+ 两件一次性货物
+      ringlightLevel: relics.levels().ringlight,
+      ringBulb: ringlight.hasBulb(),
+      ringStand: ringlight.hasStand(),
     };
     for (const item of shopStock) {
       const rar = rarityInfo(item);
@@ -5550,6 +5651,10 @@ async function boot() {
       guillotineLevel: relics.levels().guillotine,
       guillotineHone: guillotine.hasHone(),
       guillotineGrip: guillotine.hasGrip(),
+      // 第 128 块：环形灯同理
+      ringlightLevel: relics.levels().ringlight,
+      ringBulb: ringlight.hasBulb(),
+      ringStand: ringlight.hasStand(),
     });
     if (locked) return;
     if (adminOn) coins = ADMIN_GOLD; else coins -= price;
@@ -5629,6 +5734,11 @@ async function boot() {
         guillotine.setRelicLevel(relics.levels().guillotine);
         queueHint('guillotine');
       }
+      // 第 128 块：环形灯同理
+      if (item.relic === 'ringlight') {
+        ringlight.setRelicLevel(relics.levels().ringlight);
+        queueHint('ringlight');
+      }
       showToast(`${def.name} ${lv} 级`, def.desc[lv - 1] + (lv < def.maxLevel ? ' · 再买可升级' : ' · 已满级'));
     } else if (item.type === 'ink') {
       // 第 114 块：墨丸的两件一次性强化（买了就一局有效，itemLocked 已拦重复）
@@ -5668,6 +5778,16 @@ async function boot() {
       } else {
         guillotine.buyGrip();
         showToast('缠柄皮', `裁纸刀射程 ${guillotine.bonuses().range.toFixed(1)} 格 · 一局一次`);
+      }
+      renderSkill();
+    } else if (item.type === 'ringlight') {
+      // 第 128 块：环形灯的两件一次性强化（买了就一局有效，itemLocked 已拦重复）
+      if (item.ringlight === 'bulb') {
+        ringlight.buyBulb();
+        showToast('广角灯罩', `灯圈半径 ${ringlight.bonuses().radius.toFixed(1)} 格 · 减速 ${Math.round(ringlight.bonuses().slow * 100)}% · 一局一次`);
+      } else {
+        ringlight.buyStand();
+        showToast('加长支架', `环形灯持续 ${ringlight.bonuses().duration.toFixed(1)} 秒 · 冷却 ${ringlight.bonuses().cdMax.toFixed(1)} 秒 · 一局一次`);
       }
       renderSkill();
     } else if (item.type === 'quiver') {
@@ -5753,7 +5873,7 @@ async function boot() {
   }
   function applySkillCdFactor(f) {
     const m = Math.max(0.3, baseSkillCdMul() * (Number(f) || 1));
-    for (const mod of [weapon, arrowRain, mines, latte, candle, mark, board, guillotine]) {
+    for (const mod of [weapon, arrowRain, mines, latte, candle, mark, board, guillotine, ringlight, broadcast]) {
       if (mod && mod.setCdMul) mod.setCdMul(m);
     }
     return m;
@@ -6182,6 +6302,12 @@ async function boot() {
     mark.clearField();
     board.clearField();      // 第 123 块：牌是局内临时物，不跨关存活
     guillotine.clearField(); // 第 124 块：刀光不跨关停留
+    // 第 128 块：环形灯只在按键时开，换关清场；补光光斑按关卡数据重建（别的关传 null = 关掉）
+    ringlight.clearField();
+    broadcast.clearField();  // 开播的临时属性 mod 也当场撤掉
+    silenceT = 0;            // 换关不该带着上一关超管的禁言
+    spotlight.build(level.level.spotlight || null);
+    spotlight.setRound(level.roundNo || 1);
     // 雾里只留判定环：把脚下那个环置顶（depthTest:false）。没雾的关卡要还原，
     // 否则环会穿过井壁 / 柜子，看起来像画在空气里。
     playerRing.setOnTop(!!level.level.fog);
@@ -6307,6 +6433,9 @@ async function boot() {
       board: board.snapshot(),
       // 第 124 块：裁纸刀的卡片加成与两件商店买断
       guillotine: guillotine.snapshot(),
+      // 第 128 块：环形灯的卡片加成与两件商店买断；开播只剩冷却
+      ringlight: ringlight.snapshot(),
+      broadcast: broadcast.snapshot(),
       bag: { ...bag },
       diff: getDifficulty() === DIFFS.normal ? null : (profile().difficulty || 'normal'),
       rarities: [...runRarities],
@@ -6439,6 +6568,10 @@ async function boot() {
       if (candle.setCdMul) candle.setCdMul(m);   // 第 118 块
       if (mark.setCdMul) mark.setCdMul(m);       // 第 118 块
       if (board.setCdMul) board.setCdMul(m);     // 第 123 块
+      if (guillotine.setCdMul) guillotine.setCdMul(m);   // 第 124 块
+      // 第 128 块：环形灯 / 开播的冷却也吃局外那条「技能CD缩短」
+      if (ringlight.setCdMul) ringlight.setCdMul(m);
+      if (broadcast.setCdMul) broadcast.setCdMul(m);
     }
     // 第 118 块：读档时也要把火种 / 盲盒的法器增幅灌回去（globals 不在存档里，按档案重算）
     applyRelicAmp();
@@ -6458,6 +6591,10 @@ async function boot() {
     guillotine.setRelicLevel(relics.levels().guillotine);
     mark.restore(saved.mark);
     mark.setRelicLevel(relics.levels().mark);
+    // 第 128 块：环形灯 / 开播跟着存档回来
+    ringlight.restore(saved.ringlight);
+    ringlight.setRelicLevel(relics.levels().ringlight);
+    broadcast.restore(saved.broadcast);
     // 第 122 块：挑战 / 大涨都是「只活一回合」的东西，**不进档** ——
     // 存档里的 playerMods 会把它们一起带回来（dumpMods 不区分 src），这里成对抹掉。
     // 顺序：先撤属性表上的，再把 CD 倍率与法器增幅复位（这两样不在属性表里）。
@@ -9578,6 +9715,55 @@ async function boot() {
           guillotine.setRelicLevel(relics.levels().guillotine);
           return relics.levels().guillotine;
         },
+        // 第 128 块：第十五关的三个新口 —— 补光光斑、环形灯、开播 / 禁言。
+        spotlight: {
+          on: () => !!spotlight.enabled,
+          state: () => spotlight.state(),
+          list: () => spotlight.list(),
+          inLight: (x, z) => !!spotlight.inLight(x, z),
+          reset: () => { spotlight.reset(); return spotlight.count; },
+        },
+        ringlight: {
+          owned: () => !!ringlight.owned,
+          active: () => !!ringlight.active,
+          ready: () => !!ringlight.ready,
+          count: () => ringlight.count,
+          cap: () => ringlight.cap,
+          cdLeft: () => +ringlight.cdLeft.toFixed(2),
+          cdMax: () => +ringlight.cdMax.toFixed(2),
+          progress: () => +ringlight.progress.toFixed(3),
+          bonuses: () => ringlight.bonuses(),
+          list: () => ringlight.list(),
+          inLight: (x, z) => !!ringlight.inLight(x, z),
+          drop: (x, z) => !!ringlight.drop(x == null ? pos : { x, z }),
+          bulb: () => ringlight.buyBulb(),
+          stand: () => ringlight.buyStand(),
+          reset: () => { ringlight.reset(); return ringlight.count; },
+        },
+        grantRinglight: (lv = 1) => {
+          let n = 0;
+          while (relics.levels().ringlight < lv && n < 5) { relics.buy('ringlight'); n++; }
+          ringlight.setRelicLevel(relics.levels().ringlight);
+          return relics.levels().ringlight;
+        },
+        broadcast: {
+          owned: () => !!levelCleared(14) || DEBUG,
+          active: () => !!broadcast.active,
+          ready: () => !!broadcast.ready,
+          remain: () => +broadcast.remain.toFixed(2),
+          cdLeft: () => +broadcast.cdLeft.toFixed(2),
+          cdMax: () => +broadcast.cdMax.toFixed(2),
+          bonuses: () => broadcast.bonuses(),
+          cast: () => !!broadcast.cast(pos),
+          reset: () => { broadcast.reset(); return 1; },
+        },
+        // 超管禁言：读秒 / 直接设一个秒数（测试不必真等它读完条）
+        silence: () => +silenceT.toFixed(2),
+        silenceNow: (sec = 3) => {
+          silenceT = Math.max(0, Number(sec) || 0);
+          renderSkill();
+          return +silenceT.toFixed(2);
+        },
         // 第 124 块：裁切刀（场地）的调试口。CDP 里等 6 秒一刀太慢，
         // 直接 trigger() 立刻进预警；state() 回的是扁平的相位/切位，别回对象（Three 循环引用）。
         cutter: {
@@ -10509,6 +10695,11 @@ async function boot() {
           golemCap: Math.max(0, golems.bonuses().cap - 1),
           mineOwned: relics.levels().mine > 0,
           latteOwned: relics.levels().latte > 0,
+          candleOwned: relics.levels().candle > 0,
+          markOwned: relics.levels().mark > 0,
+          boardOwned: relics.levels().board > 0,
+          guillotineOwned: relics.levels().guillotine > 0,
+          ringlightOwned: relics.levels().ringlight > 0,
         }),
         odds: (roundNo = level.roundNo, luck) => rarityOdds(roundNo, {
           luck: luck ?? stats.get('luck'), hasWeapon: weapon.granted,
@@ -11080,6 +11271,13 @@ async function boot() {
     playerPos: pos,
     // 第 123 块：跑道对敌人也生效（×1.25）—— 只给玩家就变成白捡的加速带。
     trackMul: (x, z) => track.enemyMulAt(x, z),
+    // 第 128 块：补光光斑里的怪跑得更急（×1.20）。enemy.js 的 moveToward 里乘一次。
+    lightMul: (x, z) => spotlight.enemyMulAt(x, z),
+    // 第 128 块：超管读条完成 → 技能栏整排锁死 N 秒（enemy.js 的 handleModerator 调）
+    silenceSkills: (sec) => {
+      silenceT = Math.max(silenceT, Math.max(0, Number(sec) || 3));
+      renderSkill();
+    },
     // 第 123 块：纸立牌挡弹道。enemy.js 的弹道每帧推进前先问一句 ——
     // 命中就消掉并播一朵火花，所以「挡」是**判定**而不是减伤。
     blockShot: (x, z) => board.hitAt(x, z),
@@ -11285,6 +11483,15 @@ async function boot() {
       traffic.update(dt, { playerPos: pos, playerRadius: BODY_R, roundNo: level.roundNo });
       // 第 123 块：跑道的流光（只有第十三关有；没启用时第一行就 return）
       track.update(dt);
+      // 第 128 块：补光曝光区（只有第十五关有）。灯随回合加、光斑自己漂 ——
+      // 每帧先把回合喂进去，再让 update 走漂移。
+      spotlight.setRound(level.roundNo);
+      spotlight.update(dt);
+      // 第 128 块：环形灯（灯圈跟着玩家 + 减速 + 冷却）。法器等级每帧对账。
+      ringlight.setRelicLevel(relics.levels().ringlight);
+      ringlight.update(dt, { playerPos: pos });
+      // 第 128 块：开播（攻击/移速 mod 的到期撤销与冷却走表）
+      broadcast.update(dt);
       // 第 124 块：裁切刀（只有第十四关有）—— 预警走表 + 落刀那一瞬结算。
       // 玩家伤害传的是**最大生命**（cutter 内部按 playerPct 折算），不是当前血。
       cutter.update(dt, {
@@ -11353,6 +11560,8 @@ async function boot() {
         if (stats.hp.cur <= 0) { endGame(false); }
       }
       if (iframe > 0) iframe -= dt;
+      // 第 128 块：超管禁言倒数（到 0 技能栏自动解锁。renderSkill 每帧都跑，不用额外刷新）
+      if (silenceT > 0) silenceT = Math.max(0, silenceT - dt);
       if (gameState === 'tutorial') tutorialTick(Math.hypot(pos.x - prevX, pos.z - prevZ));
       if (gameState === 'wtut') wtTick(dt);
     } else if (gameState === 'over') {

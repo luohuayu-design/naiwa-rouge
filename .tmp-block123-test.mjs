@@ -157,7 +157,7 @@ sec('② 第十三关「焦土操场」');
 const L13 = W.LEVELS_BY_ID[13];
 ok(!!L13, 'LEVELS_BY_ID 里有第 13 关');
 ok(L13 && /焦土操场/.test(L13.name), `关名 = ${L13 && L13.name}`);
-ok(Object.keys(W.LEVELS_BY_ID).length === 14, `一共 14 关（实 ${Object.keys(W.LEVELS_BY_ID).length}）`);
+ok(Object.keys(W.LEVELS_BY_ID).length === 15, `一共 15 关（实 ${Object.keys(W.LEVELS_BY_ID).length}）`);
 ok(L13.theme === 'campus', '主题是校园（campus）');
 ok(near(L13.arena, 19.5), `场地半径 19.5（实 ${L13.arena}）`);
 ok(L13.rounds.length === 20, `20 回合（实 ${L13.rounds.length}）`);
@@ -201,7 +201,7 @@ const ST = E.ENEMY_TYPES.standee;
 const CM = E.ENEMY_TYPES.camera;
 ok(!!ST && ST.name === '立牌', '立牌（standee）在');
 ok(!!CM && CM.name === '取景的', '取景的（camera）在');
-ok(Object.keys(E.ENEMY_TYPES).length === 31, `怪种 31 只（实 ${Object.keys(E.ENEMY_TYPES).length}）`);
+ok(Object.keys(E.ENEMY_TYPES).length === 33, `怪种 33 只（实 ${Object.keys(E.ENEMY_TYPES).length}）`);
 
 ok(ST && ST.faceGuard && ST.faceGuard.arc > 0 && ST.faceGuard.reduce > 0,
   `立牌：正面减伤 ${ST && ST.faceGuard && ST.faceGuard.reduce}`);
@@ -272,7 +272,7 @@ ok(mainSrc.includes('blockShot: (x, z) => board.hitAt(x, z)'), 'combatCtx.blockS
 // 第 12 关的老 bug：加关卡必须改两处（wave.js 的 LEVELS_BY_ID + main.js 的 LEVELS）
 ok(/\{ id: 12, /.test(mainSrc) && /\{ id: 13, /.test(mainSrc),
   'main.js 的 LEVELS 选关表里有第 12、13 关（第 12 关当年就是漏了这一处）');
-ok(/LEVEL_13, LEVEL_14, LEVELS_BY_ID/.test(mainSrc), 'main 把 LEVEL_14 一起 import 了');
+ok(/LEVEL_14, LEVEL_15, LEVELS_BY_ID/.test(mainSrc), 'main 把 LEVEL_14、LEVEL_15 一起 import 了');
 
 // 弹道：必须在移动之后、命中判定之前问一句
 const shotBlock = enemySrc.slice(enemySrc.indexOf('function updateShots'), enemySrc.indexOf('function updateShots') + 1800);
@@ -289,7 +289,7 @@ ok(/inFrame && !shielded/.test(snapBlock), '被挡下来就不掉血（算它空
 // 技能栏
 const skBoard = SK.SKILLS.find((s) => s.id === 'board');
 ok(!!skBoard, '技能栏里有 board 这一格');
-ok(SK.SKILLS.length === 10, `技能一共 10 个（实 ${SK.SKILLS.length}）`);
+ok(SK.SKILLS.length === 12, `技能一共 12 个（实 ${SK.SKILLS.length}）`);
 ok(skBoard && skBoard.key === '9', '按键是 9');
 ok(skBoard && !SK.SKILLS.filter((s) => s.key).some((s) => s !== skBoard && s.key === skBoard.key),
   '按键没和别人撞');
@@ -302,11 +302,11 @@ ok(mainSrc.includes('playerYaw: () => yaw'), 'main 把「朝向」以函数形�
 
 // 法器表 / 商店 / 抽卡
 ok(!!R.RELIC_DEFS.board && R.RELIC_DEFS.board.maxLevel === 3, '法器表里有 board，最多 3 级');
-ok(Object.keys(R.RELIC_DEFS).length === 16, `法器 16 件（实 ${Object.keys(R.RELIC_DEFS).length}）`);
+ok(Object.keys(R.RELIC_DEFS).length === 17, `法器 17 件（实 ${Object.keys(R.RELIC_DEFS).length}）`);
 const shopBoard = S.SHOP_ITEMS.find((i) => i.relic === 'board');
 ok(!!shopBoard && shopBoard.needLevel === 13, '商店的纸立牌从第 13 关起上架');
 ok(S.SHOP_ITEMS.filter((i) => i.type === 'board').length === 2, '两件买断货（油纸 / 三角支架）');
-ok(S.SHOP_ITEMS.length === 46, `商店 46 件（实 ${S.SHOP_ITEMS.length}）`);
+ok(S.SHOP_ITEMS.length === 49, `商店 49 件（实 ${S.SHOP_ITEMS.length}）`);
 ok(S.itemLocked({ type: 'board', board: 'oil', needRound: 5 }, { level: 13, round: 9, boardLevel: 0 })
   === '要先拥有「纸立牌」', '没学会纸立牌之前，两件买断货是灰的');
 ok(S.itemLocked({ type: 'board', board: 'oil', needRound: 5 }, { level: 13, round: 9, boardLevel: 1, boardOil: true })

@@ -163,7 +163,7 @@ sec('③ 商店：骨币刷新与新货');
   ok(buyCandle.needLevel === 11 && buyMark.needLevel === 11, '两件都从第十一关起上架');
   const ids = ['buyCandleWax', 'buyCandleShade', 'buyMarkCinnabar', 'buyMarkPaper'];
   ok(ids.every((id) => S.SHOP_ITEMS.some((i) => i.id === id)), '四件一次性强化都在货架里');
-  ok(S.SHOP_ITEMS.length === 46, `商店货 46 件（实 ${S.SHOP_ITEMS.length}）`);
+  ok(S.SHOP_ITEMS.length === 49, `商店货 49 件（实 ${S.SHOP_ITEMS.length}）`);
 
   const candleWax = S.SHOP_ITEMS.find((i) => i.id === 'buyCandleWax');
   ok(S.itemLocked(candleWax, { candleLevel: 0 }) === '要先拥有「守夜烛」', '没守夜烛时买蜡油被拦');

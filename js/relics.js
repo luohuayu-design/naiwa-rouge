@@ -16,12 +16,12 @@
 // 与环剑（自动索敌、消耗制）和炮台（固定点位）互补；价格定在
 // 商店里「买得起但要攒一攒」的档，让 9/12/15/18 回合的商店有取舍。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=144';
-import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=144';
-import { withV } from './assetUrl.js?v=144';   // 第 80 块：glb 带版本号，SW 才走缓存优先
-import { distance2D } from './stats.js?v=144';
-import { TAG_BASE, TAG_SEAL } from './deposit.js?v=144';   // 第 84 块：掉牌概率的真相源
-import audio from './audio.js?v=144';
+import * as THREE from '../lib/three.module.js?v=145';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=145';
+import { withV } from './assetUrl.js?v=145';   // 第 80 块：glb 带版本号，SW 才走缓存优先
+import { distance2D } from './stats.js?v=145';
+import { TAG_BASE, TAG_SEAL } from './deposit.js?v=145';   // 第 84 块：掉牌概率的真相源
+import audio from './audio.js?v=145';
 
 // 百分比文案（概率表里存的是 0.5 这种小数）
 const pct = (v) => `${Math.round(v * 100)}%`;
@@ -265,11 +265,31 @@ export const RELIC_DEFS = {
       '一刀过八格：切 50% 最大生命、冷却 22 秒 —— 越厚的怪越怕这一下',
     ],
   },
+  // ---------------- 第十五关新增（第 128 块）：环形灯 ----------------
+  // 用户定案：「超管 + 弹幕」两只新怪、「环形灯 + 开播」配套。
+  // 第十五关的场地是补光曝光区（地上漂着两盏会动的灯）：站在光里击杀多拿钱、
+  // 但挨打更疼、怪也更快。环形灯是玩家**自己举着**的那一盏 ——
+  // 走哪儿照哪儿，圈里怪减速、圈里击杀额外打赏。
+  // 它和场地光斑刚好相反：场地光斑是「贪」，环形灯是「稳」。
+  // 本体、减速、打赏、卡片加成全在 ringlight.js；这里只管「买没买 / 几级」。
+  // 等级成长：持续 [6/7/8] 秒、半径 [3.6/4.2/4.8]、减速 [30/35/40]%、冷却 [24/21/18] 秒。
+  ringlight: {
+    name: '环形灯',
+    maxLevel: 3,
+    radius: [3.6, 4.2, 4.8],
+    slow: [0.30, 0.35, 0.40],
+    life: [6, 7, 8],
+    desc: [
+      '举人递给你一盏直播用的环形灯：技能栏多一颗「环形灯」。按下打开，灯跟着你走 6 秒 —— 灯圈里的怪减速 30%，圈里击杀每只额外 +1 打赏金币。冷却 24 秒',
+      '灯管更亮：灯圈半径 4.2 格、持续 7 秒、减速 35%、冷却 21 秒',
+      '满功率开灯：半径 4.8 格、持续 8 秒、减速 40%、冷却 18 秒 —— 走到哪儿，哪儿就是你的直播间',
+    ],
+  },
 };
 
 export function createRelicSystem({ scene, fx, enemies, onLanternReveal }) {
-  const levels = { spikes: 0, frost: 0, bell: 0, thorns: 0, stove: 0, lantern: 0, insulator: 0, woodfish: 0, seal: 0, puppet: 0, mine: 0, latte: 0, candle: 0, mark: 0, board: 0, guillotine: 0 };
-  const cds = { spikes: 0, frost: 0, bell: 0, thorns: 0, stove: 0, lantern: 0, insulator: 0, woodfish: 0, seal: 0, puppet: 0, mine: 0, latte: 0, candle: 0, mark: 0, board: 0, guillotine: 0 };
+  const levels = { spikes: 0, frost: 0, bell: 0, thorns: 0, stove: 0, lantern: 0, insulator: 0, woodfish: 0, seal: 0, puppet: 0, mine: 0, latte: 0, candle: 0, mark: 0, board: 0, guillotine: 0, ringlight: 0 };
+  const cds = { spikes: 0, frost: 0, bell: 0, thorns: 0, stove: 0, lantern: 0, insulator: 0, woodfish: 0, seal: 0, puppet: 0, mine: 0, latte: 0, candle: 0, mark: 0, board: 0, guillotine: 0, ringlight: 0 };
 
   // ---------------- 逐件法器增幅（第 118 块）----------------
   // 火种（逐件法器各一簇）与盲盒（法器属性）都往这张表里灌：
@@ -877,27 +897,10 @@ export function createRelicSystem({ scene, fx, enemies, onLanternReveal }) {
   }
 
   function reset() {
-    levels.spikes = 0;
-    levels.frost = 0;
-    levels.bell = 0;
-    levels.thorns = 0;
-    levels.stove = 0;
-    levels.lantern = 0;
-    levels.insulator = 0;
-    levels.woodfish = 0;
-    levels.seal = 0;
-    levels.puppet = 0;
-    levels.mine = 0;
-    levels.latte = 0;
-    cds.spikes = 0;
-    cds.frost = 0;
-    cds.bell = 0;
-    cds.thorns = 0;
-    cds.stove = 0;
-    cds.lantern = 0;
-    cds.insulator = 0;
-    cds.woodfish = 0;
-    cds.seal = 0;
+    // 第 128 块：按表清零，别再手写一串 id —— 之前 candle / mark / board / guillotine
+    // 就是漏在清单外面，换局会带着上一局的等级进新局。
+    for (const k of Object.keys(levels)) levels[k] = 0;
+    for (const k of Object.keys(cds)) cds[k] = 0;
     thornPulse = 0;
     stovePulse = 0;
     stoveAngle = 0;

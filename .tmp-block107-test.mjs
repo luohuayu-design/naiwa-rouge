@@ -101,7 +101,7 @@ console.log('[§2] 三只新怪 cfg');
   ok(E.keepDistance >= 5, `回声站得远（${E.keepDistance} 格）`);
   ok(!!E.file && fs.existsSync(path.join(ROOT, E.file)), '回声有 glb');
 
-  ok(Object.keys(ENEMY_TYPES).length === 31, 'ENEMY_TYPES 共 31 只（第 125 块删掉等的那个）');
+  ok(Object.keys(ENEMY_TYPES).length === 33, 'ENEMY_TYPES 共 33 只（第 128 块加了超管 / 弹幕）');
 }
 
 // ============================================================ §3 收件人免疫契约
@@ -212,9 +212,10 @@ console.log('[§9] relics.puppet');
   const d = RELIC_DEFS.puppet;
   ok(!!d && d.maxLevel === 3, '傀儡术 3 级');
   ok(d.desc.length === 3, '三级描述各一条');
-  ok(/levels\.puppet = 0/.test(relicsSrc), 'reset 归零');
+  // 第 128 块：reset 改成按表清零 —— 断言改成「循环清零」这种写法，别绑死某个 id
+  ok(/for \(const k of Object\.keys\(levels\)\) levels\[k\] = 0/.test(relicsSrc), 'reset 按表清零（不会再漏法器）');
   ok(/kind === 'puppet'\) puppetGroup\.visible = true/.test(relicsSrc), '买到立刻显形（小木偶挂件）');
-  ok(/levels\.puppet = 0;\n    cds/.test(relicsSrc) || /levels\.puppet = 0;/.test(relicsSrc), 'reset 有 puppet');
+  ok(/for \(const k of Object\.keys\(cds\)\) cds\[k\] = 0/.test(relicsSrc), 'reset 也把冷却表清零（含 puppet）');
 }
 
 // ============================================================ §10 main.js 接线

@@ -34,9 +34,9 @@
 //   标了 scope:'weapon' 的项改的是武器表（剑系 / 元素系），其余改主角表。
 //   两块表都要传进来，没传 wstats 时武器项会退化到主角表（只为兼容老调用）。
 // ============================================================
-import { STAT_DEFS } from './stats.js?v=144';
-import { WEAPON_STAT_DEFS } from './weaponStats.js?v=144';
-import { RARITIES, rarityWeight, oddsOf } from './rarity.js?v=144';
+import { STAT_DEFS } from './stats.js?v=145';
+import { WEAPON_STAT_DEFS } from './weaponStats.js?v=145';
+import { RARITIES, rarityWeight, oddsOf } from './rarity.js?v=145';
 
 // 一张卡改的是哪块表
 function tableFor(scope, stats, wstats) {
@@ -709,6 +709,49 @@ const UNIQUE = [
     title: '刀口宽度 +0.6 格',
     desc: '一刀切得更宽（能重复拿）—— 排成一片冲过来的怪，一刀全在刀口里',
   },
+  // ---------------- 环形灯卡（第 128 块，第十五关专属法器） ----------------
+  // 买到「环形灯」后才会进池子（weightOf 里拦：opts.ringlightOwned）。
+  // 五个通道：持续 / 半径 / 减速 / 冷却 / 传说套装；up.ringlight 转交 ringlight.applyCard()。
+  {
+    id: 'ringDur', tag: 'def', glyph: '🔦', name: '多开一会儿',
+    rarity: 0,
+    w0: 0.60, gw: +0.015,
+    ringlight: { stat: 'duration', flat: 1.5 },
+    title: '环形灯持续 +1.5 秒',
+    desc: '灯亮得更久（能重复拿）—— 一场围殴从头照到尾，不用中途再按一次',
+  },
+  {
+    id: 'ringRad', tag: 'atk', glyph: '⭕', name: '换大灯罩',
+    rarity: 0,
+    w0: 0.58, gw: +0.015,
+    ringlight: { stat: 'radius', flat: 0.4 },
+    title: '灯圈半径 +0.4 格',
+    desc: '灯圈更大（能重复拿）—— 站在圈心就够得着圈边的怪，被减速的范围也更宽',
+  },
+  {
+    id: 'ringSlow', tag: 'def', glyph: '🐌', name: '调暗一点',
+    rarity: 1,
+    w0: 0.50, gw: +0.016,
+    ringlight: { stat: 'slow', flat: 0.04 },
+    title: '灯圈减速 +4%',
+    desc: '灯下的怪更挪不动（能重复拿，上限 60%）—— 这个数到 50% 以上，冲过来的怪几乎像停住',
+  },
+  {
+    id: 'ringCd', tag: 'mov', glyph: '⏱', name: '快换电池',
+    rarity: 2,
+    w0: 0.38, gw: +0.020,
+    ringlight: { stat: 'cd', flat: 2.5 },
+    title: '环形灯冷却 −2.5 秒',
+    desc: '开灯更勤（能重复拿，最低 12 秒）—— 一轮接一轮地照，灯几乎不断',
+  },
+  {
+    id: 'ringSet', tag: 'atk', glyph: '🎁', name: '打赏翻倍',
+    rarity: 4,
+    w0: 0.30, gw: +0.008,
+    ringlight: { stat: 'coin', flat: 1, extra: [{ stat: 'radius', flat: 0.4 }, { stat: 'duration', flat: 1.5 }] },
+    title: '灯下打赏 +1 币 · 半径 +0.4 · 持续 +1.5 秒',
+    desc: '传说：一次给三样 —— 圈里的钱翻倍、圈更大、亮更久。拿到这张，灯下就是提款机',
+  },
 ];
 
 // 把「族 × 三档」摊平成一张张卡。小档沿用原来的 id（老存档 / 老测试照旧认得）。
@@ -776,6 +819,8 @@ export function weightOf(up, round = 1, opts = {}) {
   if (up.board && !opts.boardOwned) return 0;
   // 第 124 块：裁纸刀卡同理
   if (up.guillotine && !opts.guillotineOwned) return 0;
+  // 第 128 块：环形灯卡同理
+  if (up.ringlight && !opts.ringlightOwned) return 0;
   if (up.needsWeapon && !opts.hasWeapon) return 0;
   const r = Math.max(1, round);
   return Math.max(0, (up.w0 ?? 1) + (up.gw ?? 0) * (r - 1));
@@ -824,7 +869,7 @@ export function rollChoices(rng = Math.random, opts = {}) {
 // wstats = 武器属性表：scope:'weapon' 的条目改它，其余改主角 stats。
 // weapon = 武器系统本身：只有「直接给一把剑」的卡（sword 字段）才需要它。
 // 返回 { src, changes }：changes 是精确的「选前 → 选后」（用于卡片/提示文案）。
-export function applyUpgrade(stats, up, serial = 0, wstats = null, weapon = null, golems = null, arrowRain = null, mines = null, latte = null, candle = null, mark = null, board = null, guillotine = null) {
+export function applyUpgrade(stats, up, serial = 0, wstats = null, weapon = null, golems = null, arrowRain = null, mines = null, latte = null, candle = null, mark = null, board = null, guillotine = null, ringlight = null) {
   // 第 107 块：傀儡卡不碰属性表，交给傀儡系统记账（golem.applyCard）
   if (up.golem) {
     const g = up.golem;
@@ -902,6 +947,16 @@ export function applyUpgrade(stats, up, serial = 0, wstats = null, weapon = null
     return {
       src: `upg:${up.id}:${serial}`,
       changes: [guillotineChange(gl, before)],
+    };
+  }
+  // 第 128 块：环形灯卡交给 ringlight.js 记账
+  if (up.ringlight) {
+    const rl = up.ringlight;
+    const before = ringlight ? ringlight.bonuses() : null;
+    if (ringlight) ringlight.applyCard(rl);
+    return {
+      src: `upg:${up.id}:${serial}`,
+      changes: [ringlightChange(rl, before)],
     };
   }
   // 剑阵这类「直接加一把剑」的卡：不碰属性表，交给武器系统上环
@@ -1179,7 +1234,30 @@ function guillotineChange(c, b) {
   };
 }
 
-export function previewUpgrade(stats, up, wstats = null, weapon = null, golems = null, arrowRain = null, mines = null, latte = null, candle = null, mark = null, board = null, guillotine = null) {  if (up.golem) {
+// ---- 第 128 块：环形灯卡的 changes 文案（apply 与 preview 共用）----
+// 卡里的键（duration/radius/slow/cd/coin）和 bonuses() 同名，但 slow 在卡里是
+// **小数**（0.04）、bonuses() 里也是小数（0.30），显示统一按百分数。
+function ringlightChange(c, b) {
+  const b0 = b || { duration: 6.0, radius: 3.6, slow: 0.30, coin: 1, cdMax: 24.0 };
+  const meta = {
+    duration: { name: '环形灯持续', from: b0.duration, fmt: (v) => `${v.toFixed(1)} 秒`, dflt: 0 },
+    radius: { name: '灯圈半径', from: b0.radius, fmt: (v) => `${v.toFixed(1)} 格`, dflt: 0 },
+    slow: { name: '灯圈减速', from: b0.slow, fmt: (v) => `${Math.round(v * 100)}%`, dflt: 0 },
+    cd: { name: '环形灯冷却', from: b0.cdMax, fmt: (v) => `${v.toFixed(1)} 秒`, dflt: 12.0 },
+    coin: { name: '灯下打赏', from: b0.coin, fmt: (v) => `+${v} 币`, dflt: 0 },
+  };
+  const stat = meta[c.stat] ? c.stat : 'duration';
+  const mm = meta[stat];
+  const flat = c.flat || 0;
+  const to = stat === 'cd' ? Math.max(mm.dflt, mm.from - flat) : mm.from + flat;
+  return {
+    key: `ringlight_${stat}`, scope: 'ringlight', name: mm.name,
+    from: mm.from, to, fromText: mm.fmt(mm.from), toText: mm.fmt(to),
+    text: `${mm.fmt(mm.from)} → ${mm.fmt(to)}`,
+  };
+}
+
+export function previewUpgrade(stats, up, wstats = null, weapon = null, golems = null, arrowRain = null, mines = null, latte = null, candle = null, mark = null, board = null, guillotine = null, ringlight = null) {  if (up.golem) {
     const g = up.golem;
     const b = golems ? golems.bonuses() : null;
     return [golemChange(g, b)];
@@ -1219,6 +1297,11 @@ export function previewUpgrade(stats, up, wstats = null, weapon = null, golems =
   if (up.guillotine) {
     const b = guillotine ? guillotine.bonuses() : null;
     return [guillotineChange(up.guillotine, b)];
+  }
+  // 第 128 块：环形灯卡 —— 同一个 ringlightChange
+  if (up.ringlight) {
+    const b = ringlight ? ringlight.bonuses() : null;
+    return [ringlightChange(up.ringlight, b)];
   }
   if (up.sword) {
     const n = weapon ? weapon.count : 0;

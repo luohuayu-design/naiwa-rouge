@@ -8,7 +8,7 @@
 // 两套配色集中在 THEMES 里，buildNightScene({ theme }) 建哪套，
 // 局中要换就调返回的 setTheme('crypt')（不改几何，只改颜色和贴图）。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=144';
+import * as THREE from '../lib/three.module.js?v=145';
 
 export const THEMES = {
   // 第一关 · 荒草地：冷月光 + 青绿边圈 + 萤火虫
@@ -225,6 +225,22 @@ export const THEMES = {
     tuft: 0x333a3a, tuftVisible: false,     // 室内地上不长草
     fly: 0xcfe9f2, flyCount: 64,            // 光柱里飘的纸尘
     ground: 'press',
+  },
+  // 第十五关 · 钟楼二层直播间（第 128 块）：补光灯 + 环形灯 + 三部手机。
+  // 配色思路：整关只有两种光 —— 补光灯的暖白（光斑 / 边缘 / 萤火）
+  // 和环形灯的冷粉（rim / 边圈）。屋里没有天光，所以底色是全作里最「黑蓝」的一档；
+  // 粉色的边圈不是装饰：它和 spotlight.js 的光斑一起告诉玩家「这一关的光是假的」。
+  studio: {
+    bg: 0x0a0d14,
+    fog: 0x1a2030, fogDensity: 0.0136,
+    hemiSky: 0x9aa4c8, hemiGround: 0x14101a, hemiIntensity: 1.34,
+    moon: 0xe8f0ff, moonIntensity: 2.92, moonBase: 2.74,
+    rim: 0x8a5a9a, rimIntensity: 0.86,      // 环形灯的冷粉
+    edge: 0xff8fd0, edgeOpacity: 0.30,      // 直播间边沿的一圈霓虹粉
+    stone: 0x2e3340,
+    tuft: 0x333a46, tuftVisible: false,     // 室内地胶上不长草
+    fly: 0xffd0f0, flyCount: 96,            // 灯下的浮尘 / 手机反光
+    ground: 'studio',
   },
 };
 
@@ -687,6 +703,83 @@ function makePressTexture() {
   return tex;
 }
 
+// 第十五关 · 直播间的地台（第 128 块）
+// 钟楼二层被改成了直播间：深灰蓝的地胶 + 胶带十字记号 + 一地掉落的截图边角。
+// 和前两关的区别：打样间是水泥的冷，这一关是**演播室地胶**的软 —— 底子更暗，
+// 上面漂着几块粉紫的灯味（补光灯漏下来的边），和人造光的主题对得上。
+function makeStudioTexture() {
+  const S = 512;
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = S;
+  const g = cv.getContext('2d');
+
+  g.fillStyle = '#191c24';
+  g.fillRect(0, 0, S, S);
+
+  let seed = 128128;
+  const rnd = () => {
+    seed = (seed * 1103515245 + 12345) % 2147483648;
+    return seed / 2147483648;
+  };
+
+  // ① 地胶颗粒：冷灰蓝细点
+  for (let i = 0; i < 2400; i++) {
+    const x = rnd() * S, y = rnd() * S;
+    g.fillStyle = `rgba(${44 + rnd() * 26 | 0},${50 + rnd() * 28 | 0},${62 + rnd() * 30 | 0},${0.06 + rnd() * 0.14})`;
+    g.beginPath(); g.arc(x, y, 0.3 + rnd() * 1.2, 0, Math.PI * 2); g.fill();
+  }
+
+  // ② 地胶接缝：四条浅暗线
+  g.strokeStyle = 'rgba(10,12,16,0.40)';
+  g.lineWidth = 2.2;
+  for (let k = 1; k < 4; k++) {
+    g.beginPath(); g.moveTo((S / 4) * k, 0); g.lineTo((S / 4) * k, S); g.stroke();
+    g.beginPath(); g.moveTo(0, (S / 4) * k); g.lineTo(S, (S / 4) * k); g.stroke();
+  }
+
+  // ③ 胶带十字记号：工作人员用来对机位 / 对灯位的记号
+  for (let i = 0; i < 9; i++) {
+    const x = rnd() * S, y = rnd() * S;
+    const len = 9 + rnd() * 16;
+    g.save();
+    g.translate(x, y);
+    g.rotate(rnd() * Math.PI);
+    g.fillStyle = `rgba(${206 + rnd() * 30 | 0},${200 + rnd() * 24 | 0},${176 + rnd() * 20 | 0},${0.24 + rnd() * 0.16})`;
+    g.fillRect(-len / 2, -2, len, 4);
+    g.fillRect(-2, -len / 2, 4, len);
+    g.restore();
+  }
+
+  // ④ 补光灯漏下来的一小块暖光（和 spotlight.js 的光斑是同一个色系）
+  for (let i = 0; i < 5; i++) {
+    const x = rnd() * S, y = rnd() * S;
+    const r = 40 + rnd() * 60;
+    const grd = g.createRadialGradient(x, y, 0, x, y, r);
+    grd.addColorStop(0, 'rgba(255,232,180,0.10)');
+    grd.addColorStop(1, 'rgba(255,232,180,0)');
+    g.fillStyle = grd;
+    g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+  }
+
+  // ⑤ 一地掉落的截图边角（直播间墙上贴过三十七张，地上也落了几张）
+  for (let i = 0; i < 22; i++) {
+    const x = rnd() * S, y = rnd() * S;
+    const w = 5 + rnd() * 12, h = 4 + rnd() * 9;
+    g.save();
+    g.translate(x, y);
+    g.rotate(rnd() * Math.PI);
+    g.fillStyle = `rgba(${214 + rnd() * 26 | 0},${218 + rnd() * 24 | 0},${228 + rnd() * 22 | 0},${0.16 + rnd() * 0.22})`;
+    g.fillRect(-w / 2, -h / 2, w, h);
+    g.restore();
+  }
+
+  const tex = new THREE.CanvasTexture(cv);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(16, 16);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
 function makeGroundTexture(kind) {
   if (kind === 'crypt') return makeCryptTexture();
   if (kind === 'ash') return makeAshTexture();
@@ -701,6 +794,7 @@ function makeGroundTexture(kind) {
   if (kind === 'highway') return makeHighwayTexture();
   if (kind === 'campus') return makeCampusTexture();
   if (kind === 'press') return makePressTexture();
+  if (kind === 'studio') return makeStudioTexture();
   return makeGrassTexture();
 }
 

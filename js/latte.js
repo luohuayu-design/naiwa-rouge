@@ -5,7 +5,7 @@
 // 等级、三选一、商店分别走独立 mods；所有临时属性 mod 都有 src，
 // 离场 / 到期 / reset 必须撤掉，不能把一杯咖啡带进下一局。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=144';
+import * as THREE from '../lib/three.module.js?v=145';
 
 export const LATTE_BASE = {
   cd: 30.0,

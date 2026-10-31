@@ -13,13 +13,13 @@
 // （击杀 / 弹事件卡 / 选升级卡）。
 // ============================================================
 
-import { ENEMY_TYPES } from './enemy.js?v=144';
-import { SWORD_KINDS } from './swordKinds.js?v=144';
-import { RELIC_DEFS } from './relics.js?v=144';
-import { UPGRADES } from './upgrade.js?v=144';
-import { ALL_EVENTS } from './events.js?v=144';
-import { RARITIES } from './rarity.js?v=144';
-import { codexAll, codexCount } from './profile.js?v=144';
+import { ENEMY_TYPES } from './enemy.js?v=145';
+import { SWORD_KINDS } from './swordKinds.js?v=145';
+import { RELIC_DEFS } from './relics.js?v=145';
+import { UPGRADES } from './upgrade.js?v=145';
+import { ALL_EVENTS } from './events.js?v=145';
+import { RARITIES } from './rarity.js?v=145';
+import { codexAll, codexCount } from './profile.js?v=145';
 
 export const CODEX_TABS = [
   { id: 'enemies', name: '怪物' },
@@ -89,6 +89,18 @@ function enemySub(cfg) {
     const c = cfg.collect;
     return `生命 ${cfg.hp} · 速度 ${cfg.speed} · 从不还手`
       + ` · 每 ${c.cd} 秒来收一次 · 读条 ${c.cast} 秒`;
+  }
+  // ---- 第十五关两只（第 128 块）----
+  // 超管：伤害是 0，直接写「伤害 0」会像漏填，所以整行重写并写出禁言周期 ——
+  // 它真正吓人的是「技能栏被锁」的那段时间，不是血条。
+  if (cfg.mute) {
+    return `生命 ${cfg.hp} · 速度 ${cfg.speed} · 从不还手`
+      + ` · 每 ${cfg.attackInterval} 秒禁言一次 · 读条 ${cfg.attackDuration} 秒`;
+  }
+  // 弹幕：脆、出手密，数值行要把「多久吐一块字牌」写出来。
+  if (cfg.projectile && cfg.projectile.word) {
+    return statLine([['生命', cfg.hp], ['伤害', cfg.damage], ['速度', cfg.speed]])
+      + ` · 每 ${cfg.attackInterval} 秒吐一块字牌`;
   }
   const line = statLine([['生命', cfg.hp], ['伤害', cfg.damage], ['速度', cfg.speed]]);
   // 并联体（第 80 块）：真正伤人的是电弧，不从这条线上说清楚，玩家会拿它当普通近战
@@ -200,6 +212,29 @@ function enemyDesc(cfg) {
       + `移速 ×${r.speedMul.toFixed(2)}、出手频率 ×${r.hasteMul.toFixed(1)}。`
       + `它只有 ${cfg.hp} 血、躲在中距离（${cfg.keepDistance} 格外不肯靠近），杀掉会掉一杯短咖啡（给你一点移速）。`
       + `所以它是这一关的「优先击杀」：要么打断它的读条、要么先点掉它，别让整群怪一起被加急`;
+  }
+  // ---- 第十五关两只（第 128 块）----
+  // 超管：它的压力不在血条上，在「技能栏被锁住的那 3 秒」——
+  // 玩家第一反应一定是先打围上来的，所以文案必须把「先拆谁」说穿。
+  if (cfg.mute) {
+    const m = cfg.mute;
+    return `禁言压力：它一下都不打你 —— 躲在中距离读条 ${cfg.attackDuration} 秒（头顶一圈紫环在缩），`
+      + `读满你的整个技能栏黑 ${m.duration} 秒：Q 环形灯、E 开播全都按不出来，`
+      + `技能位不显示冷却、只显示还剩几秒。`
+      + `它 ${cfg.hp} 血带 ${Math.round(cfg.armor * 100)}% 减伤，不难拆；真正的代价是那 ${m.duration} 秒 —— `
+      + `刚想开播的时候被禁言，整波就白等了。`
+      + `打断很简单：走出 ${cfg.attackRange} 格外，或者给它一刀，读条立刻断。`
+      + `它自己躲着你走（总保持在 ${cfg.keepDistance} 格左右），所以每回合都要先答一个问题：`
+      + `先追超管，还是先把冲上来的清完`;
+  }
+  // 弹幕：它瞄的是你「当时」的位置、不预判，所以躲法是「一直在动」，
+  // 而不是像躲紫阵那样看圈。这两点不说清，玩家会觉得这弹道在追踪。
+  if (cfg.projectile && cfg.projectile.word) {
+    return `压制压力：它飘在 ${cfg.attackRange} 格外朝你吐「字牌」—— 每 ${cfg.attackInterval} 秒一块，`
+      + `牌面直着飞、不翻滚，比投手的骨刀慢一点，但来得更密。撞上掉 ${cfg.damage} 点血。`
+      + `牌上写的就是直播间那些话（就这? / 下播吧），一排横着飞过来的时候会挡视线。`
+      + `躲法只有一条：它瞄的是你「当时」的位置，不预判 —— 横着挪一步就错开，站着不动才挨打。`
+      + `它只有 ${cfg.hp} 血，全场最脆之一，但会一直跟你保持 ${cfg.keepDistance} 格以上的距离 —— 想拆它就得主动追过去`;
   }
   if (cfg.erase) return '损失压力：它从不还手，读条 4.5 秒后把你环上的一把剑「擦掉」，然后转身往场地外跑 —— 跑出去那把剑这一局就没了。冰剑冻住 / 震剑击退 / 冲过去砍死它，都行';  if (cfg.reboot) return '耐心压力：打死不算完 —— 躺 4 秒后原地半血重启，而且比上一次更快（最多重启 2 次）。地上那圈红光就是倒计时，守着它补刀';
   if (cfg.charge) return '机动压力：地上一道直线就是它的冲锋路线 —— 横向侧移能躲，撞完它会僵一下（那就是输出窗口）';

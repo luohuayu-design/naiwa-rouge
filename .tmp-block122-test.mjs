@@ -181,8 +181,8 @@ ok(/function clearRoundBuffs\(\)[\s\S]{0,900}clearBoost\(\)/.test(mainSrc),
 ok(/boostSrc/.test(mainSrc) && !/roundBuffSrc = boostSrc/.test(mainSrc),
   '大涨用独立 boostSrc，不抢 roundBuffSrc');
 // 受击加重
-ok(/const raw = amount \* \(1 \+ runCurseDmg\) \* \(1 \+ boxCurseDmg\) \* \(1 \+ chalDmgTaken\);/.test(mainSrc),
-  '破防挑战乘在 hurtPlayer 的 raw 上（盲盒减成也各占一项）');
+ok(/const raw = amount \* \(1 \+ runCurseDmg\) \* \(1 \+ boxCurseDmg\) \* \(1 \+ chalDmgTaken\) \* lightMul;/.test(mainSrc),
+  '破防挑战乘在 hurtPlayer 的 raw 上（盲盒减成也各占一项；第 128 块尾部再乘曝光/开播）');
 // 攻击力用 mul 不用 flat
 ok(/stats\.addMod\(\{ stat: 'attack', mul: target \/ Math\.max/.test(mainSrc),
   '绵软挑战用 mul 折算（flat 会被 pct 放大）');
@@ -203,7 +203,7 @@ ok(/weapon\.setMuted\(true\)/.test(mainSrc) && /weapon\.setMuted\(false\)/.test(
 // 禁术：技能栏与按下都拦
 ok(/if \(chalNoSkill\) \{[\s\S]{0,200}showToast\('技能被禁'/.test(mainSrc), '禁术拦在 pressSkill');
 ok(/muted: chalNoSkill,/.test(mainSrc), 'skillCtx 带 muted');
-ok(/const muted = !!ctx\.muted;/.test(mainSrc), 'renderSkill 读 muted');
+ok(/const muted = !!ctx\.muted/.test(mainSrc), 'renderSkill 读 muted（第 128 块起还叠上 ctx.silenced）');
 // 调试门：debug 默认跳过（老 CDP 套件靠「清场就能推进」）
 ok(/function chalEnabled\(\) \{[\s\S]{0,160}DEBUG_SKIP_NARRATIVE/.test(mainSrc),
   'debug 默认跳过挑战');

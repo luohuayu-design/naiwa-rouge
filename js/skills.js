@@ -32,7 +32,7 @@
 //
 // ctx 由 main.js 每帧拼好传进来：{ playing, weapon, playerPos, stats, coins }
 // ============================================================
-import audio from './audio.js?v=144';
+import audio from './audio.js?v=145';
 
 // 冷却数字统一两位小数（第 64 块用户需求：倒计时精确到两位小数）。
 // 不补零会跳字（3.4 → 3.35 期间宽度变化），toFixed(2) 宽度恒定。
@@ -450,6 +450,92 @@ export const SKILLS = [
       // 挥空了也要有声音：刀落在地上和刀切到东西是两种手感（见 guillotine.hits）
       if (ok) audio.sfx('swordFire', { vol: 0.35 });
       return ok;
+    },
+  },
+
+  // ---- 第 17 件法器「环形灯」（第 128 块，第十五关专属） ----
+  // 第十五关的场地是补光曝光区：地上漂着灯，站进去多拿钱但也更危险。
+  // 环形灯是你自己举着的那一盏 —— 按下打开，灯圈跟着你走，圈里怪减速，
+  // 圈里击杀额外打赏。它补的正是场地机制缺的那块「稳」。
+  {
+    id: 'ringlight',
+    name: '环形灯',
+    // 内联 SVG：一圈粉色灯管 + 中间的灯盘 + 支架
+    art: '<svg viewBox="0 0 40 40" aria-hidden="true">'
+      + '<circle cx="20" cy="15.4" r="9.2" fill="none" stroke="#ff9ad6" stroke-width="3"/>'
+      + '<circle cx="20" cy="15.4" r="9.2" fill="none" stroke="#ffe0f2" stroke-width="1.2" opacity=".85"/>'
+      + '<circle cx="20" cy="15.4" r="5.2" fill="#ffe6f4" opacity=".55"/>'
+      + '<path d="M20 24.6 v7.6" stroke="#8a90a0" stroke-width="2.4" stroke-linecap="round"/>'
+      + '<path d="M13.4 34.6 h13.2" stroke="#8a90a0" stroke-width="2.2" stroke-linecap="round"/>'
+      + '</svg>',
+    ring: true,
+    hint: '打开环形灯，灯圈跟着你走 6 秒：圈里怪减速、圈里击杀额外 +1 金币。冷却 24 秒',
+    key: 'q',
+    cd: 24.0,
+    cdNow: (ctx) => (ctx.ringlight ? ctx.ringlight.cdMax() : 24.0),
+    desc: '环形灯：按一下把它打开，持续 6 秒 —— 灯圈半径 3.6 格，跟着你走。'
+      + '灯圈里的怪减速 30%；在灯圈里打死的怪，每只额外掉 1 枚「打赏」金币。'
+      + '冷却 24 秒；法器三级半径 4.8 格、持续 8 秒、减速 40%、冷却 18 秒。'
+      + '它和场地上那些不动的补光光斑刚好互补：光斑是「站进去贪」，灯是「举着走稳」。',
+    unlockNote: '夜行商店买到「环形灯」（第十五关起上架）后拥有',
+    visible: (ctx) => ctx.playing && !!ctx.ringlight && ctx.ringlight.owned,
+    state: (ctx) => {
+      if (!ctx.ringlight || !ctx.ringlight.owned) return 'lock';
+      if (ctx.ringlight.count >= ctx.ringlight.cap) return 'full';
+      return ctx.ringlight.ready ? 'ready' : 'cd';
+    },
+    ready: (ctx) => !!ctx.ringlight && ctx.ringlight.owned && ctx.playing && ctx.ringlight.ready,
+    progress: (ctx) => (ctx.ringlight ? ctx.ringlight.progress : 0),
+    cdText: (ctx) => {
+      if (!ctx.ringlight || !ctx.ringlight.owned) return '';
+      if (ctx.ringlight.count >= ctx.ringlight.cap) return '开';
+      return ctx.ringlight.ready ? '' : fmtCd(ctx.ringlight.cdLeft);
+    },
+    press(ctx) {
+      if (!ctx.ringlight) return false;
+      return ctx.ringlight.drop(ctx.playerPos);   // 冷却中 / 已经开着：返回 false，不播音效
+    },
+  },
+
+  // ---- 技能「开播」（第 128 块，第十五关） ----
+  // 不挂在法器上：通关第十四关后永久可用（档案里的通关记录）。
+  // 按下 6 秒内整个人进状态：攻速 +20%、移速 +15%、击杀额外 +1 打赏，
+  // 但直播不设防 —— 这 6 秒受伤 +10%。
+  {
+    id: 'broadcast',
+    name: '开播',
+    // 内联 SVG：一台摄像机 + 录制红点 + 三道声浪
+    art: '<svg viewBox="0 0 40 40" aria-hidden="true">'
+      + '<rect x="6" y="13" width="18" height="14" rx="2.6" fill="#2a3040" stroke="#ff9ad6" stroke-width="1.6"/>'
+      + '<path d="M24 18.4 l8 -3.6 v10.4 l-8 -3.6 z" fill="#ff9ad6" opacity=".85"/>'
+      + '<circle cx="12" cy="20" r="2.4" fill="#ff5a7a"/>'
+      + '<path d="M31 9 q3.4 4.4 0 8.8 M35 6.4 q5 6.8 0 13.6" fill="none" stroke="#ffe0f2" stroke-width="1.3" opacity=".7"/>'
+      + '</svg>',
+    ring: true,
+    hint: '6 秒直播状态：攻速 +20%、移速 +15%、击杀额外 +1 金币，但受伤 +10%。冷却 45 秒',
+    key: 'e',
+    cd: 45.0,
+    cdNow: (ctx) => (ctx.broadcast ? ctx.broadcast.cdMax : 45.0),
+    desc: '开播：按下之后 6 秒内进入直播状态 —— 攻速 +20%、移速 +15%，'
+      + '而且每一次击杀都额外拿 1 枚打赏金币。代价是直播不设防：这 6 秒里你受到的伤害 +10%。'
+      + '冷却 45 秒。它不挑目标也不占场地，是「这一波我要冲进去收钱」的开关，'
+      + '开在环形灯里最赚：打赏 + 灯圈打赏叠在一起。',
+    unlockNote: '通关第十四关后永久解锁（局外档案，跨局有效）',
+    visible: (ctx) => ctx.playing && !!ctx.broadcast,
+    state: (ctx) => {
+      if (!ctx.broadcast) return 'lock';
+      return ctx.broadcast.ready ? 'ready' : 'cd';
+    },
+    ready: (ctx) => !!ctx.broadcast && ctx.playing && ctx.broadcast.ready,
+    progress: (ctx) => (ctx.broadcast ? ctx.broadcast.progress : 0),
+    cdText: (ctx) => {
+      if (!ctx.broadcast) return '';
+      if (ctx.broadcast.active) return fmtCd(ctx.broadcast.remain);
+      return ctx.broadcast.ready ? '' : fmtCd(ctx.broadcast.cdLeft);
+    },
+    press(ctx) {
+      if (!ctx.broadcast) return false;
+      return ctx.broadcast.cast(ctx.playerPos);
     },
   },
 

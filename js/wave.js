@@ -1065,10 +1065,89 @@ export const LEVEL_14 = {
   ],
 };
 
+// ============================================================
+// 第十五关 · 钟楼二层直播间（第 128 块）
+// ============================================================
+// 场地机制：补光曝光区（js/spotlight.js）—— 地上两盏漂移的补光灯。
+//   · 光里击杀额外 +3 打赏金币   · 光里受伤 ×1.30（过曝）
+//   · 光里的怪移速 ×1.20         · 第 6 / 11 / 16 回合各多一盏，同时漂得更快
+//
+// 它和前面四关场地的关系：第十一关「看不见」、第十二关「车流横穿」、
+// 第十三关「两边一起变快」、第十四关「按时间落刀」。这一关第一次把
+// **收益和风险绑在同一块地上**：想多拿钱就得走进光里，而光里既更疼、怪也更快。
+// 于是第十五关的走位是主动的贪 —— 不是躲什么，是抢什么。
+//
+// 两只新怪围绕这条线：弹幕（远程字弹）逼你不能停在光里当靶子，
+// 超管（读条禁言）把你在光里保命的技能按下三秒。
+//
+// 数值：用户定案「抬一档」—— hpMul 1.70 / dmgMul 2.05（第十四关 1.65 / 2.00）。
+export const LEVEL_15 = {
+  id: 15,
+  name: '第十五关 · 钟楼直播间',
+  theme: 'studio',          // 夜里的演播室：深灰蓝地胶 + 补光灯的暖白 + 环形灯的粉
+  arena: 19,
+  order: [
+    ['minion', 1], ['warrior', 1.5], ['archer', 1.8],
+    ['danmaku', 2.1], ['bowman', 2.2], ['leaper', 2.3],
+    ['misprint', 2.4], ['wraith', 2.5], ['shielder', 2.6],
+    ['charger', 2.7], ['brood', 2.8], ['mender', 2.9],
+    ['moderator', 3.0], ['clerk', 3.1], ['proofreader', 3.2],
+    ['standee', 3.3], ['camera', 3.4], ['addressee', 3.5],
+  ],
+  spawnRadius: 16.6,
+  spawnJitter: 0.5,
+  minPlayerDistance: 7.4,
+  minSpawnGap: 2.4,
+  gapScale: 1.12,
+  gap: 2.6,
+  upgradeAfter: [1, 2, 3, 4, 5, 8, 10, 12, 15, 17, 19, 20],
+  shopAfter: [3, 6, 9, 12, 15, 18],
+  weaponAt: 4,
+  scale: { hp: 0.34, damage: 0.20, speed: 0.045, haste: 0.0110, curve: 0.28, hpMul: 1.70, dmgMul: 2.05 },
+  // 补光曝光区：见 js/spotlight.js。arena 变了这里要跟着改（灯绕着场地中心转）。
+  spotlight: {
+    arena: 19,
+    count: 2,
+    radius: 2.8,
+    drift: 0.10,
+    coinKill: 3,
+    playerTakenMul: 1.30,
+    enemyMul: 1.20,
+    extraAt: [{ round: 6, add: 1 }, { round: 11, add: 1 }, { round: 16, add: 1 }],
+  },
+  rounds: [
+    // ---- 第一幕（R1~R4）：先学会看地上的灯 ----
+    { minion: 4, warrior: 1, archer: 0, danmaku: 0, bowman: 0, leaper: 0, misprint: 0, wraith: 0, shielder: 0, charger: 0, brood: 0, mender: 0, moderator: 0, clerk: 0, proofreader: 0, standee: 0, camera: 0, addressee: 0, gap: 0.86, tip: '地上那两圈暖白是补光灯。在光里杀怪多掉 3 个打赏金币 —— 但光里也更容易挨打' },
+    { minion: 4, warrior: 2, archer: 0, danmaku: 1, bowman: 0, leaper: 0, misprint: 0, wraith: 0, shielder: 0, charger: 0, brood: 0, mender: 0, moderator: 0, clerk: 0, proofreader: 0, standee: 0, camera: 0, addressee: 0, gap: 0.82, tip: '新面孔·弹幕：它远远地吐字牌过来。牌不翻滚、走直线 —— 横着走两步就能躲' },
+    { minion: 5, warrior: 2, archer: 1, danmaku: 1, bowman: 0, leaper: 0, misprint: 0, wraith: 0, shielder: 0, charger: 0, brood: 0, mender: 0, moderator: 0, clerk: 0, proofreader: 0, standee: 0, camera: 0, addressee: 0, gap: 0.78, tip: '光里受伤是 1.3 倍。站在光里打怪是赚的，但别在光里硬扛大块头的拳头' },
+    { minion: 5, warrior: 2, archer: 1, danmaku: 1, bowman: 0, leaper: 0, misprint: 1, wraith: 0, shielder: 0, charger: 0, brood: 0, mender: 0, moderator: 1, clerk: 0, proofreader: 0, standee: 0, camera: 0, addressee: 0, gap: 0.74, tip: '新面孔·超管：它不打人，只读条禁言。读条环缩到底的那一下，你三秒内按不出任何技能' },
+    // ---- 第二幕（R5~R8）：灯开始漂 ----
+    { minion: 5, warrior: 3, archer: 1, danmaku: 2, bowman: 1, leaper: 1, misprint: 1, wraith: 0, shielder: 0, charger: 0, brood: 0, mender: 0, moderator: 1, clerk: 0, proofreader: 0, standee: 0, camera: 0, addressee: 0, gap: 0.70, tip: '灯在漂：光斑不是固定靶，它会慢慢绕场转。别站稳，跟着它走' },
+    { minion: 6, warrior: 3, archer: 2, danmaku: 2, bowman: 1, leaper: 1, misprint: 1, wraith: 1, shielder: 0, charger: 1, brood: 0, mender: 0, moderator: 1, clerk: 0, proofreader: 0, standee: 0, camera: 1, addressee: 0, gap: 0.68, tip: '第 6 回合起多一盏灯：三块光在场上转，总有一块离你更近' },
+    { minion: 6, warrior: 3, archer: 2, danmaku: 2, bowman: 1, leaper: 1, misprint: 1, wraith: 1, shielder: 1, charger: 1, brood: 0, mender: 1, moderator: 1, clerk: 0, proofreader: 1, standee: 0, camera: 1, addressee: 0, gap: 0.66, tip: '超管的禁言按的是「全部技能」：它读条的时候先把最要紧的那个技能用掉' },
+    { minion: 6, warrior: 4, archer: 2, danmaku: 3, bowman: 2, leaper: 1, misprint: 2, wraith: 1, shielder: 1, charger: 1, mender: 1, moderator: 1, clerk: 1, proofreader: 1, standee: 0, camera: 1, addressee: 0, gap: 0.64, tip: '弹幕 + 超管同场：字牌逼你动、禁言逼你用技能。两件事一起做才不会卡住' },
+    // ---- 第三幕（R9~R12）：第三盏灯 ----
+    { minion: 7, warrior: 4, archer: 2, danmaku: 3, bowman: 2, leaper: 2, misprint: 2, wraith: 2, shielder: 1, charger: 2, mender: 1, moderator: 1, clerk: 1, proofreader: 1, standee: 1, camera: 1, addressee: 1, gap: 0.62, tip: '被批注的怪头上有一圈红：校对的也在这一关，光里的怪被批注就是双倍凶' },
+    { minion: 7, warrior: 4, archer: 3, danmaku: 3, bowman: 2, leaper: 2, misprint: 2, wraith: 2, shielder: 2, charger: 2, brood: 1, mender: 1, moderator: 1, clerk: 2, proofreader: 1, standee: 1, camera: 1, addressee: 1, gap: 0.60, tip: '立牌在光里也挡刀：正面 −75% 那一下，抵掉过曝还多赚' },
+    { minion: 7, warrior: 5, archer: 3, danmaku: 3, bowman: 3, leaper: 2, misprint: 3, wraith: 2, shielder: 2, charger: 3, brood: 1, mender: 1, moderator: 1, clerk: 2, proofreader: 1, standee: 1, camera: 1, addressee: 1, gap: 0.58, tip: '第 11 回合：又亮起一盏。现在四块光在转，整块场地几乎没有不亮的地方' },
+    { minion: 7, warrior: 5, archer: 3, danmaku: 3, bowman: 3, leaper: 2, misprint: 3, wraith: 2, shielder: 2, charger: 3, mender: 2, moderator: 1, clerk: 2, proofreader: 0, standee: 1, camera: 2, addressee: 2, gap: 0.56, tip: '两台取景的 + 四盏灯：闪光和光斑叠在一起会很晃，靠边的暗处反而安全' },
+    // ---- 第四幕（R13~R16）：灯变快 ----
+    { minion: 8, warrior: 5, archer: 4, danmaku: 4, bowman: 3, leaper: 3, misprint: 3, wraith: 3, shielder: 2, charger: 3, mender: 2, moderator: 2, clerk: 2, proofreader: 1, standee: 1, camera: 2, addressee: 2, gap: 0.54, tip: '两只超管轮流读条：禁言的间隙越来越短，技能要留给真正要紧的那一下' },
+    { minion: 8, warrior: 6, archer: 4, danmaku: 4, bowman: 3, leaper: 3, misprint: 3, wraith: 3, shielder: 2, charger: 4, mender: 2, moderator: 2, clerk: 2, proofreader: 1, standee: 2, camera: 2, addressee: 2, gap: 0.52, tip: '灯开始快了：光斑漂得比第 1 回合明显更急，追光要提前站位' },
+    { minion: 9, warrior: 6, archer: 4, danmaku: 4, bowman: 4, leaper: 3, misprint: 4, wraith: 3, shielder: 3, charger: 4, brood: 1, mender: 2, moderator: 2, clerk: 2, proofreader: 1, standee: 2, camera: 2, addressee: 3, gap: 0.50, tip: '第 15 回合：弹幕开始连发。字牌是一条线过来的，别在原地等第二块' },
+    { minion: 9, warrior: 6, archer: 4, danmaku: 5, bowman: 4, leaper: 4, misprint: 4, wraith: 4, shielder: 3, charger: 4, brood: 1, mender: 2, moderator: 2, clerk: 3, proofreader: 2, standee: 2, camera: 2, addressee: 3, gap: 0.48, tip: '第 16 回合：第五盏灯亮起来。到这一步，场上已经没有完全安全的地面了' },
+    // ---- 第五幕（R17~R20）：下播 ----
+    { minion: 10, warrior: 6, archer: 5, danmaku: 5, bowman: 4, leaper: 4, misprint: 5, wraith: 4, shielder: 3, charger: 5, brood: 1, mender: 3, moderator: 2, clerk: 3, proofreader: 2, standee: 2, camera: 3, addressee: 3, gap: 0.46, tip: '超管和校对的都在场：一边禁你的技能，一边把光里的怪批注得更凶' },
+    { minion: 10, warrior: 7, archer: 5, danmaku: 5, bowman: 5, leaper: 4, misprint: 5, wraith: 4, shielder: 4, charger: 5, brood: 2, mender: 3, moderator: 3, clerk: 3, proofreader: 2, standee: 3, camera: 3, addressee: 4, gap: 0.44, tip: '三只超管：禁言快要连成一片了。把「开播」留到自己站在光里的时候再按' },
+    { minion: 11, warrior: 7, archer: 5, danmaku: 6, bowman: 5, leaper: 5, misprint: 5, wraith: 5, shielder: 4, charger: 5, brood: 2, mender: 3, moderator: 3, clerk: 3, proofreader: 2, standee: 3, camera: 3, addressee: 4, gap: 0.42, tip: '倒数第二波：灯比人快。记住一件事 —— 光斑的圆心会从你脚下穿过去，提前站到它前面' },
+    { minion: 11, warrior: 8, archer: 6, danmaku: 6, bowman: 5, leaper: 5, misprint: 6, wraith: 5, shielder: 4, charger: 6, brood: 2, mender: 3, moderator: 3, clerk: 4, proofreader: 2, standee: 3, camera: 3, addressee: 5, gap: 0.40, tip: '最后一波：她把补光灯全部打开了 —— 整个二层亮得像白天，没有一个角落是暗的' },
+  ],
+};
+
 // 关卡号 → 关卡表（主流程 / 选关 / 测试都从这里取）
 export const LEVELS_BY_ID = {
   1: LEVEL_1, 2: LEVEL_2, 3: LEVEL_3, 4: LEVEL_4, 5: LEVEL_5, 6: LEVEL_6, 7: LEVEL_7, 8: LEVEL_8,
-  9: LEVEL_9, 10: LEVEL_10, 11: LEVEL_11, 12: LEVEL_12, 13: LEVEL_13, 14: LEVEL_14,
+  9: LEVEL_9, 10: LEVEL_10, 11: LEVEL_11, 12: LEVEL_12, 13: LEVEL_13, 14: LEVEL_14, 15: LEVEL_15,
 };
 
 // 第 roundNo 回合（从 1 开始）的怪物属性倍率

@@ -25,15 +25,15 @@
 // 第四关三只（wraith/leaper/mender，第 35 块，第 52 块换模型），
 // 各自在下面 ENEMY_TYPES 里有详细注释。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=144';
-import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=144';
-import { clone as cloneSkinned } from '../lib/jsm/utils/SkeletonUtils.js?v=144';
-import { distance2D } from './stats.js?v=144';
-import { createRangeRing } from './rangeRing.js?v=144';
-import { withV } from './assetUrl.js?v=144';
+import * as THREE from '../lib/three.module.js?v=145';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=145';
+import { clone as cloneSkinned } from '../lib/jsm/utils/SkeletonUtils.js?v=145';
+import { distance2D } from './stats.js?v=145';
+import { createRangeRing } from './rangeRing.js?v=145';
+import { withV } from './assetUrl.js?v=145';
 // 第 114 块：誊录员落笔 / 收账人翻账簿的提示音（以前这个文件不放音效，
 // 忘了 import 会在落笔那一帧抛 ReferenceError，整帧 AI 全断 —— 别省这一行）
-import audio from './audio.js?v=144';
+import audio from './audio.js?v=145';
 
 // KayKit 模型正面朝 +Z；如果哪天换模型发现怪倒着走，把这里改成 Math.PI
 export const ENEMY_MODEL_YAW = 0;
@@ -1667,6 +1667,83 @@ export const ENEMY_TYPES = {
     glow: { color: 0x40382a, intensity: 0.28 },
     anim: { walk: 'idle', idle: 'idle', cast: 'attack', death: 'death', spawn: 'spawn' },
   },
+
+  // 弹幕 —— 第十五关（第 128 块）：直播间里刷屏的那一条条评论。
+  // 模型是 Quaternius 的 Glub（CC0）：一对翅膀 + 一对大眼睛的小飞怪，
+  // 贴着地面飘过来，远远地朝你吐「字弹」—— 弹体是一块写着字的牌子，
+  // 不翻滚、直着飞（投手的骨刀是翻滚的，两种弹道一眼能分清）。
+  // 定位：脆（3 血）但出手比投手密、弹速慢一点 —— 逼你一直横着走。
+  danmaku: {
+    name: '弹幕',
+    file: 'assets/monsters/glub.glb',
+    sourceHeight: 2.57,   // .tmp-128-calib.js 实测（Flying_Idle 渲染身高）
+    height: 1.20,
+    footY: 0.0,
+    hover: 0.30,          // 它本来就飞（Flying_Idle），离地飘着才对
+    radius: 0.42,
+    hp: 3.0,
+    armor: 0.0,
+    speed: 1.60,
+    attackRange: 8.2,
+    keepDistance: 4.4,
+    damage: 1,
+    attackInterval: 3.9,
+    windup: 0.80,
+    attackDuration: 1.05,
+    projectile: {
+      word: true,         // 见 throwBone：走「字牌」那条分支，不翻滚
+      speed: 4.6,
+      radius: 0.34,
+      life: 3.0,
+      y: 1.15,
+      color: 0xcfe6ff,
+    },
+    spawnTime: 0.85,
+    deathTime: 1.0,
+    selfDestruct: false,
+    color: 0xcfe6ff,
+    tint: 0xbcd8f2,
+    animFamily: 'flying',
+    clipOverrides: { cast: 'Punch' },   // 飞行家族没有读条动画，抬手挥一下代替
+    anim: { walk: 'walk', idle: 'idle', cast: 'cast', death: 'death', spawn: 'spawn' },
+  },
+
+  // 超管 —— 第十五关（第 128 块）：直播间里那个能一票否决你的人。
+  // 模型是 Quaternius 的 Yeti（CC0）：一整颗只剩嘴的大脑袋，张嘴就是判决。
+  // 行为：不打人（damage 0），躲在中距离读条「禁言」；读条完成 → 玩家技能栏
+  // 全部锁死 3 秒（main.js 的 silenceSkills）。和校对的 / 加急袋鼠同一套骨架：
+  // 读条环从大缩到小，走出作业半径或把它打死，读条立刻断。
+  moderator: {
+    name: '超管',
+    file: 'assets/monsters/yeti.glb',
+    sourceHeight: 2.488,  // .tmp-128-calib.js 实测（Idle 渲染身高）
+    height: 2.05,
+    footY: 0.0,
+    radius: 0.62,
+    hp: 9.0,
+    armor: 0.10,
+    speed: 1.02,
+    attackRange: 9.0,
+    keepDistance: 5.2,
+    damage: 0,
+    attackInterval: 11.0,
+    windup: 1.15,
+    attackDuration: 1.9,
+    // 禁言时长（秒）。键名叫 mute 不叫 silence —— main.js 的 ctx.muted 是技能栏的
+    // 「整体静音」开关，两边一个输出一个输入，别混成一个词。
+    mute: {
+      duration: 3.0,
+      color: 0x8f8fe8,
+    },
+    spawnTime: 1.0,
+    deathTime: 1.3,
+    selfDestruct: false,
+    color: 0x9a9ae8,
+    tint: 0x9aa2e8,
+    animFamily: 'blob',
+    clipOverrides: { cast: 'Jump' },   // 团块家族没有读条，原地一蹦 = 张嘴宣判
+    anim: { walk: 'walk', idle: 'idle', cast: 'cast', death: 'death', spawn: 'spawn' },
+  },
 };
 
 // ------------------------------------------------------------
@@ -2754,6 +2831,16 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
       root.add(e.waitRing.mesh);
       e.waitRing.setVisible(false);
     }
+    // 第 128 块：超管 —— 读条环换成靛蓝（比校对的略大一圈，因为它读得更慢）
+    if (cfg.mute) {
+      e.waitRing = createRangeRing({
+        radius: 1.7, color: cfg.mute.color,
+        opacity: 0.55, pulse: 0.0, y: cfg.hover + cfg.height + 0.34,
+      });
+      e.waitRing.setOnTop(true);
+      root.add(e.waitRing.mesh);
+      e.waitRing.setVisible(false);
+    }
     // 第 55 块：新怪第一次上场时通报一声 —— main.js 据此冻结世界、弹「它怎么打人」的信息卡。
     // 放在 push 之后：回调里就看得见这只怪已经在场上了（测试也靠这点断言）。
     if (onSpawn) onSpawn(e);
@@ -3348,6 +3435,42 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     });
   }
 
+  // 第 128 块：弹幕的「字弹」—— 一块写着字的牌子（不翻滚）。
+  // 四个词轮换，贴图只造一次（4 张 canvas），弹体只是共享几何的 Mesh。
+  // 为什么用字牌而不是又一根骨刀：第十五关的主题是「直播间里的评论」，
+  // 一排「下播吧 / 就这?」横着飞过来，玩家一眼就知道这关在讲什么；
+  // 而且牌面不转 —— 和投手翻滚的骨刀是两种弹道，躲起来不会混。
+  let wordGeo = null, wordMats = null;
+  const WORD_TEXTS = ['就这?', '下播吧', '刷屏了', '菜'];
+  const WORD_COLORS = ['#ffe08a', '#8fe8ff', '#ffb0c0', '#c8ff9e'];
+
+  function wordAssets() {
+    if (wordGeo) return;
+    wordGeo = new THREE.PlaneGeometry(1.55, 0.44);
+    wordMats = WORD_TEXTS.map((txt, i) => {
+      const W = 256, H = 72;
+      const cv = document.createElement('canvas');
+      cv.width = W; cv.height = H;
+      const g = cv.getContext('2d');
+      g.fillStyle = 'rgba(8,14,20,0.86)';
+      g.fillRect(0, 0, W, H);
+      g.strokeStyle = WORD_COLORS[i];
+      g.lineWidth = 4;
+      g.strokeRect(3, 3, W - 6, H - 6);
+      g.font = '700 40px "Microsoft YaHei",ui-sans-serif,sans-serif';
+      g.textAlign = 'center';
+      g.textBaseline = 'middle';
+      g.fillStyle = WORD_COLORS[i];
+      g.fillText(txt, W / 2 + 1, H / 2 + 1);
+      const tex = new THREE.CanvasTexture(cv);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.minFilter = THREE.LinearFilter;
+      return new THREE.MeshBasicMaterial({
+        map: tex, transparent: true, depthWrite: false, side: THREE.DoubleSide,
+      });
+    });
+  }
+
   // 从投手身前朝「主角当前所在位置」掷出（不预判，所以玩家一直动就打不中）
   function throwBone(e, ctx) {
     const cfg = e.cfg.projectile;
@@ -3358,12 +3481,21 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     const y = cfg.y ?? 0.85;
 
     shotAssets();
-    const mesh = new THREE.Mesh(shotGeo, shotMat);
+    let mesh;
+    if (cfg.word) {
+      wordAssets();
+      mesh = new THREE.Mesh(wordGeo, wordMats[Math.floor(Math.random() * wordMats.length)]);
+    } else {
+      mesh = new THREE.Mesh(shotGeo, shotMat);
+    }
     mesh.frustumCulled = false;
     const x = e.pos.x + nx * (e.cfg.radius + 0.25);
     const z = e.pos.z + nz * (e.cfg.radius + 0.25);
     mesh.position.set(x, y, z);
-    mesh.rotation.y = Math.atan2(nx, nz);
+    // 牌面要**朝玩家这一侧**可读：平面默认法线 +Z，所以转 180° 对着来向。
+    // 骨刀照旧沿飞行方向躺着（它自己翻滚，朝向无所谓）。
+    const faceYaw = Math.atan2(-nx, -nz);
+    mesh.rotation.y = cfg.word ? faceYaw : Math.atan2(nx, nz);
     scene.add(mesh);
 
     shots.push({
@@ -3374,6 +3506,9 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
       r: cfg.radius ?? 0.28,
       color: cfg.color ?? 0xffc46a,
       y, spin: 0,
+      word: !!cfg.word,
+      faceYaw,
+      spinRate: cfg.word ? 0 : 16,   // 字牌不翻滚（翻了就看不清写的什么）
     });
     if (fx) fx.burst({ x, z }, { color: cfg.color ?? 0xffc46a, count: 6, speed: 1.4, life: 0.28, size: 0.1, y, up: 0.7, gravity: 3 });
   }
@@ -3384,10 +3519,11 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
       s.life -= dt;
       s.x += s.vx * dt;
       s.z += s.vz * dt;
-      s.spin += dt * 16;
+      s.spin += dt * (s.spinRate ?? 16);
       s.mesh.position.x = s.x;
       s.mesh.position.z = s.z;
-      s.mesh.rotation.y = Math.atan2(s.vx, s.vz) + s.spin;
+      // 第 128 块：字牌用发射那一刻的「面向玩家」朝向（不翻滚），骨刀照旧翻滚
+      s.mesh.rotation.y = s.word ? s.faceYaw : Math.atan2(s.vx, s.vz) + s.spin;
 
       const dx = ctx.playerPos.x - s.x;
       const dz = ctx.playerPos.z - s.z;
@@ -4640,6 +4776,10 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     // ---- 第十四关 · 校对的（第 124 块）----
     // 和袋鼠同一性质：damage 是 0（它不打人），必须排在通用近战之前。
     if (e.cfg.proof) { handleProofreader(e, dt, ctx, dx, dz, dist); return; }
+
+    // ---- 第十五关 · 超管（第 128 块）----
+    // 和校对的同一性质：damage 是 0（它不打人），必须排在通用近战之前。
+    if (e.cfg.mute) { handleModerator(e, dt, ctx, dx, dz, dist); return; }
 
     // ---- 雾鬼：隐身 / 显形循环（第 35 块；第 61 块改规则）----
     // 隐身时不可被索敌、打不着；**但贴脸不再强制显形**，只能等它自己露头。
@@ -6037,6 +6177,82 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     }
   }
 
+  // ------------------------------------------------------------
+  // 第十五关 · 超管：读条禁言（第 128 块）
+  // ------------------------------------------------------------
+  // 和校对的 / 加急袋鼠同一套骨架：damage 0、躲中距离、读条完成才生效。
+  // 差别只在「作用对象」：那两个是给**怪**挂增益，这个是给**玩家**挂禁令 ——
+  // 读条走完，技能栏整排锁死 m.duration 秒（main.js 的 silenceSkills）。
+  //
+  // 为什么要单独做「禁言」而不是给它一个高伤害：第十五关的收益全靠主动走进
+  // 曝光区拿打赏，技能是玩家在光里保命 + 清场的底牌。禁言把这张底牌按掉三秒，
+  // 正好逼玩家在光里多扛一会儿 —— 惩罚的是「贪」，不是「手慢」。
+  // ⚠️ 读条期间走出作业半径不会取消（和校对的保持一致）：它的判定在出手那一刻，
+  //    玩家能做的只有「打断它（打死）」或者「读条完再躲」。
+  function handleModerator(e, dt, ctx, dx, dz, dist) {
+    const m = e.cfg.mute;
+    if (e.state === 'attack') {
+      if (e.waitRing) {
+        const k = Math.min(1, e.t / Math.max(0.01, e.cfg.windup));
+        e.waitRing.setRadius(1.7 * (0.35 + 0.65 * (1 - k)));
+        e.waitRing.setVisible(true);
+      }
+      if (!e.hitDone && e.t >= e.cfg.windup) {
+        e.hitDone = true;
+        if (e.waitRing) e.waitRing.setVisible(false);
+        if (ctx.silenceSkills) ctx.silenceSkills(m.duration);
+        if (fx) {
+          fx.ring({ x: ctx.playerPos.x, z: ctx.playerPos.z }, {
+            from: 0.3, to: 2.2, color: m.color, life: 0.5, opacity: 0.7, y: 0.08,
+          });
+          fx.text({ x: ctx.playerPos.x, z: ctx.playerPos.z }, '禁言', {
+            color: '#a8b4ff', y: 1.75, size: 0.66,
+          });
+        }
+        audio.sfx('curse', { vol: 0.22 });
+      }
+      if (e.t >= e.cfg.attackDuration) {
+        e.state = 'chase';
+        e.t = 0;
+        e.attackCd = cdOf(e, e.cfg.attackInterval, 1.2, true);
+      }
+      return;
+    }
+    // 它自己不打人：贴太近就退（和校对的完全一样）
+    if (dist < e.cfg.keepDistance) {
+      moveToward(e, -dx, -dz, dist, dt, ctx);
+      if (e.currentAnim !== e.cfg.anim.walk) {
+        e.currentAnim = e.cfg.anim.walk;
+        e.play(e.cfg.anim.walk, { fade: 0.2 });
+      }
+      return;
+    }
+    if (dist > e.cfg.attackRange) {
+      moveToward(e, dx, dz, dist, dt, ctx);
+      if (e.currentAnim !== e.cfg.anim.walk) {
+        e.currentAnim = e.cfg.anim.walk;
+        e.play(e.cfg.anim.walk, { fade: 0.2 });
+      }
+      return;
+    }
+    e.attackCd -= dt;
+    if (e.attackCd <= 0) {
+      e.state = 'attack';
+      e.t = 0;
+      e.hitDone = false;
+      e.currentAnim = e.cfg.anim.cast;
+      e.play(e.cfg.anim.cast, { once: true, fade: 0.1, duration: e.cfg.attackDuration });
+      if (e.waitRing) e.waitRing.setVisible(true);
+      if (fx) fx.ring(e.pos, { from: 0.2, to: 1.7, color: m.color, life: 0.34, opacity: 0.6, y: 1.5 });
+      audio.sfx('curse', { vol: 0.2 });
+      return;
+    }
+    if (e.currentAnim !== e.cfg.anim.idle) {
+      e.currentAnim = e.cfg.anim.idle;
+      e.play(e.cfg.anim.idle, { fade: 0.2 });
+    }
+  }
+
   function handleWeigher(e, dt, ctx, dx, dz, dist) {
     const cfg = e.cfg.weigh;
     // 第 91 块：它的上称节奏只吃**一半**的攻速成长（开方）。
@@ -6938,8 +7154,12 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     // 第 123 块：第十三关的环形跑道 —— 站上去的怪也更快（×1.25）。
     // 只给玩家加速的话，最优解会退化成「永远绕着跑道跑」，这条带就没有意义了。
     const trackBoost = (ctx && ctx.trackMul) ? ctx.trackMul(e.pos.x, e.pos.z) : 1;
+    // 第 128 块：第十五关的补光光斑 —— 站在光里的怪追得更急（×1.20）。
+    // 和跑道同一个道理：光斑如果只加成玩家，最优解就退化成「永远站在光里」，
+    // 两边一起抬，玩家才需要判断「这盏灯值不值得我进去」。
+    const lightBoost = (ctx && ctx.lightMul) ? ctx.lightMul(e.pos.x, e.pos.z) : 1;
     const sp = e.speed * (e.slowT > 0 ? (1 - Math.min(0.9, e.slowFactor || 0)) : 1)
-      * namedBoost * hasteBoost * trackBoost;
+      * namedBoost * hasteBoost * trackBoost * lightBoost;
     const step = sp * dt;
 
     // 曲线接近：把「指向玩家」的方向绕竖轴旋转一个随时间摆动的角度，
