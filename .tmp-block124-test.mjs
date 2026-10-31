@@ -420,6 +420,20 @@ ok(U.UPGRADES.length === 117, '升级卡 117 张', String(U.UPGRADES.length));
 ok(Object.keys(E.ENEMY_TYPES).length === 32, '怪物种类 32', String(Object.keys(E.ENEMY_TYPES).length));
 ok(Object.keys(W.LEVELS_BY_ID).length === 14, '关卡 14 张表', String(Object.keys(W.LEVELS_BY_ID).length));
 
+// ---- 守卫：加关卡 = 法器 + 技能 + **卡池** 一起加（用户 2026-10-31 定下的铁律）----
+// 最容易漏的一环：技能栏加了格子、卡池没加卡 → 抽卡永远抽不到，成长线断在商店里。
+// 除初始武器（万剑齐发，不设专属卡）外，每个技能都必须能在 upgrade.js 里找到自己的卡。
+const NO_CARD_SKILLS = new Set(['swordRain']);
+for (const sk of SK.SKILLS) {
+  if (NO_CARD_SKILLS.has(sk.id)) continue;
+  const n = (upgSrc.match(new RegExp(sk.id, 'g')) || []).length;
+  ok(n >= 1, `技能 ${sk.id} 在卡池里有专属卡（加技能必须同时加卡）`, `${n} 处引用`);
+}
+ok(/if \(up\.guillotine && !opts\.guillotineOwned\) return 0;/.test(upgSrc), '专属卡带「没买到本体就不进池」门控');
+// 反向：卡池里出现的法器名必须是真法器（打字错了会静默变成永不生效的卡）
+const relicKeys = new Set(Object.keys(R.RELIC_DEFS));
+ok(['guillotine', 'board', 'mark'].every((k) => relicKeys.has(k)), '卡池用到的法器名都在 RELIC_DEFS 里');
+
 // ============================================================
 sec('⑦ 文案与版本号');
 // ============================================================
