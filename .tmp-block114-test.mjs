@@ -67,7 +67,7 @@ sec('② 两只新怪');
 // ============================================================
 const clerk = E.ENEMY_TYPES.clerk;
 const col = E.ENEMY_TYPES.collector;
-ok(Object.keys(E.ENEMY_TYPES).length === 32, `怪种 32 只（25 + 2 + 1 + 2 + 2，实 ${Object.keys(E.ENEMY_TYPES).length}）`);
+ok(Object.keys(E.ENEMY_TYPES).length === 31, `怪种 31 只（第 125 块 -1，实 ${Object.keys(E.ENEMY_TYPES).length}）`);
 ok(!!clerk && clerk.name === '誊录员', 'clerk = 誊录员');
 ok(!!col && col.name === '收账人', 'collector = 收账人');
 // 模型：第 123 块把两只手搓的换成了下载资产（scaranto 墨笔 / Quaternius 摊开的书）。
@@ -275,7 +275,7 @@ for (const id of ['clear_11', 'clerk_10', 'collector_5', 'fog_20']) {
 }
 ok(A.achById('clear_all').name === '十二关皆通', 'clear_all 改名「十二关皆通」');
 ok(A.achById('fog_20').prog && A.achById('fog_20').prog.key === 'fogKills', 'fog_20 读 fogKills');
-ok(A.ACH_COUNT === 118, `成就总数 118（实 ${A.ACH_COUNT}）`);
+ok(A.ACH_COUNT === 117, `成就总数 117（实 ${A.ACH_COUNT}）`);
 ok(/tryAch\('clear_11'\)/.test(mainSrc), '通关第十一关发 clear_11');
 
 const codexSrc = src('js/codex.js');

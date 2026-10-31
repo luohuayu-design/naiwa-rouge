@@ -13,13 +13,13 @@
 // （击杀 / 弹事件卡 / 选升级卡）。
 // ============================================================
 
-import { ENEMY_TYPES } from './enemy.js?v=141';
-import { SWORD_KINDS } from './swordKinds.js?v=141';
-import { RELIC_DEFS } from './relics.js?v=141';
-import { UPGRADES } from './upgrade.js?v=141';
-import { ALL_EVENTS } from './events.js?v=141';
-import { RARITIES } from './rarity.js?v=141';
-import { codexAll, codexCount } from './profile.js?v=141';
+import { ENEMY_TYPES } from './enemy.js?v=142';
+import { SWORD_KINDS } from './swordKinds.js?v=142';
+import { RELIC_DEFS } from './relics.js?v=142';
+import { UPGRADES } from './upgrade.js?v=142';
+import { ALL_EVENTS } from './events.js?v=142';
+import { RARITIES } from './rarity.js?v=142';
+import { codexAll, codexCount } from './profile.js?v=142';
 
 export const CODEX_TABS = [
   { id: 'enemies', name: '怪物' },
@@ -70,12 +70,6 @@ function enemySub(cfg) {
   if (cfg.fill) {
     return statLine([['生命', cfg.hp], ['伤害', 0], ['速度', cfg.speed]])
       + ` · 每 ${cfg.fill.every} 秒填一个名字 · 免疫 ${cfg.fill.time} 秒`;
-  }
-  // 等的那个：等待期速度是 0，写 0 会让人以为它不动 —— 把「醒后」也写上。
-  if (cfg.wait) {
-    const r = cfg.rage;
-    return statLine([['生命', cfg.hp], ['伤害', cfg.damage], ['速度', 0]])
-      + ` · 等 ${cfg.wait.time} 秒 · 醒后 速度 ${r.speed} 伤害 ×${r.dmgMul}`;
   }
   // 回声：它站得远、只负责照，数值行要写周期。
   if (cfg.echo) {

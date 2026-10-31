@@ -31,7 +31,7 @@
 //    · tier 决定骨币，**别手写骨币数字**（改档位只改 ACH_TIERS 一处）。
 // ============================================================
 
-import { profile, hasAch, achGot, markAchGot, addBones, save } from './profile.js?v=141';
+import { profile, hasAch, achGot, markAchGot, addBones, save } from './profile.js?v=142';
 
 // ---------------- 八类别 ----------------
 // icon 全部来自 game-icons.net（CC BY 3.0），和背包图标同源；
@@ -183,7 +183,6 @@ export const ACHS = [
   // ---- 第十关四只（第 107 块，用户定案「配套要成就」）----
   { id: 'mirror_10', cat: 'level', tier: 1, icon: '🪞', name: '水里没有你', desc: '累计击倒 10 只照影', prog: { k: 'enemy', id: 'mirror', need: 10 } },
   { id: 'addressee_10', cat: 'level', tier: 1, icon: '📜', name: '退件', desc: '累计击倒 10 只收件人', prog: { k: 'enemy', id: 'addressee', need: 10 } },
-  { id: 'waiter_5', cat: 'level', tier: 1, icon: '🪦', name: '别再等了', desc: '累计击倒 5 只等的那个', prog: { k: 'enemy', id: 'waiter', need: 5 } },
   { id: 'echo_10', cat: 'level', tier: 1, icon: '🔔', name: '回声到此为止', desc: '累计击倒 10 只回声', prog: { k: 'enemy', id: 'echo', need: 10 } },
   // ---- 第十一关两只 + 雾（第 114 块）----
   { id: 'clear_11', cat: 'level', tier: 2, icon: '🌫️', name: '雾散之时', desc: '通关「钟楼雾原」' },

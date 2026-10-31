@@ -11,9 +11,9 @@
 //   灼烧 = 武器攻击 × DPS_MUL × 等级系数 × (1 + 卡/货) × 局外增幅
 //   持续时间 / 半径 / 冷却 各有独立通道，reset() 清零（局内成长，不跨局）。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=141';
-import { mitigate } from './stats.js?v=141';
-import audio from './audio.js?v=141';
+import * as THREE from '../lib/three.module.js?v=142';
+import { mitigate } from './stats.js?v=142';
+import audio from './audio.js?v=142';
 
 const CD_MAX = 22.0;        // 基础冷却
 const CD_MIN = 8.0;         // 冷却下限

@@ -158,8 +158,8 @@ ok(RB && RB.height >= 1.8 && RB.height <= 2.0, '重启体身高 1.8~2.0', RB.hei
 // 第 83 块：删掉第八关的 ranker / bearer（队形整块不要了），加寄存处看守 warden
 // 第 97 块：+盖章人 stamper → 21
 // 第 107 块：+照影 / 收件人 / 等的那个 / 回声 → 25
-ok(enemy.ENEMY_TYPES.minion && Object.keys(enemy.ENEMY_TYPES).filter((k) => !enemy.ENEMY_TYPES[k].planned).length === 32,
-  '启用中的怪物 32 只（第 114 块 +誊录员 / 收账人，第 116 块 +加急袋鼠，第 123 块 +立牌 / 取景的，第 124 块 +错版 / 校对的）');
+ok(enemy.ENEMY_TYPES.minion && Object.keys(enemy.ENEMY_TYPES).filter((k) => !enemy.ENEMY_TYPES[k].planned).length === 31,
+  '启用中的怪物 31 只（第 124 块 +错版 / 校对的，第 125 块 -等的那个）');
 // 第 62 块定下的尺寸（盾兵/孢生按战士 1.4 倍，三只小的统一 1.8~1.9）
 const W = enemy.ENEMY_TYPES.warrior;
 // 战士 1.38 × 1.4 = 1.93，用户拍板取整到 1.9 —— 容差放到 0.06 而不是 0.02
@@ -295,7 +295,7 @@ for (const [id, needle] of [['eraser_10', '擦名者'], ['reboot_10', '重启体
   const a = ach.achById(id);
   ok(!!a && a.desc.includes(needle), `成就 ${id} 存在且描述对得上`, a && a.desc);
 }
-ok(ach.ACHS.length === 118, '成就总数 118（第 114 块 +4 条，第 116 块 +4 条）', ach.ACHS.length);
+ok(ach.ACHS.length === 117, '成就总数 117（第 125 块删掉 waiter_5）', ach.ACHS.length);
 
 // ============================================================
 sec('J、版本号：所有模块同一个 ?v=');

@@ -25,15 +25,15 @@
 // 第四关三只（wraith/leaper/mender，第 35 块，第 52 块换模型），
 // 各自在下面 ENEMY_TYPES 里有详细注释。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=141';
-import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=141';
-import { clone as cloneSkinned } from '../lib/jsm/utils/SkeletonUtils.js?v=141';
-import { distance2D } from './stats.js?v=141';
-import { createRangeRing } from './rangeRing.js?v=141';
-import { withV } from './assetUrl.js?v=141';
+import * as THREE from '../lib/three.module.js?v=142';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=142';
+import { clone as cloneSkinned } from '../lib/jsm/utils/SkeletonUtils.js?v=142';
+import { distance2D } from './stats.js?v=142';
+import { createRangeRing } from './rangeRing.js?v=142';
+import { withV } from './assetUrl.js?v=142';
 // 第 114 块：誊录员落笔 / 收账人翻账簿的提示音（以前这个文件不放音效，
 // 忘了 import 会在落笔那一帧抛 ReferenceError，整帧 AI 全断 —— 别省这一行）
-import audio from './audio.js?v=141';
+import audio from './audio.js?v=142';
 
 // KayKit 模型正面朝 +Z；如果哪天换模型发现怪倒着走，把这里改成 Math.PI
 export const ENEMY_MODEL_YAW = 0;
@@ -1218,13 +1218,15 @@ export const ENEMY_TYPES = {
   },
 
   // ============================================================
-  // 第十关「塔顶井台」四只（第 107 块）
+  // 第十关「塔顶井台」三只（第 107 块；第 125 块删掉了「等的那个」）
   // ============================================================
-  // 四只全部从 s10「井水照见的东西」那几句话里长出来，机制口径也刻意和前面九关错开：
+  // 三只全部从 s10「井水照见的东西」那几句话里长出来，机制口径也刻意和前面九关错开：
   //   照影    —— 「这口井能照出你被人记住的样子」：井里爬出来的那只蛙，抄你的面板打你
   //   收件人  —— 「一张单子，收件人那一栏空着」：给别的怪填上名字，让它免掉你手上那把剑
-  //   等的那个 —— 井壁上新刻的一行字「第 70 层，等」：站着不动地等，等到点就活过来
   //   回声    —— 井水照出过去的东西：把这一局已经死掉的怪，再照回来一只
+  // ⚠️ 第 125 块：用户实测「等的那个没有任何意义，直接删除」——
+  //   它站着不动、90 秒才醒、醒了也只是一只普通近战，等于场上多一块需要拆的石头。
+  //   cfg / handleWaiter / wakeWaiter / 金环 / 成就 waiter_5 一并删掉。
   // ------------------------------------------------------------
   mirror: {
     name: '照影',
@@ -1313,49 +1315,6 @@ export const ENEMY_TYPES = {
     animFamily: null,       // 程序化网格没有骨骼动画（和并联体一个待遇）
     anim: {
       walk: 'idle', idle: 'idle', cast: 'idle',
-      death: 'death', spawn: 'spawn',
-    },
-  },
-  waiter: {
-    name: '等的那个',
-    file: 'assets/monsters/goleling.glb',
-    sourceHeight: 1.90,    // 实测
-    footY: 0.0,
-    height: 2.05,
-    radius: 0.62,
-    hp: 22,                // 站着不动、很好打 —— 但也很厚，不是顺手就能拆掉的
-    armor: 0.15,
-    speed: 0.0,            // ⚠️ 等待期间一步都不走（wait 分支里直接不调 moveToward）
-    attackRange: 2.0,
-    keepDistance: 0,
-    damage: 3,
-    attackInterval: 1.6,
-    windup: 0.42,
-    attackDuration: 0.80,
-    // 「等」：井壁上刻着「第 70 层，等」。它从上场就开始倒数，
-    // 头顶那圈金环从大缩到小 —— 缩没了它就活过来（狂暴）。
-    // 玩家每回合都要做一个判断：**现在花时间拆它**，还是**抢在它醒前清场**。
-    wait: {
-      time: 90,            // 秒
-      ringColor: 0xffd86b,
-      from: 3.2, to: 0.55, // 金环半径：越大说明还剩越多时间
-      callAt: [60, 30, 10],// 这三个点各报一次（「它动了一下」）
-    },
-    rage: {
-      speed: 1.98,         // 狂暴后的绝对移速（不再吃 cfg.speed）
-      dmgMul: 2.0,
-      heal: 1.0,           // 活过来那一下血回满
-      color: 0xff5a3c,
-    },
-    spawnTime: 1.2,
-    deathTime: 1.8,
-    selfDestruct: false,
-    color: 0xb8c4cc,       // 石灰色
-    tint: 0x9aa6ae,
-    glow: { color: 0x3a4a55, intensity: 0.6 },
-    animFamily: 'flying',
-    anim: {
-      walk: 'walk', idle: 'idle', attack: 'attack',
       death: 'death', spawn: 'spawn',
     },
   },
@@ -2663,10 +2622,8 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
       splitDone: false,   // 错版：分裂过了没有（只分一代）
       guillotineHits: 0,  // 裁纸刀：这一局被切过几次（伤害递减用，见 guillotine.js）
       mirrorT: 0,         // 照影：下一次「重照」的倒计时
-      waitT: null,        // 等的那个：还剩多少秒活过来
-      waitCalls: 0,       // 等的那个：已经报过几次时
-      waitRing: null,     // 等的那个：头顶那圈倒计时金环
-      raged: false,       // 等的那个：已经活过来没有
+      waitRing: null,     // 头顶那圈读条环（收账人 / 加急袋鼠 / 校对的共用；等的那个已删）
+      raged: false,       // 看守：已经暴怒没有
       echoCd: 3.0,        // 回声：下一次照出一只的倒计时（上场先给 3 秒适应）
       echoed: false,      // 回声：这只怪是「被照回来」的（不再进 deadLog，见 die）
       mirrorSized: false, // 照影：血量已经按玩家面板定过了吗（只定一次）
@@ -2754,15 +2711,6 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     // 第 82 块：并联体一落地就摆到离每一台都 ≥ minGap 的位置（见 seatArc）。
     // 放在 push 之后、onSpawn 之前：新怪信息卡弹出来时它已经在正确位置上了。
     if (cfg.arc) seatArc(e);
-    // 第 107 块：「等的那个」上一场就挂上那圈倒计时金环 —— 玩家第一眼就得
-    // 看见「这只怪身上有个在走的计时器」，而不是等它活过来才反应过来。
-    if (cfg.wait) {
-      e.waitRing = createRangeRing({
-        radius: cfg.wait.from, color: cfg.wait.ringColor,
-        opacity: 0.5, pulse: 0.06, y: 0.03,
-      });
-      root.add(e.waitRing.mesh);
-    }
     // 第 114 块：收账人 —— 头顶一圈读条环（平时藏着，翻账簿时才出现）。
     // 挂在 root 上、抬到 book 的高度，并且**置顶**（depthTest:false）：
     // 雾里要能看见「有人在收你」，否则这一整只怪就是无声的。
@@ -4645,13 +4593,12 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     // 它没有 spell / projectile / volley，占不到「施法者」那条骨架，所以自己开一条。
     if (e.cfg.weigh) { handleWeigher(e, dt, ctx, dx, dz, dist); return; }
 
-    // ---- 第十关 · 四只（第 107 块）----
-    // ⚠️ 这四条必须排在「通用近战 / 施法者」之前：照影和「活过来的」等的那个
-    // 都是近战怪、收件人和回声都有 attack 分支 —— 掉进下面的通用分支就会
+    // ---- 第十关 · 三只（第 107 块；第 125 块删了等的那个）----
+    // ⚠️ 这三条必须排在「通用近战 / 施法者」之前：照影是近战怪、
+    // 收件人和回声都有 attack 分支 —— 掉进下面的通用分支就会
     // 按 cfg.damage 打，照影抄的面板全部作废。
     if (e.cfg.mirror) { handleMirror(e, dt, ctx, dx, dz, dist); return; }
     if (e.cfg.fill) { handleAddressee(e, dt, ctx, dx, dz, dist); return; }
-    if (e.cfg.wait) { handleWaiter(e, dt, ctx, dx, dz, dist); return; }
     if (e.cfg.echo) { handleEcho(e, dt, ctx, dx, dz, dist); return; }
 
     // ---- 第十一关 · 两只（第 114 块）----
@@ -6130,12 +6077,11 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
   }
 
   // ============================================================
-  // 第十关「塔顶井台」四只（第 107 块）
+  // 第十关「塔顶井台」三只（第 107 块；第 125 块删掉「等的那个」）
   // ============================================================
-  // 四只全从 s10「井水照见的东西」那几句话里长出来，四条机制彼此不重叠：
+  // 三只全从 s10「井水照见的东西」那几句话里长出来，三条机制彼此不重叠：
   //   照影    井里爬出来的那只蛙 —— 抄玩家的面板（你越强它越强）
   //   收件人  那张收件人栏空着的单子 —— 给别的怪填名字，让它免掉你手上那一类伤害
-  //   等的那个 井壁上新刻的「第 70 层，等」—— 站着不动地倒数，数完就活过来
   //   回声    井水照出过去的东西 —— 把这一局已经死掉的怪，再照回来一只
   // ------------------------------------------------------------
 
@@ -6302,104 +6248,6 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
         fx.ring(e.pos, { from: 0.25, to: 1.3, color: f.color, life: e.cfg.windup, opacity: 0.5, y: 0.06 });
       }
     }
-  }
-
-  // ---- ③ 等的那个：「等」----
-  // 上场后一步不走，头顶那圈金环从大缩到小。缩没了 = 活过来（狂暴）。
-  // 玩家每回合都要判断：现在花时间拆它（22 血、站着不动很好打），
-  // 还是抢在它醒前把这一波清完。
-  function handleWaiter(e, dt, ctx, dx, dz, dist) {
-    const w = e.cfg.wait;
-    if (e.waitT == null) e.waitT = w.time;
-    if (!e.raged) {
-      e.waitT -= dt;
-      // 金环：从 from 缩到 to。玩家一眼能看出还剩多久（不是靠文字）
-      if (e.waitRing) {
-        const k = Math.max(0, Math.min(1, e.waitT / w.time));
-        e.waitRing.setRadius(w.to + (w.from - w.to) * k);
-      }
-      // 三个报时点各叫一声（「它动了一下」）—— 不动的话玩家会忘了它
-      if (e.waitCalls == null) e.waitCalls = 0;
-      const calls = w.callAt || [];
-      while (e.waitCalls < calls.length && e.waitT <= calls[e.waitCalls]) {
-        if (fx) {
-          fx.text({ x: e.pos.x, z: e.pos.z }, '它动了一下', {
-            color: '#ffd86b', y: e.height * 1.2, size: 0.62,
-          });
-        }
-        e.waitCalls++;
-      }
-      if (e.waitT <= 0) {
-        wakeWaiter(e, ctx);
-        return;
-      }
-      // 等待期间：连朝向都不改（它就是一块石头），但被打了会正常掉血
-      return;
-    }
-    // ---- 活过来之后：一只普通但很凶的近战怪 ----
-    if (e.state === 'attack') {
-      if (!e.hitDone && e.t >= e.cfg.windup) {
-        e.hitDone = true;
-        const d2 = Math.hypot(ctx.playerPos.x - e.pos.x, ctx.playerPos.z - e.pos.z);
-        if (d2 <= e.cfg.attackRange + ctx.playerRadius) ctx.hurtPlayer(e.damage, e);
-      }
-      if (e.t >= e.cfg.attackDuration) {
-        e.state = 'chase';
-        e.t = 0;
-        e.attackCd = cdOf(e, e.cfg.attackInterval, 0.5);
-        e.currentAnim = e.cfg.anim.walk;
-        e.play(e.cfg.anim.walk, { fade: 0.16 });
-      }
-      return;
-    }
-    if (dist > e.cfg.attackRange) {
-      moveToward(e, dx, dz, dist, dt, ctx);
-      if (e.currentAnim !== e.cfg.anim.walk) {
-        e.currentAnim = e.cfg.anim.walk;
-        e.play(e.cfg.anim.walk, { fade: 0.2 });
-      }
-      return;
-    }
-    e.attackCd -= dt;
-    if (e.attackCd <= 0) {
-      e.state = 'attack';
-      e.t = 0;
-      e.hitDone = false;
-      e.currentAnim = e.cfg.anim.attack;
-      e.play(e.cfg.anim.attack, { once: true, fade: 0.1, duration: e.cfg.attackDuration });
-      return;
-    }
-    if (e.currentAnim !== e.cfg.anim.idle) {
-      e.currentAnim = e.cfg.anim.idle;
-      e.play(e.cfg.anim.idle, { fade: 0.2 });
-    }
-  }
-
-  function wakeWaiter(e, ctx) {
-    const r = e.cfg.rage;
-    e.raged = true;
-    e.waitT = 0;
-    e.hp = e.maxHp;                    // 活过来那一下是满血的
-    e.speed = r.speed;                 // ⚠️ cfg.speed 是 0（等待期不走），这里给绝对值
-    e.damage = Math.round((e.dmg0 || e.cfg.damage) * r.dmgMul);
-    e.dmg0 = e.damage;
-    if (e.waitRing) {
-      e.root.remove(e.waitRing.mesh);
-      try { e.waitRing.dispose(); } catch (_) {}
-      e.waitRing = null;
-    }
-    // 自发光转暗红：一眼看出「它活了」（和称量官的金环是两套视觉，不会混）
-    for (const m of e.mats) {
-      if (!m.emissive) continue;
-      m.emissive.setHex(r.color);
-      m.emissiveIntensity = 1.15;
-    }
-    if (fx) {
-      fx.ring(e.pos, { from: 0.3, to: 3.0, color: r.color, life: 0.7, opacity: 0.9, y: 0.06 });
-      fx.burst(e.pos, { color: r.color, count: 20, speed: 3.0, life: 0.7, size: 0.13, y: 0.4, up: 1.8 });
-      fx.text({ x: e.pos.x, z: e.pos.z }, '它活过来了', { color: '#ff8a6a', y: e.height * 1.2, size: 0.85 });
-    }
-    if (ctx && ctx.onWaiterWake) ctx.onWaiterWake(e);
   }
 
   // ---- ④ 回声：「照出过去的东西」----
@@ -7309,7 +7157,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
       if (e.ring) e.ring.dispose();
       if (e.auraRing) e.auraRing.dispose();
       if (e.namedRing) e.namedRing.dispose();   // 第 82 块：称量官的金环
-      if (e.waitRing) e.waitRing.dispose();     // 第 107 块：等的那个的倒计时金环
+      if (e.waitRing) e.waitRing.dispose();     // 头顶的读条环（收账人 / 袋鼠 / 校对的）
       if (e.filledRing) e.filledRing.dispose(); // 第 107 块：被填名那个空白框
       disposeChargeLine(e);
       disposeLeapRing(e);

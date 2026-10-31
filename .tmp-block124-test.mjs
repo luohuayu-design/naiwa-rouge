@@ -365,7 +365,7 @@ ok(glbs.includes('misprint.glb') && glbs.includes('proofreader.glb'), '两份新
 const misSize = readFileSync(path.join(mdir, 'misprint.glb')).length;
 const prfSize = readFileSync(path.join(mdir, 'proofreader.glb')).length;
 ok(misSize > 2048 && prfSize > 2048, '两份模型都不是空文件', `${Math.round(misSize / 1024)}KB / ${Math.round(prfSize / 1024)}KB`);
-ok(glbs.length === 32, '怪物模型总数 32（30 + 两只新的）', String(glbs.length));
+ok(glbs.length === 31, '怪物模型总数 31（第 125 块删掉等的那个的 goleling.glb）', String(glbs.length));
 
 // 源码里不该再有任何「手搓模型」的构建函数
 ok(!/function build(Standee|Camera|Slip|Quill|Ledger|Kangaroo|Misprint|Proofreader)Model/.test(enemySrc),
@@ -417,7 +417,7 @@ ok(relicCount === 16, '法器总数 16', String(relicCount));
 ok(SK.SKILLS.length === 10, '技能格 10', String(SK.SKILLS.length));
 ok(S.SHOP_ITEMS.length === 46, '商店货 46', String(S.SHOP_ITEMS.length));
 ok(U.UPGRADES.length === 117, '升级卡 117 张', String(U.UPGRADES.length));
-ok(Object.keys(E.ENEMY_TYPES).length === 32, '怪物种类 32', String(Object.keys(E.ENEMY_TYPES).length));
+ok(Object.keys(E.ENEMY_TYPES).length === 31, '怪物种类 31', String(Object.keys(E.ENEMY_TYPES).length));
 ok(Object.keys(W.LEVELS_BY_ID).length === 14, '关卡 14 张表', String(Object.keys(W.LEVELS_BY_ID).length));
 
 // ---- 守卫：加关卡 = 法器 + 技能 + **卡池** 一起加（用户 2026-10-31 定下的铁律）----
@@ -444,7 +444,7 @@ ok(!/desc: '[^']*\*\*/.test(shopSrc.slice(shopSrc.indexOf("id: 'buyGuillotine'")
 ok(!/hint: '[^']*\*\*/.test(skillsSrc.slice(skillsSrc.indexOf("id: 'guillotine'"), skillsSrc.indexOf("id: 'guillotine'") + 900)),
   '技能 hint 里没有 ** 加粗');
 // 版本号：index.html 与所有 js 的 ?v= 必须一致
-ok(VER === '141', '版本号 bump 到 141', VER);
+ok(VER === '142', '版本号 bump 到 142', VER);
 const jsFiles = readdirSync(path.join(ROOT, 'js')).filter((f) => f.endsWith('.js'));
 const badVer = [];
 for (const f of jsFiles) {

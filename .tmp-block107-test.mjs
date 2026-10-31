@@ -67,22 +67,22 @@ console.log('[§1] LEVEL_10 配表');
   ok(!!well && well.x === 0 && well.z === 0, '场地中央有一口井');
   ok(well && well.r === 2.4 && well.damage === 3, '井 r 2.4 / 掉进去 3 点');
   // 每一回合都有全部怪键（wave.js 的 round 表要求全键，方便测试直接读数）
-  const keys = ['minion', 'warrior', 'mirror', 'addressee', 'waiter', 'echo', 'archer', 'bowman', 'leaper', 'wraith', 'shielder', 'brood', 'mender', 'reboot', 'hexer'];
-  ok(L.rounds.every((r) => keys.every((k) => typeof r[k] === 'number')), '每回合 15 键全齐');
+  const keys = ['minion', 'warrior', 'mirror', 'addressee', 'echo', 'archer', 'bowman', 'leaper', 'wraith', 'shielder', 'brood', 'mender', 'reboot', 'hexer'];
+  ok(L.rounds.every((r) => keys.every((k) => typeof r[k] === 'number')), '每回合 14 键全齐');
   ok(L.rounds.every((r) => r.tip), '每回合都有提示语');
   ok(L.rounds.slice(0, 3).every((r) => r.mirror >= 0) && L.rounds[0].mirror === 0, '第一回合还没有照影（先认井）');
   ok(L.rounds[3].addressee === 1, '第 4 回合收件人上场');
-  ok(L.rounds[7].waiter === 1, '第 8 回合等的那个上场');
   ok(L.rounds[9].echo === 1, '第 10 回合回声上场');
   // 顺序表
   ok(L.order.some((x) => x[0] === 'mirror') && L.order.some((x) => x[0] === 'addressee')
-    && L.order.some((x) => x[0] === 'waiter') && L.order.some((x) => x[0] === 'echo'), 'order 里有四只新怪');
-  ok(levelTypes(L).length === 15, 'levelTypes(10) = 15 种', String(levelTypes(L).length));
+    && L.order.some((x) => x[0] === 'echo'), 'order 里有三只新怪');
+  ok(!L.order.some((x) => x[0] === 'waiter') && !Object.keys(ENEMY_TYPES).includes('waiter'), '等的那个已彻底删除（第 125 块）');
+  ok(levelTypes(L).length === 14, 'levelTypes(10) = 14 种', String(levelTypes(L).length));
   ok(L.shopAfter.length === 6 && L.upgradeAfter.length === 12, '6 次商店 / 12 次三选一');
 }
 
 // ============================================================ §2 四只新怪
-console.log('[§2] 四只新怪 cfg');
+console.log('[§2] 三只新怪 cfg');
 {
   const M = ENEMY_TYPES.mirror;
   ok(M && M.mirror && M.mirror.hpRatio === 0.6, '照影：血 = 玩家上限 60%', M && M.mirror && M.mirror.hpRatio);
@@ -96,17 +96,12 @@ console.log('[§2] 四只新怪 cfg');
   ok(!!A.file && fs.existsSync(path.join(ROOT, A.file)), '收件人用下载的 glb（第 123 块改）');
   ok(A.hp <= 8, `收件人血薄（${A.hp}，拆单子是解法）`);
 
-  const W = ENEMY_TYPES.waiter;
-  ok(W && W.wait && W.wait.time > 0 && W.rage && W.rage.dmgMul > 1, '等的那个：等待期 + 醒后狂暴');
-  ok(W.speed === 0, '等的那个等待期一步不走');
-  ok(!!W.file && fs.existsSync(path.join(ROOT, W.file)), '等的那个有 glb');
-
   const E = ENEMY_TYPES.echo;
   ok(E && E.echo && E.echo.every > 0 && E.echo.cap >= 2, '回声：周期 + 并存上限');
   ok(E.keepDistance >= 5, `回声站得远（${E.keepDistance} 格）`);
   ok(!!E.file && fs.existsSync(path.join(ROOT, E.file)), '回声有 glb');
 
-  ok(Object.keys(ENEMY_TYPES).length === 32, 'ENEMY_TYPES 共 32 只（第 114 块 +2 / 第 116 块 +1 / 第 123 块 +2 / 第 124 块 +2 错版·校对）');
+  ok(Object.keys(ENEMY_TYPES).length === 31, 'ENEMY_TYPES 共 31 只（第 125 块删掉等的那个）');
 }
 
 // ============================================================ §3 收件人免疫契约
@@ -236,7 +231,8 @@ console.log('[§10] main.js 接线');
   ok(/value: 'iron'[\s\S]*value: 'snow'|value: 'snow'[\s\S]*value: 'iron'/.test(mainSrc), '二选一：铁 / 雪两张卡');
   ok(/Math\.sin\(yaw\) \* 1\.5/.test(mainSrc), '召在主角面朝方向 1.5 格');
   ok(/tryAch\('clear_10'\)/.test(mainSrc) && /tryAch\('mirror_10'\)/.test(mainSrc)
-    && /tryAch\('waiter_5'\)/.test(mainSrc), 'clear_10 与新怪里程碑埋点');
+    && /tryAch\('echo_10'\)/.test(mainSrc) && !/tryAch\('waiter_5'\)/.test(mainSrc),
+    'clear_10 与新怪里程碑埋点（waiter_5 第 125 块已摘掉）');
   ok(/puppetOwned: relics\.levels\(\)\.puppet > 0/.test(mainSrc), '三选一抽签带 puppetOwned');
   // 第 114 块起参数表尾部多了 arrowRain / mines，用 [^)]* 兜住后续追加
   ok(/applyUpgrade\(stats, up, upSerial, wstats, weapon, golems[^)]*\)/.test(mainSrc),
@@ -248,11 +244,12 @@ console.log('[§11] 剧情 / 成就 / 版本');
 {
   const s10 = STORY_CHAPTERS.find((c) => c.id === 's10');
   ok(s10 && s10.levelId === 10 && s10.atRound === 2, 's10 绑第十关第 2 回合');
-  ok(ACHS.length === 118, '成就 118 条（第 114 块 +4 / 第 116 块 +4）', String(ACHS.length));
-  for (const id of ['clear_10', 'mirror_10', 'addressee_10', 'waiter_5', 'echo_10']) {
+  ok(ACHS.length === 117, '成就 117 条（第 125 块 -waiter_5）', String(ACHS.length));
+  for (const id of ['clear_10', 'mirror_10', 'addressee_10', 'echo_10']) {
     const a = achById(id);
     ok(!!a, `成就 ${id} 存在`);
   }
+  ok(!achById('waiter_5'), '成就 waiter_5 已随「等的那个」一起删掉（第 125 块）');
   ok(achById('clear_all').desc.includes('十二关'), '九关皆通改口径：十二关全部通关（第 116 块）');
   ok(/^\d+$/.test(VER) && idx.includes(`style.css?v=${VER}`), `版本号 ${VER} 两处一致`);
   for (const f of ['golem.js', 'skills.js', 'upgrade.js', 'shop.js', 'relics.js', 'enemy.js', 'main.js']) {

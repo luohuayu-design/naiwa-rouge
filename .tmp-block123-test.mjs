@@ -201,7 +201,7 @@ const ST = E.ENEMY_TYPES.standee;
 const CM = E.ENEMY_TYPES.camera;
 ok(!!ST && ST.name === '立牌', '立牌（standee）在');
 ok(!!CM && CM.name === '取景的', '取景的（camera）在');
-ok(Object.keys(E.ENEMY_TYPES).length === 32, `怪种 32 只（实 ${Object.keys(E.ENEMY_TYPES).length}）`);
+ok(Object.keys(E.ENEMY_TYPES).length === 31, `怪种 31 只（实 ${Object.keys(E.ENEMY_TYPES).length}）`);
 
 ok(ST && ST.faceGuard && ST.faceGuard.arc > 0 && ST.faceGuard.reduce > 0,
   `立牌：正面减伤 ${ST && ST.faceGuard && ST.faceGuard.reduce}`);
@@ -353,7 +353,7 @@ const badVer = jsFiles.filter((f) => {
   return s.includes('?v=') && !s.includes(`?v=${VER}`);
 });
 ok(badVer.length === 0, `全仓版本号一致（v=${VER}）`, badVer.join(','));
-ok(VER === '141', `版本号已 bump 到 141（实 ${VER}）`);
+ok(VER === '142', `版本号已 bump 到 142（实 ${VER}）`);
 ok(indexHtml.includes(`js/main.js?v=${VER}`), 'index.html 指的就是这个版本');
 
 // ============================================================

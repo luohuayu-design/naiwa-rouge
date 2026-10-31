@@ -8,7 +8,16 @@
 // 接线方把 heat 条 UI 显示出来，并把 heat 提供的 speedMul/atkMul 乘进移速/攻速。
 // ============================================================
 
-// 热度上限（满格）
+// 第 125 块（用户 2026-10-31 报的 bug / 决定）：
+//   「连击打到十次以上就不在往上了」—— 原来 HEAT_MAX = 10 是**硬上限**，
+//   数字和加成一齐卡在 ×10。现在改成 **连杀与增益都不封顶**：
+//   数字一直往上加，移速 / 攻速也按同一斜率一直涨。
+//   `HEAT_MAX` 保留但只表示「基础满格」= 前 10 连杀的增益口径，
+//   绝不拿来钳制计数（钳了就是回到这个 bug）。
+//   ⚠️ 唯一的风险是后期移速过大导致单帧穿过井口 / 场地边界。
+//   真出现了就去**位移处夹单帧步长**，别把这里改回封顶 —— 那是把症状按回去。
+
+// 基础满格（10 连杀 = 下面两个 MAX 值，和前 10 杀的手感一比一）
 export const HEAT_MAX = 10;
 // 每次击杀 +1 热度
 export const HEAT_PER_KILL = 1;
@@ -20,6 +29,9 @@ export const HEAT_DECAY_TICK = 1.2;
 export const HEAT_SPEED_MAX = 0.12;
 // 满热度时攻速加成（比例）
 export const HEAT_ATK_MAX = 0.18;
+// 每一点热度的增益（不封顶：heat 多少就乘多少）
+export const HEAT_SPEED_PER_KILL = HEAT_SPEED_MAX / HEAT_MAX;   // 0.012
+export const HEAT_ATK_PER_KILL = HEAT_ATK_MAX / HEAT_MAX;       // 0.018
 
 /**
  * 创建热度条。
@@ -35,7 +47,8 @@ export function createHeat(opts = {}) {
   let lastKillT = -1e9;   // 上一次击杀时刻（用于断连判定）
 
   function setHeat(v) {
-    const nv = Math.max(0, Math.min(HEAT_MAX, v));
+    // 只兜底（不封顶）：连杀可以一直往上加，只有断连才会往下掉
+    const nv = Math.max(0, v);
     if (nv !== heat) { heat = nv; onChange(heat); }
   }
 
@@ -62,14 +75,14 @@ export function createHeat(opts = {}) {
     return heat;
   }
 
-  // 热度 → 移速倍率（线性：0 热度 = 1.0，满热度 = 1 + HEAT_SPEED_MAX）
+  // 热度 → 移速倍率（线性、不封顶：10 点 = +12%，30 点 = +36%）
   function speedMul() {
-    return 1 + (heat / HEAT_MAX) * HEAT_SPEED_MAX;
+    return 1 + heat * HEAT_SPEED_PER_KILL;
   }
 
-  // 热度 → 攻速倍率
+  // 热度 → 攻速倍率（同上）
   function atkMul() {
-    return 1 + (heat / HEAT_MAX) * HEAT_ATK_MAX;
+    return 1 + heat * HEAT_ATK_PER_KILL;
   }
 
   function reset() {
@@ -85,6 +98,8 @@ export function createHeat(opts = {}) {
     atkMul,
     reset,
     get heat() { return heat; },
+    // 相对「基础满格」的倍数，**会大于 1**（连杀不封顶）。只给调试口与「满热」判断用，
+    // 别拿它当进度条宽度（会溢出 100%）。
     get ratio() { return heat / HEAT_MAX; },
   };
 }

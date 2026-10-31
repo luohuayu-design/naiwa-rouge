@@ -18,7 +18,7 @@
 //
 // 数值骨架和 board.js / candle.js 同一套（三级 + 卡片 + 两件商店货 + 存档）。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=141';
+import * as THREE from '../lib/three.module.js?v=142';
 
 // 三级数值：百分比 / 冷却 / 射程
 const LV_CUT = [0.30, 0.40, 0.50];

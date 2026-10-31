@@ -148,7 +148,7 @@ ok(!!A.achById('clear_12'), '成就「通关十二关」');
 ok(!!A.achById('kangaroo_10'), '成就「击倒袋鼠」');
 ok(!!A.achById('traffic_50'), '成就「车辆撞怪」');
 ok(!!A.achById('traffic_run_20'), '成就「单局借车击杀」');
-ok(A.ACH_COUNT === 118, `成就总数 118（114 + 4，实 ${A.ACH_COUNT}）`);
+ok(A.ACH_COUNT === 117, `成就总数 117（第 125 块 -1，实 ${A.ACH_COUNT}）`);
 ok(ST.STORY_CHAPTERS.find((c) => c.id === 's12')?.levelId === 12, '剧情 s12 已绑定第十二关');
 // 图鉴 desc 有袋鼠的说明
 const codexSrc = src('js/codex.js');

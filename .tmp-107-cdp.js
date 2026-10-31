@@ -150,16 +150,16 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     }
 
     // ============================================================
-    console.log('\n[B] 四只新怪 spawn 冒烟');
+    console.log('\n[B] 三只新怪 spawn 冒烟（第 125 块删了等的那个）');
     // ============================================================
     {
-      for (const t of ['mirror', 'addressee', 'waiter', 'echo']) {
+      for (const t of ['mirror', 'addressee', 'echo']) {
         const r = await ev(`__game.block63.enemies.spawn('${t}', ${4 + Math.random() * 3}, ${-3 + Math.random() * 6})`);
         ok(r === t, `spawn ${t}`);
       }
       await sleep(900);
-      ok(await ev(`__game.block63.enemies.list().filter(e => ['mirror','addressee','waiter','echo'].includes(e.type) && e.state !== 'dead').length`) === 4,
-        '四只都活着');
+      ok(await ev(`__game.block63.enemies.list().filter(e => ['mirror','addressee','echo'].includes(e.type) && e.state !== 'dead').length`) === 3,
+        '三只都活着');
       await shot('b-four-monsters.png');
       // 照影：血 = min(玩家上限 60%, hpCap)（满面板主角 10 → 6）
       const want = await ev(`(() => {
@@ -169,8 +169,6 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
       })()`);
       const mhp = await ev(`__game.block63.enemies.list().find(e => e.type==='mirror' && e.state !== 'dead').hp`);
       ok(Math.abs(mhp - want) <= 0.3, `照影出生血 = min(上限60%, ${want})`, `${mhp} / ${want}`);
-      const wst = await ev(`__game.block63.enemies.list().find(e => e.type==='waiter' && e.state !== 'dead').state`);
-      ok(wst === 'chase' || wst === 'spawn', '等的那个在场（等待期站着不动）', String(wst));
       await ev('__game.block63.enemies.kill()');
       await sleep(300);
     }
