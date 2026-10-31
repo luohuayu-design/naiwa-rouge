@@ -444,7 +444,7 @@ ok(!/desc: '[^']*\*\*/.test(shopSrc.slice(shopSrc.indexOf("id: 'buyGuillotine'")
 ok(!/hint: '[^']*\*\*/.test(skillsSrc.slice(skillsSrc.indexOf("id: 'guillotine'"), skillsSrc.indexOf("id: 'guillotine'") + 900)),
   '技能 hint 里没有 ** 加粗');
 // 版本号：index.html 与所有 js 的 ?v= 必须一致
-ok(VER === '143', '版本号 bump 到 143', VER);
+ok(+VER >= 143, '版本号至少到 143', VER);
 const jsFiles = readdirSync(path.join(ROOT, 'js')).filter((f) => f.endsWith('.js'));
 const badVer = [];
 for (const f of jsFiles) {

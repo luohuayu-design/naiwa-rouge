@@ -23,9 +23,9 @@
 // 数值骨架和 candle.js / mine.js / latte.js 同一套：
 //   持续 / 冷却 / 判定宽度 / 同时几块 各有独立通道，reset() 清零（局内成长，不跨局）。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=143';
-import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=143';
-import { withV } from './assetUrl.js?v=143';
+import * as THREE from '../lib/three.module.js?v=144';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=144';
+import { withV } from './assetUrl.js?v=144';
 
 // 三级数值：时长 / 冷却 / 一次立几块
 const LV_LIFE = [6.0, 8.0, 10.0];

@@ -8,17 +8,19 @@
 // 接线方把 heat 条 UI 显示出来，并把 heat 提供的 speedMul/atkMul 乘进移速/攻速。
 // ============================================================
 
-// 第 125 块（用户 2026-10-31 报的 bug / 决定）：
-//   「连击打到十次以上就不在往上了」—— 原来 HEAT_MAX = 10 是**硬上限**，
-//   数字和加成一齐卡在 ×10。现在改成 **连杀与增益都不封顶**：
-//   数字一直往上加，移速 / 攻速也按同一斜率一直涨。
-//   `HEAT_MAX` 保留但只表示「基础满格」= 前 10 连杀的增益口径，
-//   绝不拿来钳制计数（钳了就是回到这个 bug）。
-//   ⚠️ 唯一的风险是后期移速过大导致单帧穿过井口 / 场地边界。
-//   真出现了就去**位移处夹单帧步长**，别把这里改回封顶 —— 那是把症状按回去。
+// 连杀的「数字」与「加成」是两件事，各有各的上限（用户 2026-10-31 二次定案）：
+//   第 125 块：「连击打到十次以上就不在往上了」→ 当时把计数和加成一齐放开。
+//   第 127 块：「要求连击数量显示无上限，但是属性加成有上限」→ 拆开：
+//     · 计数（连杀 ×N）**永不封顶**，一路往上数；
+//     · 移速 / 攻速加成封顶在 HEAT_BONUS_CAP（默认 10 连杀 = +12% / +18%）。
+//   所以 setHeat 不钳制，只有 speedMul / atkMul 读的时候钳。
+//   ⚠️ 反过来写（在 setHeat 里 Math.min）就是退回第 125 块的那个 bug：数字停住、玩家以为坏了。
+//   ⚠️ 上限值是 HEAT_BONUS_CAP 一个常量，想调手感只改这一处。
 
 // 基础满格（10 连杀 = 下面两个 MAX 值，和前 10 杀的手感一比一）
 export const HEAT_MAX = 10;
+// 加成封顶：连杀涨到这么多次之后，移速 / 攻速不再变强（数字照样涨）
+export const HEAT_BONUS_CAP = HEAT_MAX;
 // 每次击杀 +1 热度
 export const HEAT_PER_KILL = 1;
 // 断连阈值（秒）：超过这个时长没击杀，热度开始掉
@@ -75,14 +77,14 @@ export function createHeat(opts = {}) {
     return heat;
   }
 
-  // 热度 → 移速倍率（线性、不封顶：10 点 = +12%，30 点 = +36%）
+  // 热度 → 移速倍率（封顶：10 点 = +12%，之后不再涨 —— 数字照涨，加成不动）
   function speedMul() {
-    return 1 + heat * HEAT_SPEED_PER_KILL;
+    return 1 + Math.min(heat, HEAT_BONUS_CAP) * HEAT_SPEED_PER_KILL;
   }
 
-  // 热度 → 攻速倍率（同上）
+  // 热度 → 攻速倍率（同上，共用同一个封顶）
   function atkMul() {
-    return 1 + heat * HEAT_ATK_PER_KILL;
+    return 1 + Math.min(heat, HEAT_BONUS_CAP) * HEAT_ATK_PER_KILL;
   }
 
   function reset() {
@@ -98,8 +100,10 @@ export function createHeat(opts = {}) {
     atkMul,
     reset,
     get heat() { return heat; },
-    // 相对「基础满格」的倍数，**会大于 1**（连杀不封顶）。只给调试口与「满热」判断用，
-    // 别拿它当进度条宽度（会溢出 100%）。
-    get ratio() { return heat / HEAT_MAX; },
+    // 相对「基础满格」的倍数。**已经钳在 1**：连杀数字不封顶，但加成到满格就停，
+    // 进度条 / 满热判断都读它，不用自己再 clip。
+    get ratio() { return Math.min(1, heat / HEAT_MAX); },
+    // 加成是否已经顶到上限（UI 用来给「满」的提示，别让玩家以为数字还在涨就应该更强）
+    get bonusCapped() { return heat >= HEAT_BONUS_CAP; },
   };
 }

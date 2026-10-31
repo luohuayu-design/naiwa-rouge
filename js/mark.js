@@ -12,9 +12,9 @@
 // 数值骨架同 mine.js：伤害 = 武器攻击 × 倍率，吃暴击与护甲；
 // 目标数 / 持续伤害 / 爆炸范围 / 冷却各有独立通道，reset() 清零。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=143';
-import { mitigate } from './stats.js?v=143';
-import audio from './audio.js?v=143';
+import * as THREE from '../lib/three.module.js?v=144';
+import { mitigate } from './stats.js?v=144';
+import audio from './audio.js?v=144';
 
 const CD_MAX = 14.0;        // 基础冷却
 const CD_MIN = 5.0;         // 冷却下限

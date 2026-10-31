@@ -25,15 +25,15 @@
 // 第四关三只（wraith/leaper/mender，第 35 块，第 52 块换模型），
 // 各自在下面 ENEMY_TYPES 里有详细注释。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=143';
-import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=143';
-import { clone as cloneSkinned } from '../lib/jsm/utils/SkeletonUtils.js?v=143';
-import { distance2D } from './stats.js?v=143';
-import { createRangeRing } from './rangeRing.js?v=143';
-import { withV } from './assetUrl.js?v=143';
+import * as THREE from '../lib/three.module.js?v=144';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=144';
+import { clone as cloneSkinned } from '../lib/jsm/utils/SkeletonUtils.js?v=144';
+import { distance2D } from './stats.js?v=144';
+import { createRangeRing } from './rangeRing.js?v=144';
+import { withV } from './assetUrl.js?v=144';
 // 第 114 块：誊录员落笔 / 收账人翻账簿的提示音（以前这个文件不放音效，
 // 忘了 import 会在落笔那一帧抛 ReferenceError，整帧 AI 全断 —— 别省这一行）
-import audio from './audio.js?v=143';
+import audio from './audio.js?v=144';
 
 // KayKit 模型正面朝 +Z；如果哪天换模型发现怪倒着走，把这里改成 Math.PI
 export const ENEMY_MODEL_YAW = 0;
@@ -1291,7 +1291,10 @@ export const ENEMY_TYPES = {
     tiltX: -1.45,
     tint: 0xf2ead6,         // 旧纸黄：模型本身是纯白，压一点免得在夜色里跳出来
     radius: 0.62,
-    hp: 6,
+    // 第 127 块（用户实测：「收件人和回声的血太厚」）：6 → 4.0。
+    // 它自己一下都不打人，全部价值在「给别的怪填名」—— 血比 shielder（5）还厚时，
+    // 玩家清它的时间成本高过它造成的麻烦，这一关就只剩「绕着走」一种打法。
+    hp: 4.0,
     armor: 0,
     speed: 1.15,
     attackRange: 9.0,       // 远远地就能给别的怪填名字
@@ -1329,7 +1332,11 @@ export const ENEMY_TYPES = {
     footY: 0.0,
     height: 1.35,
     radius: 0.60,
-    hp: 7,
+    // 第 127 块（用户实测：「收件人和回声的血太厚」）：7 → 4.5。
+    // 回声不主动贴身（keepDistance 8），但它每 15 秒就从「这一局已经死掉的怪」里
+    // 照一只回来，只要它站着就一直在生效 —— 血厚等于给全场发免死金牌。
+    // 4.5 = 和袋鼠 / 相机同一档：点得掉，但得专门跑一趟。
+    hp: 4.5,
     armor: 0,
     speed: 1.00,
     attackRange: 2.0,

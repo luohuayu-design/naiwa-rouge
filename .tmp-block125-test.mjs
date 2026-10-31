@@ -92,21 +92,30 @@ ok(totalCount(L10.rounds[19]) === 65, 'R20 总只数 65（waiter 3 并进 warrio
 ok(L10.rounds[19].warrior === 11, 'R20 warrior 8 → 11', String(L10.rounds[19].warrior));
 
 // ============================================================
-sec('③ 连杀不封顶（用户选的是「数字和加成都彻底不封顶」）');
+sec('③ 连杀数字不封顶、属性加成封顶（第 127 块二次定案）');
 // ============================================================
 {
   const h = H.createHeat({ now: () => 0 });
   for (let i = 0; i < 30; i++) h.onKill();
-  ok(h.heat === 30, '30 连杀 → heat = 30（不再卡在 10）', String(h.heat));
-  // 前 10 杀的手感和旧版一模一样：10 点 = +12% 移速 / +18% 攻速
-  ok(near(h.speedMul(), 1 + 30 * 0.012, 1e-9), '移速 = 1 + 30 × 1.2% = 1.36', h.speedMul().toFixed(3));
-  ok(near(h.atkMul(), 1 + 30 * 0.018, 1e-9), '攻速 = 1 + 30 × 1.8% = 1.54', h.atkMul().toFixed(3));
-  ok(H.HEAT_MAX === 10, 'HEAT_MAX 只剩「基础满格」的含义（10）');
+  ok(h.heat === 30, '30 连杀 → 数字 30（计数不封顶）', String(h.heat));
+  // 加成到 10 连杀就停：+12% 移速 / +18% 攻速
+  ok(near(h.speedMul(), 1.12, 1e-9), '移速加成封顶在 +12%', h.speedMul().toFixed(3));
+  ok(near(h.atkMul(), 1.18, 1e-9), '攻速加成封顶在 +18%', h.atkMul().toFixed(3));
+  ok(h.bonusCapped === true, 'bonusCapped = true（UI 能写「已满」）');
+  ok(h.ratio === 1, 'ratio 钳在 1（不会被当成进度条宽度溢出）');
+  ok(H.HEAT_MAX === 10 && H.HEAT_BONUS_CAP === 10, 'HEAT_MAX 基础满格 / HEAT_BONUS_CAP 加成上限');
   ok(H.HEAT_SPEED_PER_KILL === 0.012 && H.HEAT_ATK_PER_KILL === 0.018, '每点增益导出成常量，UI 与逻辑同源');
 
-  // 只钳下限，不钳上限
+  // 未到上限时仍然线性：9 杀 = +10.8%
+  const h9 = H.createHeat({ now: () => 0 });
+  for (let i = 0; i < 9; i++) h9.onKill();
+  ok(near(h9.speedMul(), 1 + 9 * 0.012, 1e-9), '9 连杀 = +10.8%（未到顶仍线性）', h9.speedMul().toFixed(3));
+  ok(h9.bonusCapped === false, '9 连杀 bonusCapped = false');
+
+  // 只钳下限，不钳计数上限
   ok(!/Math\.min\(HEAT_MAX/.test(heatSrc), 'setHeat 里没有把上限钳回 HEAT_MAX');
   ok(/Math\.max\(0, v\)/.test(heatSrc), '仍然只兜底到 0');
+  ok(/Math\.min\(heat, HEAT_BONUS_CAP\)/.test(heatSrc), 'speedMul / atkMul 读的时候才钳加成');
 
   // 和第 124 块之前的版本对一遍：10 点时数值必须严格相同（手感不能漂）
   const h10 = H.createHeat({ now: () => 0 });
@@ -149,10 +158,10 @@ ok(/heat\.speedMul\(\) \* weather\.playerMult\('move'\)/.test(mainSrc), '移速�
 // ============================================================
 sec('⑥ 版本号');
 // ============================================================
-ok(VER === '143', '版本号 bump 到 143', VER);
+ok(+VER >= 144, '版本号至少到 144（第 127 块）', VER);
 const stale = ['index.html', 'js/main.js', 'js/enemy.js', 'js/wave.js', 'js/achievements.js', 'js/heat.js']
-  .filter((f) => src(f).includes('?v=141'));
-ok(stale.length === 0, '没有残留 ?v=141', stale.join(','));
+  .filter((f) => src(f).includes('?v=143'));
+ok(stale.length === 0, '没有残留 ?v=143', stale.join(','));
 
 console.log('\n====================================================');
 console.log(`第 125 块契约：${pass} 通过 / ${fail} 失败`);
