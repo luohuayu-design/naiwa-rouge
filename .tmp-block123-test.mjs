@@ -353,7 +353,7 @@ const badVer = jsFiles.filter((f) => {
   return s.includes('?v=') && !s.includes(`?v=${VER}`);
 });
 ok(badVer.length === 0, `全仓版本号一致（v=${VER}）`, badVer.join(','));
-ok(VER === '142', `版本号已 bump 到 142（实 ${VER}）`);
+ok(VER === '143', `版本号已 bump 到 143（实 ${VER}）`);
 ok(indexHtml.includes(`js/main.js?v=${VER}`), 'index.html 指的就是这个版本');
 
 // ============================================================

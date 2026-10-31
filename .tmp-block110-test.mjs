@@ -56,8 +56,10 @@ ok(M.mirror.hpCap === 60, 'hpCap 26 → 60（「你越强它越疼」在终盘�
 ok(M.mirror.hpFloor === 6, 'hpFloor 6 不变（早期别秒碎）');
 ok(!/want \* \(e\.spawnScale/.test(enemySrc.split('function reMirror')[1].split('function handleMirror')[0]),
   'reMirror 不再乘 spawnScale.hp（回合倍率把影子抬到比本尊还厚的双倍缩放已移除）');
-ok(M.height === 1.22 && M.height < 1.3, '模型缩小：height 1.55 → 1.22', M.height);
-ok(M.radius === 0.44, '碰撞同步收窄：radius 0.55 → 0.44', M.radius);
+// 第 126 块：照影换成主角模型（= frog.js 的 TARGET_H 2.28），第 110 块那次「放小到 1.22」
+// 是针对原来那只四足蛙的，已随模型一起作废。
+ok(M.height === 2.28, '和主角一样高：height = 2.28（frog.js 的 TARGET_H）', M.height);
+ok(M.radius === 0.6, '碰撞半径 0.60（比主角 BODY_R 0.65 略窄）', M.radius);
 ok(!!M.file && existsSync(path.join(ROOT, M.file)), 'glb 还在盘上');
 
 // ---------------- ③ 看守暴怒攻速 ----------------

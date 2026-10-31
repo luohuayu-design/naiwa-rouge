@@ -87,7 +87,7 @@ console.log('[§2] 三只新怪 cfg');
   const M = ENEMY_TYPES.mirror;
   ok(M && M.mirror && M.mirror.hpRatio === 0.6, '照影：血 = 玩家上限 60%', M && M.mirror && M.mirror.hpRatio);
   ok(M.mirror.every >= 6 && M.mirror.every <= 10, `照影每 ${M.mirror.every} 秒重照一次`);
-  ok(M.phantom === 0.62, '照影半透明（水影）');
+  ok(M.phantom === 0.80, '照影半透明（水影；第 126 块换主角模型后 0.62 → 0.80，太透会看见背面内壁）');
   ok(!!M.file && fs.existsSync(path.join(ROOT, M.file)), '照影有 glb 且在盘上');
 
   const A = ENEMY_TYPES.addressee;

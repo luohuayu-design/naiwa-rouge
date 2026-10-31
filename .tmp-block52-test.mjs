@@ -82,7 +82,8 @@ for (const k of ['minion', 'warrior', 'archer', 'bowman']) {
 
 // 第 123 块：静态道具模型（一张纸 / 一支笔 / 一本摊开的书 / 一块牌子 / 一台三脚架相机）
 // 几何本来就极简，slip.glb 只有 3.4KB —— 门槛按「静态 2KB / 带骨架 8KB」分两档。
-const STATIC_MODELS = new Set(['arc', 'addressee', 'clerk', 'collector', 'kangaroo', 'standee', 'camera', 'proofreader']);
+// 第 126 块：照影换成主角模型后也是静态单网格（0 段动画，靠 bounce 一跳一跳）。
+const STATIC_MODELS = new Set(['arc', 'addressee', 'clerk', 'collector', 'kangaroo', 'standee', 'camera', 'proofreader', 'mirror']);
 sec('二、模型文件真的在，且是合法 glb');
 for (const [k, t] of TYPES) {
   const abs = path.join(ROOT, t.file);

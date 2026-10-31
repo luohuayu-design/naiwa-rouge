@@ -149,7 +149,7 @@ ok(/heat\.speedMul\(\) \* weather\.playerMult\('move'\)/.test(mainSrc), '移速�
 // ============================================================
 sec('⑥ 版本号');
 // ============================================================
-ok(VER === '142', '版本号 bump 到 142', VER);
+ok(VER === '143', '版本号 bump 到 143', VER);
 const stale = ['index.html', 'js/main.js', 'js/enemy.js', 'js/wave.js', 'js/achievements.js', 'js/heat.js']
   .filter((f) => src(f).includes('?v=141'));
 ok(stale.length === 0, '没有残留 ?v=141', stale.join(','));

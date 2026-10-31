@@ -30,9 +30,9 @@
 // 官方资源（iron_golem.png / snow_golem.png，版权归 Mojang）。这是用户明确
 // 要求的（「贴图就用MC的」），风险已知。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=142';
-import { distance2D } from './stats.js?v=142';
-import audio from './audio.js?v=142';
+import * as THREE from '../lib/three.module.js?v=143';
+import { distance2D } from './stats.js?v=143';
+import audio from './audio.js?v=143';
 
 // ---- 数值（用户定案 + 我的拍板，都写在这里方便改） ----
 const CD_TOTAL = 40;        // 技能冷却：召出（或傀儡阵亡）后要等这么久才能再召

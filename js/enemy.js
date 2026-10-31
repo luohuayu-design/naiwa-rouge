@@ -25,15 +25,15 @@
 // 第四关三只（wraith/leaper/mender，第 35 块，第 52 块换模型），
 // 各自在下面 ENEMY_TYPES 里有详细注释。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=142';
-import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=142';
-import { clone as cloneSkinned } from '../lib/jsm/utils/SkeletonUtils.js?v=142';
-import { distance2D } from './stats.js?v=142';
-import { createRangeRing } from './rangeRing.js?v=142';
-import { withV } from './assetUrl.js?v=142';
+import * as THREE from '../lib/three.module.js?v=143';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=143';
+import { clone as cloneSkinned } from '../lib/jsm/utils/SkeletonUtils.js?v=143';
+import { distance2D } from './stats.js?v=143';
+import { createRangeRing } from './rangeRing.js?v=143';
+import { withV } from './assetUrl.js?v=143';
 // 第 114 块：誊录员落笔 / 收账人翻账簿的提示音（以前这个文件不放音效，
 // 忘了 import 会在落笔那一帧抛 ReferenceError，整帧 AI 全断 —— 别省这一行）
-import audio from './audio.js?v=142';
+import audio from './audio.js?v=143';
 
 // KayKit 模型正面朝 +Z；如果哪天换模型发现怪倒着走，把这里改成 Math.PI
 export const ENEMY_MODEL_YAW = 0;
@@ -109,15 +109,8 @@ const CLIP_FAMILIES = {
     idle: 'Idle', walk: 'Walk', run: 'Run', attack: 'Sword_Slash', cast: 'Interact',
     death: 'Death', hit: 'HitRecieve', spawn: 'Idle',
   },
-  // 第 107 块：Quaternius 的**四足蛙**（`reflect-frog.glb`，FrogArmature，只有 4 段）。
-  // 照影是第十关「井水照出来的那只蛙」，所以刻意选了和第七关井蛙（frog.glb，
-  // 直立蛙人、humanoid 族）不一样的一只 —— 四足、贴地、跳着走。
-  // ⚠️ 这套 clip 没有「走路」：walk 借 Frog_Jump（四足蛙本来就是一跳一跳地挪，
-  // 正好当成移动动画），也没有受击段，hit 退回 Idle（挨打靠闪白表现，见 takeDamage）。
-  frogbeast: {
-    idle: 'Frog_Idle', walk: 'Frog_Jump', run: 'Frog_Jump', attack: 'Frog_Attack',
-    cast: 'Frog_Attack', death: 'Frog_Death', hit: 'Frog_Idle', spawn: 'Frog_Idle',
-  },
+  // ⚠️ 第 126 块删掉了 `frogbeast` 族（原来只服务照影的四足蛙）。
+  // 照影换成主角模型后是单网格静态 glb，没有 clip 可放 —— 见 mirror 的 bounce。
   // 第 107 块：Quaternius 的**史莱姆**（`echo-slime.glb`，Armature，4 段）。
   // 回声是「井里浮上来的一团水」，所以本体就是一坨会弹的胶 —— 半透明 + 冷青色。
   // Walk 是真的有（弹跳前进），cast 借 Attack（吐出一只怪就是那一下前冲）。
@@ -1230,11 +1223,18 @@ export const ENEMY_TYPES = {
   // ------------------------------------------------------------
   mirror: {
     name: '照影',
-    file: 'assets/monsters/reflect-frog.glb',
-    sourceHeight: 1.30,    // 实测（Idle 渲染身高，.tmp-107-calib.js）
-    footY: 0.0,
-    height: 1.22,          // 第 110 块：1.55 → 1.22，用户反馈「模型放小一下」—— 水影比本体小一圈
-    radius: 0.44,          // 模型缩小同步收碰撞（原 0.55）
+    // 第 126 块：用户「把模仿者的 3D 模型换成和主角一样，只不过把黄色换成紫色」。
+    // 做法 = 复制主角的 assets/rigged.glb，**只换 baseColor 贴图**（黄/米白 →
+    // 中紫/淡紫，几何·UV·法线一字未改），存成 assets/monsters/mirror-frog.glb。
+    // 所以它和主角是同一只蛙，换的不是形状是配色 —— 一眼认出「照出来的那个你」。
+    file: 'assets/monsters/mirror-frog.glb',
+    // ⚠️ 主角模型是 KHR_mesh_quantization 量化的（POSITION = normalized short，满量程
+    // 32767）+ node scale 0.5392 + rotX 90°，套完世界高度正好 1.0784。
+    // 不能拿原来那只四足蛙的 1.30 来凑 —— 会缩成六成大小。
+    sourceHeight: 1.0784,
+    footY: 0.0,            // 脚底正好落在原点（node 的 translation.y 已把 -0.539 抬平）
+    height: 2.28,          // = frog.js 的 RIG.TARGET_H —— **和主角一模一样大**
+    radius: 0.60,          // 比主角的 BODY_R（0.65）略窄：水影的判定别比视觉更宽
     hp: 8,                 // 只是兜底值 —— 真正的血在 spawn 时按玩家最大生命算
     armor: 0,
     speed: 2.2,            // 同上：只是兜底，抄完后用玩家的移速
@@ -1261,15 +1261,19 @@ export const ENEMY_TYPES = {
     spawnTime: 0.9,
     deathTime: 1.4,
     selfDestruct: false,
-    color: 0x9fe8ff,        // 井水的冷青
-    tint: 0xdff0ff,
-    glow: { color: 0x2a6a88, intensity: 0.9 },
-    phantom: 0.62,          // 第 107 块：半透明（它是一层水影，不是实体）
-    animFamily: 'frogbeast',
-    anim: {
-      walk: 'walk', idle: 'idle', attack: 'attack',
-      death: 'death', spawn: 'spawn',
-    },
+    color: 0x9a63d8,        // 紫（和贴图同一族，用在落点圈 / 血条这类非贴图元素上）
+    // ⚠️ 不写 tint：tint 会把 material.color 整体压成那个色再乘贴图，
+    // 一层冷白压上去紫色就被冲淡了。现在颜色全交给贴图自己。
+    glow: { color: 0x3a1f66, intensity: 0.70 },
+    phantom: 0.80,          // 它还是一层水影（第 107 块的设定没变），但换了实体模型后
+                            // 太透会看见自己背面的内壁，0.80 是「看得出半透、又不穿帮」
+    // ⚠️ 没有 animFamily：主角模型在敌人这边是**静态单网格**（frog.js 那套 7 骨蒙皮
+    // 是它专门为玩家那一个造出来的，敌人不走那条路），放不了任何 clip。
+    // 所以照影没有走路 / 攻击动画，靠下面这套 bounce 把「它在动」演出来。
+    // anim 仍要留一个对象：spawn / chase 的状态机里会读 e.cfg.anim.idle（play 找不到
+    // action 会安全地 return，和校对的 / 立牌这些静态怪同一个写法）。
+    bounce: { amp: 0.16, hz: 5.6, tilt: 0.07 },   // 腾空高度 / 每秒几个来回 / 点头幅度
+    anim: { walk: 'idle', idle: 'idle', attack: 'attack', death: 'death', spawn: 'spawn' },
   },
   addressee: {
     name: '收件人',
@@ -4353,6 +4357,19 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
         const rig = e.modelPivot || e.model;
         rig.rotation.z = Math.sin(e.t * 1.4 + e.driftPhase) * 0.16;
       }
+    } else if (e.cfg.bounce && e.state !== 'dead' && e.state !== 'dying') {
+      // ---- 照影（第 126 块）：换成主角模型后没有骨骼动画 ----
+      // 主角那套 7 骨蒙皮是 frog.js 专门给玩家造的一份（顶点权重靠距离算），
+      // 敌人这边只有静态网格 —— 所以「它在动」这件事只能自己演。
+      // 用 **|sin|** 而不是 sin：蛙跳是「落地 → 腾空 → 落地」，正弦的负半周
+      // 会把模型压到地面以下（半个身子钻进土里），取绝对值才是两跳一个周期。
+      const bp = e.cfg.bounce;
+      const ph = e.t * bp.hz + e.driftPhase;
+      e.root.position.y = Math.abs(Math.sin(ph)) * bp.amp;
+      // 腾空时身体往前点一下头、落地回正 —— 静态网格有这一下才像「蹬地」，
+      // 否则就是一块贴图在平移。只转 x，y 是朝向（root 管），z 留给别的怪用。
+      const rig = e.modelPivot || e.model;
+      rig.rotation.x = Math.sin(ph * 2) * (bp.tilt || 0);
     }
 
     // ---- 第 107 块：被填名的免疫倒计时 ----

@@ -12,7 +12,7 @@
 //
 // 零 import、纯注入（和 traffic.js / fog.js 一套写法）：自己建几何、自己画流光，
 // 业务侧只调 update() 和 sample()。
-import * as THREE from '../lib/three.module.js?v=142';
+import * as THREE from '../lib/three.module.js?v=143';
 
 // 不在带上时统一返回这一份（调用方可以无条件相乘，不用判空）
 const OFF = { on: false, mul: 1, push: 0, tx: 0, tz: 0 };
