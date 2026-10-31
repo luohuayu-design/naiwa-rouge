@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // skills.js —— 技能栏注册表（第 10 块）
 //
 // 以前技能栏是「1 个释放键 + 5 个剑槽」，剑槽只展示每种剑各有几把，
@@ -32,7 +32,7 @@
 //
 // ctx 由 main.js 每帧拼好传进来：{ playing, weapon, playerPos, stats, coins }
 // ============================================================
-import audio from './audio.js?v=146';
+import audio from './audio.js?v=147';
 
 // 冷却数字统一两位小数（第 64 块用户需求：倒计时精确到两位小数）。
 // 不补零会跳字（3.4 → 3.35 期间宽度变化），toFixed(2) 宽度恒定。
@@ -581,6 +581,50 @@ export const SKILLS = [
       const yaw = ctx.playerYaw ? ctx.playerYaw() : 0;
       const ok = ctx.pencil.mark(ctx.playerPos, yaw);
       if (ok) audio.sfx('swordFire', { vol: 0.3 });
+      return ok;
+    },
+  },
+
+  // ---- 第 19 件法器「空箱子」·技能「装箱」（第 130 块，第十七关专属） ----
+  // 场地机制是「整点钟响」：全场定身 0.6 秒。空箱子是另一种「停」——
+  // 把烦人的几只收走、攒满再倒出来摔一顿。手动这一格是一次收 3 只的口子。
+  // id 跟法器同名（crate），卡池守卫靠这个 id 找专属卡。
+  {
+    id: 'crate',
+    name: '装箱',
+    // 内联 SVG：一只敞口木箱 + 铜箍 + 往下的箭头
+    art: '<svg viewBox="0 0 40 40" aria-hidden="true">'
+      + '<rect x="9" y="16" width="22" height="18" rx="1.6" fill="#6b4b2e" stroke="#b08d4a" stroke-width="1.6"/>'
+      + '<path d="M9 22 h22 M9 28 h22" stroke="#b08d4a" stroke-width="1.2" opacity=".8"/>'
+      + '<path d="M13 16 l0 -5 h14 l0 5" fill="none" stroke="#d8c79a" stroke-width="1.6"/>'
+      + '<path d="M20 6 v-3 m-3 3 l3 3 3 -3" fill="none" stroke="#ffd86b" stroke-width="1.8" opacity=".95"/>'
+      + '</svg>',
+    ring: true,
+    hint: '一次收走身边 5 格内最多的 3 只怪，收满当场倒箱。冷却 26 秒',
+    key: 'f',
+    cd: 26.0,
+    cdNow: (ctx) => (ctx.crate ? ctx.crate.cdMax() : 26.0),
+    desc: '装箱：按下之后把身边 5 格内最多的 3 只怪（由近到远）收进空箱子 —— 它们从场上消失、'
+      + '不动也打不到。箱子装满的那一秒自动倒箱：箱里的怪被倒在脚边，摔掉四分之一以上的最大生命、'
+      + '被木屑定住近 1 秒，落点还会砸一圈周围的怪。冷却 26 秒；法器三级冷却 20 秒。'
+      + '它和钟声刚好相反 —— 钟声是全场停半秒，箱子是把几只「先收起来晚点打」。',
+    unlockNote: '夜行商店买到「空箱子」（第十七关起上架）后拥有',
+    visible: (ctx) => ctx.playing && !!ctx.crate && ctx.crate.owned,
+    state: (ctx) => {
+      if (!ctx.crate || !ctx.crate.owned) return 'lock';
+      return ctx.crate.ready ? 'ready' : 'cd';
+    },
+    ready: (ctx) => !!ctx.crate && ctx.crate.owned && ctx.playing && ctx.crate.ready,
+    progress: (ctx) => (ctx.crate ? ctx.crate.progress : 0),
+    cdText: (ctx) => {
+      if (!ctx.crate || !ctx.crate.owned) return '';
+      return ctx.crate.ready ? '' : fmtCd(ctx.crate.cdLeft);
+    },
+    press(ctx) {
+      if (!ctx.crate) return false;
+      const yaw = ctx.playerYaw ? ctx.playerYaw() : 0;
+      const ok = ctx.crate.cast(ctx.playerPos, yaw);
+      if (ok) audio.sfx('swordHit', { vol: 0.35 });
       return ok;
     },
   },

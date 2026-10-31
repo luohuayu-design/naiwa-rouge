@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // scene.js —— 深夜场景（两套皮肤）
 //
 // 只负责「看起来像什么」这一件事：地面、月光、雾、萤火虫、边界石圈。
@@ -8,7 +8,7 @@
 // 两套配色集中在 THEMES 里，buildNightScene({ theme }) 建哪套，
 // 局中要换就调返回的 setTheme('crypt')（不改几何，只改颜色和贴图）。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=146';
+import * as THREE from '../lib/three.module.js?v=147';
 
 export const THEMES = {
   // 第一关 · 荒草地：冷月光 + 青绿边圈 + 萤火虫
@@ -257,6 +257,23 @@ export const THEMES = {
     tuft: 0x4a4436, tuftVisible: false,     // 室内不长草
     fly: 0xf0e6cc, flyCount: 88,            // 台灯光里的纸屑
     ground: 'atelier',
+  },
+  // 第十七关 · 钟楼顶（第 130 块）：露天的一层石台，北沿架着一口铜钟。
+  // 配色思路：夜里站在楼顶，天光是**冷青**的，但钟架那边一直有一圈铜黄 ——
+  // 冷底 + 一点暖，是这一关「整点定身」的视觉暗示（钟一响，全场停半秒）。
+  // 地面是青石板 + 铜绿渍 + 落下的夜雾，屋子里没有的东西这里都有了：
+  // 所以 tuftVisible 关掉（楼顶不长草），萤火换成雾里的水汽。
+  roof: {
+    bg: 0x090d11,
+    fog: 0x1b2426, fogDensity: 0.0132,
+    hemiSky: 0x9fb4bc, hemiGround: 0x0e1315, hemiIntensity: 1.40,
+    moon: 0xe2eeff, moonIntensity: 2.90, moonBase: 2.78,
+    rim: 0x6f9080, rimIntensity: 0.84,      // 铜绿的反光
+    edge: 0xffd86b, edgeOpacity: 0.30,      // 钟架的铜黄（和钟响的定身色同一个）
+    stone: 0x33403e,
+    tuft: 0x3a4644, tuftVisible: false,     // 楼顶不长草
+    fly: 0xcfe0dc, flyCount: 92,            // 雾里的水汽
+    ground: 'roof',
   },
 };
 
@@ -889,6 +906,84 @@ function makeAtelierTexture() {
   return tex;
 }
 
+// 第十七关 · 钟楼顶的石台（第 130 块）
+// 楼顶这一层是**露天**的：青石板被雨泡了几十年，缝里长铜绿，面上落着一层夜雾。
+// 和画室的区别：那边是暖木头 + 铅笔屑，这边是冷石 + 铜锈，一张图就能看出换了地方。
+// 注意贴图 repeat 是 16×16 —— 任何「大块图案」（比如一口钟的影子）都会被复制成
+// 十六份，所以这里只画小尺度的东西：石板、锈渍、雾霜。
+function makeRoofTexture() {
+  const S = 512;
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = S;
+  const g = cv.getContext('2d');
+
+  g.fillStyle = '#242b2c';
+  g.fillRect(0, 0, S, S);
+
+  let seed = 130013;
+  const rnd = () => {
+    seed = (seed * 1103515245 + 12345) % 2147483648;
+    return seed / 2147483648;
+  };
+
+  // ① 青石板：一块一块铺，横缝错开（楼顶的石板是老的，块头不小）
+  for (let y = 0; y < S; y += 86) {
+    const offset = (Math.floor(y / 86) % 2) ? 42 : 0;
+    for (let x = -86; x < S + 86; x += 86) {
+      const px = x + offset, w = 82, h = 82;
+      // 每块色差一点点：偏青、偏灰、偶尔一块偏绿（铜绿渗进去了）
+      const tint = rnd();
+      const r = 42 + rnd() * 14 + (tint > 0.82 ? -6 : 0);
+      const gg = 50 + rnd() * 16;
+      const b = 50 + rnd() * 14 + (tint > 0.82 ? -8 : 0);
+      g.fillStyle = `rgba(${r | 0},${gg | 0},${b | 0},0.58)`;
+      g.fillRect(px, y, w, h);
+      // 板缝：暗，但别到纯黑（太黑会像格栅）
+      g.fillStyle = 'rgba(11,15,16,0.52)';
+      g.fillRect(px + w, y, 4, h);
+      g.fillRect(px, y + h, w + 4, 4);
+      // 石面细纹：几道斜的浅痕（石头被踩出来的磨损）
+      for (let i = 0; i < 5; i++) {
+        const sx = px + 6 + rnd() * (w - 12);
+        const sy = y + 6 + rnd() * (h - 12);
+        g.strokeStyle = `rgba(${96 + rnd() * 26 | 0},${108 + rnd() * 26 | 0},${104 + rnd() * 24 | 0},${0.05 + rnd() * 0.09})`;
+        g.lineWidth = 0.8 + rnd() * 1.3;
+        g.beginPath();
+        g.moveTo(sx, sy);
+        g.lineTo(sx + (rnd() - 0.3) * 26, sy + (rnd() - 0.3) * 26);
+        g.stroke();
+      }
+    }
+  }
+
+  // ② 铜绿渍：钟架那一带的雨把铜锈冲下来，石板上到处是一小片一小片的绿
+  for (let i = 0; i < 30; i++) {
+    const x = rnd() * S, y = rnd() * S;
+    const rx = 8 + rnd() * 26, ry = 6 + rnd() * 18;
+    g.fillStyle = `rgba(${70 + rnd() * 30 | 0},${118 + rnd() * 34 | 0},${100 + rnd() * 30 | 0},${0.06 + rnd() * 0.12})`;
+    g.beginPath();
+    g.ellipse(x, y, rx, ry, rnd() * Math.PI, 0, Math.PI * 2);
+    g.fill();
+  }
+
+  // ③ 夜雾落下来的霜：淡青白的一层，这是楼顶这张图的性格（和雾原同一路）
+  for (let i = 0; i < 7; i++) {
+    const x = rnd() * S, y = rnd() * S;
+    const r = 50 + rnd() * 80;
+    const grd = g.createRadialGradient(x, y, 0, x, y, r);
+    grd.addColorStop(0, 'rgba(212,226,228,0.10)');
+    grd.addColorStop(1, 'rgba(212,226,228,0)');
+    g.fillStyle = grd;
+    g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+  }
+
+  const tex = new THREE.CanvasTexture(cv);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(16, 16);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
 function makeGroundTexture(kind) {
   if (kind === 'crypt') return makeCryptTexture();
   if (kind === 'ash') return makeAshTexture();
@@ -905,6 +1000,7 @@ function makeGroundTexture(kind) {
   if (kind === 'press') return makePressTexture();
   if (kind === 'studio') return makeStudioTexture();
   if (kind === 'atelier') return makeAtelierTexture();
+  if (kind === 'roof') return makeRoofTexture();
   return makeGrassTexture();
 }
 

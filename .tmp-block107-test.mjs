@@ -101,7 +101,7 @@ console.log('[§2] 三只新怪 cfg');
   ok(E.keepDistance >= 5, `回声站得远（${E.keepDistance} 格）`);
   ok(!!E.file && fs.existsSync(path.join(ROOT, E.file)), '回声有 glb');
 
-  ok(Object.keys(ENEMY_TYPES).length === 35, 'ENEMY_TYPES 共 35 只（第 128 块 +2，第 129 块 +2）');
+  ok(Object.keys(ENEMY_TYPES).length === 37, 'ENEMY_TYPES 共 35 只（第 128 块 +2，第 129 块 +2）');
 }
 
 // ============================================================ §3 收件人免疫契约

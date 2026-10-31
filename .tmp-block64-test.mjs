@@ -186,7 +186,7 @@ ok(oldHits.size > 40, `怪池子还是混着抽的（4000 次抽到 ${oldHits.si
 // ============================================================
 sec('五、技能元数据（属性面板「技能」页要用）');
 // ============================================================
-ok(skills.SKILLS.length === 13, `13 个技能（第 128 块 +环形灯 / 开播，第 129 块 +描红，实际 ${skills.SKILLS.length}）`);
+ok(skills.SKILLS.length === 14, `13 个技能（第 128 块 +环形灯 / 开播，第 129 块 +描红，实际 ${skills.SKILLS.length}）`);
 for (const sk of skills.SKILLS) {
   ok(typeof sk.cd === 'number' && sk.cd > 0, `${sk.id} 有基础 CD（${sk.cd} 秒）`);
   ok(typeof sk.cdNow === 'function', `${sk.id} 有 cdNow()（算上 CD 缩短）`);

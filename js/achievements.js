@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // achievements.js —— 成就清单（第 18 块建立，第 94 块重做）
 //
 // 这个文件只放「定义」：八类别 × 三档奖励。解锁动作分散在 main.js 的各个埋点
@@ -31,7 +31,7 @@
 //    · tier 决定骨币，**别手写骨币数字**（改档位只改 ACH_TIERS 一处）。
 // ============================================================
 
-import { profile, hasAch, achGot, markAchGot, addBones, save } from './profile.js?v=146';
+import { profile, hasAch, achGot, markAchGot, addBones, save } from './profile.js?v=147';
 
 // ---------------- 八类别 ----------------
 // icon 全部来自 game-icons.net（CC BY 3.0），和背包图标同源；

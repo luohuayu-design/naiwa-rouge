@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // shop.js —— 流浪商人商店
 //
 // 规则（用户定案）：
@@ -26,9 +26,9 @@
 // 第 11 块：每件货都带 rarity（0 普通 ~ 4 传说），店里按品质加权抽取 ——
 // 幸运越高，摆出来的货越往金/红那一头走（见 rarity.js）。
 // ============================================================
-import { rarityWeight } from './rarity.js?v=146';
-import { TURRET } from './turret.js?v=146';
-import { RELIC_DEFS } from './relics.js?v=146';
+import { rarityWeight } from './rarity.js?v=147';
+import { TURRET } from './turret.js?v=147';
+import { RELIC_DEFS } from './relics.js?v=147';
 
 export const SHOP_ITEMS = [
   // ---------------- 生命药水（第 13 块起：买进背包，作战中随时用） ----------------
@@ -420,6 +420,29 @@ export const SHOP_ITEMS = [
     glyph: '✖️', name: '双头铅笔',
     desc: '两道笔头：每道线同时划出十字形的另一道 —— 一条封路、一条截腰，怪绕不过去。一局只能买一次。',
   },
+  // ---------------- 第十七关新增（第 130 块）：空箱子 ----------------
+  // 场地是「整点钟响」：全场定身半秒。空箱子是另一种「停」——
+  // 把烦人的几只先收走，攒满再倒出来摔一顿。同样 relic 本体 + 两件一局一次的买断。
+  {
+    id: 'buyCrate', type: 'relic', relic: 'crate', price: 36, needRound: 8, needLevel: 17,
+    rarity: 3,
+    glyph: '📦', name: '空箱子',
+    desc: '钟楼顶那口空木箱：每 7 秒把身边最近的一只怪装进去（从场上消失、打不到），装满就当场倒出来 —— '
+      + '被倒出的怪摔掉 25% 最大生命、被定住近 1 秒，落点还砸一圈。技能栏多一颗「装箱」：一次收 3 只，冷却 26 秒。'
+      + '再买可升级（最多 3 级：能装 3 只、每 5 秒收一只、摔伤 35%、冷却 20 秒）。',
+  },
+  {
+    id: 'buyCrateLid', type: 'crate', crate: 'lid', price: 20, needRound: 5, needLevel: 17,
+    rarity: 2,
+    glyph: '🪵', name: '厚箱盖',
+    desc: '换一块更厚的箱盖：容量 +1 —— 满级能装 4 只，一次倒出来的摔伤与冲击也更多。一局只能买一次。',
+  },
+  {
+    id: 'buyCrateRope', type: 'crate', crate: 'rope', price: 24, needRound: 9, needLevel: 17,
+    rarity: 2,
+    glyph: '🪢', name: '麻绳捆扎',
+    desc: '箱身用麻绳捆紧：倒箱时落点冲击伤害 ×1.5 —— 攒一箱倒下去，周围那一圈怪跟着一起摔。一局只能买一次。',
+  },
 ];
 
 // 第 118 块：付**夜行骨币**刷新（用户定案「本次进店递增、离店重置」）。
@@ -504,6 +527,12 @@ export function itemLocked(item, ctx = {}) {
     if (item.pencil === 'long' && ctx.pencilLong) return '这一局已经买过了';
     if (item.pencil === 'twin' && ctx.pencilTwin) return '这一局已经买过了';
   }
+  // 第 130 块：空箱子的两件买断货
+  if (item.type === 'crate') {
+    if (!ctx.crateLevel) return '要先拥有「空箱子」';
+    if (item.crate === 'lid' && ctx.crateLid) return '这一局已经买过了';
+    if (item.crate === 'rope' && ctx.crateRope) return '这一局已经买过了';
+  }
   return null;
 }
 
@@ -518,7 +547,9 @@ export const SHOP_SHOW = 4;
 // 都挂在 9 这一格，靠 onlyLevel / needLevel 各自过滤，同一格互不干扰
 // （第 8 关只摆铃、第 11 关只摆墨丸、第 10 关两件都被滤掉）。
 // 第 129 块：铅笔挂 12 这一格（第 16 关起 needLevel 才放行，前几关自动跳过）。
-export const SHOP_PINNED = { 9: ['buySeal', 'buyMine', 'buyLatte', 'buyRinglight'], 12: ['buySeal', 'buyPuppet', 'buyRinglight', 'buyPencil'] };
+// 第 130 块：空箱子挂 9 这一格（第 17 关起才放行；第 9 回合那家店里
+// 第 17 关可用的常驻货正好是铃 / 拿铁 / 环形灯 / 箱子四件，不会撑爆四格）。
+export const SHOP_PINNED = { 9: ['buySeal', 'buyMine', 'buyLatte', 'buyRinglight', 'buyCrate'], 12: ['buySeal', 'buyPuppet', 'buyRinglight', 'buyPencil'] };
 
 // 抽本次商店的货物：返回一个**不含重复**的物品数组（默认 4 件）。
 // hasWeapon = 已拿到环剑（没有时剑类买了也用不了，先不进池）

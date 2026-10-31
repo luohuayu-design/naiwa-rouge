@@ -138,7 +138,7 @@ ok(/tribal\.glb$/.test(ENEMY_TYPES.hexer.file), '咒面图腾还在用 tribal.gl
 // 第 82 块：+称量官 → 21 只
 // 第 83 块：-无名者/旗手 +寄存处看守 → 20 只
 // 第 97 块：+盖章人 stamper → 21 只（称量官同时换模型，总数不变的是文件数）
-ok(Object.keys(ENEMY_TYPES).length === 35, `怪物总数 35 只（第 128 块 +2，第 129 块 +2，实际 ${Object.keys(ENEMY_TYPES).length}）`);
+ok(Object.keys(ENEMY_TYPES).length === 37, `怪物总数 35 只（第 128 块 +2，第 129 块 +2，实际 ${Object.keys(ENEMY_TYPES).length}）`);
 ok(ENEMY_TYPES.arc && ENEMY_TYPES.arc.animFamily === undefined, '并联体仍是静态网格（没乱加动画族）');
 
 // ============================================================

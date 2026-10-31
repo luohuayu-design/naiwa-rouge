@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // upgrade.js —— 局内成长：回合结束的三选一
 //
 // 设计原则：
@@ -34,9 +34,9 @@
 //   标了 scope:'weapon' 的项改的是武器表（剑系 / 元素系），其余改主角表。
 //   两块表都要传进来，没传 wstats 时武器项会退化到主角表（只为兼容老调用）。
 // ============================================================
-import { STAT_DEFS } from './stats.js?v=146';
-import { WEAPON_STAT_DEFS } from './weaponStats.js?v=146';
-import { RARITIES, rarityWeight, oddsOf } from './rarity.js?v=146';
+import { STAT_DEFS } from './stats.js?v=147';
+import { WEAPON_STAT_DEFS } from './weaponStats.js?v=147';
+import { RARITIES, rarityWeight, oddsOf } from './rarity.js?v=147';
 
 // 一张卡改的是哪块表
 function tableFor(scope, stats, wstats) {
@@ -795,6 +795,58 @@ const UNIQUE = [
     title: '描红增伤 +10% · 标记 +1.5 秒',
     desc: '传说：换成红笔 —— 被描红的怪受到的伤害从 +25% 提到 +35%，还多标 1.5 秒。先描最厚的那只',
   },
+  // ---------------- 空箱子卡（第 130 块，第十七关专属法器） ----------------
+  // 买到「空箱子」后才会进池子（weightOf 里拦：opts.crateOwned）。
+  // 六个通道：容量 / 装箱频率 / 落点伤害 / 摔伤比例 / 收怪范围 / 装箱冷却；
+  // up.crate 转交 crate.applyCard()。
+  {
+    id: 'crateInterval', tag: 'def', glyph: '⏳', name: '塞得更快',
+    rarity: 1,
+    w0: 0.50, gw: +0.016,
+    crate: { stat: 'interval', flat: 0.7 },
+    title: '自动装箱间隔 −0.7 秒',
+    desc: '箱子收得更勤（能重复拿，最快 2.6 秒一只）—— 场上的烦人精一只只消失，压力一直在减',
+  },
+  {
+    id: 'crateImpact', tag: 'atk', glyph: '💥', name: '更沉的箱底',
+    rarity: 0,
+    w0: 0.58, gw: +0.015,
+    crate: { stat: 'impact', flat: 0.4 },
+    title: '倒箱落点伤害 +0.4',
+    desc: '箱底压了块石头：倒出来的怪落地时砸得更重，周围那一圈也跟着吃（能重复拿）',
+  },
+  {
+    id: 'crateRange', tag: 'mov', glyph: '🪄', name: '绳子放长',
+    rarity: 1,
+    w0: 0.44, gw: +0.014,
+    crate: { stat: 'range', flat: 1.0 },
+    title: '收怪范围 +1 格',
+    desc: '自动装箱与「装箱」技能的索敌都多 1 格（能重复拿）—— 不用贴脸也能把远处的射手收走',
+  },
+  {
+    id: 'crateCd', tag: 'mov', glyph: '⏱', name: '削薄的木榫',
+    rarity: 2,
+    w0: 0.38, gw: +0.020,
+    crate: { stat: 'cd', flat: 3.0 },
+    title: '装箱冷却 −3 秒',
+    desc: '技能转得更快（能重复拿，最低 10 秒）—— 一波围殴里能手动收两次，够把半场装进去',
+  },
+  {
+    id: 'crateCap', tag: 'def', glyph: '📦', name: '加深一层',
+    rarity: 4,
+    w0: 0.30, gw: +0.008,
+    crate: { stat: 'cap', flat: 1 },
+    title: '箱子容量 +1',
+    desc: '传说：木箱再加一层（能重复拿）—— 攒得越多，一次倒下来的摔伤与冲击越像一记闷棍',
+  },
+  {
+    id: 'crateFall', tag: 'atk', glyph: '🪨', name: '箱底垫石头',
+    rarity: 4,
+    w0: 0.30, gw: +0.008,
+    crate: { stat: 'fall', flat: 0.06, extra: [{ stat: 'impact', flat: 0.4 }] },
+    title: '摔伤 +6% 最大生命 · 落点伤害 +0.4',
+    desc: '传说：箱底铺了一层碎石 —— 倒出来的怪摔掉更多最大生命（按比例，越厚的怪越疼）',
+  },
 ];
 
 // 把「族 × 三档」摊平成一张张卡。小档沿用原来的 id（老存档 / 老测试照旧认得）。
@@ -866,6 +918,8 @@ export function weightOf(up, round = 1, opts = {}) {
   if (up.ringlight && !opts.ringlightOwned) return 0;
   // 第 129 块：铅笔卡同理
   if (up.pencil && !opts.pencilOwned) return 0;
+  // 第 130 块：空箱子卡同理
+  if (up.crate && !opts.crateOwned) return 0;
   if (up.needsWeapon && !opts.hasWeapon) return 0;
   const r = Math.max(1, round);
   return Math.max(0, (up.w0 ?? 1) + (up.gw ?? 0) * (r - 1));
@@ -914,7 +968,7 @@ export function rollChoices(rng = Math.random, opts = {}) {
 // wstats = 武器属性表：scope:'weapon' 的条目改它，其余改主角 stats。
 // weapon = 武器系统本身：只有「直接给一把剑」的卡（sword 字段）才需要它。
 // 返回 { src, changes }：changes 是精确的「选前 → 选后」（用于卡片/提示文案）。
-export function applyUpgrade(stats, up, serial = 0, wstats = null, weapon = null, golems = null, arrowRain = null, mines = null, latte = null, candle = null, mark = null, board = null, guillotine = null, ringlight = null, pencil = null) {
+export function applyUpgrade(stats, up, serial = 0, wstats = null, weapon = null, golems = null, arrowRain = null, mines = null, latte = null, candle = null, mark = null, board = null, guillotine = null, ringlight = null, pencil = null, crate = null) {
   // 第 107 块：傀儡卡不碰属性表，交给傀儡系统记账（golem.applyCard）
   if (up.golem) {
     const g = up.golem;
@@ -1012,6 +1066,16 @@ export function applyUpgrade(stats, up, serial = 0, wstats = null, weapon = null
     return {
       src: `upg:${up.id}:${serial}`,
       changes: [pencilChange(pc, before)],
+    };
+  }
+  // 第 130 块：空箱子卡交给 crate.js 记账
+  if (up.crate) {
+    const cr = up.crate;
+    const before = crate ? crate.bonuses() : null;
+    if (crate) crate.applyCard(cr);
+    return {
+      src: `upg:${up.id}:${serial}`,
+      changes: [crateChange(cr, before)],
     };
   }
   // 剑阵这类「直接加一把剑」的卡：不碰属性表，交给武器系统上环
@@ -1338,7 +1402,34 @@ function pencilChange(c, b) {
   };
 }
 
-export function previewUpgrade(stats, up, wstats = null, weapon = null, golems = null, arrowRain = null, mines = null, latte = null, candle = null, mark = null, board = null, guillotine = null, ringlight = null, pencil = null) {  if (up.golem) {
+// ---- 第 130 块：空箱子卡的 changes 文案（apply 与 preview 共用）----
+// 卡里的键（cap/interval/impact/fall/range/cd）和 crate.bonuses() 同名。
+// interval 与 cd 是「减」的方向，fall 是比例，cap 是整数。
+function crateChange(c, b) {
+  const b0 = b || { cap: 1, interval: 7.0, impact: 1.5, fall: 0.25, cdMax: 26.0, autoRange: 6.0 };
+  const meta = {
+    cap: { name: '箱子容量', from: b0.cap, fmt: (v) => `${Math.round(v)} 只`, dflt: 1 },
+    interval: { name: '装箱间隔', from: b0.interval, fmt: (v) => `${v.toFixed(1)} 秒`, dflt: 2.6 },
+    impact: { name: '落点冲击', from: b0.impact, fmt: (v) => `${v.toFixed(2)} 伤`, dflt: 0 },
+    fall: { name: '摔伤比例', from: b0.fall, fmt: (v) => `${Math.round(v * 100)}%`, dflt: 0.05 },
+    cd: { name: '装箱冷却', from: b0.cdMax, fmt: (v) => `${v.toFixed(1)} 秒`, dflt: 10.0 },
+    range: { name: '收怪半径', from: b0.autoRange, fmt: (v) => `${v.toFixed(1)} 格`, dflt: 0 },
+  };
+  const stat = meta[c.stat] ? c.stat : 'impact';
+  const mm = meta[stat];
+  const flat = c.flat || 0;
+  const to = (stat === 'cd' || stat === 'interval')
+    ? Math.max(mm.dflt, mm.from - flat)
+    : mm.from + flat;
+  return {
+    key: `crate_${stat}`, scope: 'crate', name: mm.name,
+    from: mm.from, to, fromText: mm.fmt(mm.from), toText: mm.fmt(to),
+    text: `${mm.fmt(mm.from)} → ${mm.fmt(to)}`,
+  };
+}
+
+export function previewUpgrade(stats, up, wstats = null, weapon = null, golems = null, arrowRain = null, mines = null, latte = null, candle = null, mark = null, board = null, guillotine = null, ringlight = null, pencil = null, crate = null) {
+  if (up.golem) {
     const g = up.golem;
     const b = golems ? golems.bonuses() : null;
     return [golemChange(g, b)];
@@ -1388,6 +1479,11 @@ export function previewUpgrade(stats, up, wstats = null, weapon = null, golems =
   if (up.pencil) {
     const b = pencil ? pencil.bonuses() : null;
     return [pencilChange(up.pencil, b)];
+  }
+  // 第 130 块：空箱子卡 —— 同一个 crateChange
+  if (up.crate) {
+    const b = crate ? crate.bonuses() : null;
+    return [crateChange(up.crate, b)];
   }
   if (up.sword) {
     const n = weapon ? weapon.count : 0;

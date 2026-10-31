@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // metaShop.js —— 局外商店 · 宝箱（第 58 块）
 //
 // 设计（用户定案）：
@@ -24,8 +24,8 @@
 import {
   profile, bones, addBones, metaShopState, metaAddMod, metaGrantRelic,
   metaGrantSkillCd, metaLog, metaBought, save,
-} from './profile.js?v=146';
-import { RELIC_DEFS } from './relics.js?v=146';
+} from './profile.js?v=147';
+import { RELIC_DEFS } from './relics.js?v=147';
 
 // ---------------- 三档宝箱 ----------------
 // tier 0/1/2 对应「最低可出现的池子档位」；mag 是木匣基准的强度倍率；

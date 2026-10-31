@@ -1220,11 +1220,87 @@ export const LEVEL_16 = {
   ],
 };
 
+// ============================================================
+// 第十七关 · 钟楼顶（第 130 块）
+// ============================================================
+// 从画室往上再走一层，就是钟楼的顶。这一层没有墙，只有北沿那口大钟。
+//
+// 场地机制是「整点钟声」：钟每 9 秒自己响一次，响的那 0.6 秒**全场定住**
+// （主角也算），余波把主角身边 3 格内的怪往外推开。所以这一关的节奏是
+// 「卡钟响的缝里输出」—— 钟一响连你自己都动不了，但被围住时那一下又刚好救命。
+//
+// 两只新怪都围着这条线：
+//   · 撞钟的（toll）—— 一口自己长了腿的小铜钟，慢吞吞贴上来，每 6.5 秒响一声，
+//     站在它 2.8 格内会被**局部钉住 0.9 秒**（大钟的缩小版，逼你离开它）
+//   · 铜壳（bronze）—— 全场唯一对钟响定身免疫的怪：所有人都停的那 0.6 秒，
+//     只有它还在一步一步挪过来。7 血 + 25% 减伤，是这一关的「墙」
+//
+// 数值：再抬一档 —— hpMul 1.80 / dmgMul 2.15（第十六关 1.78 / 2.12）。
+export const LEVEL_17 = {
+  id: 17,
+  name: '第十七关 · 钟楼顶',
+  theme: 'roof',            // 钟楼顶层：夜雾 + 青石板 + 铜绿
+  arena: 19,
+  order: [
+    ['minion', 1], ['warrior', 1.5], ['archer', 1.8],
+    ['paper', 2.1], ['bowman', 2.2], ['toll', 2.3],
+    ['bronze', 2.4], ['frame', 2.5], ['wraith', 2.6],
+    ['shielder', 2.7], ['charger', 2.8], ['mender', 2.9],
+    ['proofreader', 3.0], ['addressee', 3.1], ['camera', 3.2],
+  ],
+  spawnRadius: 16.6,
+  spawnJitter: 0.5,
+  minPlayerDistance: 7.4,
+  minSpawnGap: 2.4,
+  gapScale: 1.12,
+  gap: 2.6,
+  upgradeAfter: [1, 2, 3, 4, 5, 8, 10, 12, 15, 17, 19, 20],
+  shopAfter: [3, 6, 9, 12, 15, 18],
+  weaponAt: 4,
+  scale: { hp: 0.30, damage: 0.18, speed: 0.045, haste: 0.0105, curve: 0.28, hpMul: 1.80, dmgMul: 2.15 },
+  // 整点钟声：见 js/bell.js。arena 变了这里要跟着改（钟架挂在场地北沿外侧）。
+  bell: {
+    arena: 19,
+    interval: 9.0,       // 两声钟响之间隔多久
+    minInterval: 6.0,    // 回合再往后也不会比这个更密
+    warn: 1.0,           // 响之前预警多久
+    hold: 0.6,           // 全场定住多久
+    push: 3.0,           // 余波把主角身边几格内的怪推开
+  },
+  rounds: [
+    // ---- 第一幕（R1~R4）：先听懂钟 ----
+    { minion: 4, warrior: 1, archer: 0, paper: 0, bowman: 0, toll: 0, bronze: 0, frame: 0, wraith: 0, shielder: 0, charger: 0, mender: 0, proofreader: 0, addressee: 0, camera: 0, gap: 0.88, tip: '北沿那口大钟每九秒自己响一次。响的那半秒连你也动不了 —— 别在它响之前把自己送进怪堆里' },
+    { minion: 4, warrior: 2, archer: 0, paper: 0, bowman: 0, toll: 1, bronze: 0, frame: 0, wraith: 0, shielder: 0, charger: 0, mender: 0, proofreader: 0, addressee: 0, camera: 0, gap: 0.84, tip: '新面孔·撞钟的：一口会走的铜钟。它每六秒半响一声，站在它两格半内会被钉住快一秒 —— 离它远点' },
+    { minion: 4, warrior: 2, archer: 1, paper: 0, bowman: 0, toll: 1, bronze: 0, frame: 0, wraith: 0, shielder: 0, charger: 0, mender: 0, proofreader: 0, addressee: 0, camera: 0, gap: 0.80, tip: '钟响的余波会把贴在你身上的怪推开三格。被围住的时候，它反而是救命的那一下 —— 学会等它' },
+    { minion: 5, warrior: 2, archer: 1, paper: 0, bowman: 0, toll: 1, bronze: 1, frame: 0, wraith: 0, shielder: 0, charger: 0, mender: 0, proofreader: 0, addressee: 0, camera: 0, gap: 0.76, tip: '新面孔·铜壳：全场只有它不怕钟声。所有人都停的那半秒，它还在走 —— 别指望钟替你拦住它' },
+    // ---- 第二幕（R5~R8）：纸屑进场，钟开始和走位打架 ----
+    { minion: 5, warrior: 3, archer: 1, paper: 2, bowman: 1, toll: 1, bronze: 1, frame: 0, wraith: 0, shielder: 0, charger: 0, mender: 0, proofreader: 0, addressee: 0, camera: 0, gap: 0.72, tip: '钟声是公平的：它停的时候怪也停。所以「快被贴脸了」的正确反应是往钟响的方向等，而不是硬跑' },
+    { minion: 6, warrior: 3, archer: 2, paper: 2, bowman: 1, toll: 1, bronze: 1, frame: 1, wraith: 0, shielder: 0, charger: 0, mender: 0, proofreader: 0, addressee: 0, camera: 0, gap: 0.70, tip: '画框也回来了。框住你的时候正好赶上钟响，就是最长的一次罚站 —— 先算钟，再算框' },
+    { minion: 6, warrior: 3, archer: 2, paper: 3, bowman: 1, toll: 1, bronze: 1, frame: 1, wraith: 0, shielder: 0, charger: 0, mender: 0, proofreader: 0, addressee: 0, camera: 0, gap: 0.68, tip: '纸屑一碰就炸，钟响的时候它们会停在原地炸不了 —— 那半秒是清场最安全的窗口' },
+    { minion: 6, warrior: 4, archer: 2, paper: 3, bowman: 2, toll: 1, bronze: 1, frame: 1, wraith: 1, shielder: 1, charger: 0, mender: 0, proofreader: 0, addressee: 0, camera: 0, gap: 0.66, tip: '两件铜壳会顶着钟声一路走过来。它们很慢，但别把背留给它们 —— 七点血要砍一会儿' },
+    // ---- 第三幕（R9~R12）：两口钟 ----
+    { minion: 7, warrior: 4, archer: 3, paper: 4, bowman: 2, toll: 2, bronze: 1, frame: 1, wraith: 1, shielder: 1, charger: 1, mender: 0, proofreader: 0, addressee: 0, camera: 0, gap: 0.64, tip: '第二口撞钟的出场：两只钟的读条不共享，它们会轮流把你钉在原地 —— 别站在两只中间' },
+    { minion: 7, warrior: 4, archer: 3, paper: 4, bowman: 2, toll: 2, bronze: 2, frame: 1, wraith: 1, shielder: 1, charger: 1, mender: 1, proofreader: 0, addressee: 0, camera: 0, gap: 0.62, tip: '钟响的那半秒里，怪不会出手、你也不会。把大招留到「钟刚响完」那一帧，不会浪费在定身里' },
+    { minion: 7, warrior: 5, archer: 3, paper: 5, bowman: 2, toll: 2, bronze: 2, frame: 2, wraith: 1, shielder: 1, charger: 1, mender: 1, proofreader: 1, addressee: 0, camera: 0, gap: 0.60, tip: '两只画框 + 两只撞钟的：一个锁腿，一个钉人，都是「站着挨打」的路。动起来，哪怕只是绕圈' },
+    { minion: 8, warrior: 5, archer: 3, paper: 5, bowman: 3, toll: 2, bronze: 2, frame: 2, wraith: 1, shielder: 2, charger: 1, mender: 1, proofreader: 1, addressee: 0, camera: 0, gap: 0.58, tip: '钟的节拍会随回合变密（九秒 → 六秒）。到后期它几乎是一层背景音乐，别等它再提醒你' },
+    // ---- 第四幕（R13~R16）：铜壳成群 ----
+    { minion: 8, warrior: 5, archer: 4, paper: 6, bowman: 3, toll: 2, bronze: 2, frame: 2, wraith: 2, shielder: 2, charger: 2, mender: 1, proofreader: 1, addressee: 1, camera: 0, gap: 0.56, tip: '收件人也上来了。它给铜壳填名最恶心：一只免物理的七血墙，你砍半天它不掉血 —— 先拆收件人' },
+    { minion: 8, warrior: 6, archer: 4, paper: 6, bowman: 3, toll: 2, bronze: 3, frame: 2, wraith: 2, shielder: 2, charger: 3, mender: 2, proofreader: 1, addressee: 1, camera: 0, gap: 0.54, tip: '三只铜壳同时上场：钟响定不住它们，所以「等钟救命」这一招对它们无效 —— 单独处理' },
+    { minion: 9, warrior: 6, archer: 4, paper: 6, bowman: 4, toll: 3, bronze: 3, frame: 3, wraith: 2, shielder: 2, charger: 3, mender: 2, proofreader: 1, addressee: 2, camera: 1, gap: 0.52, tip: '三口钟 + 三只画框：这一回合的「定身」几乎不断。位移技能别省，留在同时被钉的那一刻' },
+    { minion: 9, warrior: 6, archer: 5, paper: 7, bowman: 4, toll: 3, bronze: 3, frame: 3, wraith: 2, shielder: 3, charger: 3, mender: 2, proofreader: 2, addressee: 2, camera: 1, gap: 0.50, tip: '取景的又来了。闪光是一瞬、钟声是半秒 —— 两样都不讲道理，但它们不会同时要你的命' },
+    // ---- 第五幕（R17~R20）：钟楼顶的最后一程 ----
+    { minion: 10, warrior: 7, archer: 5, paper: 7, bowman: 4, toll: 3, bronze: 4, frame: 3, wraith: 3, shielder: 3, charger: 4, mender: 3, proofreader: 2, addressee: 2, camera: 2, gap: 0.47, tip: '四只铜壳像四面墙。它们不怕钟，也不怕被围 —— 先把移速慢的它们放一边，清掉快的' },
+    { minion: 10, warrior: 7, archer: 5, paper: 8, bowman: 5, toll: 4, bronze: 4, frame: 3, wraith: 3, shielder: 3, charger: 4, mender: 3, proofreader: 2, addressee: 3, camera: 2, gap: 0.45, tip: '四口小钟一起响的时候，你几乎每两秒就有一次动不了。别站在任何一口的圈边 —— 那是它们的猎场' },
+    { minion: 11, warrior: 8, archer: 6, paper: 8, bowman: 5, toll: 4, bronze: 4, frame: 3, wraith: 4, shielder: 4, charger: 5, mender: 3, proofreader: 2, addressee: 3, camera: 3, gap: 0.43, tip: '倒数第二波：整层楼都在响。记住钟响那半秒是公平的 —— 你停，它们也停，除了铜壳' },
+    { minion: 12, warrior: 8, archer: 6, paper: 9, bowman: 5, toll: 4, bronze: 5, frame: 3, wraith: 4, shielder: 4, charger: 5, mender: 4, proofreader: 3, addressee: 4, camera: 3, gap: 0.40, tip: '最后一波：她把整座钟楼的钟都放了下来。站在钟响的间隙里，把最后这几只砍完' },
+  ],
+};
+
 // 关卡号 → 关卡表（主流程 / 选关 / 测试都从这里取）
 export const LEVELS_BY_ID = {
   1: LEVEL_1, 2: LEVEL_2, 3: LEVEL_3, 4: LEVEL_4, 5: LEVEL_5, 6: LEVEL_6, 7: LEVEL_7, 8: LEVEL_8,
   9: LEVEL_9, 10: LEVEL_10, 11: LEVEL_11, 12: LEVEL_12, 13: LEVEL_13, 14: LEVEL_14, 15: LEVEL_15,
-  16: LEVEL_16,
+  16: LEVEL_16, 17: LEVEL_17,
 };
 
 // 第 roundNo 回合（从 1 开始）的怪物属性倍率

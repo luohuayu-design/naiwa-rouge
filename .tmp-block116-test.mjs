@@ -129,7 +129,7 @@ const cardStats = latteCards.map((u) => u.latte.stat);
 ok(['duration', 'radius', 'haste', 'slow', 'cd', 'radius'].every((s) => cardStats.includes(s)),
   '六通道齐全（持续/半径/攻速/减速/冷却/传说）');
 // 第 118 块：卡池 93 + 拿铁 6 + 守夜烛 5 + 落款 5 = 109
-ok(U.UPGRADES.length === 127, `卡池 127 张（93 + 6 + 10 + 4 + 4 + 5 + 5，实 ${U.UPGRADES.length}）`);
+ok(U.UPGRADES.length === 133, `卡池 127 张（93 + 6 + 10 + 4 + 4 + 5 + 5，实 ${U.UPGRADES.length}）`);
 const buyLatte = S.SHOP_ITEMS.find((i) => i.id === 'buyLatte');
 const buyFoam = S.SHOP_ITEMS.find((i) => i.id === 'buyLatteFoam');
 const buyThermos = S.SHOP_ITEMS.find((i) => i.id === 'buyLatteThermos');
@@ -138,7 +138,7 @@ ok(!!buyFoam && buyFoam.type === 'latte' && buyFoam.latte === 'foam', '商店一
 ok(!!buyThermos && buyThermos.type === 'latte' && buyThermos.latte === 'thermos', '商店一次性强化「保温杯」');
 ok(buyLatte.needLevel === 12, '第十二关起上架');
 // 第 118 块：31 + 拿铁 3 + 守夜烛 / 落款 6 = 40
-ok(S.SHOP_ITEMS.length === 52, `商店货 52 件（31 + 3 + 6 + 3 + 3 + 3 + 3，实 ${S.SHOP_ITEMS.length}）`);
+ok(S.SHOP_ITEMS.length === 55, `商店货 52 件（31 + 3 + 6 + 3 + 3 + 3 + 3，实 ${S.SHOP_ITEMS.length}）`);
 ok(S.SHOP_PINNED[9].includes('buyLatte'), '第 9 回合商店常驻摆拿铁');
 
 // ============================================================

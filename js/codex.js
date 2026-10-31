@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // codex.js —— 图鉴（第 18 块）
 //
 // 五个页签：怪物 / 武器 / 法器 / 升级卡 / 奇遇。
@@ -13,13 +13,13 @@
 // （击杀 / 弹事件卡 / 选升级卡）。
 // ============================================================
 
-import { ENEMY_TYPES } from './enemy.js?v=146';
-import { SWORD_KINDS } from './swordKinds.js?v=146';
-import { RELIC_DEFS } from './relics.js?v=146';
-import { UPGRADES } from './upgrade.js?v=146';
-import { ALL_EVENTS } from './events.js?v=146';
-import { RARITIES } from './rarity.js?v=146';
-import { codexAll, codexCount } from './profile.js?v=146';
+import { ENEMY_TYPES } from './enemy.js?v=147';
+import { SWORD_KINDS } from './swordKinds.js?v=147';
+import { RELIC_DEFS } from './relics.js?v=147';
+import { UPGRADES } from './upgrade.js?v=147';
+import { ALL_EVENTS } from './events.js?v=147';
+import { RARITIES } from './rarity.js?v=147';
+import { codexAll, codexCount } from './profile.js?v=147';
 
 export const CODEX_TABS = [
   { id: 'enemies', name: '怪物' },
@@ -282,6 +282,23 @@ function enemyDesc(cfg) {
     return `数量压力：地上扫起来的一把纸屑 —— 1 血、移速快、碰到你就自爆。`
       + `它单个不吓人，但永远是一群一群倒下来：追着打只会被围住，范围伤害一次扫掉一片才是正解。`
       + `也正因为脆，它是第十六关最划算的「描红」目标 —— 一条线扫过去，整片纸屑一起变红。`;
+  }
+  // ---- 第十七关两只（第 130 块）----
+  // 撞钟的：它的压力在「你站在它旁边的时候」—— 不是伤害，是把你的节奏打断。
+  if (cfg.toll) {
+    const t = cfg.toll;
+    return `节奏压力：它走得慢、血也不多，活儿是替钟楼「敲钟」—— 每 ${cfg.attackInterval} 秒抬杆读条 ${cfg.windup} 秒，`
+      + `读满那一下，如果你在它 ${t.range} 格内，会被钟声钉住 ${t.pin} 秒（一步都走不了，技能照放）。`
+      + `它只有 ${cfg.hp} 血，真正的麻烦是你正想躲全场那口大钟的时候，它又给你补一下定身。`
+      + `打法：要么离它 ${t.range} 格外打（它自己走得慢，追不上），要么先点掉它 —— 它读条时头上会亮一圈暖黄。`;
+  }
+  // 铜壳：全场钟响也定不住它 —— 它就是这一关「钟声定身」的反面教材。
+  if (cfg.freezeImmune) {
+    return `抗性压力：全场钟响那 0.6 秒所有怪都停住，只有它照走照打 —— 因为它就是那口钟的铜壳。`
+      + `它 ${cfg.hp} 血、带 ${Math.round(cfg.armor * 100)}% 减伤、移速 ${cfg.speed}，一下 ${cfg.damage} 点，`
+      + `不难打但很拖时间：别人被钟定住的时候，它正好贴到你脸上。`
+      + `注意它只免疫「钟声」这一路定身 —— 冰剑的冻结、空箱子倒出来的木屑定身，照样钉得住它。`
+      + `所以这一关的正确节奏是：钟响前先把它推开或点掉，别让它是全场唯一还能动的那只。`;
   }
   return '远程型：躲在后面朝你扔东西';
 }

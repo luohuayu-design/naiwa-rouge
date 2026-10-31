@@ -2081,7 +2081,7 @@ export const STORY_CHAPTERS = [
   },
 
   {
-    id: 's17', no: 17, act: 3, levelId: null, atRound: null,
+    id: 's17', no: 17, act: 3, levelId: 17, atRound: 2,   // 第 130 块：接第十七关「钟楼顶」
     icon: '🔔', title: '钟响', who: '所有人', place: '钟楼顶',
     story:
       '钟楼的墙开始往下掉灰。\n'

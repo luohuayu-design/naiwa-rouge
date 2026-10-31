@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // hazards.js —— 场上的周期性危险区（第 63 块，第六关「漏电地板」）
 //
 // 骨塔地下机房的地板是拆下来的机柜格栅，年头久了会漏电：
@@ -22,7 +22,7 @@
 //   drip 走的是和漏电地板完全独立的一条分支，互不影响：
 //   `isPowered` 仍然只服务于漏电地板（绝缘斗篷的判定照旧）。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=146';
+import * as THREE from '../lib/three.module.js?v=147';
 
 export function createHazards({ scene, fx, playerPos, playerRadius = 0.32, hurtPlayer }) {
   // 漏电地板 def: { x, z, r, cycle, on, warm, damage }

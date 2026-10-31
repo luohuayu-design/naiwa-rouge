@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // statView.js —— 主菜单「属性」页的 3D 奶蛙展示（第 50 块）
 //
 // 一个独立的小渲染器，与游戏场景完全隔离：
@@ -7,9 +7,9 @@
 //   · 待机呼吸 + 每隔几秒原地蹦一下（update(dt, 1) 走路步态），偶尔拍一下手（playAttack）。
 // 只在属性页开着时被 main.js 每帧驱动，关页即停，不占主循环。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=146';
-import { loadFrog } from './frog.js?v=146';
-import { withV } from './assetUrl.js?v=146';   // 第 80 块：和 main.js 用同一个带版本的 URL，浏览器只下一次
+import * as THREE from '../lib/three.module.js?v=147';
+import { loadFrog } from './frog.js?v=147';
+import { withV } from './assetUrl.js?v=147';   // 第 80 块：和 main.js 用同一个带版本的 URL，浏览器只下一次
 
 export function createStatView(canvas) {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
@@ -58,7 +58,7 @@ export function createStatView(canvas) {
       frog = await loadFrog(withV('assets/rigged.glb'));
     } catch (err) {
       console.warn('[属性页] 奶蛙模型加载失败，用占位：', err);
-      import('./frog.js?v=146').then((m) => { frog = m.buildFallbackFrog(); }).catch(() => { loadErr = true; });
+      import('./frog.js?v=147').then((m) => { frog = m.buildFallbackFrog(); }).catch(() => { loadErr = true; });
       loadErr = true;   // 先标记，兜底异步到了再覆盖 frog
       return;
     }

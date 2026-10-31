@@ -193,12 +193,12 @@ ok(/SHOP_PINNED[\s\S]{0,220}'buyPencil'/.test(shopSrc), '第 12 回合的固定�
 ok(['pencilLen', 'pencilDps', 'pencilRate', 'pencilCd', 'pencilMark'].every((id) => upgSrc.includes(`id: '${id}'`)),
   '五张铅笔卡都在');
 ok(upgSrc.includes('if (up.pencil && !opts.pencilOwned) return 0;'), '没买到铅笔前卡片不进池子');
-ok(/export function applyUpgrade\([^)]*pencil = null\)/.test(upgSrc), 'applyUpgrade 末参加 pencil');
-ok(/export function previewUpgrade\([^)]*pencil = null\)/.test(upgSrc), 'previewUpgrade 末参加 pencil');
+ok(/export function applyUpgrade\([^)]*pencil = null, crate = null\)/.test(upgSrc), 'applyUpgrade 末参加 pencil');
+ok(/export function previewUpgrade\([^)]*pencil = null, crate = null\)/.test(upgSrc), 'previewUpgrade 末参加 pencil');
 ok(upgSrc.includes('function pencilChange(c, b)'), '升级卡有 changes 文案翻译');
 ok(/if \(up\.pencil\)/.test(upgSrc), 'applyUpgrade / previewUpgrade 都有 pencil 分支');
 
-ok(/LEVEL_15, LEVEL_16, LEVELS_BY_ID/.test(mainSrc), 'main.js 从 wave.js 引入了 LEVEL_16');
+ok(/LEVEL_15, LEVEL_16, LEVEL_17, LEVELS_BY_ID/.test(mainSrc), 'main.js 从 wave.js 引入了 LEVEL_16');
 ok(/\{ id: 16, name: LEVEL_16\.name, playable: true \}/.test(mainSrc), '选关表里有第 16 关');
 ok(mainSrc.includes("from './sketch.js?v=") && mainSrc.includes("from './pencil.js?v="),
   'main.js 引入了 sketch / pencil 两个模块');
@@ -232,12 +232,12 @@ ok(/applyRelicAmp[\s\S]{0,400}'pencil'/.test(mainSrc) && /pencil\.setRelicAmp/.t
 ok(/sketch: \{/.test(mainSrc) && /grantPencil/.test(mainSrc), '调试口有 sketch / grantPencil');
 
 // 总量口径
-ok(Object.keys(R.RELIC_DEFS).length === 18, '法器总数 18（本块 +铅笔）', String(Object.keys(R.RELIC_DEFS).length));
-ok(SK.SKILLS.length === 13, '技能格 13（本块 +描红）', String(SK.SKILLS.length));
-ok(S.SHOP_ITEMS.length === 52, '商店货 52', String(S.SHOP_ITEMS.length));
-ok(U.UPGRADES.length === 127, '升级卡 127 张', String(U.UPGRADES.length));
-ok(Object.keys(E.ENEMY_TYPES).length === 35, '怪物种类 35', String(Object.keys(E.ENEMY_TYPES).length));
-ok(Object.keys(W.LEVELS_BY_ID).length === 16, '关卡 16 张表', String(Object.keys(W.LEVELS_BY_ID).length));
+ok(Object.keys(R.RELIC_DEFS).length === 19, '法器总数 18（本块 +铅笔）', String(Object.keys(R.RELIC_DEFS).length));
+ok(SK.SKILLS.length === 14, '技能格 13（本块 +描红）', String(SK.SKILLS.length));
+ok(S.SHOP_ITEMS.length === 55, '商店货 52', String(S.SHOP_ITEMS.length));
+ok(U.UPGRADES.length === 133, '升级卡 127 张', String(U.UPGRADES.length));
+ok(Object.keys(E.ENEMY_TYPES).length === 37, '怪物种类 35', String(Object.keys(E.ENEMY_TYPES).length));
+ok(Object.keys(W.LEVELS_BY_ID).length === 17, '关卡 16 张表', String(Object.keys(W.LEVELS_BY_ID).length));
 
 // 守卫：加关卡 = 法器 + 技能 + 卡池一起加
 const NO_CARD_SKILLS = new Set(['swordRain', 'broadcast']);
@@ -267,7 +267,7 @@ ok(hashes.size === glbs.length, `${glbs.length} 个怪物模型一个都不重�
 ok(glbs.includes('paper-scrap.glb') && glbs.includes('picture-frame.glb'), '两份新模型在盘上');
 ok(readFileSync(path.join(mdir, 'paper-scrap.glb')).length > 2048
   && readFileSync(path.join(mdir, 'picture-frame.glb')).length > 2048, '两份模型都不是空文件');
-ok(glbs.length === 35, '怪物模型总数 35', String(glbs.length));
+ok(glbs.length === 37, '怪物模型总数 35', String(glbs.length));
 
 ok(+VER >= 146, '版本号至少到 146', VER);
 const jsFiles = readdirSync(path.join(ROOT, 'js')).filter((f) => f.endsWith('.js'));

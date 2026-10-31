@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // enemy.js —— 怪物系统（模型加载 / 克隆 / AI / 血条 / 死亡）
 //
 // 模型两个来源（都是 CC0，资产铁律：先找现成的，不手写几何）：
@@ -25,15 +25,15 @@
 // 第四关三只（wraith/leaper/mender，第 35 块，第 52 块换模型），
 // 各自在下面 ENEMY_TYPES 里有详细注释。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=146';
-import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=146';
-import { clone as cloneSkinned } from '../lib/jsm/utils/SkeletonUtils.js?v=146';
-import { distance2D } from './stats.js?v=146';
-import { createRangeRing } from './rangeRing.js?v=146';
-import { withV } from './assetUrl.js?v=146';
+import * as THREE from '../lib/three.module.js?v=147';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=147';
+import { clone as cloneSkinned } from '../lib/jsm/utils/SkeletonUtils.js?v=147';
+import { distance2D } from './stats.js?v=147';
+import { createRangeRing } from './rangeRing.js?v=147';
+import { withV } from './assetUrl.js?v=147';
 // 第 114 块：誊录员落笔 / 收账人翻账簿的提示音（以前这个文件不放音效，
 // 忘了 import 会在落笔那一帧抛 ReferenceError，整帧 AI 全断 —— 别省这一行）
-import audio from './audio.js?v=146';
+import audio from './audio.js?v=147';
 
 // KayKit 模型正面朝 +Z；如果哪天换模型发现怪倒着走，把这里改成 Math.PI
 export const ENEMY_MODEL_YAW = 0;
@@ -117,6 +117,20 @@ const CLIP_FAMILIES = {
   slime: {
     idle: 'Slime_Idle', walk: 'Slime_Walk', run: 'Slime_Walk', attack: 'Slime_Attack',
     cast: 'Slime_Attack', death: 'Slime_Death', hit: 'Slime_Idle', spawn: 'Slime_Idle',
+  },
+  // 第 130 块：3dassets.dev 的教堂铜钟（rigid node 动画，只有一段 swing）。
+  // 它没有「走 / 打」的概念，全映射到 swing —— 钟自己前后晃就是它的全部表演。
+  bell: {
+    idle: 'swing', walk: 'swing', run: 'swing', attack: 'swing',
+    cast: 'swing', death: 'swing', hit: 'swing', spawn: 'swing',
+  },
+  // 第 130 块：KayKit《Character Pack: Adventures》的 Knight（76 段动画）。
+  // 和骨架小兵同一套命名，但多了 Walking_A / Running_A / Death_A 这些后缀版本，
+  // 近战借 1H_Melee_Attack_Slice_Horizontal（横劈，正好当「撞过来」那一下）。
+  knight: {
+    idle: 'Idle', walk: 'Walking_A', run: 'Running_A',
+    attack: '1H_Melee_Attack_Slice_Horizontal', cast: '1H_Melee_Attack_Chop',
+    death: 'Death_A', hit: 'Hit_A', spawn: 'Idle',
   },
 };
 
@@ -1816,6 +1830,75 @@ export const ENEMY_TYPES = {
     animFamily: null,
     anim: { walk: 'idle', idle: 'idle', cast: 'idle', death: 'death', spawn: 'spawn' },
   },
+
+  // ---------------- 第十七关 · 撞钟的（第 130 块） ----------------
+  // 钟楼顶那口小铜钟自己长了腿。模型是 3dassets.dev 的「Chapel Bell」
+  // （CC0 1.0，Wedding and Chapel Kit），0.76 × 0.47 × 0.416 m，只有一段 swing。
+  // 钟轴本来就是 Y 轴，不需要 tiltX；sourceHeight 按实测渲染高度 0.4712
+  // 的一半折算成 0.236（和 minion 1.05 的口径一致，见 ENEMY_TYPES 顶部注释）。
+  // 行为：慢吞吞地朝主角挪，每 6.5 秒原地响一声 —— 主角若在 2.8 格内，
+  // 就被这一声**局部钉住 0.9 秒**（大钟响 0.6 秒的缩小版）。
+  // 它自己不打人（damage 0），压力全在「逼你离开它」。
+  toll: {
+    name: '撞钟的',
+    file: 'assets/monsters/chapel-bell.glb',
+    sourceHeight: 0.236,
+    height: 1.02,
+    radius: 0.46,
+    hp: 3.5,
+    armor: 0,
+    speed: 0.95,
+    damage: 0,
+    attackInterval: 6.5,
+    windup: 0.7,
+    attackDuration: 1.05,
+    toll: {
+      range: 2.8,          // 这一声能钉住多近的主角
+      pin: 0.9,            // 钉多久
+      color: 0xffd86b,
+    },
+    spawnTime: 0.9,
+    deathTime: 0.9,
+    selfDestruct: false,
+    color: 0xffd86b,
+    tint: 0xb08a46,
+    glow: { color: 0xffcf6a, intensity: 0.45 },
+    animFamily: 'bell',
+    anim: { walk: 'walk', idle: 'idle', cast: 'cast', death: 'death', spawn: 'spawn' },
+  },
+
+  // ---------------- 第十七关 · 铜壳（第 130 块） ----------------
+  // KayKit《Character Pack: Adventures》的 Knight（CC0，同族模型但本作没用过）。
+  // 实测渲染身高 2.4297（Idle）→ sourceHeight 1.215（折半口径）。
+  // 它是这一关唯一「钟响定身免疫」的怪（cfg.freezeImmune）：全场停 0.6 秒时，
+  // 只有它还在一步一步挪过来 —— 铜壳太厚，钟声震不住。
+  // 7 点血 + 25% 减伤 + 慢速，不追人时像一堵会走路的墙。
+  bronze: {
+    name: '铜壳',
+    file: 'assets/monsters/bronze-knight.glb',
+    sourceHeight: 1.215,
+    height: 1.42,
+    radius: 0.52,
+    hp: 7.0,
+    armor: 0.25,
+    speed: 0.95,
+    attackRange: 1.6,
+    damage: 2,
+    attackInterval: 2.0,
+    windup: 0.5,
+    spawnTime: 1.0,
+    deathTime: 1.4,
+    selfDestruct: false,
+    freezeImmune: true,
+    color: 0x9a8a6a,
+    tint: 0xa89670,
+    glow: { color: 0x6a5a32, intensity: 0.25 },
+    animFamily: 'knight',
+    anim: {
+      walk: 'walk', idle: 'idle', attack: 'attack',
+      death: 'death', spawn: 'spawn',
+    },
+  },
 };
 
 // ------------------------------------------------------------
@@ -2746,6 +2829,8 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
       slowFactor: 0,   // 冰缓减速比例
       freezeT: 0,      // 冰冻剩余时间（第 56 块，冰剑）：>0 时完全定住，不动也不打
       freezeFxT: 0,    // 冰冻指示圈的发出计时
+      freezeColor: 0,  // 第 130 块：这次定身用什么颜色（钟声是金、冰剑是蓝）
+      boxed: null,     // 第 130 块：被「空箱子」装箱：{ t }，期间不可见、不可命中、不跑 AI
       // 第 63 块：
       reboots: 0,      // 重启体：已经重启过几次（见 cfg.reboot.times）
       rebootFxT: 0,    // 重启体躺尸时那圈红光的闪动计时
@@ -2929,6 +3014,17 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
       root.add(e.waitRing.mesh);
       e.waitRing.setVisible(false);
     }
+    // 第 130 块：撞钟的 —— 它自己就是一口钟，读条环做小一点（1.0 格），
+    // 摆在钟顶上方，响之前那一下看得出来
+    if (cfg.toll) {
+      e.waitRing = createRangeRing({
+        radius: 1.0, color: cfg.toll.color,
+        opacity: 0.6, pulse: 0.0, y: cfg.height + 0.26,
+      });
+      e.waitRing.setOnTop(true);
+      root.add(e.waitRing.mesh);
+      e.waitRing.setVisible(false);
+    }
     // 第 55 块：新怪第一次上场时通报一声 —— main.js 据此冻结世界、弹「它怎么打人」的信息卡。
     // 放在 push 之后：回调里就看得见这只怪已经在场上了（测试也靠这点断言）。
     if (onSpawn) onSpawn(e);
@@ -2944,7 +3040,8 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
   // 雾鬼隐身不在这里判：有些地方（地刺、火地）故意要能碰到隐身目标，
   // 由调用方各自加 `!e.ghostHidden`。
   function hittable(e) {
-    return !!e && e.state !== 'dead' && e.state !== 'spawn' && e.state !== 'down';
+    // 第 130 块：被「装箱」收走的怪既不在场上、也打不到 —— 它们在箱子里待着
+    return !!e && !e.boxed && e.state !== 'dead' && e.state !== 'spawn' && e.state !== 'down';
   }
 
   // opts:
@@ -4731,16 +4828,29 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
       e.freezeFxT -= dt;
       if (e.freezeFxT <= 0) {
         e.freezeFxT = 0.45;
-        if (fx) fx.ring(e.pos, { from: 0.25, to: 0.8, color: 0x9fdcff, life: 0.4, opacity: 0.55, y: 0.05 });
+        if (fx) fx.ring(e.pos, { from: 0.25, to: 0.8, color: e.freezeColor || 0x9fdcff, life: 0.4, opacity: 0.55, y: 0.05 });
       }
       if (e.freezeT <= 0) {
         e.freezeT = 0;
         e.mixer.timeScale = 1;
-        if (fx) fx.ring(e.pos, { from: 0.3, to: 1.0, color: 0x9fdcff, life: 0.3, opacity: 0.6, y: 0.05 });
+        if (fx) fx.ring(e.pos, { from: 0.3, to: 1.0, color: e.freezeColor || 0x9fdcff, life: 0.3, opacity: 0.6, y: 0.05 });
       }
       return;
     }
     if (e.mixer.timeScale === 0) e.mixer.timeScale = 1;   // 解冻后恢复（兜底：没走上面的归零分支）
+
+    // ---- 装箱（第 130 块，空箱子）----
+    // 被收进箱子的怪这段时间「不在场上」：不可见、不可命中、不跑任何 AI。
+    // 到期自己回来（正常用法是 crate 提前把整箱倒在主角周围，见 unbox）。
+    if (e.boxed) {
+      e.boxed.t -= dt;
+      if (e.boxed.t <= 0) {
+        e.boxed = null;
+        e.root.visible = true;
+        if (fx) fx.ring(e.pos, { from: 0.2, to: 1.1, color: 0xd8c79a, life: 0.32, opacity: 0.5, y: 0.05 });
+      }
+      return;
+    }
 
     // ---- 主祭的霜牢卫队：环绕主祭站位、不自主动（第 28 块）----
     // 位置完全由主祭决定；主祭一死，卫队当场散架（霜牢断了，傀儡失去支撑）。
@@ -4896,6 +5006,11 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     // 和超管同一性质：damage 是 0（它不打人），必须排在通用近战之前。
     // 它读条完成时把囚笼扣在主角脚下（ctx.trapFrame）。
     if (e.cfg.cage) { handleFrame(e, dt, ctx, dx, dz, dist); return; }
+
+    // ---- 第十七关 · 撞钟的（第 130 块）----
+    // 和画框 / 超管同一性质：damage 0（它不打人），必须排在通用近战之前，
+    // 否则会贴上来按 cfg.damage 打。
+    if (e.cfg.toll) { handleToller(e, dt, ctx, dx, dz, dist); return; }
 
     // ---- 雾鬼：隐身 / 显形循环（第 35 块；第 61 块改规则）----
     // 隐身时不可被索敌、打不着；**但贴脸不再强制显形**，只能等它自己露头。
@@ -6457,6 +6572,63 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     }
   }
 
+  // ------------------------------------------------------------
+  // 第十七关 · 撞钟的：慢速逼近 → 读条 → 一声把近处的主角钉住（第 130 块）
+  // ------------------------------------------------------------
+  // 和画框长得像，但结果不是「圈一块地」，而是「让主角这 0.9 秒动不了」——
+  // 大钟响的那 0.6 秒是全场公平的停；它这一声只针对站在 2.8 格内的人。
+  // 它自己 damage 0，从不打人；玩家的解法就是「别站在它旁边」。
+  function handleToller(e, dt, ctx, dx, dz, dist) {
+    const m = e.cfg.toll;
+    if (e.state === 'attack') {
+      if (e.waitRing) {
+        const k = Math.min(1, e.t / Math.max(0.01, e.cfg.windup));
+        e.waitRing.setRadius(1.0 * (0.35 + 0.65 * (1 - k)));
+        e.waitRing.setVisible(true);
+      }
+      if (!e.hitDone && e.t >= e.cfg.windup) {
+        e.hitDone = true;
+        if (e.waitRing) e.waitRing.setVisible(false);
+        const inRange = dist <= m.range;
+        if (inRange && ctx.rootPlayer) ctx.rootPlayer(m.pin);
+        if (fx) {
+          // 这一声的「声波」只画到 2.8 格 —— 画大了玩家会以为全场都被钉
+          fx.ring(e.pos, {
+            from: 0.25, to: m.range, color: m.color, life: 0.42, opacity: 0.75, y: 0.07,
+          });
+          fx.text(e.pos, inRange ? '钉住' : '空响', {
+            color: inRange ? '#ffe9a8' : '#b8b0a0', y: e.height + 0.5, size: inRange ? 0.68 : 0.5,
+          });
+        }
+        audio.sfx('curse', { vol: inRange ? 0.22 : 0.12 });
+      }
+      if (e.t >= e.cfg.attackDuration) {
+        e.state = 'chase';
+        e.t = 0;
+        e.attackCd = cdOf(e, e.cfg.attackInterval, 1.2, true);
+      }
+      return;
+    }
+    // 逼近：它不保持距离，就是一步一步挪过来 —— 玩家要主动拉开
+    moveToward(e, dx, dz, dist, dt, ctx);
+    if (e.currentAnim !== e.cfg.anim.walk) {
+      e.currentAnim = e.cfg.anim.walk;
+      e.play(e.cfg.anim.walk, { fade: 0.2 });
+    }
+    e.attackCd -= dt;
+    if (e.attackCd <= 0 && dist <= m.range + 0.8) {
+      e.state = 'attack';
+      e.t = 0;
+      e.hitDone = false;
+      e.currentAnim = e.cfg.anim.cast;
+      e.play(e.cfg.anim.cast, { once: true, fade: 0.1, duration: e.cfg.attackDuration });
+      if (e.waitRing) e.waitRing.setVisible(true);
+      audio.sfx('curse', { vol: 0.14 });
+      return;
+    }
+    if (e.attackCd <= 0) e.attackCd = 0.25;   // 还没进圈：每 0.25 秒再看一次
+  }
+
   function handleWeigher(e, dt, ctx, dx, dz, dist) {
     const cfg = e.cfg.weigh;
     // 第 91 块：它的上称节奏只吃**一半**的攻速成长（开方）。
@@ -7510,12 +7682,47 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
   // 冰冻（第 56 块，冰剑重做）：直接把怪定住 time 秒 —— 不能移动也不能攻击。
   // 与冰缓是两套东西：冰缓只是砍移速（上限 90%），冰冻是 100% 定身，
   // 投手的骨刀、战士的贴脸、骨骑的冲锋全都得停。时长取更强的（后命中刷新）。
-  function applyFreeze(e, { time }) {
+  function applyFreeze(e, { time, bell = false, color } = {}) {
     if (!e || e.state === 'dead' || e.state === 'spawn') return;
+    // 第 130 块：铜壳对「钟声定身」免疫（cfg.freezeImmune）。
+    // 只跳过 bell 这一类，冰剑的冻结照旧 —— 别让一条抗性顺手废掉整轮冰系。
+    if (bell && e.cfg.freezeImmune) return;
     e.freezeT = Math.max(e.freezeT, time);
     e.freezeFxT = 0.2;
+    e.freezeColor = color ?? 0x9fdcff;
     // 冰冻指示：比冰缓更亮一圈，一眼看出「这只动不了了」
-    if (fx) fx.ring(e.pos, { from: 0.25, to: 1.0, color: 0x9fdcff, life: 0.4, opacity: 0.65, y: 0.05 });
+    if (fx) fx.ring(e.pos, { from: 0.25, to: 1.0, color: e.freezeColor, life: 0.4, opacity: 0.65, y: 0.05 });
+  }
+
+  // 装箱（第 130 块）：把一只怪暂时收走。
+  // 只做「藏起来 + 停 AI」，不动血量/状态机 —— 从箱子里倒出来时它还是原来那只。
+  function box(e, { time = 4.0 } = {}) {
+    if (!hittable(e)) return false;
+    e.boxed = { t: Math.max(0.2, time) };
+    // 被收走的那一下：脚下一圈木色，给玩家一个「它进箱子了」的反馈
+    if (fx) fx.ring(e.pos, { from: 0.35, to: 0.9, color: 0xd8c79a, life: 0.3, opacity: 0.6, y: 0.05 });
+    e.root.visible = false;
+    return true;
+  }
+
+  // 倒箱 / 提前放出来：可给一个新位置（打在主角周围散开）
+  function unbox(e, at = null) {
+    if (!e || !e.boxed) return false;
+    e.boxed = null;
+    e.root.visible = true;
+    if (at && Number.isFinite(at.x) && Number.isFinite(at.z)) {
+      e.pos.x = at.x;
+      e.pos.z = at.z;
+      const lim = arenaR - e.cfg.radius;
+      const r = Math.hypot(e.pos.x, e.pos.z);
+      if (r > lim) { e.pos.x = (e.pos.x / r) * lim; e.pos.z = (e.pos.z / r) * lim; }
+    }
+    if (fx) fx.ring(e.pos, { from: 0.15, to: 1.2, color: 0xd8c79a, life: 0.36, opacity: 0.6, y: 0.05 });
+    return true;
+  }
+
+  function boxedList() {
+    return list.filter((e) => !!e.boxed);
   }
 
   // 连锁闪电的目标：e 之外最近的 count 只活怪（距离 ≤ maxDist）
@@ -7650,6 +7857,7 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     hittable,          // 第 97 块：选目标 / 圈范围统一判据（排除 dead / spawn / down）
     takeDamage,
     applyDot, applySlow, applyFreeze, chainTargets,
+    box, unbox, boxedList,     // 第 130 块：空箱子的「装箱 / 倒箱」
     shotCount: () => shots.length,
     zoneCount: () => zones.length,      // 场上正在倒计时的圈（三种法术都算）
     // ---- 第 114 块：第十一关的观测口 ----

@@ -185,7 +185,7 @@ for (const f of jsFiles) {
   for (const m of s.matchAll(/[^\n]*\.state\s*!==\s*'dead'\s*&&[^\n]*'spawn'[^\n]*/g)) {
     const line = m[0].trim();
     if (BENIGN.some((re) => re.test(line))) continue;
-    if (/function hittable/.test(line) || /return !!e && e\.state/.test(line)) continue;   // 统一出口本体
+    if (/function hittable/.test(line) || /return !!e && !e\.boxed && e\.state/.test(line)) continue;   // 统一出口本体
     badSites.push(f + ' → ' + line.slice(0, 60));
   }
 }

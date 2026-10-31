@@ -143,7 +143,7 @@ ok(/const MAX_BOLT_VIS = 8;/.test(weaponSrc) && /if \(vis < MAX_BOLT_VIS\) \{ bo
 
 // enemy.js 的冻结机制
 ok(/freezeT: 0,/.test(enemySrc) && /freezeFxT: 0,/.test(enemySrc), '敌人有 freezeT / freezeFxT 字段');
-ok(/function applyFreeze\(e, \{ time \}\) \{/.test(enemySrc), 'enemy.js 实现 applyFreeze');
+ok(/function applyFreeze\(e, \{ time,/.test(enemySrc), 'enemy.js 实现 applyFreeze');
 ok(/e\.freezeT = Math\.max\(e\.freezeT, time\);/.test(enemySrc), '冰冻时长取更强的（后命中刷新）');
 ok(/applyDot, applySlow, applyFreeze, chainTargets,/.test(enemySrc), 'applyFreeze 进了系统导出');
 ok(/frozenCount: \(\) =>/.test(enemySrc), '有 frozenCount 观测口（测试用）');

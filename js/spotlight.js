@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // 第十五关「钟楼直播间」的补光曝光区（第 128 块）
 // ============================================================
 // 直播间地上打了几盏补光灯，光圈会像潮水一样缓慢漂移。
@@ -13,7 +13,7 @@
 //
 // 零 import 业务模块（和 track.js / cutter.js / traffic.js 一套写法）：
 // 自己建几何、自己算位置，业务侧只调 update() 和三个查询函数。
-import * as THREE from '../lib/three.module.js?v=146';
+import * as THREE from '../lib/three.module.js?v=147';
 
 export function createSpotlightSystem({ scene, arena = 19 } = {}) {
   const group = new THREE.Group();

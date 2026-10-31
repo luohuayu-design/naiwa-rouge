@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // board.js —— 第 15 件法器「纸立牌」（第 123 块，第十三关起上架）
 // ============================================================
 // 剧情出处：s13「流动的那块牌子」—— 那张画着你的两米立牌。
@@ -23,9 +23,9 @@
 // 数值骨架和 candle.js / mine.js / latte.js 同一套：
 //   持续 / 冷却 / 判定宽度 / 同时几块 各有独立通道，reset() 清零（局内成长，不跨局）。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=146';
-import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=146';
-import { withV } from './assetUrl.js?v=146';
+import * as THREE from '../lib/three.module.js?v=147';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=147';
+import { withV } from './assetUrl.js?v=147';
 
 // 三级数值：时长 / 冷却 / 一次立几块
 const LV_LIFE = [6.0, 8.0, 10.0];
