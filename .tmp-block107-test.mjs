@@ -92,7 +92,8 @@ console.log('[§2] 四只新怪 cfg');
 
   const A = ENEMY_TYPES.addressee;
   ok(A && A.fill && A.fill.every > 0 && A.fill.time > 0, '收件人：fill 周期 / 免疫时长');
-  ok(!A.file, '收件人没有 glb（程序化的纸）');
+  // 第 123 块：四只手搓的怪全换成下载资产，收件人也改用 Poly by Google 的 Paper
+  ok(!!A.file && fs.existsSync(path.join(ROOT, A.file)), '收件人用下载的 glb（第 123 块改）');
   ok(A.hp <= 8, `收件人血薄（${A.hp}，拆单子是解法）`);
 
   const W = ENEMY_TYPES.waiter;
@@ -105,7 +106,7 @@ console.log('[§2] 四只新怪 cfg');
   ok(E.keepDistance >= 5, `回声站得远（${E.keepDistance} 格）`);
   ok(!!E.file && fs.existsSync(path.join(ROOT, E.file)), '回声有 glb');
 
-  ok(Object.keys(ENEMY_TYPES).length === 28, 'ENEMY_TYPES 共 28 只（第 114 块 +2 / 第 116 块 +1）');
+  ok(Object.keys(ENEMY_TYPES).length === 30, 'ENEMY_TYPES 共 30 只（第 114 块 +2 / 第 116 块 +1 / 第 123 块 +2）');
 }
 
 // ============================================================ §3 收件人免疫契约

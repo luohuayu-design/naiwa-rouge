@@ -45,14 +45,15 @@ ok(CG.hp < ENEMY_TYPES.eraser.hp * 4, `8 不至于把它变成一块血豆腐（
 eq(CG.animFamily, 'royal', '换了 royal 动画族（King 没有 Punch / Weapon）');
 ok(CG.clipOverrides === undefined, '不再需要 clipOverrides 兜旧骨架');
 // 复用
-// ⚠️ 第 114 块：`addressee` / `clerk` / `collector` 是程序化模型（`proc:`），没有 `file`。
-// 第 116 块：`kangaroo` 也是程序化模型。
+// ⚠️ 第 114 / 116 块时 `addressee` / `clerk` / `collector` / `kangaroo` 还是程序化模型；
+// **第 123 块全部换成了下载资产**（用户要求「手搓的也去 GitHub 找现成的」），
+// 所以下面这条判据改成「源码里不再有 proc 怪物」。
 const glbTypes = Object.values(ENEMY_TYPES).filter((t) => !t.planned && t.file);
 const allFiles = glbTypes.map((t) => t.file);
 eq(new Set(allFiles).size, allFiles.length, `零复用：${glbTypes.length} 只有模型的怪 / ${new Set(allFiles).size} 个文件`);
-ok(Object.values(ENEMY_TYPES).filter((t) => !t.planned && t.proc).length === 4,
-  '四只程序化怪（收件人 / 誊录员 / 收账人 / 袋鼠）不占 glb',
-  Object.values(ENEMY_TYPES).filter((t) => t.proc).map((t) => t.proc).join(','));
+ok(Object.values(ENEMY_TYPES).filter((t) => t.proc).length === 0,
+  '第 123 块：一只程序化怪都不剩（四只手搓的已换成下载资产）',
+  Object.values(ENEMY_TYPES).filter((t) => t.proc).map((t) => t.type || t.proc).join(','));
 ok(ENEMY_TYPES['eraser'].file !== CG.file, '擦名者与称量官不再是同一个 glb');
 
 sec('①-b royal 动画族');

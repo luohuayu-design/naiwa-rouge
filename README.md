@@ -45,10 +45,11 @@ Three.js 做的**幸存者类肉鸽**。主角是「奶蛙」，来自同作者�
 | 十 | 塔顶井台 | 井口 hazard + 照影（抄你面板）/ 收件人（封一类伤害）/ 等的那个（90 秒倒计时，缩没狂暴）/ 回声（把已死的怪捞成半血版）+ 法器傀儡术 |
 | 十一 | 钟楼雾原 | **会走会起的雾**（挡视线，预警穿雾）+ 誊录员墨线 / 收账人偷属性 + 墨丸；守夜烛是唯一能主动照散雾的手段 |
 | 十二 | 三幻神驿站 | **车流**（两条车道、2.2s 预警、撞怪高额伤害）+ 加急袋鼠（给别的怪挂「加急」）+ 苔藓拿铁 |
+| 十三 | 焦土操场 | **环形跑道**（站上去你 +35%、怪也 +25%，带一点切向推力）+ 立牌（正面挡 75%，但转身很慢）/ 取景的（锥形快门，只拍正前方）+ 纸立牌照到弹道就挡 |
 
 ## 敌人图鉴
 
-游戏内图鉴（主菜单 → 图鉴 → 怪物）里的缩略图是**离线渲染好提交进仓库**的 webp（`assets/codex/`，换模型后跑 `node .tmp-codex-shots.js` 重出），运行时只读图不拉模型。共 **28 种**，下表只列第一关的四只基础怪：
+游戏内图鉴（主菜单 → 图鉴 → 怪物）里的缩略图是**离线渲染好提交进仓库**的 webp（`assets/codex/`，换模型后跑 `node .tmp-codex-shots.js` 重出），运行时只读图不拉模型。共 **30 种**，下表只列第一关的四只基础怪：
 
 | 怪物 | 生命（第 1 回合） | 速度 | 行为 |
 | --- | --- | --- | --- |
@@ -85,9 +86,9 @@ naiwa-rouge/
 ├── style.css               # 深色 UI 全量样式
 ├── sw.js                   # Service Worker（必须在根目录：scope 要覆盖全站）
 ├── 关卡事件表.txt / 每日任务池.md / DESIGN.md
-├── assets/                 # 奶蛙 rigged.glb / weapons / monsters(24 glb) / golems / props / codex(27 webp) / audio
+├── assets/                 # 奶蛙 rigged.glb / weapons / monsters(30 glb) / golems / props / codex(30 webp) / audio
 ├── lib/                    # three.module.js r160 + GLTFLoader / SkeletonUtils（本地内置）
-└── js/                     # 64 个 ES module（主循环 main / wave / stats / enemy / weapon / shop / events / 各系统）
+└── js/                     # 66 个 ES module（主循环 main / wave / stats / enemy / weapon / shop / events / 各系统）
 ```
 
 ## 素材与致谢

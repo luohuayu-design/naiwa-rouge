@@ -49,8 +49,9 @@ ok(L6.name.includes('第六关') && L6.name.includes('骨塔机房'), '第六关
 // 第 81 块加了第八关「骨塔寄存层」
 // 第 82 块加了第九关「骨塔登记庭」
 // 第 107 块加了第十关「塔顶井台」；第 114 块 +第十一关「钟楼雾原」；第 116 块 +第十二关「三幻神驿站」
-ok(wave.LEVELS_BY_ID[1] && wave.LEVELS_BY_ID[12] && Object.keys(wave.LEVELS_BY_ID).length === 12,
-  'LEVELS_BY_ID 1~12 全在', Object.keys(wave.LEVELS_BY_ID).join(','));
+// 第 123 块 +第十三关「焦土操场」
+ok(wave.LEVELS_BY_ID[1] && wave.LEVELS_BY_ID[13] && Object.keys(wave.LEVELS_BY_ID).length === 13,
+  'LEVELS_BY_ID 1~13 全在', Object.keys(wave.LEVELS_BY_ID).join(','));
 
 for (const [tag, L] of [['五', L5], ['六', L6]]) {
   ok(L.rounds.length === 20, `${tag}关 20 回合`, L.rounds.length);
@@ -135,7 +136,7 @@ ok(relics.RELIC_DEFS.insulator && relics.RELIC_DEFS.insulator.maxLevel === 3, '�
 ok(relics.RELIC_DEFS.lantern.desc.length === 3 && relics.RELIC_DEFS.insulator.desc.length === 3, '两件法器每级都有说明');
 // 第 71 块 +木鱼
 // 第 84 块 +镇牌铃（第八关寄存柜专用）→ 9 件
-ok(Object.keys(relics.RELIC_DEFS).length === 14, '法器一共 14 件（第 107 块 +傀儡术 / 第 114 块 +墨丸 / 第 116 块 +拿铁 / 第 118 块 +守夜烛 / +落款）', Object.keys(relics.RELIC_DEFS).join(','));
+ok(Object.keys(relics.RELIC_DEFS).length === 15, '法器一共 15 件（第 107 块 +傀儡术 / 第 114 块 +墨丸 / 第 116 块 +拿铁 / 第 118 块 +守夜烛 / +落款 / 第 123 块 +纸立牌）', Object.keys(relics.RELIC_DEFS).join(','));
 
 // ============================================================
 sec('D、怪物表：擦名者 / 重启体');
@@ -157,8 +158,8 @@ ok(RB && RB.height >= 1.8 && RB.height <= 2.0, '重启体身高 1.8~2.0', RB.hei
 // 第 83 块：删掉第八关的 ranker / bearer（队形整块不要了），加寄存处看守 warden
 // 第 97 块：+盖章人 stamper → 21
 // 第 107 块：+照影 / 收件人 / 等的那个 / 回声 → 25
-ok(enemy.ENEMY_TYPES.minion && Object.keys(enemy.ENEMY_TYPES).filter((k) => !enemy.ENEMY_TYPES[k].planned).length === 28,
-  '启用中的怪物 28 只（第 114 块 +誊录员 / 收账人，第 116 块 +加急袋鼠）');
+ok(enemy.ENEMY_TYPES.minion && Object.keys(enemy.ENEMY_TYPES).filter((k) => !enemy.ENEMY_TYPES[k].planned).length === 30,
+  '启用中的怪物 30 只（第 114 块 +誊录员 / 收账人，第 116 块 +加急袋鼠，第 123 块 +立牌 / 取景的）');
 // 第 62 块定下的尺寸（盾兵/孢生按战士 1.4 倍，三只小的统一 1.8~1.9）
 const W = enemy.ENEMY_TYPES.warrior;
 // 战士 1.38 × 1.4 = 1.93，用户拍板取整到 1.9 —— 容差放到 0.06 而不是 0.02

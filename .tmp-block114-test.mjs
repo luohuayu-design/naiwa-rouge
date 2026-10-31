@@ -67,13 +67,14 @@ sec('② 两只新怪');
 // ============================================================
 const clerk = E.ENEMY_TYPES.clerk;
 const col = E.ENEMY_TYPES.collector;
-ok(Object.keys(E.ENEMY_TYPES).length === 28, `怪种 28 只（25 + 2 + 1，实 ${Object.keys(E.ENEMY_TYPES).length}）`);
+ok(Object.keys(E.ENEMY_TYPES).length === 30, `怪种 30 只（25 + 2 + 1 + 2，实 ${Object.keys(E.ENEMY_TYPES).length}）`);
 ok(!!clerk && clerk.name === '誊录员', 'clerk = 誊录员');
 ok(!!col && col.name === '收账人', 'collector = 收账人');
-// 模型：两只都是程序化生成（不抢别人的 glb —— 第 97 块的教训）
-ok(clerk.proc === 'quill' && !clerk.file, '誊录员 = proc:quill（程序化羽笔，零 glb 复用）');
-ok(col.proc === 'book' && !col.file, '收账人 = proc:book（程序化账簿，零 glb 复用）');
-ok(/function buildProcModel/.test(enemySrc), 'buildProcModel 是 proc 模型的唯一入口');
+// 模型：第 123 块把两只手搓的换成了下载资产（scaranto 墨笔 / Quaternius 摊开的书）。
+// 「零 glb 复用」这条没变 —— 判据从「有没有 file」改成「file 各不相同」+「不再有 proc」。
+ok(!!clerk.file && !!col.file && clerk.file !== col.file, '誊录员 / 收账人各用一份下载的 glb（第 123 块改）');
+ok(!Object.values(E.ENEMY_TYPES).some((t) => t.proc), '不再有任何程序化怪物模型（buildProcModel 已删）');
+ok(!/function buildProcModel/.test(enemySrc), '源码里 buildProcModel 已彻底移除');
 // 誊录员：墨线
 ok(clerk.ink && clerk.ink.len === 13 && clerk.ink.half === 0.62, '墨线长 13 / 半宽 0.62');
 ok(clerk.ink.dmg === clerk.damage, '墨线伤害 = 本体的伤害口径（同一份倍率）');
@@ -190,7 +191,7 @@ const inkThick = S.SHOP_ITEMS.find((i) => i.id === 'buyInkThick');
 ok(!!buyMine && buyMine.type === 'relic' && buyMine.relic === 'mine', 'buyMine 是法器货');
 ok(buyMine.needLevel === 11, '墨丸只在第十一关起上架');
 ok(!!inkSac && !!inkThick && inkSac.type === 'ink' && inkThick.type === 'ink', '两件墨货 type = ink');
-ok(S.SHOP_ITEMS.length === 40, `商店货 40 件（28 + 3 + 3 + 6，实 ${S.SHOP_ITEMS.length}）`);
+ok(S.SHOP_ITEMS.length === 43, `商店货 43 件（28 + 3 + 3 + 6 + 3，实 ${S.SHOP_ITEMS.length}）`);
 ok(S.itemLocked(inkSac, {}) === '要先拥有「墨丸」', '没墨丸时墨货锁着');
 ok(S.itemLocked(inkSac, { mineLevel: 1, round: 9, level: 11 }) === null,
   '有墨丸 + 够了回合/关卡后解锁');
@@ -211,7 +212,7 @@ const pv = U.previewUpgrade(
 ok(Array.isArray(pv) && pv.length === 1 && pv[0].fromText && pv[0].toText,
   'previewUpgrade 能给出「原值 → 新值」（不会崩）',
   JSON.stringify(pv && pv[0]));
-ok(U.UPGRADES.length === 109, `卡池 109 张（87 + 6 + 6 + 10，实 ${U.UPGRADES.length}）`);
+ok(U.UPGRADES.length === 113, `卡池 113 张（87 + 6 + 6 + 10 + 4，实 ${U.UPGRADES.length}）`);
 
 // 技能栏
 const mineSkill = SK.SKILLS.find((s) => s.id === 'mine');

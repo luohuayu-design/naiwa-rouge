@@ -26,9 +26,9 @@
 // 第 11 块：每件货都带 rarity（0 普通 ~ 4 传说），店里按品质加权抽取 ——
 // 幸运越高，摆出来的货越往金/红那一头走（见 rarity.js）。
 // ============================================================
-import { rarityWeight } from './rarity.js?v=139';
-import { TURRET } from './turret.js?v=139';
-import { RELIC_DEFS } from './relics.js?v=139';
+import { rarityWeight } from './rarity.js?v=140';
+import { TURRET } from './turret.js?v=140';
+import { RELIC_DEFS } from './relics.js?v=140';
 
 export const SHOP_ITEMS = [
   // ---------------- 生命药水（第 13 块起：买进背包，作战中随时用） ----------------
@@ -324,6 +324,30 @@ export const SHOP_ITEMS = [
     glyph: '📜', name: '旧纸',
     desc: '落款墨爆伤害 +40%（一局只能买一次）。死时那一下炸得更疼，一堆怪挤一起时最划算。',
   },
+  // ---------------- 第十三关新增（第 123 块）：纸立牌 ----------------
+  // 用户定案：「按键在身前立一块牌挡掉敌方弹道」。和本关的环形跑道 / 远程怪同源：
+  // 跑道上你不方便站定躲，那就立一块墙。同样 relic 本体 + 两件一局一次的买断。
+  {
+    id: 'buyBoard', type: 'relic', relic: 'board', price: 32, needRound: 8, needLevel: 13,
+    rarity: 3,
+    glyph: '🪧', name: '纸立牌',
+    desc: '从那张两米立牌上撕下一角：技能栏多一颗「纸立牌」。按下在身前 2 格立起一块纸板，'
+      + '持续 6 秒 —— 穿过它的敌方投掷物被挡下来，「取景的」隔着纸板按快门只能拍到一张纸。'
+      + '冷却 26 秒。再买可升级（最多 3 级，三级一次立两块）。',
+  },
+  // 纸立牌的两件买断强化
+  {
+    id: 'buyBoardOil', type: 'board', board: 'oil', price: 20, needRound: 5, needLevel: 13,
+    rarity: 2,
+    glyph: '🧴', name: '油纸',
+    desc: '纸立牌持续 +2 秒、牌面更宽（+0.2 格，更容易挡到擦边的弹道）。一局只能买一次。',
+  },
+  {
+    id: 'buyBoardBrace', type: 'board', board: 'brace', price: 24, needRound: 9, needLevel: 13,
+    rarity: 2,
+    glyph: '🔩', name: '三角支架',
+    desc: '纸立牌同时多立一块（+1 上限，冷却不变）。一局只能买一次 —— 一面挡箭、一面挡骨刀。',
+  },
 ];
 
 // 第 118 块：付**夜行骨币**刷新（用户定案「本次进店递增、离店重置」）。
@@ -383,6 +407,12 @@ export function itemLocked(item, ctx = {}) {
     if (!ctx.markLevel) return '要先拥有「落款」';
     if (item.mark === 'cinnabar' && ctx.markCinnabar) return '这一局已经买过了';
     if (item.mark === 'paper' && ctx.markPaper) return '这一局已经买过了';
+  }
+  // 第 123 块：纸立牌的两件买断货
+  if (item.type === 'board') {
+    if (!ctx.boardLevel) return '要先拥有「纸立牌」';
+    if (item.board === 'oil' && ctx.boardOil) return '这一局已经买过了';
+    if (item.board === 'brace' && ctx.boardBrace) return '这一局已经买过了';
   }
   return null;
 }

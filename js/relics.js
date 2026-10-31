@@ -16,12 +16,12 @@
 // 与环剑（自动索敌、消耗制）和炮台（固定点位）互补；价格定在
 // 商店里「买得起但要攒一攒」的档，让 9/12/15/18 回合的商店有取舍。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=139';
-import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=139';
-import { withV } from './assetUrl.js?v=139';   // 第 80 块：glb 带版本号，SW 才走缓存优先
-import { distance2D } from './stats.js?v=139';
-import { TAG_BASE, TAG_SEAL } from './deposit.js?v=139';   // 第 84 块：掉牌概率的真相源
-import audio from './audio.js?v=139';
+import * as THREE from '../lib/three.module.js?v=140';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=140';
+import { withV } from './assetUrl.js?v=140';   // 第 80 块：glb 带版本号，SW 才走缓存优先
+import { distance2D } from './stats.js?v=140';
+import { TAG_BASE, TAG_SEAL } from './deposit.js?v=140';   // 第 84 块：掉牌概率的真相源
+import audio from './audio.js?v=140';
 
 // 百分比文案（概率表里存的是 0.5 这种小数）
 const pct = (v) => `${Math.round(v * 100)}%`;
@@ -226,11 +226,29 @@ export const RELIC_DEFS = {
       '一页三名：目标 3 个、持续伤害 ×1.4、墨爆 ×1.3 —— 被点名的怪，走不掉',
     ],
   },
+  // ---------------- 第十三关新增（第 123 块）：纸立牌 ----------------
+  // 用户定案：「按键在身前立一块牌挡掉敌方弹道」—— 和本关场地机制同源
+  // （跑道上全是远程：弓手、骨刀、取景的），学了就能立刻用。
+  // 为什么不是「加护甲」：本关已经有立牌怪（正面减伤）了，再来一个同样手感的
+  // 防御就重复；「预判弹道从哪来、提前把牌挡在那儿」才是新的一层判断。
+  // 牌本体、判定、模型全在 board.js；这里只管「买没买 / 几级」。
+  // 等级成长：时长 [6/8/10] 秒、冷却 [26/22/18] 秒、三级一次立两块。
+  board: {
+    name: '纸立牌',
+    maxLevel: 3,
+    cap: [1, 1, 2],
+    life: [6, 8, 10],
+    desc: [
+      '撕下一角纸板立在自己身前：技能栏多一颗「纸立牌」。按下在身前 2 格立起一块牌，持续 6 秒 —— 穿过它的敌方投掷物（骨刀这类飞行弹道）会被挡下来；「取景的」隔着纸板按快门，闪光也会被吃掉。冷却 26 秒',
+      '纸板更厚更久：持续 8 秒、冷却 22 秒',
+      '一次立两块：持续 10 秒、冷却 18 秒 —— 正前一块、侧面一块，把「站着不动」变成「立着不动」',
+    ],
+  },
 };
 
 export function createRelicSystem({ scene, fx, enemies, onLanternReveal }) {
-  const levels = { spikes: 0, frost: 0, bell: 0, thorns: 0, stove: 0, lantern: 0, insulator: 0, woodfish: 0, seal: 0, puppet: 0, mine: 0, latte: 0, candle: 0, mark: 0 };
-  const cds = { spikes: 0, frost: 0, bell: 0, thorns: 0, stove: 0, lantern: 0, insulator: 0, woodfish: 0, seal: 0, puppet: 0, mine: 0, latte: 0, candle: 0, mark: 0 };
+  const levels = { spikes: 0, frost: 0, bell: 0, thorns: 0, stove: 0, lantern: 0, insulator: 0, woodfish: 0, seal: 0, puppet: 0, mine: 0, latte: 0, candle: 0, mark: 0, board: 0 };
+  const cds = { spikes: 0, frost: 0, bell: 0, thorns: 0, stove: 0, lantern: 0, insulator: 0, woodfish: 0, seal: 0, puppet: 0, mine: 0, latte: 0, candle: 0, mark: 0, board: 0 };
 
   // ---------------- 逐件法器增幅（第 118 块）----------------
   // 火种（逐件法器各一簇）与盲盒（法器属性）都往这张表里灌：

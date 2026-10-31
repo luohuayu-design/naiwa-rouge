@@ -34,9 +34,9 @@
 //   标了 scope:'weapon' 的项改的是武器表（剑系 / 元素系），其余改主角表。
 //   两块表都要传进来，没传 wstats 时武器项会退化到主角表（只为兼容老调用）。
 // ============================================================
-import { STAT_DEFS } from './stats.js?v=139';
-import { WEAPON_STAT_DEFS } from './weaponStats.js?v=139';
-import { RARITIES, rarityWeight, oddsOf } from './rarity.js?v=139';
+import { STAT_DEFS } from './stats.js?v=140';
+import { WEAPON_STAT_DEFS } from './weaponStats.js?v=140';
+import { RARITIES, rarityWeight, oddsOf } from './rarity.js?v=140';
 
 // 一张卡改的是哪块表
 function tableFor(scope, stats, wstats) {
@@ -638,6 +638,42 @@ const UNIQUE = [
     title: '目标 +1 · 持续伤害 +20% · 墨爆 +0.4',
     desc: '传说：一次给三样 —— 名字更多、写得更重、炸得更开。拿到这张，落款就是「点名清场」',
   },
+  // ---------------- 纸立牌卡（第 123 块，第十三关专属法器） ----------------
+  // 买到「纸立牌」后才会进池子（weightOf 里拦：opts.boardOwned）。
+  // 四个通道：持续 / 牌面宽度 / 冷却 / 同时几块；up.board 由 applyUpgrade 转交 board.applyCard()。
+  // 「宽度」是这件法器独有的通道 —— 判定宽一格，擦边的骨刀才挡得住。
+  {
+    id: 'boardDur', tag: 'def', glyph: '🪧', name: '多糊一层',
+    rarity: 0,
+    w0: 0.60, gw: +0.015,
+    board: { stat: 'duration', flat: 1.5 },
+    title: '纸立牌持续 +1.5 秒',
+    desc: '纸板立得更久（能重复拿）—— 一块牌撑过一整轮围上来的时间，就不用急着补第二块',
+  },
+  {
+    id: 'boardWide', tag: 'def', glyph: '📐', name: '糊宽一点',
+    rarity: 0,
+    w0: 0.60, gw: +0.015,
+    board: { stat: 'width', flat: 0.25 },
+    title: '牌面宽度 +0.25 格',
+    desc: '牌更宽（能重复拿）—— 判定宽一格，擦着边飞过去的骨刀也挡得住',
+  },
+  {
+    id: 'boardCd', tag: 'mov', glyph: '⏱', name: '随手一撕',
+    rarity: 2,
+    w0: 0.40, gw: +0.020,
+    board: { stat: 'cd', flat: 2.5 },
+    title: '纸立牌冷却 −2.5 秒',
+    desc: '撕得更勤（能重复拿，最低 10 秒）—— 挡完这一轮，下一轮还来得及',
+  },
+  {
+    id: 'boardExtra', tag: 'def', glyph: '🗂', name: '再来一块',
+    rarity: 3,
+    w0: 0.32, gw: +0.010,
+    board: { stat: 'count', flat: 1 },
+    title: '纸立牌同时 +1 块',
+    desc: '手里多一块牌（能重复拿）—— 一面挡正面、一面挡侧面，站定打也不怕被两边夹',
+  },
 ];
 
 // 把「族 × 三档」摊平成一张张卡。小档沿用原来的 id（老存档 / 老测试照旧认得）。
@@ -701,6 +737,8 @@ export function weightOf(up, round = 1, opts = {}) {
   // 第 118 块：守夜烛 / 落款卡同理
   if (up.candle && !opts.candleOwned) return 0;
   if (up.mark && !opts.markOwned) return 0;
+  // 第 123 块：纸立牌卡同理
+  if (up.board && !opts.boardOwned) return 0;
   if (up.needsWeapon && !opts.hasWeapon) return 0;
   const r = Math.max(1, round);
   return Math.max(0, (up.w0 ?? 1) + (up.gw ?? 0) * (r - 1));
@@ -749,7 +787,7 @@ export function rollChoices(rng = Math.random, opts = {}) {
 // wstats = 武器属性表：scope:'weapon' 的条目改它，其余改主角 stats。
 // weapon = 武器系统本身：只有「直接给一把剑」的卡（sword 字段）才需要它。
 // 返回 { src, changes }：changes 是精确的「选前 → 选后」（用于卡片/提示文案）。
-export function applyUpgrade(stats, up, serial = 0, wstats = null, weapon = null, golems = null, arrowRain = null, mines = null, latte = null, candle = null, mark = null) {
+export function applyUpgrade(stats, up, serial = 0, wstats = null, weapon = null, golems = null, arrowRain = null, mines = null, latte = null, candle = null, mark = null, board = null) {
   // 第 107 块：傀儡卡不碰属性表，交给傀儡系统记账（golem.applyCard）
   if (up.golem) {
     const g = up.golem;
@@ -807,6 +845,16 @@ export function applyUpgrade(stats, up, serial = 0, wstats = null, weapon = null
     return {
       src: `upg:${up.id}:${serial}`,
       changes: [markChange(m, before)],
+    };
+  }
+  // 第 123 块：纸立牌卡交给 board.js 记账
+  if (up.board) {
+    const bd = up.board;
+    const before = board ? board.bonuses() : null;
+    if (board) board.applyCard(bd);
+    return {
+      src: `upg:${up.id}:${serial}`,
+      changes: [boardChange(bd, before)],
     };
   }
   // 剑阵这类「直接加一把剑」的卡：不碰属性表，交给武器系统上环
@@ -1040,7 +1088,29 @@ function markChange(m, b) {
   };
 }
 
-export function previewUpgrade(stats, up, wstats = null, weapon = null, golems = null, arrowRain = null, mines = null, latte = null, candle = null, mark = null) {
+// ---- 第 123 块：纸立牌卡的 changes 文案（apply 与 preview 共用）----
+// 注意：卡里的键（duration/cd/width/count）和 bonuses() 里的键（life/cdMax/cap）不同名，
+// 这张表就是两者之间唯一的翻译处 —— 别再在别处硬编码一遍。
+function boardChange(c, b) {
+  const b0 = b || { life: 6.0, width: 1.15, cdMax: 26.0, cap: 1 };
+  const meta = {
+    duration: { name: '纸立牌持续', from: b0.life, fmt: (v) => `${v.toFixed(1)} 秒`, min: 0 },
+    width: { name: '牌面宽度', from: b0.width, fmt: (v) => `${v.toFixed(2)} 格`, min: 0 },
+    cd: { name: '纸立牌冷却', from: b0.cdMax, fmt: (v) => `${v.toFixed(1)} 秒`, min: 10.0 },
+    count: { name: '同时能立', from: b0.cap, fmt: (v) => `${v} 块`, min: 1 },
+  };
+  const stat = meta[c.stat] ? c.stat : 'duration';
+  const mm = meta[stat];
+  const flat = c.flat || 0;
+  const to = stat === 'cd' ? Math.max(mm.min, mm.from - flat) : mm.from + flat;
+  return {
+    key: `board_${stat}`, scope: 'board', name: mm.name,
+    from: mm.from, to, fromText: mm.fmt(mm.from), toText: mm.fmt(to),
+    text: `${mm.fmt(mm.from)} → ${mm.fmt(to)}`,
+  };
+}
+
+export function previewUpgrade(stats, up, wstats = null, weapon = null, golems = null, arrowRain = null, mines = null, latte = null, candle = null, mark = null, board = null) {
   if (up.golem) {
     const g = up.golem;
     const b = golems ? golems.bonuses() : null;
@@ -1071,6 +1141,11 @@ export function previewUpgrade(stats, up, wstats = null, weapon = null, golems =
   if (up.mark) {
     const b = mark ? mark.bonuses() : null;
     return [markChange(up.mark, b)];
+  }
+  // 第 123 块：纸立牌卡 —— 预览与实值共用同一个 boardChange
+  if (up.board) {
+    const b = board ? board.bonuses() : null;
+    return [boardChange(up.board, b)];
   }
   if (up.sword) {
     const n = weapon ? weapon.count : 0;

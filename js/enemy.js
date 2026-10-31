@@ -25,15 +25,15 @@
 // 第四关三只（wraith/leaper/mender，第 35 块，第 52 块换模型），
 // 各自在下面 ENEMY_TYPES 里有详细注释。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=139';
-import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=139';
-import { clone as cloneSkinned } from '../lib/jsm/utils/SkeletonUtils.js?v=139';
-import { distance2D } from './stats.js?v=139';
-import { createRangeRing } from './rangeRing.js?v=139';
-import { withV } from './assetUrl.js?v=139';
+import * as THREE from '../lib/three.module.js?v=140';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=140';
+import { clone as cloneSkinned } from '../lib/jsm/utils/SkeletonUtils.js?v=140';
+import { distance2D } from './stats.js?v=140';
+import { createRangeRing } from './rangeRing.js?v=140';
+import { withV } from './assetUrl.js?v=140';
 // 第 114 块：誊录员落笔 / 收账人翻账簿的提示音（以前这个文件不放音效，
 // 忘了 import 会在落笔那一帧抛 ReferenceError，整帧 AI 全断 —— 别省这一行）
-import audio from './audio.js?v=139';
+import audio from './audio.js?v=140';
 
 // KayKit 模型正面朝 +Z；如果哪天换模型发现怪倒着走，把这里改成 Math.PI
 export const ENEMY_MODEL_YAW = 0;
@@ -1271,13 +1271,19 @@ export const ENEMY_TYPES = {
   },
   addressee: {
     name: '收件人',
-    // ⚠️ 第 107 块第一只**完全没有 glb** 的怪：它就是一张单子。
-    // 模型是程序化的（Box + canvas 画的表格，收件人那一栏留空），
-    // 见 buildSlipModel() —— 和木牌 / 台账 / 印章同一套「零资产」思路。
-    proc: 'slip',
+    // 第 123 块：换成 Poly by Google 的「Paper」（CC-BY 3.0，poly.pizza）—— 一沓白纸。
+    // 原来那张 canvas 画的表格（buildSlipModel）已经删掉：全场怪物用同一套下载资产。
+    file: 'assets/monsters/slip.glb',
     hover: 1.35,            // 飘在空中（它不是走路的，是飘的）
-    sourceHeight: 1.55,     // 程序化模型按世界单位写死（见 buildSlipModel），所以 s === 1
-    height: 1.55,
+    // ⚠️ 平摊的模型不能用「高度」当参照：这个模型 8.6 是**一叠纸的厚度**，
+    // 按它归一化会被放大成一张盖住半场的巨幕。sourceHeight 一律取**包围盒最大边**
+    // （这里是 58.88），height 也按最大边写，比出来的缩放才是对的。
+    sourceHeight: 58.88,
+    height: 0.95,
+    // ⚠️ 一定要竖起来（-83°）。这张纸是平摊的，而相机是 45° 俯视 ——
+    // 不竖的话玩家永远只看到纸的边缘那条线（图鉴里也一样）。
+    tiltX: -1.45,
+    tint: 0xf2ead6,         // 旧纸黄：模型本身是纯白，压一点免得在夜色里跳出来
     radius: 0.62,
     hp: 6,
     armor: 0,
@@ -1301,7 +1307,9 @@ export const ENEMY_TYPES = {
     deathTime: 1.2,
     selfDestruct: false,
     color: 0xf3e6c0,        // 旧纸黄
-    glow: { color: 0x6a5a2a, intensity: 0.5 },
+    // 第 123 块：换成真实纸模型后，原来那盏 0x6a5a2a 的自发光会把它染成橄榄色，
+    // 在夜色里既不白也不黄。降到 0.30 并提亮色相，只留一点「纸在夜里反光」的意思。
+    glow: { color: 0x9a8a60, intensity: 0.30 },
     animFamily: null,       // 程序化网格没有骨骼动画（和并联体一个待遇）
     anim: {
       walk: 'idle', idle: 'idle', cast: 'idle',
@@ -1408,10 +1416,10 @@ export const ENEMY_TYPES = {
   // ------------------------------------------------------------
   clerk: {
     name: '誊录员',
-    // 零资产：一枝竖着的巨大羽毛笔（见 buildQuillModel）。
-    // 它没有 glb、没有骨架 —— 这也正好，现实里没有「会写字的笔」这种生物。
-    proc: 'quill',
-    sourceHeight: 1.75,    // 模型就是按 1.75 世界单位造的 → 缩放 1
+    // 第 123 块：换成 scaranto 的「Ink pen」（CC0，poly.pizza）—— 一枝竖着的羽毛笔。
+    // 原来是程序化拼的（buildQuillModel），已删。
+    file: 'assets/monsters/quill.glb',
+    sourceHeight: 2.89,    // 笔杆很长：按整根高度归一化
     footY: 0.0,
     height: 1.75,
     hover: 0.18,           // 笔尖悬在地面上方一点点：它要「写」，不能插进土里
@@ -1447,11 +1455,14 @@ export const ENEMY_TYPES = {
 
   collector: {
     name: '收账人',
-    // 零资产：一本摊开的厚账簿（见 buildBookModel）。浮空。
-    proc: 'book',
-    sourceHeight: 0.95,
+    // 第 123 块：换成 Quaternius 的「Open Book」（CC0，poly.pizza）—— 摊开的一本书。
+    file: 'assets/monsters/ledger.glb',
+    // 平摊的模型按**最大边**（摊开宽度）归一化，否则 0.17 的厚度会把它放大七倍。
+    sourceHeight: 0.93,
     footY: 0.0,
-    height: 1.30,          // 从 0.95 放大到 1.30，俯视角下才看得出是「一本摊开的书」
+    height: 1.25,
+    // 摊开的书同理：不倾的话从斜上方只看得见书脊那一条。前倾 52° 露出书页。
+    tiltX: -0.92,          // 摊开后最大边 1.25 格：俯视角下正好看清是一本摊开的书
     hover: 0.85,           // 浮在半空（它不是走路的，是飘的）
     radius: 0.55,
     hp: 3.4,               // 很脆：随手就能杀掉 —— 问题是你要不要现在花这个时间
@@ -1489,10 +1500,11 @@ export const ENEMY_TYPES = {
   // 压力不在它身上、在被它加急的那一群上：拖着不管，同一批怪会突然变快变凶。
   kangaroo: {
     name: '加急袋鼠',
-    // 零资产：程序化拼一只黄外套袋鼠（见 buildKangarooModel）。
-    // 不找 glb 的原因和誊录员 / 收账人一样：现实里没有「会挂单的袋鼠」这种生物。
-    proc: 'kangaroo',
-    sourceHeight: 1.55,    // 模型按 1.55 世界单位造 → 缩放 1
+    // 第 123 块：换成 Poly by Google 的「Kangaroo」（CC-BY 3.0，poly.pizza）——
+    // 原来那只程序化拼的黄外套袋鼠（buildKangarooModel）已删。
+    // 黄外套改由 tint 压成暖黄，和第十二关的招牌同色系。
+    file: 'assets/monsters/kangaroo.glb',
+    sourceHeight: 128.93,  // 这个模型是 obj 转的，单位是厘米级的 128.93
     footY: 0.0,
     height: 1.55,
     hover: 0.0,
@@ -1521,6 +1533,80 @@ export const ENEMY_TYPES = {
     color: 0xf2c14e,       // 黄外套
     tint: 0xffe28a,
     glow: { color: 0x6a4a10, intensity: 0.6 },
+    anim: { walk: 'idle', idle: 'idle', cast: 'attack', death: 'death', spawn: 'spawn' },
+  },
+
+  // ============================================================
+  // 第十三关「焦土操场」（第 123 块）两只
+  // ============================================================
+  // 立牌 —— 操场边那块被抬着走来走去的牌子，自己长了两条腿。
+  // 玩法核心是**朝向**：正面（画着你的那一面）挡掉 75% 伤害，
+  // 但它的转身只有 0.9 弧度/秒 —— 你以 4.4 的移速在它身边绕圈，
+  // 角速度比它快三倍，绕到侧面 / 背后就是满伤。
+  // 它逼你做的决定：是花两秒绕后打满，还是站在正面硬顶着挨一下、换时间。
+  // ⚠️ 判定读 `root.rotation.y`（和画面同源），别另存一个逻辑朝向。
+  standee: {
+    name: '立牌',
+    file: 'assets/monsters/standee.glb',
+    sourceHeight: 2.15,    // 木牌连柱子整根高
+    height: 2.60,          // 米高的牌子：比主角高一截，俯视角下才认得出是块板
+    footY: 0.0,
+    radius: 0.58,          // 判定给大一点：它是一块板，不是一个人
+    hp: 9,
+    armor: 0.0,
+    speed: 0.92,           // 走得很慢 —— 但一直在逼近
+    attackRange: 2.0,
+    keepDistance: 0,
+    damage: 2,
+    attackInterval: 2.1,
+    windup: 0.55,
+    attackDuration: 0.95,
+    // 转身速率（弧度/秒）。0.9 是刻意压出来的：绕圈半径 1.5 格时，
+    // 玩家 4.4 的移速对角速度约 2.9 rad/s，绕一圈只要 2 秒出头。
+    turnRate: 0.90,
+    // 正面减伤：夹角 ≤ 60° 时伤害 ×0.25。arc 用弧度，判断处见 takeDamage。
+    faceGuard: { arc: 1.05, reduce: 0.75 },
+    spawnTime: 0.9,
+    deathTime: 1.2,
+    selfDestruct: false,
+    color: 0xc9a26b,
+    glow: { color: 0x4a3a20, intensity: 0.35 },
+    anim: { walk: 'idle', idle: 'idle', cast: 'attack', death: 'death', spawn: 'spawn' },
+  },
+
+  // 取景的 —— 操场上那台架在三脚架上的机器，一直在对着你拍。
+  // 它不追人：进 7.5~12 格这个环带就站定，举机取景 1.5 秒，
+  // 读满时**只打正前方 45° 锥内**的目标。所以躲法很明确 —— 往侧面走，
+  // 走出它的取景框它就空拍一次（冷却缩一半，它还得重新对焦）。
+  // 和弓手的区别：弓手的红圈钉在地上、惩罚「站着不动」；
+  // 取景的锥子钉在它的朝向上、惩罚「一直站在它对面」。
+  camera: {
+    name: '取景的',
+    file: 'assets/monsters/camera.glb',
+    sourceHeight: 4.29,    // 三脚架整根高（obj 单位，按它归一化）
+    height: 2.40,
+    footY: 0.0,
+    radius: 0.50,
+    hp: 4.5,
+    armor: 0.10,
+    speed: 0.85,           // 慢：它靠站位，不靠贴身
+    attackRange: 12.0,
+    keepDistance: 7.5,
+    damage: 2.2,
+    attackInterval: 4.6,
+    windup: 1.50,          // 取景读条：这就是你的侧移窗口
+    attackDuration: 2.20,  // 必须 > windup
+    snap: {
+      range: 12.0,
+      arc: 0.78,           // 半角 45°：站在它正前方才会被拍到
+      missCd: 2.0,         // 空拍之后只等 2 秒，它会重新对焦
+      color: 0xfff3c4,
+    },
+    spawnTime: 0.95,
+    deathTime: 1.3,
+    selfDestruct: false,
+    color: 0xdfd6bd,
+    glow: { color: 0x4a4430, intensity: 0.30 },
     anim: { walk: 'idle', idle: 'idle', cast: 'attack', death: 'death', spawn: 'spawn' },
   },
 };
@@ -1875,332 +1961,9 @@ function makeLedgerTexture() {
   return ledgerTex;
 }
 
-// ------------------------------------------------------------
-// 第十关「收件人」：一张飘在空中的单子（第 107 块）
-// ------------------------------------------------------------
-// 它是本作第一只**完全没有 glb** 的怪 —— 因为它就是一张纸。
-// 剧情出处：s10 井水浮出来的那三样东西之一 —— 「一张单子，备注栏写着
-// 『齁齁齁』，收件人那一栏空着」。所以贴图里**收件人那一行必须留空**，
-// 那是这只怪的全部意义（它拿这个名字去给别人填上）。
-//
-// ⚠️ 用薄 Box 而不是 Plane：零厚度的 Plane 侧过身去就是一条线（第 81 块的教训），
-// 而它是飘着转的，会经常侧过来。0.07 的厚度在任何角度都还是一张纸的样子。
-// ⚠️ 材质用 Standard（不是 Basic）：它要吃 tint / glow / 受击闪白，
-// 挂在 userData.isTag 上的那些挂件才不吃这些（那是为了保证贴图本色）。
-// ------------------------------------------------------------
-let slipTex = null;
-const SLIP_W = 1.05, SLIP_H = 1.45, SLIP_D = 0.07;
-
-function makeSlipTexture() {
-  if (slipTex) return slipTex;
-  if (typeof document === 'undefined') return null;
-  const W = 132, H = 182;
-  const cv = document.createElement('canvas');
-  cv.width = W; cv.height = H;
-  const g = cv.getContext('2d');
-  // 旧纸：米黄底 + 四角压深（像被人攥过）
-  g.fillStyle = '#efe2bd';
-  g.fillRect(0, 0, W, H);
-  const grd = g.createRadialGradient(W / 2, H / 2, W * 0.2, W / 2, H / 2, W * 0.78);
-  grd.addColorStop(0, 'rgba(255,250,232,0)');
-  grd.addColorStop(1, 'rgba(150,124,80,0.30)');
-  g.fillStyle = grd;
-  g.fillRect(0, 0, W, H);
-  // 纸的折痕
-  for (let i = 0; i < 3; i++) {
-    g.strokeStyle = 'rgba(120,96,58,0.16)';
-    g.lineWidth = 1;
-    const y = H * (0.3 + i * 0.25);
-    g.beginPath();
-    g.moveTo(0, y);
-    g.bezierCurveTo(W * 0.3, y + 3, W * 0.7, y - 3, W, y + 1);
-    g.stroke();
-  }
-  // 抬头（送货单三个字压在顶上）
-  g.fillStyle = '#3a2f1c';
-  g.font = '700 21px system-ui,"PingFang SC","Microsoft YaHei",sans-serif';
-  g.textAlign = 'center';
-  g.textBaseline = 'alphabetic';
-  g.fillText('送货单', W / 2, 30);
-  g.strokeStyle = 'rgba(58,47,28,0.55)';
-  g.lineWidth = 1.6;
-  g.beginPath();
-  g.moveTo(W * 0.16, 38);
-  g.lineTo(W * 0.84, 38);
-  g.stroke();
-  // 三行表格：只有「收件人」那一行是**空的**（这只怪的全部意义）
-  g.textAlign = 'left';
-  g.font = '600 15px system-ui,"PingFang SC","Microsoft YaHei",sans-serif';
-  g.fillStyle = '#4a3d26';
-  g.fillText('收件人', 12, 62);
-  g.strokeStyle = '#2f2617';
-  g.lineWidth = 1.4;
-  g.beginPath();
-  g.moveTo(56, 64);
-  g.lineTo(W - 14, 64);
-  g.stroke();                       // ← 空的那条横线，永远不填
-  g.fillText('备注', 12, 90);
-  g.fillStyle = '#6a5837';
-  g.fillText('齁齁齁', 56, 90);      // 剧情里那句备注
-  g.fillStyle = '#4a3d26';
-  g.fillText('件数', 12, 116);
-  g.fillText('1', 56, 116);
-  // 右下角：盖章处（也是空的）
-  g.strokeStyle = 'rgba(180,60,44,0.75)';
-  g.lineWidth = 2.2;
-  g.strokeRect(W - 46, 128, 34, 34);
-  g.strokeStyle = 'rgba(120,96,58,0.30)';
-  g.lineWidth = 1;
-  g.beginPath();
-  g.moveTo(12, 128);
-  g.lineTo(W - 56, 128);
-  g.stroke();
-  slipTex = new THREE.CanvasTexture(cv);
-  slipTex.colorSpace = THREE.SRGBColorSpace;
-  return slipTex;
-}
-
-// 单子本体：竖着的一张纸（底边在 y=0，飘起来靠 cfg.hover）+ 顶上一个深色夹子。
-// 尺寸直接按世界单位写（sourceHeight = height = 1.55，所以 spawn 里的 s === 1）。
-export function buildSlipModel() {
-  if (typeof document === 'undefined') return new THREE.Group();
-  const g = new THREE.Group();
-  const mat = new THREE.MeshStandardMaterial({
-    map: makeSlipTexture(), roughness: 0.92, metalness: 0.0,
-  });
-  const paper = new THREE.Mesh(new THREE.BoxGeometry(SLIP_W, SLIP_H, SLIP_D), mat);
-  paper.position.y = SLIP_H / 2;
-  paper.castShadow = true;
-  paper.receiveShadow = false;
-  paper.frustumCulled = false;
-  g.add(paper);
-  // 夹子：一小条深色，让它看起来是「被夹着的单子」而不是一张飞纸
-  const clipMat = new THREE.MeshStandardMaterial({ color: 0x4a4038, roughness: 0.6, metalness: 0.35 });
-  const clip = new THREE.Mesh(new THREE.BoxGeometry(SLIP_W * 0.34, 0.09, SLIP_D * 2.2), clipMat);
-  clip.position.set(0, SLIP_H - 0.06, 0);
-  clip.castShadow = true;
-  clip.frustumCulled = false;
-  g.add(clip);
-  return g;
-}
-
-// ============================================================
-// 第 114 块：两只程序化新怪（零资产）
-// ============================================================
-// 为什么不做 glb：第十一关的两只怪都是「账簿里的东西」，本体就是一枝笔 /
-// 一本账簿 —— 现实里没有这种生物，找 CC0 模型只会找到「抄写员」「法师」
-// 那一类人形，反而又要跟擦名者 / 称量官撞脸（用户第 97 块就是因为模型
-// 重复才让换的）。所以走第十关「收件人」那条老路：程序化 + 零版权风险，
-// 而且轮廓一眼就能分开 —— 一根竖着的笔 vs 一本摊开的书。
-//
-// ⚠️ 这两只都没有骨架、没有动画（loadType 里 `proc` 分支直接给空 clips），
-// 所以「活着」必须自己写：见 updateOne 里 `e.cfg.proc` 那一段的摆动。
-// ============================================================
-// 誊录员：一支竖着的巨大羽毛笔，笔尖朝下，笔杆顶上一撮羽。写字时整枝笔
-// 前后压一下（updateOne 里的 z/wobble）。墨迹是它的武器，所以笔尖永远是湿的。
-export function buildQuillModel() {
-  if (typeof document === 'undefined') return new THREE.Group();
-  const g = new THREE.Group();
-
-  // 笔尖（金属，朝下）：圆锥 + 一道缝
-  const nibMat = new THREE.MeshStandardMaterial({ color: 0x2b2430, roughness: 0.45, metalness: 0.7 });
-  const nib = new THREE.Mesh(new THREE.ConeGeometry(0.085, 0.34, 8), nibMat);
-  nib.rotation.x = Math.PI;              // 尖朝下
-  nib.position.y = 0.17;
-  g.add(nib);
-  // 笔尖上那一点没干的墨
-  const inkMat = new THREE.MeshBasicMaterial({ color: 0x14101c });
-  const inkTip = new THREE.Mesh(new THREE.SphereGeometry(0.055, 8, 6), inkMat);
-  inkTip.position.y = 0.03;
-  g.add(inkTip);
-
-  // 笔杆：象牙白，微微上粗下细
-  const shaftMat = new THREE.MeshStandardMaterial({ color: 0xe6ddc6, roughness: 0.75, metalness: 0.05 });
-  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.042, 1.22, 10), shaftMat);
-  shaft.position.y = 0.95;
-  g.add(shaft);
-  // 金属箍：把笔尖和笔杆分开，远看有个亮点
-  const bandMat = new THREE.MeshStandardMaterial({ color: 0xb08a3c, roughness: 0.35, metalness: 0.8 });
-  const band = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.075, 0.09, 10), bandMat);
-  band.position.y = 0.36;
-  g.add(band);
-
-  // 羽毛：两片压扁的锥体，转开一点角度 —— 俯视角下能看出「这是一枝羽笔」
-  const featherMat = new THREE.MeshStandardMaterial({
-    color: 0xd8cdb4, roughness: 0.85, metalness: 0.0, side: THREE.DoubleSide,
-  });
-  for (const [rot, tilt, sx] of [[0.34, 0.10, 1.0], [-0.42, -0.12, 0.86]]) {
-    const f = new THREE.Mesh(new THREE.ConeGeometry(0.19, 0.72, 5), featherMat);
-    f.scale.set(sx * 0.55, 1, sx);       // 压扁 → 像羽片而不是棍子
-    f.position.set(Math.sin(rot) * 0.10, 1.42, Math.cos(rot) * 0.06);
-    f.rotation.z = tilt;
-    f.rotation.y = rot;
-    g.add(f);
-  }
-  // 羽轴
-  const rachis = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, 0.62, 6), shaftMat);
-  rachis.position.y = 1.49;
-  rachis.rotation.z = 0.06;
-  g.add(rachis);
-
-  g.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.frustumCulled = false; } });
-  return g;
-}
-
-// 收账人：一本摊开的厚账簿，浮在半空，封面朝你、纸页朝上。
-// 「三万七千条记录」= 它自己就是那本账簿。
-export function buildBookModel() {
-  if (typeof document === 'undefined') return new THREE.Group();
-  const g = new THREE.Group();
-
-  const coverMat = new THREE.MeshStandardMaterial({ color: 0x3a2a20, roughness: 0.82, metalness: 0.05 });
-  const pageMat = new THREE.MeshStandardMaterial({ color: 0xe9e0c8, roughness: 0.95, metalness: 0.0 });
-  const spineMat = new THREE.MeshStandardMaterial({ color: 0x24190f, roughness: 0.7, metalness: 0.1 });
-
-  // 两片「摊开」的封面 + 纸页：绕 y 各转 22°，形成一本翻开的书
-  for (const sgn of [-1, 1]) {
-    const cover = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.80, 0.06), coverMat);
-    cover.position.set(sgn * 0.30, 0.42, -0.10);
-    cover.rotation.y = sgn * 0.38;
-    g.add(cover);
-
-    const pages = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.72, 0.09), pageMat);
-    pages.position.set(sgn * 0.29, 0.42, -0.03);
-    pages.rotation.y = sgn * 0.38;
-    g.add(pages);
-  }
-  // 书脊
-  const spine = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.82, 0.13), spineMat);
-  spine.position.set(0, 0.42, -0.16);
-  g.add(spine);
-  // 书签带：垂在下面，飘着的最有「账簿」味
-  const ribbonMat = new THREE.MeshStandardMaterial({ color: 0x9c3a34, roughness: 0.85, side: THREE.DoubleSide });
-  const ribbon = new THREE.Mesh(new THREE.BoxGeometry(0.055, 0.42, 0.012), ribbonMat);
-  ribbon.position.set(0.06, 0.02, -0.19);
-  ribbon.rotation.z = 0.08;
-  g.add(ribbon);
-  // 封面上那道箍（铜色）：远看像一本账
-  const claspMat = new THREE.MeshStandardMaterial({ color: 0x9a7a3e, roughness: 0.4, metalness: 0.7 });
-  const clasp = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.07, 0.05), claspMat);
-  clasp.position.set(0, 0.30, -0.14);
-  g.add(clasp);
-
-  g.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.frustumCulled = false; } });
-  return g;
-}
-
-// ============================================================
-// 第 116 块：加急袋鼠（零资产程序化模型）
-// ============================================================
-// 造型要点（俯视角要一眼认出「这是一只黄外套袋鼠」）：
-//   · 大脚 + 粗尾巴（袋鼠的剪影特征，也是它「能站着挂单」的支点）；
-//   · 胸前一块黄色外套 + 一顶小帽（呼应剧情里「穿黄外套的袋鼠」）；
-//   · 怀里抱一张小白单（它就是来「加急」别人的）。
-// 没有骨骼、没有动画 —— 「活着」靠 updateOne 里 proc 分支的摆动。
-export function buildKangarooModel() {
-  if (typeof document === 'undefined') return new THREE.Group();
-  const g = new THREE.Group();
-
-  const furMat = new THREE.MeshStandardMaterial({ color: 0xc79a62, roughness: 0.85, metalness: 0.0 });
-  const coatMat = new THREE.MeshStandardMaterial({ color: 0xf2c14e, roughness: 0.7, metalness: 0.05 });
-  const darkMat = new THREE.MeshStandardMaterial({ color: 0x3a2c1e, roughness: 0.75, metalness: 0.05 });
-  const slipMat = new THREE.MeshStandardMaterial({ color: 0xf3e6c0, roughness: 0.95, metalness: 0.0 });
-
-  // 身体（微前倾的椭球，袋鼠挺着肚子站）
-  const body = new THREE.Mesh(new THREE.SphereGeometry(0.42, 16, 12), furMat);
-  body.scale.set(0.9, 1.15, 0.72);
-  body.position.set(0, 0.78, 0.04);
-  body.castShadow = true;
-  g.add(body);
-
-  // 黄外套：罩住身体下半（胸前一块）
-  const coat = new THREE.Mesh(new THREE.SphereGeometry(0.40, 16, 10), coatMat);
-  coat.scale.set(0.92, 0.62, 0.76);
-  coat.position.set(0, 0.62, 0.16);
-  coat.castShadow = true;
-  g.add(coat);
-
-  // 头（小，往前探）
-  const head = new THREE.Mesh(new THREE.SphereGeometry(0.24, 14, 10), furMat);
-  head.scale.set(1, 0.9, 0.9);
-  head.position.set(0, 1.30, 0.12);
-  head.castShadow = true;
-  g.add(head);
-
-  // 两只长耳朵
-  for (const sgn of [-1, 1]) {
-    const ear = new THREE.Mesh(new THREE.ConeGeometry(0.075, 0.34, 8), furMat);
-    ear.position.set(sgn * 0.11, 1.52, 0.06);
-    ear.rotation.z = sgn * 0.18;
-    ear.castShadow = true;
-    g.add(ear);
-  }
-
-  // 吻部（浅色，袋鼠的长脸）
-  const snout = new THREE.Mesh(new THREE.SphereGeometry(0.11, 10, 8), slipMat);
-  snout.scale.set(0.8, 0.7, 1.2);
-  snout.position.set(0, 1.26, 0.34);
-  g.add(snout);
-
-  // 小帽子（黄外套配套）
-  const hat = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.19, 0.10, 12), coatMat);
-  hat.position.set(0, 1.44, 0.10);
-  hat.castShadow = true;
-  g.add(hat);
-  const brim = new THREE.Mesh(new THREE.CylinderGeometry(0.23, 0.23, 0.03, 12), coatMat);
-  brim.position.set(0, 1.39, 0.10);
-  g.add(brim);
-
-  // 两条后腿（大脚，粗）
-  for (const sgn of [-1, 1]) {
-    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.10, 0.12, 0.55, 10), furMat);
-    leg.position.set(sgn * 0.15, 0.42, 0.02);
-    leg.castShadow = true;
-    g.add(leg);
-    // 大脚掌（袋鼠的剪影）
-    const foot = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.09, 0.36), darkMat);
-    foot.position.set(sgn * 0.15, 0.10, 0.16);
-    foot.castShadow = true;
-    g.add(foot);
-  }
-
-  // 粗尾巴（向后下方拖，支住身体）
-  const tail = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.55, 10), furMat);
-  tail.position.set(0, 0.34, -0.34);
-  tail.rotation.x = -1.15;
-  tail.castShadow = true;
-  g.add(tail);
-
-  // 两条短前臂（抱着单子）
-  for (const sgn of [-1, 1]) {
-    const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.05, 0.34, 8), furMat);
-    arm.position.set(sgn * 0.24, 0.92, 0.30);
-    arm.rotation.x = -0.5;
-    arm.rotation.z = sgn * 0.3;
-    arm.castShadow = true;
-    g.add(arm);
-  }
-
-  // 怀里那张「加急单」（小白片，和收件人的单子同色系，一眼「是来挂单的」）
-  const slip = new THREE.Mesh(new THREE.BoxGeometry(0.30, 0.20, 0.03), slipMat);
-  slip.position.set(0, 0.95, 0.36);
-  slip.rotation.x = -0.25;
-  slip.castShadow = true;
-  g.add(slip);
-
-  g.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.frustumCulled = false; } });
-  return g;
-}
-
-// proc 种类 → 模型。**唯一入口**：loadType / buildPreviewModel / 图鉴都走这里，
-// 免得和收件人那次一样「一个分支改了、另一个没改」。
-export function buildProcModel(kind) {
-  if (kind === 'quill') return buildQuillModel();
-  if (kind === 'book') return buildBookModel();
-  if (kind === 'slip') return buildSlipModel();
-  if (kind === 'kangaroo') return buildKangarooModel();
-  return new THREE.Group();
-}
+// 第 123 块：四只「程序化模型」怪（收件人 / 誊录员 / 收账人 / 加急袋鼠）
+// 全部换成 poly.pizza 上的 CC0/CC-BY 现成 glb —— 手搓的 build*Model 已删除，
+// 别再往这里加拼装出来的怪物（用户 2026-10-31 定）。
 
 // 把木牌挂到模型上。
 // ⚠️ 挂在 model 里要**反向缩放**：model.scale 是 (height/sourceHeight) ≈ 1.5，
@@ -2299,16 +2062,15 @@ export async function buildPreviewModel(type) {
   const cfg = ENEMY_TYPES[type];
   if (!cfg) return null;
   let gltf = null;
-  // 第 107 块：程序化模型（收件人 `proc:'slip'`）没有 file，直接走局内同一套构建。
-  // 第 114 块：羽毛笔 / 账簿也走同一条路（buildProcModel 是唯一入口）。
-  const model = cfg.proc ? buildProcModel(cfg.proc) : await (async () => {
-        gltf = previewGltf.get(cfg.file);
-        if (!gltf) {
-          gltf = await new GLTFLoader().loadAsync(withV(cfg.file));
-          previewGltf.set(cfg.file, gltf);
-        }
-        return cloneSkinned(gltf.scene);
-      })();
+  // 第 123 块起全部走 glb（四只手搓的怪物已换成下载资产），没有分支了。
+  const model = await (async () => {
+    gltf = previewGltf.get(cfg.file);
+    if (!gltf) {
+      gltf = await new GLTFLoader().loadAsync(withV(cfg.file));
+      previewGltf.set(cfg.file, gltf);
+    }
+    return cloneSkinned(gltf.scene);
+  })();
   const s = cfg.height / cfg.sourceHeight;
   model.scale.setScalar(s);
   // 脚底对齐（同 spawn）：实测脚底在原点以下的模型要往上抬一点，不然缩略图会「陷」进影子
@@ -2363,10 +2125,10 @@ export async function buildPreviewModel(type) {
   if (cfg.skin && cfg.skin.staff) attachStaff(model, model, cfg.skin.staff);
   // 绑定姿态是张牙舞爪的 T pose，不能直接用 —— 先推进 Idle 半拍再定格。
   // 第 52 块：新模型的 idle 叫 Flying_Idle / 带 CharacterArmature| 前缀，走别名表解析。
-  // 第 107 块：程序化模型没有骨骼动画，跳过整段。
-  if (!cfg.proc) {
+  {
     const aliases = resolveClipAliases(gltf, cfg);
     const idleName = aliases.idle || ANIM.idle;
+    // 静态模型（近三批下载的道具类，animations 为空）走不进 if (clip)
     const clip = gltf.animations.find((c) => c.name === idleName) || gltf.animations[0];
     if (clip) {
       const mixer = new THREE.AnimationMixer(model);
@@ -2404,6 +2166,9 @@ export async function buildPreviewModel(type) {
       }
     }
   } catch (_) {}
+  // 第 123 块：平摊的模型（摊开的书 / 一沓纸）从图鉴的斜俯角看会塌成一片 ——
+  // 让它们前倾一点，把正面（书页 / 纸面）抬给相机。spawn 里同样要加，两处必须一致。
+  if (cfg.tiltX) (pivot !== model ? pivot : model).rotation.x = cfg.tiltX;
   return { model, pivot, height: cfg.height, center };
 }
 
@@ -2489,16 +2254,6 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
   async function loadType(type) {
     if (assets.has(type)) return assets.get(type);
     const cfg = ENEMY_TYPES[type];
-    // 第 107 块：**程序化怪没有 glb**（收件人一张单子 / 第 114 块的羽毛笔、账簿）。
-    // 它不进网络、没有动画，直接造一个 Group 当模型 —— 后面 spawn / 预载 /
-    // 图鉴走的都是同一条路，所以唯一要打标记的就是 `proc: true`（clone 时
-    // 不能用 SkeletonUtils，它没有骨架）。
-    if (cfg.proc) {
-      const built = buildProcModel(cfg.proc);
-      const pd = { scene: built, clips: {}, aliases: {}, offset: null, proc: true };
-      assets.set(type, pd);
-      return pd;
-    }
     // 同一个 glb 只解析一次（同文件的怪共用一份模型与动画）。
     // 第 52 块换模型后 13 只怪已经各用各的文件，这条只对「以后又复用」的怪有用。
     for (const [k, v] of assets) {
@@ -2606,7 +2361,11 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     // 缩放按实测的 sourceHeight 归一（见 ENEMY_TYPES 顶部注释）
     // 第 107 块：程序化怪（收件人）没有骨架，走普通 clone —— 它本来就是
     // 一堆 Mesh，材质在下面 traverse 里照旧各自 clone（受击闪白才不连坐）。
-    const model = src.proc ? src.scene.clone(true) : cloneSkinned(src.scene);
+    // 第 123 块：四只程序化怪换成 glb 后，`proc` 标记没了。
+    // 没有骨骼的静态 glb（道具类）走普通 clone，有骨架的走 SkeletonUtils ——
+    // 用 clips 是否为空来判断，比维护一份 proc 白名单可靠。
+    const hasSkeleton = !!(src.clips && Object.keys(src.clips).length);
+    const model = hasSkeleton ? cloneSkinned(src.scene) : src.scene.clone(true);
     // opts.scale：同一个模型可以按实例缩放（第 53 块，菌王的四个卫队用 0.7）——
     // 只改这一只，不动 ENEMY_TYPES 里 warrior 本体的身高（第一关还在用）。
     const scaleMul = opts.scale ?? 1;
@@ -2883,6 +2642,10 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     // 第 80 块：sway 要转的是 pivot（几何中心），不是 model 本身
     e.modelPivot = pivot !== model ? pivot : null;
 
+    // 第 123 块：平摊的模型前倾（和图鉴 buildPreviewModel 里的同一行保持一致）。
+    // 只转 x 轴：y 是朝向（root 管），z 是呼吸摆动（updateOne 管），三者不打架。
+    if (cfg.tiltX) (e.modelPivot || e.model).rotation.x = cfg.tiltX;
+
     // 出生：先播从地里钻出来的动画
     bar.draw(1, maxHp, maxHp);
     e.currentAnim = cfg.anim.spawn;
@@ -2948,6 +2711,10 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
   // opts:
   //   dot   中毒跳伤 —— 不闪白、绿色小字（每 0.5 秒一次，别和普攻特效混在一起）
   //   quiet 只扣血不播命中碎屑（连锁闪电等批量伤害用）
+  // 第 123 块：「立牌」的正面判定要读玩家在哪，而 takeDamage 拿不到 update 的 ctx ——
+  // 所以在 updateOne 里每帧记一份最近位置（只在同一次 update 内有效，够用了）。
+  let playerLast = { x: 0, z: 0 };
+
   function takeDamage(e, amount, crit = false, opts = {}) {
     if (!hittable(e)) return false;
     // 第 107 块：被收件人填名的怪 —— 免掉**一类**伤害（'phys' 物理 / 'elem' 元素）。
@@ -2979,7 +2746,24 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     //   auraArmor  —— 主祭霜牢环（第 28 块）
     //   shieldUp   —— 盾斧兽人举盾（第 29 块，举盾时减伤 70%）
     //   namedArmor —— 第九关称量官的「记名」叠层（第 82 块，每层 per.armor）
-    const red = Math.min(0.95, (e.auraArmor || 0) + (e.namedArmor || 0)
+    // 第 123 块：立牌的「正面护甲」—— 玩家还站在它朝向的 ±60° 里就打不动。
+    // 判定读 root.rotation.y（画面朝哪就判哪），和「画在这打在那」同源。
+    let faceArmor = 0;
+    if (e.cfg.faceGuard) {
+      const fdx = playerLast.x - e.pos.x;
+      const fdz = playerLast.z - e.pos.z;
+      if (Math.hypot(fdx, fdz) > 0.001) {
+        let d = Math.atan2(fdx, fdz) - e.root.rotation.y;
+        d = Math.atan2(Math.sin(d), Math.cos(d));
+        if (Math.abs(d) <= e.cfg.faceGuard.arc) faceArmor = e.cfg.faceGuard.reduce;
+      }
+    }
+    if (faceArmor > 0 && fx && !opts.quiet && !opts.dot) {
+      fx.text({ x: e.pos.x, z: e.pos.z }, '挡', {
+        color: '#ffe6a8', y: e.height * 0.85, size: 0.5,
+      });
+    }
+    const red = Math.min(0.95, (e.auraArmor || 0) + (e.namedArmor || 0) + faceArmor
       + (e.shieldUp && e.cfg.shield ? e.cfg.shield.reduce : 0));
     const dealt = (red > 0 ? amount * (1 - red) : amount);
     e.hp -= dealt;
@@ -3534,6 +3318,16 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
       const dz = ctx.playerPos.z - s.z;
       const hit = Math.hypot(dx, dz) <= s.r + ctx.playerRadius;
       const gone = s.life <= 0 || Math.hypot(s.x, s.z) > ctx.arenaRadius + 1.5;
+
+      // 第 123 块：纸立牌 —— 弹体每帧先问一句「飞到牌面上了吗」。
+      // 判定在**移动之后**（不然高速弹体会整格跨过薄牌），所以这一步必须在 hit 之前。
+      // 打在纸上炸成一朵纸屑：谁被挡下来的，一眼看得出来。
+      if (ctx.blockShot && ctx.blockShot(s.x, s.z)) {
+        if (fx) fx.burst({ x: s.x, z: s.z }, { color: 0xf2ead6, count: 10, speed: 2.0, life: 0.34, size: 0.11, y: s.y, up: 1.3, gravity: 4 });
+        scene.remove(s.mesh);
+        shots.splice(i, 1);
+        continue;
+      }
 
       if (hit) {
         ctx.hurtPlayer(s.dmg, null);
@@ -4489,11 +4283,11 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
       // 第 107 块：程序化的「收件人」是一张纸 —— 光上下呼吸会像贴在空中的贴图，
       // 再叠一层小幅的纸面翻动（绕 z 轴），看着才是「飘着的」。
       // ⚠️ 只转 z（纸面翻），不转 y：y 是朝向，root 已经朝玩家转好了。
-      if (e.cfg.proc) {
+      // 第 123 块：程序化模型换成了 glb（没有骨架动画），浮空物还是得自己摆一下，
+      // 否则就是一张贴图挂在半空。只转 z（面片翻动），不转 y —— y 是朝向，root 管。
+      if (e.cfg.name === '收件人' || e.cfg.name === '收账人') {
         const rig = e.modelPivot || e.model;
-        // 第 114 块：誊录员的笔杆由 handler 自己管（起手时往前压）—— 别在这里抢，
-        // 抢了就是每帧把 rotation.z 覆盖成呼吸值，写字动作永远看不出来。
-        if (e.cfg.proc !== 'quill') rig.rotation.z = Math.sin(e.t * 1.4 + e.driftPhase) * 0.16;
+        rig.rotation.z = Math.sin(e.t * 1.4 + e.driftPhase) * 0.16;
       }
     }
 
@@ -4696,8 +4490,20 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
 
     // 朝向玩家（平滑转身，避免瞬间打转）
     if (dist > 0.001) {
-      e.root.rotation.y = lerpAngle(e.root.rotation.y, Math.atan2(dx, dz), 1 - Math.exp(-9 * dt));
+      const targetYaw = Math.atan2(dx, dz);
+      if (e.cfg.turnRate) {
+        // 第 123 块：turnRate = 每秒最多转多少弧度。立牌 0.9，玩家绕圈 2.9 ——
+        // 追不上的那部分就是你绕到它背后的时间。
+        let d = targetYaw - e.root.rotation.y;
+        d = Math.atan2(Math.sin(d), Math.cos(d));
+        const max = e.cfg.turnRate * dt;
+        e.root.rotation.y += Math.abs(d) > max ? Math.sign(d) * max : d;
+      } else {
+        e.root.rotation.y = lerpAngle(e.root.rotation.y, targetYaw, 1 - Math.exp(-9 * dt));
+      }
     }
+    playerLast.x = ctx.playerPos.x;
+    playerLast.z = ctx.playerPos.z;
 
     // ---- 第七关 · 木鱼灵：吐追踪泡（第 82 块）----
     // 必须排在「巫师 spell」分支之前（见 handleBubbleCaster）。
@@ -4708,6 +4514,9 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
 
     // ---- 第九关 · 盖章人：抬印 / 落印（第 97 块）----
     if (e.cfg.seal) { handleStamper(e, dt, ctx, dx, dz, dist); return; }
+
+    // ---- 第十三关 · 取景的：举机取景 → 闪光（第 123 块）----
+    if (e.cfg.snap) { handleSnapCaster(e, dt, ctx, dx, dz, dist); return; }
 
     // ---- 第九关 · 称量官：给全场记账（第 82 块）----
     // 它没有 spell / projectile / volley，占不到「施法者」那条骨架，所以自己开一条。
@@ -5614,6 +5423,98 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
       e.currentAnim = e.cfg.anim.cast;
       e.play(e.cfg.anim.cast, { once: true, fade: 0.1, duration: e.cfg.attackDuration });
       spawnSeal(e, ctx);
+      return;
+    }
+    if (e.currentAnim !== e.cfg.anim.idle) {
+      e.currentAnim = e.cfg.anim.idle;
+      e.play(e.cfg.anim.idle, { fade: 0.2 });
+    }
+  }
+
+  // ============================================================
+  // 第十三关 · 取景的（第 123 块）：站定取景，读满就闪你一下
+  // ============================================================
+  // 节奏：进 7.5~12 格这个环带 → 举机对焦（1.5 秒前摇）→ 闪光。
+  // 判定只认**正前方 ±45°**，所以躲法只有一个字：侧移。走出取景框它就空拍，
+  // 空拍只冷却 2 秒（它会重新对焦），命中才走完整 4.6 秒。
+  // 和弓手的区别：弓手把红圈钉在地上（惩罚站着不动），取景的把锥子钉在自己朝向上
+  // （惩罚一直站在它对面）—— 两种「别站桩」的解法不一样。
+  function handleSnapCaster(e, dt, ctx, dx, dz, dist) {
+    const cfg = e.cfg.snap;
+    if (e.state === 'attack') {
+      // 读满这一帧：闪光 + 判定（只判一次，hitDone 那套字段没复用，改成自己的 snapDone）
+      if (!e.snapDone && e.t >= e.cfg.windup) {
+        e.snapDone = true;
+        e.snapHit = false;
+        let d = Math.atan2(dx, dz) - e.root.rotation.y;
+        d = Math.atan2(Math.sin(d), Math.cos(d));
+        const inFrame = Math.abs(d) <= cfg.arc && dist <= cfg.range;
+        // 第 123 块：纸立牌 —— 牌挡在中间就是「隔着纸板拍」，闪光被吃掉。
+        // 沿视线每 0.5 格问一次（牌只有 0.7 格厚，只在两端取点会整块漏过去）。
+        // 被挡算空拍（走 missCd 2 秒），所以挡一次 = 白賺 2 秒节奏，和躲开是一样的收益。
+        let shielded = false;
+        if (inFrame && ctx.blockShot) {
+          const steps = Math.max(3, Math.ceil(dist / 0.5));
+          for (let k = 1; k < steps; k++) {
+            const t = k / steps;
+            if (ctx.blockShot(e.pos.x + dx * t, e.pos.z + dz * t)) { shielded = true; break; }
+          }
+        }
+        if (fx) {
+          const px = e.pos.x + Math.sin(e.root.rotation.y) * 0.55;
+          const pz = e.pos.z + Math.cos(e.root.rotation.y) * 0.55;
+          fx.burst(new THREE.Vector3(px, 1.25, pz),
+            { color: cfg.color, count: 16, speed: 3.4, life: 0.26, size: 0.09, y: 1.25, up: 0.7 });
+        }
+        if (shielded && fx) {
+          // 纸屑从挡下的那块牌上崩开：玩家看得见「是牌子替我挨了这一下」
+          fx.burst({ x: e.pos.x + dx * 0.5, z: e.pos.z + dz * 0.5 },
+            { color: 0xf2ead6, count: 12, speed: 2.2, life: 0.36, size: 0.12, y: 1.4, up: 1.4, gravity: 4 });
+        }
+        if (inFrame && !shielded) {
+          e.snapHit = true;
+          ctx.hurtPlayer(e.cfg.damage, 'snap');
+        }
+      }
+      if (e.t >= e.cfg.attackDuration) {
+        e.state = 'chase';
+        e.t = 0;
+        e.snapDone = false;
+        // 空拍之后只等一会儿就重新对焦 —— 别让玩家觉得「躲掉一次赚翻了」
+        e.attackCd = e.snapHit ? cdOf(e, e.cfg.attackInterval, 1.0, true) : cfg.missCd;
+        e.snapHit = false;
+        e.currentAnim = e.cfg.anim.idle;
+        e.play(e.cfg.anim.idle, { fade: 0.18 });
+      }
+      return;
+    }
+
+    if (dist < e.cfg.keepDistance) {
+      moveToward(e, -dx, -dz, dist, dt, ctx);
+      if (e.currentAnim !== e.cfg.anim.walk) {
+        e.currentAnim = e.cfg.anim.walk;
+        e.play(e.cfg.anim.walk, { fade: 0.2 });
+      }
+      return;
+    }
+    if (dist > e.cfg.attackRange) {
+      moveToward(e, dx, dz, dist, dt, ctx);
+      if (e.currentAnim !== e.cfg.anim.walk) {
+        e.currentAnim = e.cfg.anim.walk;
+        e.play(e.cfg.anim.walk, { fade: 0.2 });
+      }
+      return;
+    }
+
+    e.attackCd -= dt;
+    if (e.attackCd <= 0) {
+      e.state = 'attack';
+      e.t = 0;
+      e.snapDone = false;
+      e.snapHit = false;
+      // 举机：朝向在这一刻就已经锁死（前摇期间它还会慢慢转，但转不快）
+      e.currentAnim = e.cfg.anim.cast;
+      e.play(e.cfg.anim.cast, { once: true, fade: 0.1, duration: e.cfg.attackDuration });
       return;
     }
     if (e.currentAnim !== e.cfg.anim.idle) {
@@ -6885,7 +6786,11 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     const namedBoost = 1 + (e.named || 0) * ((WEIGH() && WEIGH().per.speed) || 0);
     // 第 116 块：袋鼠的「加急」给移速（独立乘数，到期在 updateOne 摘掉）
     const hasteBoost = (e.hasted && e.hasted.speedMul) || 1;
-    const sp = e.speed * (e.slowT > 0 ? (1 - Math.min(0.9, e.slowFactor || 0)) : 1) * namedBoost * hasteBoost;
+    // 第 123 块：第十三关的环形跑道 —— 站上去的怪也更快（×1.25）。
+    // 只给玩家加速的话，最优解会退化成「永远绕着跑道跑」，这条带就没有意义了。
+    const trackBoost = (ctx && ctx.trackMul) ? ctx.trackMul(e.pos.x, e.pos.z) : 1;
+    const sp = e.speed * (e.slowT > 0 ? (1 - Math.min(0.9, e.slowFactor || 0)) : 1)
+      * namedBoost * hasteBoost * trackBoost;
     const step = sp * dt;
 
     // 曲线接近：把「指向玩家」的方向绕竖轴旋转一个随时间摆动的角度，

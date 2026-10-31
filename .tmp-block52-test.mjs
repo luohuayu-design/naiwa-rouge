@@ -58,18 +58,19 @@ const typeNames = TYPES.map(([k]) => k);
 // 第 107 块：第十关 +mirror / addressee / waiter / echo → 条目 25；
 //   收件人是**本作第一只没有 glb 的怪**（一张程序化的纸，enemy.js 的 cfg.proc 通道）
 //   → 有模型的 24 条，零复用不变。
-// 第 116 块：+加急袋鼠（程序化怪）→ 28 条，有模型的 24 条
-sec('一、28 只怪 · 零复用（有模型的每条一个独立模型）');
-ok(TYPES.length === 28, `怪物条目 28 只（实际 ${TYPES.length}）`);   // 第 97 块 +stamper，第 107 块 +4，第 114 块 +2，第 116 块 +1
+// 第 116 块：+加急袋鼠 → 28 条
+// 第 123 块：+立牌 / 取景的 → 30 条；**四只手搓的（收件人 / 誊录员 / 收账人 / 袋鼠）全换成下载资产**，
+//            从此「零个没模型的怪」—— 这条断言从「四只没有 glb」翻成「一只都没有」。
+sec('一、30 只怪 · 零复用（每条一个独立模型）');
+ok(TYPES.length === 30, `怪物条目 30 只（实际 ${TYPES.length}）`);   // 第 97 块 +stamper，第 107 块 +4，第 114 块 +2，第 116 块 +1，第 123 块 +2
 const noModel = TYPES.filter(([, t]) => !t.file);
-ok(noModel.length === 4 && noModel.map((x) => x[0]).sort().join() === 'addressee,clerk,collector,kangaroo',
-  '四只程序化怪：收件人（纸）/ 誊录员（羽笔）/ 收账人（账簿）/ 袋鼠（黄外套）', noModel.map((x) => x[0]).join(','));
+ok(noModel.length === 0, '没有一只怪缺 glb（第 123 块起彻底告别手搓模型）', noModel.map((x) => x[0]).join(','));
 const files = TYPES.map(([, t]) => t.file).filter(Boolean);
 ok(files.every((f) => typeof f === 'string' && f.startsWith('assets/monsters/')), '有模型的都写了 assets/monsters/ 下的路径');
 const dupFiles = files.filter((f, i) => files.indexOf(f) !== i);
 // 第 97 块起称量官也换了模型，历史上有意复用（无名者 / 旗手 / 称量官）已全部消除
 const ALLOWED_DUP = new Set([]);
-ok(dupFiles.every((f) => ALLOWED_DUP.has(f)) && new Set(files).size === 24,
+ok(dupFiles.every((f) => ALLOWED_DUP.has(f)) && new Set(files).size === 30,
   `${files.length} 条目 / ${new Set(files).size} 文件，零复用`,
   `重复：${dupFiles.join(', ')}`);
 const names = TYPES.map(([, t]) => t.name);
@@ -79,13 +80,17 @@ for (const k of ['minion', 'warrior', 'archer', 'bowman']) {
   ok(ENEMY_TYPES[k].file.includes('skeleton-'), `${k} 仍是 KayKit 骷髅（${ENEMY_TYPES[k].file.split('/').pop()}）`);
 }
 
+// 第 123 块：静态道具模型（一张纸 / 一支笔 / 一本摊开的书 / 一块牌子 / 一台三脚架相机）
+// 几何本来就极简，slip.glb 只有 3.4KB —— 门槛按「静态 2KB / 带骨架 8KB」分两档。
+const STATIC_MODELS = new Set(['arc', 'addressee', 'clerk', 'collector', 'kangaroo', 'standee', 'camera']);
 sec('二、模型文件真的在，且是合法 glb');
 for (const [k, t] of TYPES) {
-  if (!t.file) continue;   // 第 107 块：收件人没有 glb
   const abs = path.join(ROOT, t.file);
   ok(fs.existsSync(abs), `${k} 文件存在（${t.file.split('/').pop()}）`);
   if (!fs.existsSync(abs)) continue;
-  ok(fs.statSync(abs).size > 8 * 1024, `${k} 体积不像空壳（${(fs.statSync(abs).size / 1024).toFixed(0)}KB）`);
+  const minKB = STATIC_MODELS.has(k) ? 2 : 8;
+  ok(fs.statSync(abs).size > minKB * 1024,
+    `${k} 体积不像空壳（${(fs.statSync(abs).size / 1024).toFixed(0)}KB > ${minKB}KB）`);
 }
 
 sec('三、动作名对得上（clipOverrides 不许抄错）');
@@ -97,8 +102,11 @@ for (const [k, t] of TYPES) {
   const clips = glbClipNames(abs);
   // 第 75 块：并联体（arc）用的是 Kenney 的静态网格，本来就没有骨骼动画，
   // 它的「活着」靠程序化悬停 + 电弧抖动（见 updateOne 的 cfg.spin 分支）。
-  if (k === 'arc') {
-    ok(clips.length === 0, `${k} 是静态模型（0 段动画，靠程序化浮空）`, String(clips.length));
+  // 第 123 块：换来的五只下载资产同样是**静态道具模型**（没有骨架），
+  // 它们的「活着」靠 root 上的程序化摆动（见 spawn 里按名字挂的浮动）——
+  // 所以这几只断言改成「0 段动画 + 不能挂 clipOverrides」。
+  if (STATIC_MODELS.has(k)) {
+    ok(clips.length === 0, `${k} 是静态模型（0 段动画，靠程序化动作）`, String(clips.length));
   } else {
     ok(clips.length >= 3, `${k} 模型自带动画 ≥3 段（${clips.length} 段）`);
   }

@@ -8,7 +8,7 @@
 // 两套配色集中在 THEMES 里，buildNightScene({ theme }) 建哪套，
 // 局中要换就调返回的 setTheme('crypt')（不改几何，只改颜色和贴图）。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=139';
+import * as THREE from '../lib/three.module.js?v=140';
 
 export const THEMES = {
   // 第一关 · 荒草地：冷月光 + 青绿边圈 + 萤火虫
@@ -194,6 +194,22 @@ export const THEMES = {
     tuft: 0x3a362c, tuftVisible: true,      // 路边枯草还立着
     fly: 0xffe08a, flyCount: 88,            // 飘着的车灯尘 / 飞蛾
     ground: 'highway',
+  },
+  // 第十三关 · 焦土操场（第 123 块）：夜里被烧过一次的大学操场。
+  // 配色思路：足球场的草早烧没了，只剩干土与塑胶跑道的红渣；
+  // 主光是球场上那两盏钠灯（暖橙），所以 rim/edge 都压成橙 ——
+  // 和第十二关的「公路黄」是同一家人，但明显更暗、更旧。
+  campus: {
+    bg: 0x0a0e13,
+    fog: 0x1a2027, fogDensity: 0.0140,
+    hemiSky: 0x8e9cae, hemiGround: 0x1a1410, hemiIntensity: 1.30,
+    moon: 0xdfe8f4, moonIntensity: 2.86, moonBase: 2.68,
+    rim: 0x9a5a2a, rimIntensity: 0.72,      // 远处还在冒烟的焦土
+    edge: 0xffc46a, edgeOpacity: 0.30,      // 钠灯的橙
+    stone: 0x2c3238,
+    tuft: 0x3a4432, tuftVisible: true,      // 跑道边的野草还活着
+    fly: 0xffd08a, flyCount: 80,            // 灯下的飞蛾
+    ground: 'campus',
   },
 };
 
@@ -522,6 +538,73 @@ export function buildNightScene({ arenaRadius = 15, theme = 'meadow' } = {}) {
 // ------------------------------------------------------------
 // 地面贴图：按主题选一套（都平铺 16×16）
 // ------------------------------------------------------------
+// 焦土操场（第 123 块）：干裂的土 + 塑胶跑道的红渣。
+// 三层：① 土底（灰褐，比公路暖）；② 裂缝（细长、分叉，操场被烧过之后地会裂）；
+// ③ 红渣点（跑道的碎片，散得到处都是 —— 这块地以前是个操场）。
+function makeCampusTexture() {
+  const S = 512;
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = S;
+  const g = cv.getContext('2d');
+
+  g.fillStyle = '#2a2620';
+  g.fillRect(0, 0, S, S);
+
+  let seed = 123123;
+  const rnd = () => {
+    seed = (seed * 1103515245 + 12345) % 2147483648;
+    return seed / 2147483648;
+  };
+
+  // ① 土粒：暖灰的细点，让地面有颗粒感
+  for (let i = 0; i < 2400; i++) {
+    const x = rnd() * S, y = rnd() * S;
+    g.fillStyle = `rgba(${52 + rnd() * 26 | 0},${46 + rnd() * 22 | 0},${36 + rnd() * 18 | 0},${0.07 + rnd() * 0.13})`;
+    g.beginPath(); g.arc(x, y, 0.3 + rnd() * 1.0, 0, Math.PI * 2); g.fill();
+  }
+
+  // ② 裂缝：又细又长，带一点分叉
+  g.lineCap = 'round';
+  for (let i = 0; i < 34; i++) {
+    let x = rnd() * S, y = rnd() * S;
+    let ang = rnd() * Math.PI * 2;
+    g.strokeStyle = `rgba(14,12,10,${0.22 + rnd() * 0.22})`;
+    g.lineWidth = 0.8 + rnd() * 1.4;
+    g.beginPath();
+    g.moveTo(x, y);
+    const segs = 4 + (rnd() * 6 | 0);
+    for (let k = 0; k < segs; k++) {
+      ang += (rnd() - 0.5) * 0.9;
+      x += Math.cos(ang) * (8 + rnd() * 16);
+      y += Math.sin(ang) * (8 + rnd() * 16);
+      g.lineTo(x, y);
+    }
+    g.stroke();
+  }
+
+  // ③ 红渣：塑胶跑道的碎屑（这一片以前是操场）
+  for (let i = 0; i < 520; i++) {
+    const x = rnd() * S, y = rnd() * S;
+    const r = 0.7 + rnd() * 1.8;
+    g.fillStyle = `rgba(${120 + rnd() * 40 | 0},${52 + rnd() * 24 | 0},${40 + rnd() * 20 | 0},${0.16 + rnd() * 0.22})`;
+    g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+  }
+
+  // ④ 一道褪色的白线：留下的跑道分道线残影
+  g.strokeStyle = 'rgba(210,200,180,0.10)';
+  g.lineWidth = 5;
+  g.beginPath();
+  g.moveTo(0, S * 0.34);
+  g.lineTo(S, S * 0.34);
+  g.stroke();
+
+  const tex = new THREE.CanvasTexture(cv);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(16, 16);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
 function makeGroundTexture(kind) {
   if (kind === 'crypt') return makeCryptTexture();
   if (kind === 'ash') return makeAshTexture();
@@ -534,6 +617,7 @@ function makeGroundTexture(kind) {
   if (kind === 'welltop') return makeWelltopTexture();
   if (kind === 'fogfield') return makeFogfieldTexture();
   if (kind === 'highway') return makeHighwayTexture();
+  if (kind === 'campus') return makeCampusTexture();
   return makeGrassTexture();
 }
 

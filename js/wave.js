@@ -585,7 +585,7 @@ export const LEVEL_8 = {
     { minion: 4, warrior: 3, archer: 2, bowman: 2, leaper: 1, wraith: 0, shielder: 0, brood: 0, mender: 0, reboot: 0, charger: 0, gap: 0.72, tip: '输对了柜里的牌子全被取走 —— 趁场上没几只的时候按' },
     { minion: 4, warrior: 3, archer: 3, bowman: 2, leaper: 2, wraith: 0, shielder: 1, brood: 0, mender: 0, reboot: 0, charger: 0, gap: 0.70, tip: '面板不暂停游戏：按键盘的时候怪还在往你身上走' },
     { minion: 5, warrior: 3, archer: 3, bowman: 2, leaper: 2, wraith: 1, shielder: 1, brood: 0, mender: 0, reboot: 0, charger: 0, gap: 0.66, tip: '输错或超时只是白跑一趟，牌子还在柜里，3 秒后能再按' },
-    { minion: 5, warrior: 3, archer: 3, bowman: 2, leaper: 2, wraith: 1, shielder: 2, brood: 0, mender: 1, reboot: 0, charger: 0, gap: 0.62, tip: '攒满 8 块会**当场封柜** —— 到那一刻就再也清不掉了' },
+    { minion: 5, warrior: 3, archer: 3, bowman: 2, leaper: 2, wraith: 1, shielder: 2, brood: 0, mender: 1, reboot: 0, charger: 0, gap: 0.62, tip: '攒满 8 块会当场封柜 —— 到那一刻就再也清不掉了' },
     // ---- 第三幕（R9~R13）：看守 ----
     { minion: 5, warrior: 3, archer: 3, bowman: 3, leaper: 2, wraith: 1, shielder: 2, brood: 1, mender: 1, reboot: 0, charger: 0, gap: 0.60, tip: '封柜 5 秒后柜门打开：寄存处看守会自己走出来' },
     { minion: 6, warrior: 3, archer: 3, bowman: 3, leaper: 3, wraith: 2, shielder: 2, brood: 1, mender: 1, reboot: 1, charger: 0, gap: 0.58, tip: '看守有五套攻击：贴脸横扫、中距砸地、正面扇形牌雨、远处拐弯投牌，还会砸柜放小怪' },
@@ -904,10 +904,90 @@ export const LEVEL_12 = {
   ],
 };
 
+// ============================================================
+// 第十三关「焦土操场」（第 123 块）
+// ============================================================
+// 剧情接 s13「流动的那块牌子」：焦土东边那片废墟，招牌上还留着一半字 —— 大学城。
+// 操场上没有灯，但有人在跑：四个穿校服的人抬着一块两米高的牌子来回搬、拍照、再搬走。
+// 牌子上画的是你，黄色、圆肚子、咧着嘴大笑。
+//
+// **这一关的场地机制是「环形跑道」**（用户 2026-10-31 定案，从三个方案里挑的 B）：
+//   场地中间套一条塑胶跑道，站上去自己移速 ×1.35、带 0.42 格/秒的切向推力；
+//   **怪站上去也 ×1.25**。两边一起抬是刻意的 —— 只给玩家就退化成
+//   「永远绕着跑道跑圈」的永动机，两边一起抬之后它的意义是**换一种走位**：
+//   你在这条带上更快，但敌人也会从切线方向抄近路堵你。
+//   推力做得很轻（约移速的一成）：单摇杆最怕「场地跟摇杆抢方向」。
+//
+// 它和前面关卡的关系：第六关是「固定地板不许站」，第十关是「中间有个洞」，
+// 第十一关是「看不见」，第十二关是「车流横穿、要把怪送进车道」。
+// 这一关把压力搬到了「**速度差**」上 —— 全场唯一一块让你变快的地，
+// 也是唯一一块让怪变快的地。
+//
+// 数值：用户定案「抬一档」—— hpMul 1.60 / dmgMul 1.95（第十二关 1.55 / 1.85）。
+export const LEVEL_13 = {
+  id: 13,
+  name: '第十三关 · 焦土操场',
+  theme: 'campus',          // 夜里的操场：干裂土 + 跑道红渣 + 钠灯暖橙
+  arena: 19.5,              // 比驿站大一点：跑道占掉中段，外圈还得留得下跑动
+  order: [
+    ['minion', 1], ['warrior', 1.6], ['standee', 1.9],
+    ['archer', 2.0], ['bowman', 2.2], ['leaper', 2.3],
+    ['wraith', 2.4], ['shielder', 2.5], ['brood', 2.6],
+    ['charger', 2.7], ['mender', 2.8], ['reboot', 2.9],
+    ['camera', 3.0], ['hexer', 3.1], ['clerk', 3.3], ['addressee', 3.5],
+  ],
+  spawnRadius: 17.0,
+  spawnJitter: 0.5,
+  minPlayerDistance: 7.6,
+  minSpawnGap: 2.4,
+  gapScale: 1.12,
+  gap: 2.6,
+  upgradeAfter: [1, 2, 3, 4, 5, 8, 10, 12, 15, 17, 19, 20],
+  shopAfter: [3, 6, 9, 12, 15, 18],
+  weaponAt: 4,
+  scale: { hp: 0.34, damage: 0.20, speed: 0.045, haste: 0.0110, curve: 0.28, hpMul: 1.60, dmgMul: 1.95 },
+  // 跑道：见 js/track.js。arena 变了这里要跟着改（跑道不会长到场外）。
+  track: {
+    inner: 5.4,
+    outer: 7.6,
+    playerMul: 1.35,
+    enemyMul: 1.25,
+    push: 0.42,
+    dir: 1,
+  },
+  rounds: [
+    // ---- 第一幕（R1~R4）：跑道 + 立牌 ----
+    { minion: 4, warrior: 1, standee: 0, archer: 0, bowman: 0, leaper: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, reboot: 0, hexer: 0, addressee: 0, clerk: 0, charger: 0, camera: 0, gap: 0.86, tip: '操场上有一圈跑道。站上去你会跑得更快 —— 怪站上去也更快，别把它当安全区' },
+    { minion: 4, warrior: 2, standee: 1, archer: 0, bowman: 0, leaper: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, reboot: 0, hexer: 0, addressee: 0, clerk: 0, charger: 0, camera: 0, gap: 0.80, tip: '新面孔·立牌：正面挡掉七成五的伤害，但它转身很慢 —— 绕着它走两步，从侧后方打' },
+    { minion: 5, warrior: 2, standee: 1, archer: 0, bowman: 1, leaper: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, reboot: 0, hexer: 0, addressee: 0, clerk: 0, charger: 0, camera: 0, gap: 0.76, tip: '牌子上画的是你：黄色、圆肚子、咧着嘴笑。它举着的不是你' },
+    { minion: 5, warrior: 2, standee: 1, archer: 0, bowman: 1, leaper: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, reboot: 0, hexer: 0, addressee: 0, clerk: 0, charger: 0, camera: 1, gap: 0.72, tip: '新面孔·取景的：举机对焦一秒半，只拍正前方。往侧面走，走出它的取景框' },
+    // ---- 第二幕（R5~R8）：拍照与冲锋 ----
+    { minion: 5, warrior: 3, standee: 1, archer: 0, bowman: 1, leaper: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, reboot: 0, hexer: 0, addressee: 0, clerk: 0, charger: 1, camera: 1, gap: 0.70, tip: '冲锋蛮牛会撞倒立牌：牌倒了那一瞬间，正面的护甲也没了' },
+    { minion: 6, warrior: 3, standee: 2, archer: 1, bowman: 1, leaper: 0, wraith: 0, shielder: 0, brood: 0, mender: 0, reboot: 0, hexer: 0, addressee: 0, clerk: 0, charger: 1, camera: 1, gap: 0.68, tip: '两只立牌别背对着打：它们的护甲只看自己的朝向，不看你的站位' },
+    { minion: 6, warrior: 3, standee: 2, archer: 2, bowman: 1, leaper: 1, wraith: 0, shielder: 0, brood: 0, mender: 0, reboot: 0, hexer: 0, addressee: 0, clerk: 0, charger: 1, camera: 2, gap: 0.66, tip: '两台机器一起取景：它们不会互相协调，所以总有一只的角度是空的' },
+    { minion: 6, warrior: 4, standee: 2, archer: 2, bowman: 2, leaper: 1, wraith: 0, shielder: 1, brood: 0, mender: 0, reboot: 0, hexer: 0, addressee: 0, clerk: 0, charger: 1, camera: 2, gap: 0.64, tip: '跑道不是安全区，是加速带：想甩开追兵就往上面跑，想被围住也一样' },
+    // ---- 第三幕（R9~R12）：墨与单子 ----
+    { minion: 6, warrior: 4, standee: 2, archer: 2, bowman: 2, leaper: 2, wraith: 1, shielder: 1, brood: 0, mender: 0, reboot: 0, hexer: 0, addressee: 0, clerk: 0, charger: 2, camera: 2, gap: 0.62, tip: '跑道上的速度差在雾鬼身上最明显：它隐身时追不上你，一显形就在你背后' },
+    { minion: 7, warrior: 4, standee: 2, archer: 2, bowman: 2, leaper: 2, wraith: 1, shielder: 1, brood: 0, mender: 1, reboot: 0, hexer: 0, addressee: 0, clerk: 1, charger: 2, camera: 2, gap: 0.60, tip: '誊录员回来了：它的墨线会横切跑道，站在墨上再借跑道的速度，等于自己往刀上撞' },
+    { minion: 7, warrior: 4, standee: 3, archer: 3, bowman: 2, leaper: 2, wraith: 2, shielder: 1, brood: 0, mender: 1, reboot: 0, hexer: 0, addressee: 1, clerk: 1, charger: 2, camera: 2, gap: 0.58, tip: '收件人给别的怪填名字：白框的那只免疫你某一类伤害 —— 换一类，或者先拆单子' },
+    { minion: 7, warrior: 5, standee: 3, archer: 3, bowman: 3, leaper: 2, wraith: 2, shielder: 2, brood: 1, mender: 1, reboot: 1, hexer: 0, addressee: 1, clerk: 1, charger: 3, camera: 2, gap: 0.56, tip: '第 12 回合：看台那边有人在鼓掌，但场上一个人也没有' },
+    // ---- 第四幕（R13~R16）：操场挤满 ----
+    { minion: 8, warrior: 5, standee: 3, archer: 3, bowman: 3, leaper: 3, wraith: 2, shielder: 2, brood: 1, mender: 1, reboot: 1, hexer: 0, addressee: 1, clerk: 2, charger: 3, camera: 3, gap: 0.54, tip: '立牌 + 取景的：一个逼你绕后，一个逼你侧移 —— 这两件事方向正好相反' },
+    { minion: 8, warrior: 5, standee: 3, archer: 3, bowman: 3, leaper: 3, wraith: 3, shielder: 2, brood: 2, mender: 2, reboot: 1, hexer: 1, addressee: 1, clerk: 2, charger: 3, camera: 3, gap: 0.52, tip: '被拍到不疼，但你会立刻被三只盯着 —— 这就是取景的作用' },
+    { minion: 9, warrior: 6, standee: 4, archer: 4, bowman: 3, leaper: 3, wraith: 3, shielder: 2, brood: 2, mender: 2, reboot: 2, hexer: 1, addressee: 2, clerk: 2, charger: 3, camera: 3, gap: 0.50, tip: '四块牌子立着的时候，跑道就成了唯一的开阔地 —— 也是四条腿一起追你的地方' },
+    { minion: 9, warrior: 6, standee: 4, archer: 4, bowman: 4, leaper: 4, wraith: 3, shielder: 3, brood: 2, mender: 2, reboot: 2, hexer: 1, addressee: 2, clerk: 2, charger: 4, camera: 4, gap: 0.48, tip: '第 16 回合：那块牌子被搬到跑道上了，正对着你' },
+    // ---- 第五幕（R17~R20）：门前 ----
+    { minion: 10, warrior: 6, standee: 4, archer: 4, bowman: 4, leaper: 4, wraith: 4, shielder: 3, brood: 2, mender: 2, reboot: 2, hexer: 2, addressee: 2, clerk: 3, charger: 4, camera: 4, gap: 0.46, tip: '三支笔一起划：跑道上会全是墨，这一次别借它的速度' },
+    { minion: 10, warrior: 7, standee: 5, archer: 5, bowman: 4, leaper: 4, wraith: 4, shielder: 3, brood: 2, mender: 2, reboot: 2, hexer: 2, addressee: 2, clerk: 3, charger: 4, camera: 4, gap: 0.44, tip: '五块牌子：这一波先清取景的，它不解决，你的走位永远被拍到' },
+    { minion: 11, warrior: 7, standee: 5, archer: 5, bowman: 5, leaper: 5, wraith: 4, shielder: 3, brood: 2, mender: 2, reboot: 3, hexer: 2, addressee: 3, clerk: 3, charger: 5, camera: 5, gap: 0.42, tip: '倒数第二波：他们在操场尽头把牌子放下了，然后退开、掏出手机' },
+    { minion: 11, warrior: 8, standee: 5, archer: 5, bowman: 5, leaper: 5, wraith: 5, shielder: 4, brood: 2, mender: 2, reboot: 3, hexer: 2, addressee: 3, clerk: 3, charger: 5, camera: 5, gap: 0.40, tip: '最后一波：你站在牌子旁边比了比 —— 它比你更圆，笑得更开' },
+  ],
+};
+
 // 关卡号 → 关卡表（主流程 / 选关 / 测试都从这里取）
 export const LEVELS_BY_ID = {
   1: LEVEL_1, 2: LEVEL_2, 3: LEVEL_3, 4: LEVEL_4, 5: LEVEL_5, 6: LEVEL_6, 7: LEVEL_7, 8: LEVEL_8,
-  9: LEVEL_9, 10: LEVEL_10, 11: LEVEL_11, 12: LEVEL_12,
+  9: LEVEL_9, 10: LEVEL_10, 11: LEVEL_11, 12: LEVEL_12, 13: LEVEL_13,
 };
 
 // 第 roundNo 回合（从 1 开始）的怪物属性倍率

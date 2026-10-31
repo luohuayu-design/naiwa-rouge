@@ -73,7 +73,8 @@ sec('② 新怪「加急袋鼠」');
 const K = E.ENEMY_TYPES.kangaroo;
 ok(!!K, 'ENEMY_TYPES.kangaroo 存在');
 ok(K && K.name === '加急袋鼠', `名字 = ${K && K.name}`);
-ok(K && K.proc === 'kangaroo', '程序化模型 proc = kangaroo（零资产）');
+// 第 123 块：袋鼠改用 Poly by Google 的 Kangaroo（不再是程序化模型）
+ok(K && !K.proc && /^assets\/monsters\/.+\.glb$/.test(K.file || ''), `袋鼠用下载的 glb（${K && K.file}）`);
 ok(K && K.damage === 0, '它自己一下都不打人（damage 0）');
 ok(K && K.keepDistance === 4.5, '保持中距离（keepDistance 4.5）');
 ok(K && K.rush && K.rush.time === 6.0, '加急持续 6 秒');
@@ -128,7 +129,7 @@ const cardStats = latteCards.map((u) => u.latte.stat);
 ok(['duration', 'radius', 'haste', 'slow', 'cd', 'radius'].every((s) => cardStats.includes(s)),
   '六通道齐全（持续/半径/攻速/减速/冷却/传说）');
 // 第 118 块：卡池 93 + 拿铁 6 + 守夜烛 5 + 落款 5 = 109
-ok(U.UPGRADES.length === 109, `卡池 109 张（93 + 6 + 10，实 ${U.UPGRADES.length}）`);
+ok(U.UPGRADES.length === 113, `卡池 113 张（93 + 6 + 10 + 4，实 ${U.UPGRADES.length}）`);
 const buyLatte = S.SHOP_ITEMS.find((i) => i.id === 'buyLatte');
 const buyFoam = S.SHOP_ITEMS.find((i) => i.id === 'buyLatteFoam');
 const buyThermos = S.SHOP_ITEMS.find((i) => i.id === 'buyLatteThermos');
@@ -137,7 +138,7 @@ ok(!!buyFoam && buyFoam.type === 'latte' && buyFoam.latte === 'foam', '商店一
 ok(!!buyThermos && buyThermos.type === 'latte' && buyThermos.latte === 'thermos', '商店一次性强化「保温杯」');
 ok(buyLatte.needLevel === 12, '第十二关起上架');
 // 第 118 块：31 + 拿铁 3 + 守夜烛 / 落款 6 = 40
-ok(S.SHOP_ITEMS.length === 40, `商店货 40 件（31 + 3 + 6，实 ${S.SHOP_ITEMS.length}）`);
+ok(S.SHOP_ITEMS.length === 43, `商店货 43 件（31 + 3 + 6 + 3，实 ${S.SHOP_ITEMS.length}）`);
 ok(S.SHOP_PINNED[9].includes('buyLatte'), '第 9 回合商店常驻摆拿铁');
 
 // ============================================================

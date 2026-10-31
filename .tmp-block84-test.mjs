@@ -58,7 +58,7 @@ ok(seal && seal.coinPer === 10, '每挡回 10 块牌子换一枚骨币', seal &&
 ok(seal && seal.desc.length === 3, '三级各有一段说明', seal && String(seal.desc.length));
 ok(seal && seal.desc[0].includes('34%') && seal.desc[1].includes('22%') && seal.desc[2].includes('13%'),
   '说明里的数字与概率表对得上', seal && seal.desc.join(' | '));
-ok(Object.keys(RELIC_DEFS).length === 14, '法器一共 14 件（第 107 块 +傀儡术 / 第 114 块 +墨丸 / 第 116 块 +拿铁 / 第 118 块 +守夜烛 / +落款）', Object.keys(RELIC_DEFS).join(','));
+ok(Object.keys(RELIC_DEFS).length === 15, '法器一共 15 件（第 107 块 +傀儡术 / 第 114 块 +墨丸 / 第 116 块 +拿铁 / 第 118 块 +守夜烛 / +落款 / 第 123 块 +纸立牌）', Object.keys(RELIC_DEFS).join(','));
 ok(/levels\.seal = 0;/.test(relicsSrc), 'reset() 会把铃清回 0 级');
 ok(/cds\.seal = 0;/.test(relicsSrc), '冷却表也带 seal（和其余法器保持一致）');
 ok(/if \(kind === 'seal'\) sealGroup\.visible = true;/.test(relicsSrc), 'buy 之后腰侧的铃显示出来');

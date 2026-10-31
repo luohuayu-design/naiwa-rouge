@@ -1589,7 +1589,7 @@ export const STORY_CHAPTERS = [
   },
 
   {
-    id: 's13', no: 13, act: 3, levelId: null, atRound: null,
+    id: 's13', no: 13, act: 3, levelId: 13, atRound: 2,   // 第 123 块：接第十三关「焦土操场」
     icon: '🪧', title: '流动的那块牌子', who: '搬牌子的学生', place: '焦土大学城',
     story:
       '焦土东边有一片废墟，招牌上还留着一半字：大学城。\n'

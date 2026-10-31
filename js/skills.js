@@ -32,7 +32,7 @@
 //
 // ctx 由 main.js 每帧拼好传进来：{ playing, weapon, playerPos, stats, coins }
 // ============================================================
-import audio from './audio.js?v=139';
+import audio from './audio.js?v=140';
 
 // 冷却数字统一两位小数（第 64 块用户需求：倒计时精确到两位小数）。
 // 不补零会跳字（3.4 → 3.35 期间宽度变化），toFixed(2) 宽度恒定。
@@ -356,6 +356,53 @@ export const SKILLS = [
     press(ctx) {
       if (!ctx.mark) return false;
       return ctx.mark.press(ctx.playerPos);   // 场上没怪：返回 false，不播音效
+    },
+  },
+
+  // ---- 第 15 件法器「纸立牌」（第 123 块，第十三关专属） ----
+  // 第十三关的场地是环形跑道（站上去加速、怪也加速），远程怪满地跑；
+  // 「纸立牌」给的是**空间**上的解法：预判弹道从哪来，提前把牌挡在那儿。
+  // 和立牌怪（正面减伤）同源不同用 —— 那只是怪，这只是你手里的墙。
+  {
+    id: 'board',
+    name: '纸立牌',
+    // 内联 SVG：一块斜靠的纸板 + 一根支脚 + 几道弹道被挡下的火花
+    art: '<svg viewBox="0 0 40 40" aria-hidden="true">'
+      + '<rect x="10" y="9" width="20" height="21" rx="1.6" fill="#f2ead6"/>'
+      + '<rect x="10" y="9" width="20" height="21" rx="1.6" fill="none" stroke="#b9a479" stroke-width="1.4"/>'
+      + '<path d="M14 15 h12 M14 19.5 h9 M14 24 h7" stroke="#c9b48c" stroke-width="1.6" stroke-linecap="round"/>'
+      + '<path d="M20 30 v6" stroke="#8a7248" stroke-width="2.4" stroke-linecap="round"/>'
+      + '<path d="M6 13 l4 2 M34 13 l-4 2" stroke="#ffd79b" stroke-width="1.6" stroke-linecap="round" opacity=".85"/>'
+      + '</svg>',
+    ring: true,
+    hint: '在身前立一块纸牌：挡掉穿过它的敌方投掷物与「取景的」的闪光。持续 6 秒、冷却 26 秒',
+    key: '9',
+    cd: 26.0,
+    cdNow: (ctx) => (ctx.board ? ctx.board.cdMax : 26.0),
+    desc: '纸立牌：按一下在身前 2 格立起一块纸板，持续 6 秒。'
+      + '穿过它的敌方投掷物（骨刀这类飞行弹道）会被挡下来，撞在纸上炸成一朵纸屑；'
+      + '「取景的」隔着纸板按快门，闪光也会被吃掉（算它空拍）。'
+      + '冷却 26 秒；法器三级能一次立两块（正前一块、侧面一块）。'
+      + '它不给你伤害也不给你护甲，给你的是位置：知道这一下会从哪来，就把牌立在那儿。',
+    unlockNote: '夜行商店买到「纸立牌」（第十三关起上架）后拥有',
+    visible: (ctx) => ctx.playing && !!ctx.board && ctx.board.owned,
+    state: (ctx) => {
+      if (!ctx.board || !ctx.board.owned) return 'lock';
+      if (ctx.board.count >= ctx.board.cap) return 'full';
+      return ctx.board.ready ? 'ready' : 'cd';
+    },
+    ready: (ctx) => !!ctx.board && ctx.board.owned && ctx.playing && ctx.board.ready,
+    progress: (ctx) => (ctx.board ? ctx.board.progress : 0),
+    cdText: (ctx) => {
+      if (!ctx.board || !ctx.board.owned) return '';
+      if (ctx.board.count >= ctx.board.cap) return '满';
+      return ctx.board.ready ? '' : fmtCd(ctx.board.cdLeft);
+    },
+    press(ctx) {
+      if (!ctx.board) return false;
+      // 朝向拿不到就按 +Z 立（不至于让按键完全没反应）
+      const yaw = ctx.playerYaw ? ctx.playerYaw() : 0;
+      return ctx.board.drop(ctx.playerPos, yaw);
     },
   },
 

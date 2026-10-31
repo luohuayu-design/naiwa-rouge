@@ -34,15 +34,15 @@
 //       五种元素共用同一模型，克隆后改材质 color/emissive 染色区分；
 //       图标用 assets/weapons/icon-*.svg。加载失败时用双盒拼占位剑。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=139';
-import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=139';
-import { withV } from './assetUrl.js?v=139';   // 第 80 块：glb 带版本号，SW 才走缓存优先
-import { SWORD_KINDS, KIND_ORDER } from './swordKinds.js?v=139';
-import { rollSwordDamage } from './weaponStats.js?v=139';
-import audio from './audio.js?v=139';
+import * as THREE from '../lib/three.module.js?v=140';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=140';
+import { withV } from './assetUrl.js?v=140';   // 第 80 块：glb 带版本号，SW 才走缓存优先
+import { SWORD_KINDS, KIND_ORDER } from './swordKinds.js?v=140';
+import { rollSwordDamage } from './weaponStats.js?v=140';
+import audio from './audio.js?v=140';
 // 第 106 块：环剑命中数 / 累计伤害两条成就的记账。
 // profile.js 不反向依赖 weapon.js，这里加导入不会成环。
-import { bumpStat } from './profile.js?v=139';
+import { bumpStat } from './profile.js?v=140';
 
 // 轨道半径（世界单位）：贴着主角攻击范围环内侧转，视觉上「护体剑气」
 const ORBIT_R = 1.7;
