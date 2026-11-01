@@ -47,7 +47,12 @@ ok('wave.js 导出 levelTypes', /export function levelTypes/.test(waveSrc));
 ok('enemy.js 暴露 loaded()', /loaded: \(\) => \[\.\.\.assets\.keys\(\)\]/.test(enemySrc));
 ok('main.js 引入 levelTypes', /levelTypes/.test(mainSrc.slice(0, 3000)));
 ok('main.js 引入 ENEMY_TYPES', /import \{ createEnemySystem, ENEMY_TYPES \}/.test(mainSrc));
-ok('加载页只预载第一关（debug 例外）', /DEBUG \? Object\.keys\(ENEMY_TYPES\) : levelTypes\(LEVEL_1\)/.test(mainSrc));
+// 第 140 块（A）改了这条契约：正式局不再在加载页等第一关模型（后台下，进关时 ensureLevelAssets 兜底），
+// 只有 ?debug=1 才把全部模型拉齐（自动化测试要能直接 setLevel 切关）。
+ok('加载页只在 debug 下等全量模型',
+  /Object\.keys\(ENEMY_TYPES\)/.test(mainSrc) && /if \(DEBUG\) \{/.test(mainSrc));
+ok('正式局改成后台预载第一关（不 block 标题页）',
+  /enemies\.preload\(levelTypes\(LEVEL_1\), null, \{ limit: 2 \}\)/.test(mainSrc));
 ok('有 ensureLevelAssets', /async function ensureLevelAssets/.test(mainSrc));
 ok('beginGame 是 async', /async function beginGame/.test(mainSrc));
 ok('beginGame 里等预载', /await ensureLevelAssets\(pendingLevelId\)/.test(mainSrc));

@@ -608,6 +608,9 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
 #loading.off{opacity:0;pointer-events:none}
 .ld-box{width:min(74vw,300px);text-align:center}
 .ld-title{font-size:14px;letter-spacing:.22em;color:#bff0dd;opacity:.9}
+/* 第 140 块：当前步骤（下代码 / 搭场地 / 载奶蛙 / 装装备），比百分比更能让人安心等 */
+.ld-step{margin-top:9px;font-size:11px;letter-spacing:.08em;color:rgba(180,225,208,.42);
+  min-height:16px}
 .ld-bar{margin-top:16px;height:4px;border-radius:4px;background:rgba(126,235,196,.14);overflow:hidden}
 .ld-bar i{display:block;height:100%;width:0%;border-radius:4px;
   background:linear-gradient(90deg,#4fd6a8,#9cf5cf);box-shadow:0 0 12px rgba(110,240,200,.6);
