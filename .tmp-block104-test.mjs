@@ -78,22 +78,20 @@ sec('③ 手动保存兜底行：DOM / 默认隐藏 / CSS 都就位');
 sec('④ 文件名：中文「蛙步·夜行存档文件-日期-时间.txt」');
 // ============================================================
 {
-  const fnSrc = (mainSrc.match(/function saveFileName\(now\) \{[\s\S]*?\n  \}/) || [''])[0];
-  ok(!!fnSrc, '有 saveFileName() 函数');
-  let name = '';
-  try {
-    const fn = new Function('return (' + fnSrc + ')')();
-    name = fn(new Date(2026, 9, 25, 9, 7));
-  } catch (e) { name = 'ERR:' + e.message; }
+  // 第 137 块：名字只有 saveIO.fileName() 一个来源（落盘名 = toast 名），
+  // 免得两处各拼一份、改了一处忘另一处。
+  const io = await import('./js/saveIO.js');
+  const name = io.fileName(new Date(2026, 9, 25, 9, 7));
   ok(name === '蛙步·夜行存档文件-20261025-0907.txt',
     `文件名 = 蛙步·夜行存档文件-YYYYMMDD-HHMM.txt（实际 ${name}）`);
   ok(/蛙步·夜行存档文件/.test(name), '文件名一眼能看懂（第 136 块用户要求）');
   ok(!/[\\/:*?"<>|]/.test(name), '文件名里没有路径 / 非法字符', JSON.stringify(name));
   ok(/\d{8}-\d{4}/.test(name), '日期与时分都在（同一个小时导出两次不会撞名）');
-  // toast 里仍然是同一份中文名
+  ok(/const name = saveIO\.fileName\(\);/.test(mainSrc), '落盘用的就是这个名字');
   ok(/showToast\('存档已导出', `\$\{saveIO\.fileName\(\)\}/.test(mainSrc),
-    'toast 里显示的中文名（saveIO.fileName()）');
-  ok(!/return 'wabu-save-/.test(mainSrc), '旧命名不再被真正用上（注释里留着来历）');
+    'toast 里显示的是同一个名字（对得上，不会让人以为下了旧文件）');
+  ok(!/function saveFileName/.test(mainSrc) && !/return 'wabu-save-/.test(mainSrc),
+    'main.js 不再自己拼文件名（旧 wabu-save- 也没了）');
 }
 
 // ============================================================

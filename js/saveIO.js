@@ -236,13 +236,13 @@ export function payloadCode(payload) {
   return MAGIC + bytesToB64u(lzCompress(bytes));
 }
 
-// 第 97 块：把长码切成人能一段段复制的片段。
-// 手机上「全选整段」经常被输入框 / 剪贴板截断，切成 700 字符一段后
-// 每段单独复制都不会出问题；导入时按顺序粘进去，会自己拼回来。
+// 存档文件的名字（第 136 / 137 块）：中文、一眼看得懂，日期时分防重名。
+// 落盘用的也是这个名字 —— main.js 的「导出文件」直接拿它当 a.download / 分享面板的
+// File 名，不再自己拼一份，免得 toast 和真实文件名对不上。
 export function fileName(now = new Date()) {
   const p = (n) => String(n).padStart(2, '0');
-  return '蛙步夜行-存档-' + now.getFullYear() + p(now.getMonth() + 1) + p(now.getDate())
-    + '-' + p(now.getHours()) + p(now.getMinutes()) + '.json';
+  return '蛙步·夜行存档文件-' + now.getFullYear() + p(now.getMonth() + 1) + p(now.getDate())
+    + '-' + p(now.getHours()) + p(now.getMinutes()) + '.txt';
 }
 
 // ------------------------------------------------------------
