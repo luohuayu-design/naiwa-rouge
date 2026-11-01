@@ -40,8 +40,8 @@ sec('① 旧的「分享文件」按钮不留；第 134 块改用系统分享面
   // 只有 navigator.share + File 是系统给的正式通道 —— 这条必须有。
   ok(/navigator\.share/.test(mainSrc) && /navigator\.canShare/.test(mainSrc),
     '走 navigator.share + navigator.canShare（系统分享面板）');
-  ok(/new File\(\[json\], name, \{ type: 'application\/json' \}\)/.test(mainSrc),
-    '把存档构造为 File 交给系统（不是自建「分享文件」按钮）');
+  ok(/new File\(\[json\], name, \{ type: 'text\/plain' \}\)/.test(mainSrc),
+    '把存档构造为 File 交给系统（第 135 块起用 text/plain / .txt）');
   ok(!/ioShareFile/.test(mainSrc), 'main.js 里也没有分享按钮的残骸');
 }
 
@@ -85,7 +85,7 @@ sec('④ 文件名：纯 ASCII（中文名只留在 toast 里）');
     const fn = new Function('return (' + fnSrc + ')')();
     name = fn(new Date(2026, 9, 25, 9, 7));
   } catch (e) { name = 'ERR:' + e.message; }
-  ok(name === 'wabu-save-20261025-0907.json', `文件名形如 wabu-save-YYYYMMDD-HHMM.json（实际 ${name}）`);
+  ok(name === 'wabu-save-20261025-0907.txt', `文件名形如 wabu-save-YYYYMMDD-HHMM.txt（实际 ${name}）`);
   ok(!/[^\x20-\x7e]/.test(name), '文件名全部是可打印 ASCII', JSON.stringify(name));
   ok(/\d{8}-\d{4}/.test(name), '日期与时分都在（同一个小时导出两次不会撞名到不可分辨）');
   // toast 里仍然给人看中文名
@@ -123,9 +123,9 @@ sec('⑤ 会被「移交」的内核走 data: URL（blob: 跨进程就是死链�
   }
 
   ok(/function makeHref\(text, forceData\)/.test(mainSrc), '有 makeHref(text, forceData)');
-  ok(/data:application\/json;charset=utf-8,' \+ encodeURIComponent\(text\)/.test(mainSrc),
-    'data: URL 带 charset=utf-8（中文内容不花）');
-  ok(/return URL\.createObjectURL\(new Blob\(\[text\], \{ type: 'application\/json' \}\)\)/.test(mainSrc),
+  ok(/data:text\/plain;charset=utf-8,' \+ encodeURIComponent\(text\)/.test(mainSrc),
+    'data: URL 用 text/plain + charset=utf-8（第 135 块按用户要求改成 TXT 口径）');
+  ok(/return URL\.createObjectURL\(new Blob\(\[text\], \{ type: 'text\/plain' \}\)\)/.test(mainSrc),
     '不会被移交的内核仍走 blob:（大存档不吃 URL 长度）');
   ok(/ioSaveLink\.href = makeHref\(json, true\)/.test(mainSrc),
     '兜底链接**永远**用 data:（长按另存 / 跨 App 都不会死）');
@@ -199,6 +199,32 @@ sec('⑨ 分段复制：每段 < 6000 字，拼回去一字不差');
   ok(/\.parts-list\{/.test(cssSrc) && /\.parts-row\{/.test(cssSrc) && /\.parts-copy\{/.test(cssSrc),
     '分段行的样式都在');
   ok(/#partsAsk\{z-index:40\}/.test(cssSrc), '弹窗层级抬到设置页之上');
+}
+
+// ============================================================
+sec('⑩ 导出 .txt / 导入自动识别格式（第 135 块，用户要求）');
+// ============================================================
+{
+  ok(/accept="\.json,\.txt,application\/json,text\/plain"/.test(htmlSrc),
+    '文件选择器也认 .txt（老的 .json 备份照样能选）');
+  const imp = (mainSrc.match(/function importFromText\(txt\) \{[\s\S]*?\n  \}/) || [''])[0];
+  ok(!!imp, '有 importFromText()');
+  ok(/saveIO\.parseAny\(txt\)/.test(imp), '导入走 parseAny：JSON / NWSZ1: 码全部自动识别');
+
+  // 真跑一遍：同一份存档，JSON 全文与存档码两条都要能进
+  const io = await import('./js/saveIO.js');
+  const payload = {
+    app: 'naiwa-rouge', kind: 'save', ver: 1,
+    at: '2026-10-25T09:07:00Z', game: '151',
+    data: { naiwa_rouge_profile_v1: JSON.stringify({ bones: 1234, camp: { a: 1 }, ach: {} }) },
+  };
+  const jr = io.parseAny(JSON.stringify(payload, null, 2));
+  ok(jr.ok && /1234/.test(jr.payload.data.naiwa_rouge_profile_v1), '导出的 .txt（正文是 JSON）能被导入');
+  const code = io.payloadCode(payload);
+  const cr = io.parseAny(code);
+  ok(cr.ok && /1234/.test(cr.payload.data.naiwa_rouge_profile_v1), 'NWSZ1: 存档码存成 txt 也能导入');
+  const cr2 = io.parseAny(code.slice(0, 100) + '\n\n' + code.slice(100) + '\n');
+  ok(cr2.ok, '折行 / 分段拼接的 txt 也能导入（空格换行会被吃掉）');
 }
 
 // ============================================================
