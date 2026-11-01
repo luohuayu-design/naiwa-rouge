@@ -18,7 +18,7 @@
 //
 // 数值骨架和 board.js / candle.js 同一套（三级 + 卡片 + 两件商店货 + 存档）。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=158';
+import * as THREE from '../lib/three.module.js?v=159';
 
 // 三级数值：百分比 / 冷却 / 射程
 const LV_CUT = [0.30, 0.40, 0.50];
@@ -191,10 +191,13 @@ export function createGuillotineSystem({ scene, fx, enemies }) {
   function setRelicLevel(lv) { relicLv = Math.max(0, Math.min(3, lv | 0)); }
   function applyCard(card) {
     if (!card) return;
-    if (card.cut) mods.cut += card.cut;
-    if (card.cd) mods.cd += card.cd;
-    if (card.range) mods.range += card.range;
-    if (card.width) mods.width += card.width;
+    // 卡里的写法是 { stat, flat }（和 ringlight / pencil / hammer 一致），
+    // 别再按裸键 card.cd 去取 —— 那样八张卡会全是空卡。
+    const flat = Number(card.flat) || 0;
+    if (card.stat === 'cut') mods.cut += flat;
+    else if (card.stat === 'cd') mods.cd += flat;
+    else if (card.stat === 'range') mods.range += flat;
+    else if (card.stat === 'width') mods.width += flat;
   }
   function buyHone() { if (shop.hone) return false; shop.hone = true; return true; }
   function buyGrip() { if (shop.grip) return false; shop.grip = true; return true; }

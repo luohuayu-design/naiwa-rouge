@@ -106,17 +106,27 @@ ok(b3.ready() === false, '两块都在场 → 满，不能再立');
 const b4 = mk();
 b4.setRelicLevel(1);
 const w0 = b4.width();
-b4.applyCard({ width: 0.25 });
+b4.applyCard({ stat: 'width', flat: 0.25 });
 ok(near(b4.width(), w0 + 0.25), '「糊宽一点」真的把判定放宽了');
-b4.applyCard({ duration: 1.5 });
+b4.applyCard({ stat: 'duration', flat: 1.5 });
 ok(near(b4.life(), 7.5), `「多糊一层」把持续加到 ${b4.life()} 秒`);
-b4.applyCard({ count: 1 });
+b4.applyCard({ stat: 'count', flat: 1 });
 ok(near(b4.cap(), 2), '「再来一块」把上限加到 2');
-b4.applyCard({ cd: 2.5 });
+b4.applyCard({ stat: 'cd', flat: 2.5 });
 ok(near(b4.cdMax(), 23.5), `「随手一撕」把冷却压到 ${b4.cdMax()} 秒`);
 // 冷却下限：卡叠再多也不会变成永动机
-for (let i = 0; i < 20; i++) b4.applyCard({ cd: 5 });
+for (let i = 0; i < 20; i++) b4.applyCard({ stat: 'cd', flat: 5 });
 ok(b4.cdMax() >= 10, `冷却有 10 秒下限（实 ${b4.cdMax()}）`);
+
+// 真实卡面（upgrade.js 里 board 字段的写法）喂进来必须都生效 ——
+// 以前卡是 {stat,flat}、系统却读裸键，八张全成空卡，这条就是守卫。
+const realBoardCards = U.UPGRADES.filter((u) => u.board);
+ok(realBoardCards.length === 4, `board 卡池 4 张（实 ${realBoardCards.length}）`);
+const b8 = mk();
+b8.setRelicLevel(1);
+const before8 = JSON.stringify(b8.bonuses());
+for (const up of realBoardCards) b8.applyCard(up.board);
+ok(JSON.stringify(b8.bonuses()) !== before8, 'upgrade.js 里的 4 张真实纸立牌卡全部生效');
 
 // 商店两件买断（各自只生效一次）
 const b5 = mk();
@@ -143,7 +153,7 @@ ok(!b5.owned() && b5.count() === 0, 'reset 把等级 / 牌 / 卡片加成一起�
 // 存档快照
 const b6 = mk();
 b6.setRelicLevel(2);
-b6.applyCard({ width: 0.5 });
+b6.applyCard({ stat: 'width', flat: 0.5 });
 b6.buyOil();
 const snap = b6.snapshot();
 const b7 = mk();

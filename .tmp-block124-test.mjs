@@ -234,14 +234,24 @@ ok(secondHit < 200 * 0.30, '同一只怪第二刀更轻（递减生效）', Stri
 ok(near(secondHit, 200 * 0.30 * 0.55, 0.01), '第二刀正好是第一刀的 55%', String(secondHit.toFixed(1)));
 
 // 卡片：切口 +5%（卡里是小数 0.05，显示按百分数）
-gui.applyCard({ cut: 0.05 });
+gui.applyCard({ stat: 'cut', flat: 0.05 });
 ok(near(gui.cutPct(), 35), '卡片「再磨一磨」把切口从 30% 提到 35%', String(gui.cutPct()));
-gui.applyCard({ range: 1 });
+gui.applyCard({ stat: 'range', flat: 1 });
 ok(near(gui.range(), 7), '卡片「接长刀柄」射程 +1 格', String(gui.range()));
-gui.applyCard({ cd: 3 });
+gui.applyCard({ stat: 'cd', flat: 3 });
 ok(near(gui.cdMax(), 27), '卡片「磨快了」冷却 −3 秒', String(gui.cdMax()));
 gui.update(60);
 ok(near(gui.bonuses().cut, 35), 'bonuses().cut 是**百分数**（卡片是小数，别混）', String(gui.bonuses().cut));
+
+// 真实卡面（upgrade.js 里 guillotine 字段的写法）喂进来必须都生效 ——
+// 以前卡是 {stat,flat}、系统却读裸键，四张全成空卡，这条就是守卫。
+const realGuiCards = U.UPGRADES.filter((u) => u.guillotine);
+ok(realGuiCards.length === 4, `guillotine 卡池 4 张（实 ${realGuiCards.length}）`);
+const g3 = G.createGuillotineSystem({ scene, fx, enemies: gEnemies });
+g3.setRelicLevel(1);
+const beforeG3 = JSON.stringify(g3.bonuses());
+for (const up of realGuiCards) g3.applyCard(up.guillotine);
+ok(JSON.stringify(g3.bonuses()) !== beforeG3, 'upgrade.js 里的 4 张真实裁纸刀卡全部生效');
 
 // 商店买断
 ok(gui.buyHone() === true && gui.hasHone() === true, '买断「磨刀石」成功');

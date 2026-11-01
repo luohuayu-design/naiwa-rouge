@@ -23,9 +23,9 @@
 // 数值骨架和 candle.js / mine.js / latte.js 同一套：
 //   持续 / 冷却 / 判定宽度 / 同时几块 各有独立通道，reset() 清零（局内成长，不跨局）。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=158';
-import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=158';
-import { withV } from './assetUrl.js?v=158';
+import * as THREE from '../lib/three.module.js?v=159';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=159';
+import { withV } from './assetUrl.js?v=159';
 
 // 三级数值：时长 / 冷却 / 一次立几块
 const LV_LIFE = [6.0, 8.0, 10.0];
@@ -208,10 +208,13 @@ export function createBoardSystem({ scene, fx }) {
   function setRelicLevel(lv) { relicLv = Math.max(0, Math.min(3, lv | 0)); }
   function applyCard(card) {
     if (!card) return;
-    if (card.duration) mods.duration += card.duration;
-    if (card.cd) mods.cd += card.cd;
-    if (card.width) mods.width += card.width;
-    if (card.count) mods.count += card.count;
+    // 卡里的写法是 { stat, flat }（和 ringlight / pencil / hammer 一致），
+    // 别再按裸键 card.cd 去取 —— 那样八张卡会全是空卡。
+    const flat = Number(card.flat) || 0;
+    if (card.stat === 'duration') mods.duration += flat;
+    else if (card.stat === 'cd') mods.cd += flat;
+    else if (card.stat === 'width') mods.width += flat;
+    else if (card.stat === 'count') mods.count += flat;
   }
   function buyOil() { if (shop.oil) return false; shop.oil = true; return true; }
   function buyBrace() { if (shop.brace) return false; shop.brace = true; return true; }

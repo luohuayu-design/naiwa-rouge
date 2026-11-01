@@ -34,9 +34,9 @@
 //   标了 scope:'weapon' 的项改的是武器表（剑系 / 元素系），其余改主角表。
 //   两块表都要传进来，没传 wstats 时武器项会退化到主角表（只为兼容老调用）。
 // ============================================================
-import { STAT_DEFS } from './stats.js?v=158';
-import { WEAPON_STAT_DEFS } from './weaponStats.js?v=158';
-import { RARITIES, rarityWeight, oddsOf } from './rarity.js?v=158';
+import { STAT_DEFS } from './stats.js?v=159';
+import { WEAPON_STAT_DEFS } from './weaponStats.js?v=159';
+import { RARITIES, rarityWeight, oddsOf } from './rarity.js?v=159';
 
 // 一张卡改的是哪块表
 function tableFor(scope, stats, wstats) {
@@ -1327,7 +1327,11 @@ function latteChange(l, b) {
 
 // ---- 第 118 块：守夜烛卡的 changes 文案（apply 与 preview 共用）----
 function candleChange(c, b) {
-  const sum = (k) => (c[k] || 0) + ((c.extra || []).reduce((a, e) => a + (e[k] || 0), 0));
+  // 卡有两种写法：守夜烛这批老卡用裸键（{ duration: 1.2 }），
+  // 新一批卡用 { stat, flat }。两种都要算，否则冷却卡会掉进「半径」兜底，
+  // 明明减了冷却，卡片却写「半径 3.2 → 3.2」。
+  const sum = (k) => (c[k] || 0) + (c.stat === k ? (Number(c.flat) || 0) : 0)
+    + (c.extra || []).reduce((a, e) => a + (e[k] || 0) + (e.stat === k ? (Number(e.flat) || 0) : 0), 0);
   const b0 = b || { duration: 6.0, radius: 3.2, dpsMul: 0.55, cdMax: 22.0 };
   const meta = {
     duration: { name: '守夜烛持续', from: b0.duration, fmt: (v) => `${v.toFixed(1)} 秒` },
@@ -1335,20 +1339,30 @@ function candleChange(c, b) {
     dps: { name: '守夜烛灼烧', from: b0.dpsMul, fmt: (v) => `×${v.toFixed(2)}` },
     cd: { name: '守夜烛冷却', from: b0.cdMax, fmt: (v) => `${v.toFixed(1)} 秒` },
   };
-  const stat = meta[c.stat] ? c.stat : 'radius';
+  const moved = Object.keys(meta).filter((k) => sum(k) !== 0);
+  const stat = moved[0] || (meta[c.stat] ? c.stat : 'radius');
   const mm = meta[stat];
   const flat = sum(stat);
   const to = stat === 'cd' ? Math.max(8.0, mm.from - flat) : mm.from + flat;
+  // 传说卡一张动三条：主条 + 剩下的都写成「名字 旧 → 新」
+  const notes = moved.slice(1).map((k) => {
+    const x = meta[k];
+    const f = sum(k);
+    const t = k === 'cd' ? Math.max(8.0, x.from - f) : x.from + f;
+    return `${x.name} ${x.fmt(x.from)} → ${x.fmt(t)}`;
+  });
   return {
     key: `candle_${stat}`, scope: 'candle', name: mm.name,
     from: mm.from, to, fromText: mm.fmt(mm.from), toText: mm.fmt(to),
-    text: `${mm.fmt(mm.from)} → ${mm.fmt(to)}`,
+    text: `${mm.fmt(mm.from)} → ${mm.fmt(to)}` + (notes.length ? ` · ${notes.join(' · ')}` : ''),
   };
 }
 
 // ---- 第 118 块：落款卡的 changes 文案（apply 与 preview 共用）----
 function markChange(m, b) {
-  const sum = (k) => (m[k] || 0) + ((m.extra || []).reduce((a, e) => a + (e[k] || 0), 0));
+  // 同 candleChange：裸键与 { stat, flat } 两种写法都认（冷却卡靠这个才不会掉进「目标」兜底）。
+  const sum = (k) => (m[k] || 0) + (m.stat === k ? (Number(m.flat) || 0) : 0)
+    + (m.extra || []).reduce((a, e) => a + (e[k] || 0) + (e.stat === k ? (Number(e.flat) || 0) : 0), 0);
   const b0 = b || { targets: 1, dpsMul: 0.9, boomR: 1.8, cdMax: 14.0 };
   const meta = {
     targets: { name: '落款目标', from: b0.targets, fmt: (v) => `${v} 个` },
@@ -1356,14 +1370,21 @@ function markChange(m, b) {
     boomR: { name: '墨爆半径', from: b0.boomR, fmt: (v) => `${v.toFixed(1)} 格` },
     cd: { name: '落款冷却', from: b0.cdMax, fmt: (v) => `${v.toFixed(1)} 秒` },
   };
-  const stat = meta[m.stat] ? m.stat : 'targets';
+  const moved = Object.keys(meta).filter((k) => sum(k) !== 0);
+  const stat = moved[0] || (meta[m.stat] ? m.stat : 'targets');
   const mm = meta[stat];
   const flat = sum(stat);
   const to = stat === 'cd' ? Math.max(5.0, mm.from - flat) : mm.from + flat;
+  const notes = moved.slice(1).map((k) => {
+    const x = meta[k];
+    const f = sum(k);
+    const t = k === 'cd' ? Math.max(5.0, x.from - f) : x.from + f;
+    return `${x.name} ${x.fmt(x.from)} → ${x.fmt(t)}`;
+  });
   return {
     key: `mark_${stat}`, scope: 'mark', name: mm.name,
     from: mm.from, to, fromText: mm.fmt(mm.from), toText: mm.fmt(to),
-    text: `${mm.fmt(mm.from)} → ${mm.fmt(to)}`,
+    text: `${mm.fmt(mm.from)} → ${mm.fmt(to)}` + (notes.length ? ` · ${notes.join(' · ')}` : ''),
   };
 }
 

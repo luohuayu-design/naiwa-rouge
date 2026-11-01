@@ -196,6 +196,19 @@ sec('④ 三选一卡');
   sys.setRelicLevel(1);
   U.applyUpgrade({}, candleCards.find((c) => c.candle.duration), 0, fakeWstats(10), null, [], null, null, null, sys, null);
   ok(Math.abs(sys.duration() - 7.2) < 1e-6, `卡片落账：持续 ${sys.duration()}`);
+
+  // 冷却卡的预览行必须写「冷却」，不能掉进半径 / 目标兜底
+  // （实际一直在减，只有文案错：以前写「半径 3.2 → 3.2」「目标 1 个 → 1 个」）
+  const candleCd = candleCards.find((c) => c.candle.cd);
+  const pvC = U.previewUpgrade({}, candleCd, null, null, null, null, null, null, sys, null);
+  ok(pvC[0].name === '守夜烛冷却' && pvC[0].to < pvC[0].from,
+    `守夜烛冷却卡预览写的是冷却（「${pvC[0].text}」）`);
+  const mSys = M.createMarkSystem({ scene, fx, enemies: makeEnemies([]), wstats: fakeWstats(10) });
+  mSys.setRelicLevel(1);
+  const markCd = markCards.find((c) => c.mark.cd);
+  const pvM = U.previewUpgrade({}, markCd, null, null, null, null, null, null, null, mSys);
+  ok(pvM[0].name === '落款冷却' && pvM[0].to < pvM[0].from,
+    `落款冷却卡预览写的是冷却（「${pvM[0].text}」）`);
 }
 
 // ============================================================
