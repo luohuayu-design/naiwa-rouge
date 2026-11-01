@@ -5,61 +5,61 @@
 // 目标是把三件事调顺：摇杆输入 → 角色速度/朝向 → 相机跟随。
 // 后续叠战斗时，只需要在 tick() 里加敌人更新与自动攻击，不用动输入层。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=150';
-import { buildNightScene } from './scene.js?v=150';
-import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=150';
+import * as THREE from '../lib/three.module.js?v=151';
+import { buildNightScene } from './scene.js?v=151';
+import { loadFrog, buildFallbackFrog, MODEL_YAW } from './frog.js?v=151';
 // 第 80 块：给 glb 拼上版本号 → SW 缓存优先（详见 assetUrl.js）
-import { withV } from './assetUrl.js?v=150';
-import { createInput } from './input.js?v=150';
-import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=150';
-import { createStatView } from './statView.js?v=150';
-import { createWeaponStats } from './weaponStats.js?v=150';
-import { createFx } from './fx.js?v=150';
-import { createEnemySystem, ENEMY_TYPES } from './enemy.js?v=150';
+import { withV } from './assetUrl.js?v=151';
+import { createInput } from './input.js?v=151';
+import { createStats, STAT_DEFS, PLAYER_GROUPS } from './stats.js?v=151';
+import { createStatView } from './statView.js?v=151';
+import { createWeaponStats } from './weaponStats.js?v=151';
+import { createFx } from './fx.js?v=151';
+import { createEnemySystem, ENEMY_TYPES } from './enemy.js?v=151';
 import {
   createLevel, LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVEL_5, LEVEL_6, LEVEL_7, LEVEL_8, LEVEL_9, LEVEL_10, LEVEL_11, LEVEL_12, LEVEL_13, LEVEL_14, LEVEL_15, LEVEL_16, LEVEL_17, LEVELS_BY_ID, DIFFS, setDifficulty, getDifficulty, roundScale, levelStats, levelTypes,
-} from './wave.js?v=150';
-import { createRangeRing } from './rangeRing.js?v=150';
-import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=150';
-import { createWeaponSystem } from './weapon.js?v=150';
-import { createArrowRainSystem } from './arrowRain.js?v=150';
-import { SWORD_KINDS } from './swordKinds.js?v=150';
-import { createGoldSystem } from './gold.js?v=150';
-import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW, SHOP_PINNED, shopRefreshCost } from './shop.js?v=150';
-import { createTurretSystem, TURRET } from './turret.js?v=150';
-import { createRelicSystem, RELIC_DEFS } from './relics.js?v=150';
-import { createGolemSystem } from './golem.js?v=150';   // 第 107 块：法器「傀儡术」的铁 / 雪傀儡
-import { createHazards } from './hazards.js?v=150';
-import { createFogSystem } from './fog.js?v=150';    // 第 114 块：第十一关的雾
-import { createMineSystem } from './mine.js?v=150';  // 第 114 块：第 11 件法器「墨丸」
-import { createTrafficSystem } from './traffic.js?v=150';  // 第 116 块：第十二关的车流
-import { createTrackSystem } from './track.js?v=150';      // 第 123 块：第十三关的环形跑道
-import { createLatteSystem } from './latte.js?v=150';      // 第 116 块：第 12 件法器「苔藓拿铁」
-import { createCandleSystem } from './candle.js?v=150';    // 第 118 块：第 13 件法器「守夜烛」（第十一关）
-import { createMarkSystem } from './mark.js?v=150';        // 第 118 块：第 14 件法器「落款」（第十一关）
-import { createBoardSystem } from './board.js?v=150';      // 第 123 块：第 15 件法器「纸立牌」（第十三关）
-import { createCutterSystem } from './cutter.js?v=150';    // 第 124 块：第十四关的裁切刀
-import { createGuillotineSystem } from './guillotine.js?v=150';  // 第 124 块：第 16 件法器「裁纸刀」（第十四关）
+} from './wave.js?v=151';
+import { createRangeRing } from './rangeRing.js?v=151';
+import { rollChoices, applyUpgrade, previewUpgrade, upgradeText, UPGRADES, rarityOdds } from './upgrade.js?v=151';
+import { createWeaponSystem } from './weapon.js?v=151';
+import { createArrowRainSystem } from './arrowRain.js?v=151';
+import { SWORD_KINDS } from './swordKinds.js?v=151';
+import { createGoldSystem } from './gold.js?v=151';
+import { SHOP_ITEMS, itemLocked, rollShopItems, SHOP_SHOW, SHOP_PINNED, shopRefreshCost } from './shop.js?v=151';
+import { createTurretSystem, TURRET } from './turret.js?v=151';
+import { createRelicSystem, RELIC_DEFS } from './relics.js?v=151';
+import { createGolemSystem } from './golem.js?v=151';   // 第 107 块：法器「傀儡术」的铁 / 雪傀儡
+import { createHazards } from './hazards.js?v=151';
+import { createFogSystem } from './fog.js?v=151';    // 第 114 块：第十一关的雾
+import { createMineSystem } from './mine.js?v=151';  // 第 114 块：第 11 件法器「墨丸」
+import { createTrafficSystem } from './traffic.js?v=151';  // 第 116 块：第十二关的车流
+import { createTrackSystem } from './track.js?v=151';      // 第 123 块：第十三关的环形跑道
+import { createLatteSystem } from './latte.js?v=151';      // 第 116 块：第 12 件法器「苔藓拿铁」
+import { createCandleSystem } from './candle.js?v=151';    // 第 118 块：第 13 件法器「守夜烛」（第十一关）
+import { createMarkSystem } from './mark.js?v=151';        // 第 118 块：第 14 件法器「落款」（第十一关）
+import { createBoardSystem } from './board.js?v=151';      // 第 123 块：第 15 件法器「纸立牌」（第十三关）
+import { createCutterSystem } from './cutter.js?v=151';    // 第 124 块：第十四关的裁切刀
+import { createGuillotineSystem } from './guillotine.js?v=151';  // 第 124 块：第 16 件法器「裁纸刀」（第十四关）
 // 第 128 块：第十五关的补光曝光区 + 第 17 件法器「环形灯」+ 技能「开播」
-import { createSpotlightSystem } from './spotlight.js?v=150';
-import { createRingLightSystem } from './ringlight.js?v=150';
-import { createBroadcastSystem } from './broadcast.js?v=150';
+import { createSpotlightSystem } from './spotlight.js?v=151';
+import { createRingLightSystem } from './ringlight.js?v=151';
+import { createBroadcastSystem } from './broadcast.js?v=151';
 // 第 129 块：第十六关的线稿定稿圈 / 囚笼 + 第 18 件法器「铅笔」
-import { createSketchSystem } from './sketch.js?v=150';
-import { createPencilSystem } from './pencil.js?v=150';
+import { createSketchSystem } from './sketch.js?v=151';
+import { createPencilSystem } from './pencil.js?v=151';
 // 第 130 块：第十七关的整点钟声 + 第 19 件法器「空箱子」
-import { createBellSystem } from './bell.js?v=150';
-import { createCrateSystem } from './crate.js?v=150';
-import { createDeposit, tagChance } from './deposit.js?v=150';   // 第 81 块：寄存柜；第 84 块：掉牌概率
-import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=150';
-import audio from './audio.js?v=150';
-import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=150';
+import { createBellSystem } from './bell.js?v=151';
+import { createCrateSystem } from './crate.js?v=151';
+import { createDeposit, tagChance } from './deposit.js?v=151';   // 第 81 块：寄存柜；第 84 块：掉牌概率
+import { RARITIES, rarityInfo, highTierOdds, oddsOf } from './rarity.js?v=151';
+import audio from './audio.js?v=151';
+import { SKILLS, visibleSkills, skillForKey } from './skills.js?v=151';
 // 第 62 块：回血技能（第四关通关后永久解锁，回 5 点 / CD 25 秒）
-import { createHealSkill, HEAL_AMOUNT, HEAL_CD } from './healSkill.js?v=150';
+import { createHealSkill, HEAL_AMOUNT, HEAL_CD } from './healSkill.js?v=151';
 // 第 62 块：民心专属事件（升档走良性池、掉档走恶性池）
-import { repPoolForTier, REP_GOOD, REP_BAD } from './repEvents.js?v=150';
+import { repPoolForTier, REP_GOOD, REP_BAD } from './repEvents.js?v=151';
 // 第 62 块：攻略面板（战败提示上的「查看攻略」，手风琴三组）
-import { renderGuide, GUIDE_SECTIONS } from './guide.js?v=150';
+import { renderGuide, GUIDE_SECTIONS } from './guide.js?v=151';
 import {
   settings as readSettings, setSetting, save as saveProfile, profile,
   bumpStat, setStatMax, codexAdd, codexCount, countCard, unlockAch, hasAch, addBones, bones, resetAll,
@@ -74,37 +74,37 @@ import {
   hintSeen, markHintSeen,                  // 第 65 块：一次性提示卡
   markLevelClear, levelCleared, clearCount, // 第 94 块：通关过哪些关（成就用）
   getStatAdmin, setStatAdmin, resetStatAdmin, // 第 95 / 98 块：管理员模式二（手改最终值 → 存追加项，基础值不动）
-} from './profile.js?v=150';
+} from './profile.js?v=151';
 // 第 44 块：礼包兑换（码表只有哈希，明细在 gift.js 顶部注释）
-import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=150';
+import { lookupGift, giftByHash, normalizeCode, GIFT_COUNT } from './gift.js?v=151';
 // 第 46 块：音效包（抽象奶蛙音效包 —— 4 段奶蛙叫声，通关第一关解锁）
-import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=150';
-import * as runSave from './runSave.js?v=150';
+import { FROG_FILES, FROG_SFX, PACK_LIST, packInfo } from './voicepack.js?v=151';
+import * as runSave from './runSave.js?v=151';
 // 第 78 块：存档导出 / 导入。数据逻辑全在这个模块里（不碰 DOM），这里只接按钮
-import * as saveIO from './saveIO.js?v=150';
+import * as saveIO from './saveIO.js?v=151';
 import {
   CAMPFIRE, CAMP_CORE, CAMP_STEP, campBuy, campOwned, campLevel, campRelicAmp,
   campCost, campApply, bonesFor, diffBoneMul, levelBoneMul, coinBones, BONE,
-} from './campfire.js?v=150';
+} from './campfire.js?v=151';
 // 第 23 块：永夜火种（通关白给的 3 次永久三选一）
 import {
   BOONS, BOON_BY_ID, BOON_PICKS, boonOwned, boonStacks, boonPending, boonTotalStacks,
   grantBoons, rollBoons, takeBoon, applyBoons, boonStackText,
-} from './boons.js?v=150';
+} from './boons.js?v=151';
 // 第 21 块：夜行诅咒（自选 debuff 换骨币倍率）
-import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames, BOX_CURSES, BOX_CURSE_BY_ID, applyBoxCurses, boxCurseNames } from './curses.js?v=150';
+import { RUN_CURSES, CURSE_BY_ID, applyRunCurses, curseMul, curseDmg, curseList, curseNames, BOX_CURSES, BOX_CURSE_BY_ID, applyBoxCurses, boxCurseNames } from './curses.js?v=151';
 // 第 122 块：回合挑战（每关随机 2 个回合，回合前弹；打完给三选一奖励）
 import {
   CHALLENGES, CHAL_PER_LEVEL, CHAL_FIRST_ROUND, CHAL_LAST_GAP,
   chalById, planRounds, rollChallenge, REWARDS, REWARD_BY_ID, rollBoosts, boostSummary,
-} from './challenge.js?v=150';
+} from './challenge.js?v=151';
 // 第 22 块：种子与每日挑战
 import {
   DAILY_RULES, dayKey, dayText, dailySeed, seedCode, pickDailyCurses,
   seedFromText, pickSeedRules, loadSeedRecords, saveSeedRecord, pruneSeeds,
   dailyRecord, saveDailyRecord, pruneDaily, makeRng,
-} from './seed.js?v=150';
-import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=150';
+} from './seed.js?v=151';
+import { CODEX_TABS, codexEntries, codexSummary } from './codex.js?v=151';
 // 第 58 块：局外商店 · 宝箱（花骨币买，开箱随机给永久属性 / 永久法器 / 技能CD缩短）
 import {
   BOXES, BOX_BY_ID, buyBox, rollBox, metaApplyStats, applyMeta,
@@ -116,45 +116,45 @@ import {
   boxMag,
   // 第 118 块：盲盒里的法器属性 → 开局注入法器系统
   metaRelicAmp,
-} from './metaShop.js?v=150';
+} from './metaShop.js?v=151';
 // 第 59 块：每日签到（以周为单位，周一 00:00 重置）
 // 第 105 块：固定 +20 改成每天随机 0~100；里程碑 3/5/7 天 → 100 / 150 骨币 + 一次永夜火种
 import {
   SIGN_BONES_MIN, SIGN_BONES_MAX, weekCells, signSummary, signToday, signedToday,
-} from './signin.js?v=150';
+} from './signin.js?v=151';
 // 第 94 块：成就（八类 × 三档骨币奖励）
 // 第 94-2 块：骨币改成**手动领取**（achPending / achClaim），老用户补发走 achMigrate
 import {
   ACHS, ACH_CATS, ACH_TIERS, ACH_COUNT, achById, achsByCat, achTier,
   achPending, achPendingBones, achClaim, achClaimAll, achClaimed, achMigrate,
-} from './achievements.js?v=150';
+} from './achievements.js?v=151';
 // 第 94 块：通用手风琴（盲盒奖池与成就面板共用，不复制第三份引擎）
-import { renderAccordion } from './accordion.js?v=150';
+import { renderAccordion } from './accordion.js?v=151';
 // 第 94 块：每日任务（简单 3 + 中等 1 + 困难 1，每天 0 点刷新）
 import {
   DQ_TIERS, DQ_BONES, dqTasks, dqPump, dqSave, dqClaim, dqClaimAll,
   dqPending, dqGained, dqMsLeft, dayKeyOf, dqTier, dqTaskName,
   dqState, dqForceReroll, dqReset,   // 调试口：跨天重掷 / 整条重置
-} from './dailyQuest.js?v=150';
+} from './dailyQuest.js?v=151';
 import {
   EVENTS, ALL_EVENTS, getEventById, pickEvent, effectLines,
   choiceHint, canAfford, costShort, REP_MIN, REP_MAX, REP_START,
   isTalk, eventChoices, resolveRoll, mergeEffects,
-} from './events.js?v=150';
+} from './events.js?v=151';
 // 第 32 块：主线《笑不出来的那一夜》（18 夜，一夜一关，前 3 夜已有关卡）
 import {
   STORY_ARC, STORY_CHAPTERS, STORY_ENDINGS, MARK_INFO,
   storyChapterAt, storyChapterById, storyEndingKey,
-} from './story.js?v=150';
+} from './story.js?v=151';
 // 第 115 块：九套玩法系统引擎（合成台 / 元素反应 / 精英怪 / 天气 / 音乐盒 / 手感四件套）
-import { createCraftingSystem } from './crafting.js?v=150';
-import { createReactionSystem } from './elementReaction.js?v=150';
-import { createEliteSystem } from './elite.js?v=150';
-import { createWeatherSystem } from './weather.js?v=150';
-import { createMusicboxSystem } from './musicbox.js?v=150';
-import { createDash } from './dash.js?v=150';
-import { createHeat } from './heat.js?v=150';
-import { pickLastWords, winLine } from './lastwords.js?v=150';
+import { createCraftingSystem } from './crafting.js?v=151';
+import { createReactionSystem } from './elementReaction.js?v=151';
+import { createEliteSystem } from './elite.js?v=151';
+import { createWeatherSystem } from './weather.js?v=151';
+import { createMusicboxSystem } from './musicbox.js?v=151';
+import { createDash } from './dash.js?v=151';
+import { createHeat } from './heat.js?v=151';
+import { pickLastWords, winLine } from './lastwords.js?v=151';
 
 // 标记模块已经跑起来了：index.html 的兜底自检靠它判断
 // 「模块根本没执行」还是「执行了但加载慢」。
@@ -4183,61 +4183,97 @@ async function boot() {
     return URL.createObjectURL(new Blob([text], { type: 'application/json' }));
   }
 
-  // 返回 true / false，方便按钮那边统一处理「能不能走」。
-  function exportFile() {
+  // 系统分享面板：'ok' 成功了 / 'cancel' 玩家自己取消 / 'none' 这条路用不了
+  //
+  // 第 134 块（用户：「A 要做」）：微信 / QQ 内嵌内核里 <a download> 几乎注定哑火 ——
+  // 内核把下载请求移交给「QQ 下载器」，data: / blob: 都给不出真实地址，最后只剩
+  // 「没有应用可执行此操作」。navigator.share + File 是浏览器给的正式通道：系统直接
+  // 把这份文件交给玩家选的目标 App（文件 / 微信 / 邮件…），不经过下载管理器，
+  // 也就不存在「移交后死链」。
+  // 只在 canShare({ files }) 为真时才走 —— 桌面浏览器基本都返回 false，
+  // 不会平白弹一个没人认识的分享框。
+  async function shareSaveFile(json, name) {
+    if (typeof navigator === 'undefined' || typeof navigator.share !== 'function') return 'none';
+    let file = null;
+    try {
+      file = new File([json], name, { type: 'application/json' });
+    } catch (_) {
+      return 'none';                    // 老内核没有 File 构造器
+    }
+    try {
+      if (navigator.canShare && !navigator.canShare({ files: [file] })) return 'none';
+    } catch (_) {
+      return 'none';
+    }
+    try {
+      await navigator.share({ files: [file], title: '蛙步 · 夜行 存档', text: name });
+      return 'ok';
+    } catch (e) {
+      // 玩家点了取消 / 返回：系统抛 AbortError。这不是「导出失败」，
+      // 不能再悄悄走一遍下载 —— 那会变成「明明取消了却又多出一个文件」。
+      if (e && e.name === 'AbortError') return 'cancel';
+      return 'none';
+    }
+  }
+
+  // 返回 'ok' / 'cancel' / 'fail'（按钮那边据此决定音效和提示）
+  async function exportFile() {
     const snap = saveIO.snapshot();
     const name = asciiFileName();
     const json = saveIO.payloadJson(snap);
+    const s = saveIO.summarize(snap);
 
-    // ⚠️ 第 115 块（用户：「手机 QQ 打开网站点导出存档存不下来」）：
-    // 不再靠 UA 猜「是不是 QQ 内嵌内核」。QQ 各版本 / X5 内核的 UA 千奇百怪，
-    // 漏判一次就掉进 blob: 死链那条路（移交 QQ 浏览器后拉不到内容）。
-    // data: URL 是自包含的，任何内核 / 移交任何 App 都能存 —— 直接拿它当主路径，
-    // blob 只作兜底（个别桌面浏览器对超大 data: 有 URL 长度顾虑时再用）。
-    let url = '';
-    try {
-      url = makeHref(json, true);      // 一律 data:，最稳
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = name;
-      a.rel = 'noopener';
-      document.body.appendChild(a);       // Firefox 要求 a 在文档里才认 click()
-      a.click();
-      a.remove();
-    } catch (_) {
-      // data: 这条路被拦（极少见）→ 退回 blob
-      try {
-        url = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = name;
-        a.rel = 'noopener';
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-      } catch (_) {
-        if (url.startsWith('blob:')) URL.revokeObjectURL(url);
-        return false;
-      }
-    }
-    if (url.startsWith('blob:')) setTimeout(() => URL.revokeObjectURL(url), 4000);
+    // ① 手机优先交给系统分享面板
+    const shared = await shareSaveFile(json, name);
+    if (shared === 'cancel') return 'cancel';
 
-    // 兜底行：data: 链接一直有效，点 / 长按都能再存一次
+    // 兜底行：data: 链接自包含，长按 / 跨 App 都不会死（分享成功也亮出来）
     if (ioSaveLink) {
       ioSaveLink.href = makeHref(json, true);
       ioSaveLink.download = name;
       if (ioSaveRow) ioSaveRow.hidden = false;
     }
 
-    const s = saveIO.summarize(snap);
+    if (shared === 'ok') {
+      showToast('存档已导出', `${saveIO.fileName()} · 骨币 ${s.bones} · 篝火 ${s.campLv} 级`);
+      return 'ok';
+    }
+
+    // ② 浏览器下载：会被移交的内核（微信 / QQ / X5）走 data:，别的走 blob
+    //    （blob 不受 URL 长度限制，桌面大档更稳）。
+    const href = makeHref(json, false);
+    try {
+      const a = document.createElement('a');
+      a.href = href;
+      a.download = name;
+      a.rel = 'noopener';
+      document.body.appendChild(a);       // Firefox 要求 a 在文档里才认 click()
+      a.click();
+      a.remove();
+    } catch (_) {
+      // 下载这条路被拦 → 最后再试一次自包含的 data:
+      try {
+        const a = document.createElement('a');
+        a.href = makeHref(json, true);
+        a.download = name;
+        a.rel = 'noopener';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      } catch (_) {
+        return 'fail';
+      }
+    }
+    if (href.startsWith('blob:')) setTimeout(() => URL.revokeObjectURL(href), 4000);
+
     showToast('存档已导出', `${saveIO.fileName()} · 骨币 ${s.bones} · 篝火 ${s.campLv} 级`);
-    return true;
+    return 'ok';
   }
 
-  document.getElementById('ioExportFile').addEventListener('click', () => {
-    const ok = exportFile();
-    audio.sfx(ok ? 'card' : 'soldout');
-    if (!ok) showToast('导出失败', '这个浏览器不让下载 —— 改用「复制存档码」');
+  document.getElementById('ioExportFile').addEventListener('click', async () => {
+    const r = await exportFile();
+    audio.sfx(r === 'fail' ? 'soldout' : 'card');
+    if (r === 'fail') showToast('导出失败', '这个浏览器不让下载 —— 改用「分段复制」或「复制存档码」');
   });
 
   // ② 存档码：一键把**整串**写进剪贴板（第 99 块砍掉了「分段列表」）
@@ -4268,6 +4304,112 @@ async function boot() {
       showToast('复制失败', '这个浏览器不让写剪贴板 —— 改用「导出文件」');
     }
   });
+
+  // ②b 分段复制（第 134 块，用户要求：「保证每一段长度低于 6000 字符」）
+  //
+  // 手机剪贴板 / 备忘录 / 微信输入框对单次长度有上限（6000 字上下就开始吞尾巴），
+  // 所以把整串码切成每段 5000 字 —— 比 6000 留 1000 字余量，复制 / 粘贴都不会截断。
+  // 切点随便切都行：导入时 parseText 会先 replace(/\s+/g,'') 再解析，
+  // 段间多加换行、段落顺序乱都不影响，只要整串字符一个不少。
+  const PART_MAX = 5000;
+  function splitParts(code) {
+    const out = [];
+    for (let i = 0; i < code.length; i += PART_MAX) out.push(code.slice(i, i + PART_MAX));
+    return out;
+  }
+
+  const partsAsk = document.getElementById('partsAsk');
+  const partsSub = document.getElementById('partsSub');
+  const partsList = document.getElementById('partsList');
+  let partsCache = [];
+
+  function closePartsAsk() {
+    if (!partsAsk) return;
+    partsAsk.classList.remove('on');
+    partsAsk.setAttribute('aria-hidden', 'true');
+    partsCache = [];
+  }
+
+  // 返回段数（0 = 没生成出来），按钮那边据此给音效
+  function openPartsAsk() {
+    if (!partsAsk || !partsList) return 0;
+    const code = saveIO.payloadCode(saveIO.snapshot());
+    const parts = splitParts(code);
+    partsCache = parts;
+    partsList.textContent = '';
+    if (partsSub) {
+      partsSub.textContent = `共 ${parts.length} 段 · 全文 ${code.length} 字 · 每段不超过 ${PART_MAX} 字`;
+    }
+    parts.forEach((seg, i) => {
+      const row = document.createElement('div');
+      row.className = 'parts-row';
+      const hd = document.createElement('div');
+      hd.className = 'parts-hd';
+      const b = document.createElement('b');
+      b.textContent = `第 ${i + 1}/${parts.length} 段`;
+      const sp = document.createElement('span');
+      sp.textContent = `${seg.length} 字`;
+      hd.appendChild(b);
+      hd.appendChild(sp);
+      row.appendChild(hd);
+
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'parts-copy';
+      btn.dataset.i = String(i);
+      btn.textContent = '复制这一段';
+      row.appendChild(btn);
+
+      // 只读框：剪贴板被拦时还能长按全选手动复制
+      const ta = document.createElement('textarea');
+      ta.className = 'md-input md-area parts-ta';
+      ta.rows = 3;
+      ta.readOnly = true;
+      ta.spellcheck = false;
+      ta.value = seg;
+      row.appendChild(ta);
+
+      partsList.appendChild(row);
+    });
+    partsAsk.classList.add('on');
+    partsAsk.setAttribute('aria-hidden', 'false');
+    return parts.length;
+  }
+
+  if (partsAsk) {
+    const partsCloseBtn = document.getElementById('partsClose');
+    if (partsCloseBtn) partsCloseBtn.addEventListener('click', closePartsAsk);
+    partsAsk.addEventListener('click', (e) => { if (e.target === partsAsk) closePartsAsk(); });
+  }
+
+  // 复制按钮走事件委托（只绑一次）：成功把按钮文案改成「已复制 ✓」，1.6 秒后还原
+  if (partsList) {
+    partsList.addEventListener('click', async (e) => {
+      const b = e.target.closest('.parts-copy');
+      if (!b) return;
+      const i = Number(b.dataset.i || 0);
+      const seg = partsCache[i] || '';
+      const ok = await copyText(seg);
+      audio.sfx(ok ? 'card' : 'soldout');
+      if (!ok) {
+        showToast('复制失败', '长按下面那个框，全选手动复制');
+        return;
+      }
+      const old = b.textContent;
+      b.textContent = '已复制 ✓';
+      showToast(`第 ${i + 1} 段已复制`, `共 ${partsCache.length} 段 · 粘到备忘录 / 微信文件传输助手，再复制下一段`);
+      setTimeout(() => { b.textContent = old; }, 1600);
+    });
+  }
+
+  const ioExportParts = document.getElementById('ioExportParts');
+  if (ioExportParts) {
+    ioExportParts.addEventListener('click', () => {
+      const n = openPartsAsk();
+      audio.sfx(n ? 'card' : 'soldout');
+      if (!n) showToast('分段复制失败', '存档码生成不出来 —— 改用「导出文件」');
+    });
+  }
 
   // ③ 导入文件：手机内置浏览器常拦下载，但导进来这条路基本都通
   document.getElementById('ioImportFile').addEventListener('click', () => {

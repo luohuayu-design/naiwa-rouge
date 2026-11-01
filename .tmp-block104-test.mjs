@@ -30,32 +30,34 @@ const VER = (htmlSrc.match(/js\/main\.js\?v=(\d+)/) || [, ''])[1];
 const htmlNoComment = htmlSrc.replace(/<!--[\s\S]*?-->/g, '');
 
 // ============================================================
-sec('① 分享文件：按钮、代码、文案三处都清干净');
+sec('① 旧的「分享文件」按钮不留；第 134 块改用系统分享面板');
 // ============================================================
 {
   ok(!/ioShareFile/.test(htmlSrc), 'index.html 里没有 id="ioShareFile"');
   ok(!/分享文件/.test(htmlNoComment), 'index.html 的可见文案里没有「分享文件」（注释里保留了删掉的理由）');
-  ok(!/shareFree|SHARE_TITLE|SHARE_TEXT/.test(mainSrc), 'main.js 里分享那套函数与文案全删');
-  ok(!/navigator\.share|navigator\.canShare/.test(mainSrc), 'main.js 不再碰 Web Share / canShare');
-  ok(!/new File\(\[saveIO\.payloadJson/.test(mainSrc), '不再为「分享文件」构造 File 对象');
-  // 网页里任何地方都不该再提分享
-  const allJs = readdirSync(new URL('./js/', import.meta.url)).filter((f) => f.endsWith('.js'))
-    .map((f) => read('./js/' + f)).join('\n');
-  ok(!/navigator\.share\b/.test(allJs), 'js/ 全目录都没有 navigator.share');
+  ok(!/shareFree|SHARE_TITLE|SHARE_TEXT/.test(mainSrc), '第 104 块那套自建分享函数与文案没长回来');
+  // 第 134 块（用户：「A 要做」）：手机内嵌内核里 <a download> 会被移交给下载器，
+  // 只有 navigator.share + File 是系统给的正式通道 —— 这条必须有。
+  ok(/navigator\.share/.test(mainSrc) && /navigator\.canShare/.test(mainSrc),
+    '走 navigator.share + navigator.canShare（系统分享面板）');
+  ok(/new File\(\[json\], name, \{ type: 'application\/json' \}\)/.test(mainSrc),
+    '把存档构造为 File 交给系统（不是自建「分享文件」按钮）');
+  ok(!/ioShareFile/.test(mainSrc), 'main.js 里也没有分享按钮的残骸');
 }
 
 // ============================================================
-sec('② 存档区就剩四颗按钮，文案不再提分享 / 分段');
+sec('② 存档区五颗按钮，提示语里有分段复制的入口');
 // ============================================================
 {
   const ioBox = htmlSrc.slice(htmlSrc.indexOf('class="set-io-btns"'), htmlSrc.indexOf('</div>', htmlSrc.indexOf('class="set-io-btns"')));
   const btns = [...ioBox.matchAll(/<button[^>]*id="(io[A-Za-z]+)"/g)].map((m) => m[1]);
-  ok(JSON.stringify(btns) === JSON.stringify(['ioExportFile', 'ioExportCode', 'ioImportFile', 'ioImportCode']),
-    '四颗按钮、顺序 = 导出 / 复制码 / 导入 / 粘贴码', btns.join(','));
+  ok(JSON.stringify(btns) === JSON.stringify(['ioExportFile', 'ioExportCode', 'ioExportParts', 'ioImportFile', 'ioImportCode']),
+    '五颗按钮、顺序 = 导出 / 复制码 / 分段复制 / 导入 / 粘贴码', btns.join(','));
   ok(/id="ioExportFile"[^>]*>导出文件</.test(ioBox), '「导出文件」文案没变');
   ok(/id="ioExportCode"[^>]*>复制存档码</.test(ioBox), '「复制存档码」文案没变（第 99 块定的）');
+  ok(/id="ioExportParts"[^>]*>分段复制</.test(ioBox), '第 134 块新增「分段复制」');
   const ioAll = htmlSrc.slice(htmlSrc.indexOf('class="set-io"'), htmlSrc.indexOf('set-foot'));
-  ok(!/分段/.test(ioAll), '提示语里不再出现「分段」');
+  ok(/分段/.test(ioAll), '提示语里说明了「分段复制」的用途');
 }
 
 // ============================================================
@@ -127,7 +129,7 @@ sec('⑤ 会被「移交」的内核走 data: URL（blob: 跨进程就是死链�
     '不会被移交的内核仍走 blob:（大存档不吃 URL 长度）');
   ok(/ioSaveLink\.href = makeHref\(json, true\)/.test(mainSrc),
     '兜底链接**永远**用 data:（长按另存 / 跨 App 都不会死）');
-  ok(/if \(url\.startsWith\('blob:'\)\) setTimeout/.test(mainSrc),
+  ok(/if \((url|href)\.startsWith\('blob:'\)\) setTimeout/.test(mainSrc),
     '只回收 blob: 的 objectURL（data: 的要留着给兜底行用）');
 }
 
@@ -135,8 +137,10 @@ sec('⑤ 会被「移交」的内核走 data: URL（blob: 跨进程就是死链�
 sec('⑥ 导出流程：点一下必然有反馈，绝不停在「什么都没发生」');
 // ============================================================
 {
-  const fn = (mainSrc.match(/function exportFile\(\) \{[\s\S]*?\n  \}/) || [''])[0];
-  ok(!!fn, '有 exportFile()');
+  const fn = (mainSrc.match(/async function exportFile\(\) \{[\s\S]*?\n  \}/) || [''])[0];
+  ok(!!fn, '有 async exportFile()');
+  ok(/await shareSaveFile\(json, name\)/.test(fn), '先试系统分享面板');
+  ok(/if \(shared === 'cancel'\) return 'cancel'/.test(fn), '玩家取消时不再硬撑下载');
   ok(/document\.body\.appendChild\(a\)/.test(fn), 'a 先挂进文档再 click（Firefox 要求）');
   ok(/a\.rel = 'noopener'/.test(fn), '带 rel=noopener');
   ok(/a\.remove\(\)/.test(fn), '点完把 a 摘掉');
@@ -144,11 +148,57 @@ sec('⑥ 导出流程：点一下必然有反馈，绝不停在「什么都没�
   ok(/showToast\('存档已导出'/.test(fn), '成功有 toast');
   const btn = (mainSrc.match(/getElementById\('ioExportFile'\)\.addEventListener\('click',[\s\S]{0,400}?\n  \}\);/) || [''])[0];
   ok(!!btn, '导出按钮有 handler');
-  ok(/这个浏览器不让下载/.test(btn), '失败时指向「复制存档码」而不是「分享文件」');
-  ok(!/分享文件/.test(btn), '失败提示里不再出现「分享文件」');
+  ok(/await exportFile\(\)/.test(btn), 'handler 等 async exportFile() 的结果');
+  ok(/这个浏览器不让下载/.test(btn), '失败时给出去路（分段复制 / 复制存档码）而不是「分享文件」');
+  ok(!/分享文件/.test(btn), '失败提示里不出现「分享文件」');
   // 「复制存档码」那条失败时也别再把人引向已删除的按钮
   const codeBtn = (mainSrc.match(/getElementById\('ioExportCode'\)\.addEventListener[\s\S]{0,1400}?\n  \}\);/) || [''])[0];
   ok(!/分享文件/.test(codeBtn), '「复制存档码」的兜底提示里也没有「分享文件」了');
+}
+
+// ============================================================
+sec('⑨ 分段复制：每段 < 6000 字，拼回去一字不差');
+// ============================================================
+{
+  const maxM = mainSrc.match(/const PART_MAX = (\d+);/);
+  const max = maxM ? Number(maxM[1]) : 0;
+  ok(!!maxM, '有 PART_MAX 常量');
+  ok(max > 0 && max < 6000, `每段上限 ${max || '—'} 字（用户要求低于 6000，留余量）`);
+
+  const fnSrc = (mainSrc.match(/function splitParts\(code\) \{[\s\S]*?\n  \}/) || [''])[0];
+  ok(!!fnSrc, '有 splitParts(code)');
+  let pieces = [];
+  let why = '';
+  try {
+    const make = new Function('PART_MAX', 'return ' + fnSrc);
+    const split = make(max);
+    const sample = 'NWSZ1:' + 'abcdefghij0123456789'.repeat(1000);   // 16007 字
+    pieces = split(sample);
+    if (pieces.join('') !== sample) why = '拼回去不一致';
+  } catch (e) { why = 'ERR:' + e.message; }
+  ok(pieces.length > 0 && why === '', '切开的段拼回去与原文一字不差', why);
+  ok(pieces.length === 5, `20006 字 → ${pieces.length} 段（每段 ${max}）`);
+  ok(Math.max(...pieces.map((p) => p.length)) <= max, `最长的一段 ${Math.max(...pieces.map((p) => p.length))} 字 ≤ ${max}`);
+  ok(pieces[0].startsWith('NWSZ1:'), '第 1 段带着 NWSZ1: 前缀（导入靠它认出是存档码）');
+
+  ok(/id="ioExportParts"[^>]*>分段复制</.test(htmlSrc), '设置页有「分段复制」按钮');
+  ok(/ioExportParts\.addEventListener\('click'/.test(mainSrc), '按钮有 handler');
+  ok(/getElementById\('partsAsk'\)/.test(mainSrc) && /getElementById\('partsList'\)/.test(mainSrc),
+    'main.js 拿到了弹窗与列表');
+  ok(/const ok = await copyText\(seg\)/.test(mainSrc), '每段用 copyText 写剪贴板');
+  ok(/id="partsClose"/.test(htmlSrc) && /id="partsSub"/.test(htmlSrc), '弹窗有关闭按钮 / 段数说明');
+  ok(/readOnly = true/.test(mainSrc), '每段还配只读框（长按兜底）');
+
+  // 「讲清用法」是用户明确要求的：弹窗里必须说清顺序、别改字、恢复时粘回同一个框
+  const how = (htmlSrc.match(/id="partsHow"[^>]*>([\s\S]*?)<\/div>/) || [, ''])[1];
+  ok(/粘贴存档码/.test(how), '用法里说明恢复时走「粘贴存档码」');
+  ok(/NWSZ1:/.test(how), '用法里点名第 1 段开头的 NWSZ1: 不能动');
+  ok(/顺序/.test(how), '用法里说明段与段顺序无关');
+  ok(/备忘录|文件传输助手/.test(how), '用法里给出了存到哪儿（备忘录 / 文件传输助手）');
+
+  ok(/\.parts-list\{/.test(cssSrc) && /\.parts-row\{/.test(cssSrc) && /\.parts-copy\{/.test(cssSrc),
+    '分段行的样式都在');
+  ok(/#partsAsk\{z-index:40\}/.test(cssSrc), '弹窗层级抬到设置页之上');
 }
 
 // ============================================================

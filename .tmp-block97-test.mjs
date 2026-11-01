@@ -231,11 +231,12 @@ ok(/renderAutoSlot/.test(mainSrc) && /ioAutoInfo/.test(htmlSrc), '面板上有�
 ok(/ioAutoRestore/.test(htmlSrc), '有恢复按钮');
 
 // 第 104 块：用户说「导出文件和分享文件一个效果」，直接把这颗按钮删了。
-// 这里**反向钉住**，防止哪天又长回来。
-sec('⑦-c 导出文件（第 104 块删掉了「分享文件」）');
+// 第 134 块：用户又要求把「A（navigator.share + File）做上」—— 这次不是加按钮，
+// 而是「导出文件」这条路自己先弹系统分享面板，所以 share / canShare 必须有。
+sec('⑦-c 导出文件（第 104 块删掉按钮；第 134 块改用系统分享面板）');
 ok(!/ioShareFile/.test(htmlSrc), '面板上**没有**「分享文件」按钮了');
-ok(!/navigator\.share\b/.test(mainSrc), '代码里也不再调 Web Share API');
-ok(!/navigator\.canShare/.test(mainSrc), '也没有 canShare');
+ok(/navigator\.share\b/.test(mainSrc), '第 134 块：exportFile 先走 navigator.share');
+ok(/navigator\.canShare/.test(mainSrc), '先用 canShare({ files }) 判断能不能分享');
 ok(/function exportFile/.test(mainSrc), '导出动作还是抽成了函数');
 
 sec('⑦-d 粘贴容错（分段累积保留：手机输入框仍可能截断一次粘贴）');

@@ -2,8 +2,10 @@
 // 用户两条：
 //  ① 「点分享文件直接弹这台设备不支持」+「点存档码分段没反应（其实是被设置页压住了），
 //      而且足足几十段，还是直接删掉这个功能吧」
-//     → 分享：**不用 canShare 当门闩**（手机上大量误判），三级回退 files → text → 下载
-//     → 存档码：**分段列表整体删除**，回到「一键复制整串」
+//     → 分享：第 99 块**不用 canShare 当门闩**（手机上大量误判）；第 104 块整颗按钮删掉；
+//             第 134 块用户又要「A 要做」→ 由「导出文件」自己先走 navigator.share
+//     → 存档码：**分段列表整体删除**，回到「一键复制整串」；第 134 块另起一个
+//               「分段复制」入口（每段 ≤5000 字），不影响这条一键整串
 //  ② 「设置里面的速度感是不是默认打开更好一些」
 //     → 新档默认本来就是 true，问题是**老档里存着 false**；按 uiRev 世代做一次性迁移
 // 跑法：node .tmp-block99-test.mjs（cwd = naiwa-rouge）
@@ -72,12 +74,13 @@ ok(/存档码（分段）/.test(htmlSrc) === false, '按钮文案不再写「（
 ok(/id="ioExportCode"[^>]*>复制存档码</.test(htmlSrc), '按钮文案 = 复制存档码');
 
 // ============================================================
-// 第 104 块改写：用户说「导出文件和分享文件一个效果」，分享整体删掉。
-// 这一节从「验三级回退」翻成「钉住它确实没了 + 导出那条路还在」。
-sec('③ 分享文件：已整体删除（第 104 块）');
+// 第 104 块改写：用户说「导出文件和分享文件一个效果」，分享按钮整体删掉。
+// 第 134 块：用户又要求「A 要做」—— 不再加按钮，而是「导出文件」自己先走系统分享面板。
+sec('③ 分享文件按钮：没有；系统分享面板（第 134 块）：有');
 ok(!/ioShareFile/.test(htmlSrc), 'index.html 里没有「分享文件」按钮');
 ok(!/shareFree|SHARE_TITLE|SHARE_TEXT/.test(mainSrc), 'main.js 里 shareFree / 标题文案全删干净');
-ok(!/navigator\.share|navigator\.canShare/.test(mainSrc), '不再碰 Web Share / canShare');
+ok(/navigator\.share/.test(mainSrc) && /navigator\.canShare/.test(mainSrc),
+  '第 134 块：改用 navigator.share + canShare（exportFile 的第一条路）');
 // 注释里允许出现（要写清楚为什么删），查的是可见文案
 ok(!/分享文件/.test(htmlSrc.replace(/<!--[\s\S]*?-->/g, '')), '界面文案里也不提「分享文件」（别再把人往那条路上引）');
 ok(/function exportFile/.test(mainSrc), '「导出文件」这条还在，抽成了函数');
