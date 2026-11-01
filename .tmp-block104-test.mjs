@@ -75,23 +75,25 @@ sec('③ 手动保存兜底行：DOM / 默认隐藏 / CSS 都就位');
 }
 
 // ============================================================
-sec('④ 文件名：纯 ASCII（中文名只留在 toast 里）');
+sec('④ 文件名：中文「蛙步·夜行存档文件-日期-时间.txt」');
 // ============================================================
 {
-  const fnSrc = (mainSrc.match(/function asciiFileName\(now\) \{[\s\S]*?\n  \}/) || [''])[0];
-  ok(!!fnSrc, '有 asciiFileName() 函数');
+  const fnSrc = (mainSrc.match(/function saveFileName\(now\) \{[\s\S]*?\n  \}/) || [''])[0];
+  ok(!!fnSrc, '有 saveFileName() 函数');
   let name = '';
   try {
     const fn = new Function('return (' + fnSrc + ')')();
     name = fn(new Date(2026, 9, 25, 9, 7));
   } catch (e) { name = 'ERR:' + e.message; }
-  ok(name === 'wabu-save-20261025-0907.txt', `文件名形如 wabu-save-YYYYMMDD-HHMM.txt（实际 ${name}）`);
-  ok(!/[^\x20-\x7e]/.test(name), '文件名全部是可打印 ASCII', JSON.stringify(name));
-  ok(/\d{8}-\d{4}/.test(name), '日期与时分都在（同一个小时导出两次不会撞名到不可分辨）');
-  // toast 里仍然给人看中文名
+  ok(name === '蛙步·夜行存档文件-20261025-0907.txt',
+    `文件名 = 蛙步·夜行存档文件-YYYYMMDD-HHMM.txt（实际 ${name}）`);
+  ok(/蛙步·夜行存档文件/.test(name), '文件名一眼能看懂（第 136 块用户要求）');
+  ok(!/[\\/:*?"<>|]/.test(name), '文件名里没有路径 / 非法字符', JSON.stringify(name));
+  ok(/\d{8}-\d{4}/.test(name), '日期与时分都在（同一个小时导出两次不会撞名）');
+  // toast 里仍然是同一份中文名
   ok(/showToast\('存档已导出', `\$\{saveIO\.fileName\(\)\}/.test(mainSrc),
-    'toast 里显示的仍是中文名（saveIO.fileName()）—— 只改落盘名，不改给人看的字');
-  ok(!/a\.download = saveIO\.fileName\(\)/.test(mainSrc), '没有直接把中文名塞进 a.download');
+    'toast 里显示的中文名（saveIO.fileName()）');
+  ok(!/return 'wabu-save-/.test(mainSrc), '旧命名不再被真正用上（注释里留着来历）');
 }
 
 // ============================================================
