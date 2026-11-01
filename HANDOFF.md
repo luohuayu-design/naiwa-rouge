@@ -43,6 +43,10 @@ Three.js r160 的单摇杆幸存者肉鸽《蛙步 · 夜行》：纯静态站�
    ④ `relics.js` 的 `RELIC_DEFS` 定义 + `levels` / `cds` 两张状态表；
    ⑤ 主循环里「技能 CD 缩短」的那条循环要带上它。
    **只做前两步最像做完了**：技能栏有图标、按得出来，但三选一永远抽不到，成长线只剩商店一条。`block124` 里有守卫断言（除初始的万剑齐发，每个技能都必须在卡池里找到自己的卡）。
+16. **App 发版三件套**（用户 2026-11-01 定：桌面始终留一份最新的 APK）：
+   ① 游戏 `?v=` bump 的同时改 `naiwa-app/android/app/build.gradle` 的 `versionCode / versionName`（只增不减）；
+   ② 跑 `cd naiwa-app && npm run apk`；
+   ③ 脚本会自动把新包复制成 `C:\Users\MECHREVO\Desktop\蛙步夜行-v<versionName>.apk` 并删掉桌面上自己那套命名的旧版本 —— **桌面只留最新一版**，别手动改这个名字，否则旧版删不掉。
 
 ---
 
@@ -54,7 +58,7 @@ Three.js r160 的单摇杆幸存者肉鸽《蛙步 · 夜行》：纯静态站�
 
 **工程在 `../naiwa-app`（独立目录，不进本仓库）**：Capacitor 6 + `android/`。
 - `sync-web.mjs`：把本仓库的 `index.html / style.css / sw.js / js / lib / assets` 复制成 `www/`（跳过 `.tmp-*` 与 `.git`），只读本仓库、不回写。
-- `build-apk.mjs`（`npm run apk`）：串联 `sync-web` → `npx cap sync android` → `android/gradlew.bat assembleRelease` → `apksigner verify`，最后把产物收成 `naiwa-app/dist/naiwa-nightwalk-<versionName>.apk`；日志里会比对游戏 `?v=` 与 `versionCode`，不一致只警告不中断。
+- `build-apk.mjs`（`npm run apk`）：串联 `sync-web` → `npx cap sync android` → `android/gradlew.bat assembleRelease` → `apksigner verify`，最后把产物收成 `naiwa-app/dist/naiwa-nightwalk-<versionName>.apk`，**并同步一份到桌面 `C:\Users\MECHREVO\Desktop\蛙步夜行-v<versionName>.apk`（自动删掉桌面上旧的版本，桌面永远只留最新一版）**；日志里会比对游戏 `?v=` 与 `versionCode`，不一致只警告不中断。
 - 包名 `com.luohuayu.naiwa`、应用名「蛙步 · 夜行」、竖屏锁定（`AndroidManifest` 的 `screenOrientation="portrait"`）、自适应图标底色 `#0B1B2A`。
 - 签名：`android/app/naiwa-release.keystore`（alias `naiwa`，口令 `naiwa2026`，RSA2048 / 10000 天）。**包名 + keystore 永久不许换** —— 换了就是另一个 App，老用户覆盖安装会被系统拒绝，等于丢档。
 
