@@ -46,7 +46,7 @@ sec('① 旧的「分享文件」按钮不留；第 134 块改用系统分享面
 }
 
 // ============================================================
-sec('② 存档区五颗按钮，提示语里有分段复制的入口');
+sec('② 存档区五颗按钮，提示语里有分段复制的入口（第 138 块搬进独立页）');
 // ============================================================
 {
   const ioBox = htmlSrc.slice(htmlSrc.indexOf('class="set-io-btns"'), htmlSrc.indexOf('</div>', htmlSrc.indexOf('class="set-io-btns"')));
@@ -56,8 +56,27 @@ sec('② 存档区五颗按钮，提示语里有分段复制的入口');
   ok(/id="ioExportFile"[^>]*>导出文件</.test(ioBox), '「导出文件」文案没变');
   ok(/id="ioExportCode"[^>]*>复制存档码</.test(ioBox), '「复制存档码」文案没变（第 99 块定的）');
   ok(/id="ioExportParts"[^>]*>分段复制</.test(ioBox), '第 134 块新增「分段复制」');
-  const ioAll = htmlSrc.slice(htmlSrc.indexOf('class="set-io"'), htmlSrc.indexOf('set-foot'));
+  const ioAll = htmlSrc.slice(htmlSrc.indexOf('class="set-io"'), htmlSrc.indexOf('id="adminAsk"'));
   ok(/分段/.test(ioAll), '提示语里说明了「分段复制」的用途');
+  // 第 138 块：整块搬去了独立页，设置页里不该再有这套按钮
+  const setBox = htmlSrc.slice(htmlSrc.indexOf('id="setScr"'), htmlSrc.indexOf('id="backupScr"'));
+  ok(!/ioExportFile|set-io-btns/.test(setBox), '设置页里已经没有存档备份那套按钮');
+  ok(/id="setScr"/.test(htmlSrc) && /set-ver|bkVer/.test(htmlSrc), '备份页页脚有版本号位置');
+}
+
+// ============================================================
+sec('②b 入口：据点里的「存档备份」按钮 → 独立页');
+// ============================================================
+{
+  ok(/id="backupScr" class="tt-sub-scr"/.test(htmlSrc), '有独立页 #backupScr');
+  ok(/<button class="bp-it bp-wide" id="btnBackup" type="button">/.test(htmlSrc), '据点里有「存档备份」横卡（独占整行）');
+  ok(/id="btnBackup"[\s\S]{0,200}?bp-n">存档备份</.test(htmlSrc), '按钮文案是「存档备份」');
+  ok(/id="bkBack"[^>]*>‹ 返回</.test(htmlSrc), '备份页有自己的返回键（不会退成设置页）');
+  ok(/getElementById\('btnBackup'\)\.addEventListener\('click', showBackup\)/.test(mainSrc), '按钮挂到 showBackup');
+  ok(/getElementById\('bkBack'\)\.addEventListener\('click', \(\) => hideSub\(backupScr\)\)/.test(mainSrc),
+    '返回键收的是 backupScr');
+  ok(/function showBackup\(\) \{[\s\S]{0,120}?renderAutoSlot\(\)[\s\S]{0,80}?showSub\(backupScr\)/.test(mainSrc),
+    '进页先刷自动备份槽再显示');
 }
 
 // ============================================================

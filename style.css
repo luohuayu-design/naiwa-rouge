@@ -754,6 +754,8 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
   transition:border-color .18s ease,background .18s ease,transform .12s ease;
   -webkit-tap-highlight-color:transparent}
 .bp-it:hover{border-color:rgba(126,235,196,.5);background:rgba(126,235,196,.1)}
+/* 第 138 块：存档备份那一条独占整行（2 列网格里的落单项） */
+.bp-it.bp-wide{grid-column:1 / -1}
 .bp-it:active{transform:scale(.98)}
 .bp-ic{grid-row:1 / span 2;width:18px;height:18px;color:#7ef0c4;
   filter:drop-shadow(0 0 7px rgba(126,240,196,.32))}
@@ -1179,9 +1181,11 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
   border:1px solid rgba(255,120,100,.34);background:rgba(60,18,14,.5);
   transition:border-color .16s,background .16s}
 .set-reset:hover{border-color:rgba(255,120,100,.7);background:rgba(80,24,18,.7)}
-
-/* 存档备份（第 78 块）：设置面板里的导出 / 导入区 */
-.set-io{margin-top:16px;padding-top:14px;border-top:1px solid rgba(126,235,196,.14)}
+/* 存档备份（第 78 块起的导出 / 导入区；第 138 块搬进独立的「存档备份」页，
+   所以去掉了原来那根分隔线 —— 现在它就是整页的主体） */
+.set-io{margin-top:0;padding-top:0}
+/* 第 138 块：备份页页脚那行版本号 —— 用来确认手机吃没吃到新缓存 */
+.set-ver{margin-top:8px;font-size:10.5px;letter-spacing:.09em;color:rgba(150,196,178,.5)}
 .set-io-hd{font-size:11.5px;font-weight:700;letter-spacing:.16em;color:#8df0c6;margin-bottom:10px}
 .set-io-btns{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 /* 第 134 块加了第 5 颗「分段复制」：落单的那颗拉满整行，别留半格空着 */

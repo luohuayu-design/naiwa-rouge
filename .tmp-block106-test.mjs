@@ -161,6 +161,9 @@ console.log('\n[6] index.html · 四个 tab 与据点面板');
     ok(base.includes(`id="${id}"`), `${id} 已经搬进据点面板`);
     ok(mainSrc.includes(`getElementById('${id}')`), `${id} 在 main.js 里还挂着监听`);
   }
+  // 第 138 块：存档备份从设置里独立出来，据点里多一条入口
+  ok(base.includes('id="btnBackup"'), '据点里有「存档备份」入口');
+  ok(mainSrc.includes("getElementById('btnBackup')"), 'btnBackup 挂着监听');
   // 主页面不该再有它们
   const mainPane = idx.slice(idx.indexOf('id="ttPaneMain"'), idx.indexOf('id="ttPaneQuest"'));
   for (const id of moved) {
