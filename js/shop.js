@@ -26,9 +26,9 @@
 // 第 11 块：每件货都带 rarity（0 普通 ~ 4 传说），店里按品质加权抽取 ——
 // 幸运越高，摆出来的货越往金/红那一头走（见 rarity.js）。
 // ============================================================
-import { rarityWeight } from './rarity.js?v=155';
-import { TURRET } from './turret.js?v=155';
-import { RELIC_DEFS } from './relics.js?v=155';
+import { rarityWeight } from './rarity.js?v=156';
+import { TURRET } from './turret.js?v=156';
+import { RELIC_DEFS } from './relics.js?v=156';
 
 export const SHOP_ITEMS = [
   // ---------------- 生命药水（第 13 块起：买进背包，作战中随时用） ----------------
@@ -443,6 +443,29 @@ export const SHOP_ITEMS = [
     glyph: '🪢', name: '麻绳捆扎',
     desc: '箱身用麻绳捆紧：倒箱时落点冲击伤害 ×1.5 —— 攒一箱倒下去，周围那一圈怪跟着一起摔。一局只能买一次。',
   },
+  // ---------------- 第十八关新增（第 139 块）：镇纸锤 ----------------
+  // 天亮前那间书房压在纸上的铁镇纸。不跟名字牌打交道，负责把残影按在地上：
+  // 一锤下去破甲 20%（三秒内吃更多伤害），对空白族本身还多 ×1.5。
+  {
+    id: 'buyHammer', type: 'relic', relic: 'hammer', price: 38, needRound: 8, needLevel: 18,
+    rarity: 3,
+    glyph: '🔨', name: '镇纸锤',
+    desc: '书房里压纸的铁镇纸：每 6.5 秒在身前砸一下 —— 命中的怪破甲 20%（3 秒内吃更多伤害），对空白族 ×1.5。'
+      + '技能栏多一颗「砸地」：身前 4 格、伤害 25% 最大生命、钉住 1 秒，冷却 26 秒。'
+      + '再买可升级（最多 3 级：每 4.5 秒砸一下、伤害 5.6、冷却 20 秒）。',
+  },
+  {
+    id: 'buyHammerHead', type: 'hammer', hammer: 'head', price: 20, needRound: 5, needLevel: 18,
+    rarity: 2,
+    glyph: '🪨', name: '加重锤头',
+    desc: '换一个灌满铅的锤头：破甲 20% → 35%、砸地半径 +0.4 格 —— 被砸中的怪那三秒脆得像纸。一局只能买一次。',
+  },
+  {
+    id: 'buyHammerGrip', type: 'hammer', hammer: 'grip', price: 24, needRound: 9, needLevel: 18,
+    rarity: 2,
+    glyph: '🧵', name: '缠布锤柄',
+    desc: '柄上缠一圈旧布：砸地冷却 −20%，对空白族与它的残影 ×1.5 → ×1.75 —— 天亮之前，专治那个没名字的。一局只能买一次。',
+  },
 ];
 
 // 第 118 块：付**夜行骨币**刷新（用户定案「本次进店递增、离店重置」）。
@@ -533,6 +556,12 @@ export function itemLocked(item, ctx = {}) {
     if (item.crate === 'lid' && ctx.crateLid) return '这一局已经买过了';
     if (item.crate === 'rope' && ctx.crateRope) return '这一局已经买过了';
   }
+  // 第 139 块：镇纸锤的两件买断货
+  if (item.type === 'hammer') {
+    if (!ctx.hammerLevel) return '要先拥有「镇纸锤」';
+    if (item.hammer === 'head' && ctx.hammerHead) return '这一局已经买过了';
+    if (item.hammer === 'grip' && ctx.hammerGrip) return '这一局已经买过了';
+  }
   return null;
 }
 
@@ -549,7 +578,9 @@ export const SHOP_SHOW = 4;
 // 第 129 块：铅笔挂 12 这一格（第 16 关起 needLevel 才放行，前几关自动跳过）。
 // 第 130 块：空箱子挂 9 这一格（第 17 关起才放行；第 9 回合那家店里
 // 第 17 关可用的常驻货正好是铃 / 拿铁 / 环形灯 / 箱子四件，不会撑爆四格）。
-export const SHOP_PINNED = { 9: ['buySeal', 'buyMine', 'buyLatte', 'buyRinglight', 'buyCrate'], 12: ['buySeal', 'buyPuppet', 'buyRinglight', 'buyPencil'] };
+// 第 139 块：镇纸锤挂 12 这一格（第 18 关起 needLevel 才放行；那一格在第十八关
+// 正好剩一个空位 —— 铃 / 墨丸 / 拿铁 / 箱子已占满 9）。
+export const SHOP_PINNED = { 9: ['buySeal', 'buyMine', 'buyLatte', 'buyRinglight', 'buyCrate'], 12: ['buySeal', 'buyPuppet', 'buyRinglight', 'buyPencil', 'buyHammer'] };
 
 // 抽本次商店的货物：返回一个**不含重复**的物品数组（默认 4 件）。
 // hasWeapon = 已拿到环剑（没有时剑类买了也用不了，先不进池）

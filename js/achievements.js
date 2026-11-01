@@ -31,7 +31,7 @@
 //    · tier 决定骨币，**别手写骨币数字**（改档位只改 ACH_TIERS 一处）。
 // ============================================================
 
-import { profile, hasAch, achGot, markAchGot, addBones, save } from './profile.js?v=155';
+import { profile, hasAch, achGot, markAchGot, addBones, save } from './profile.js?v=156';
 
 // ---------------- 八类别 ----------------
 // icon 全部来自 game-icons.net（CC BY 3.0），和背包图标同源；
@@ -170,7 +170,14 @@ export const ACHS = [
   { id: 'clear_5', cat: 'level', tier: 1, icon: '🌾', name: '登临第五关', desc: '通关「草甸路口」' },
   { id: 'clear_9', cat: 'level', tier: 2, icon: '🏛️', name: '骨塔之巅', desc: '通关「骨塔登记庭」' },
   { id: 'clear_10', cat: 'level', tier: 2, icon: '🕳️', name: '井水无痕', desc: '通关「塔顶井台」' },   // 第 107 块
-  { id: 'clear_all', cat: 'level', tier: 2, icon: '🏆', name: '十二关皆通', desc: '十二关全部通关' },   // 第 116 块：第十二关加入，口径跟着变（need 取 playable 关卡数，自动适配）
+  { id: 'clear_all', cat: 'level', tier: 2, icon: '🏆', name: '十八关皆通', desc: '十八关全部通关' },   // 第 116 块：第十二关加入；第 139 块随第十八关改成十八（need 取 playable 关卡数，自动适配）
+  // ---- 第十八关 · 天亮之前（第 139 块）----
+  // 三条都只在这一关有落点：名字板是这一关的场地机制，空白是第 20 回合的 BOSS，
+  // 镇纸锤是这一关才上架的第十九件法器。
+  { id: 'clear_18', cat: 'level', tier: 2, icon: '🌄', name: '天亮了', desc: '通关「天亮之前」' },
+  { id: 'blank_names', cat: 'level', tier: 2, icon: '🏷️', name: '八枚全抢回来', desc: '一局里把无名牌全部抢回来（决战时它八招全废）' },
+  { id: 'blank_flawless', cat: 'level', tier: 2, icon: '🪷', name: '一根线都没被它碰', desc: '第十八关第 20 回合（决战空白）一滴血不掉' },
+  { id: 'hammer_20', cat: 'level', tier: 1, icon: '🔨', name: '一锤一个', desc: '累计用镇纸锤砸倒 20 只怪', prog: { k: 'stat', key: 'hammerKills', need: 20 } },
   // 五~九关的关卡专属怪
   { id: 'eraser_10', cat: 'level', tier: 1, icon: '🧽', name: '名字还在', desc: '累计击倒 10 只擦名者', prog: { k: 'enemy', id: 'eraser', need: 10 } },
   { id: 'reboot_10', cat: 'level', tier: 1, icon: '🔌', name: '彻底拆了', desc: '累计击倒 10 只重启体', prog: { k: 'enemy', id: 'reboot', need: 10 } },
@@ -248,7 +255,9 @@ export const ACHS = [
   // 第 106 块顺手修：原来是 20，可第 97 块加完盖章人已经是 21 只 ——
   // need 写 20 的话进度条到 20/20 就满格（100%），实际还差一只没打。
   // 解锁判定在 main.js 里读的是 ENEMY_TYPES 的真实数量，所以只是显示错，但会误导玩家。
-  { id: 'all_enemies', cat: 'secret', tier: 2, icon: '📕', name: '骨塔名录', desc: '图鉴集齐全部 21 种怪', prog: { k: 'enemies', need: 21 } },
+  // 第 139 块：第十八关又加了 9 只（8 种残影 + 空白本体），图鉴总数到 46。
+  // 这里的 need 只负责进度条显示，解锁判定在 main.js 读的是 ENEMY_TYPES 的真实数量。
+  { id: 'all_enemies', cat: 'secret', tier: 2, icon: '📕', name: '骨塔名录', desc: '图鉴集齐全部 46 种怪', prog: { k: 'enemies', need: 46 } },
   { id: 'event_50', cat: 'secret', tier: 1, icon: '👁️', name: '见多识广', desc: '遇到 50 种奇遇', prog: { k: 'events', need: 50 } },
   { id: 'event_100', cat: 'secret', tier: 2, icon: '🌌', name: '夜行百态', desc: '遇到 100 种奇遇', prog: { k: 'events', need: 100 } },
   // ---- 第 106 块新增 ----

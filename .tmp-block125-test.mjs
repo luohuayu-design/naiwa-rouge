@@ -40,7 +40,7 @@ const L10 = W.LEVELS_BY_ID[10];
 sec('① 等的那个：彻底删干净');
 // ============================================================
 ok(!E.ENEMY_TYPES.waiter, 'ENEMY_TYPES 里没有 waiter');
-ok(Object.keys(E.ENEMY_TYPES).length === 37, '怪物总数 35 只（第 128 块 +2，第 129 块 +2）', String(Object.keys(E.ENEMY_TYPES).length));
+ok(Object.keys(E.ENEMY_TYPES).length === 47, '怪物总数 47 只（第 139 块 +10）', String(Object.keys(E.ENEMY_TYPES).length));
 
 // 机制代码（不是注释）必须一起消失 —— 只删 cfg 会留下一条永远进不来的分支
 const enemyCode = enemySrc.replace(/^\s*\/\/.*$/gm, '');
@@ -73,7 +73,7 @@ ok(L10.rounds.every((r) => r.tip && r.tip.length >= 10), '每回合仍有提示�
 
 // 成就 / 图鉴 / 埋点 / 资产
 ok(!A.ACHS.some((a) => a.id === 'waiter_5'), '成就 waiter_5 已删');
-ok(A.ACH_COUNT === 117, '成就总数 117', String(A.ACH_COUNT));
+ok(A.ACH_COUNT === 121, '成就总数 121', String(A.ACH_COUNT));
 ok(A.ACHS.every((a) => !a.prog || a.prog.id !== 'waiter'), '没有别的成就还在统计 waiter');
 ok(!/waiter/.test(codexSrc), '图鉴的数值行没有 waiter 分支');
 ok(!/tryAch\('waiter_5'\)/.test(mainSrc), 'main 里没有 waiter_5 的埋点');

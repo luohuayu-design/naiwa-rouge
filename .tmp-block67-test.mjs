@@ -93,8 +93,8 @@ ok(/return;\s*\}\s*playRep\(runShop\);/.test(runUpgrade.replace(/\n/g, ' ')) ||
 // ============================================================
 sec('四、关底照播（第 65 块回归）');
 // ============================================================
-ok(/if \(isLast\) \{ runUpgrade\(\); return; \}/.test(runEvent),
-  '关底不再直接跳结算 —— 交给 runUpgrade（它内部会 playRep）', runEvent.slice(0, 120));
+ok(/if \(isLast\) \{[\s\S]{0,600}?runUpgrade\(\);\s*return;/.test(runEvent),
+  '关底不再直接跳结算 —— 交给 runUpgrade（它内部会 playRep）', runEvent.slice(0, 160));
 ok(!/while \(repEventQueue\.length\) \{\s*const rid/.test(runEvent),
   '关底那段临时 while 已并入 playRep（不重复实现）');
 

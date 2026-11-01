@@ -16,12 +16,12 @@
 // 与环剑（自动索敌、消耗制）和炮台（固定点位）互补；价格定在
 // 商店里「买得起但要攒一攒」的档，让 9/12/15/18 回合的商店有取舍。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=155';
-import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=155';
-import { withV } from './assetUrl.js?v=155';   // 第 80 块：glb 带版本号，SW 才走缓存优先
-import { distance2D } from './stats.js?v=155';
-import { TAG_BASE, TAG_SEAL } from './deposit.js?v=155';   // 第 84 块：掉牌概率的真相源
-import audio from './audio.js?v=155';
+import * as THREE from '../lib/three.module.js?v=156';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=156';
+import { withV } from './assetUrl.js?v=156';   // 第 80 块：glb 带版本号，SW 才走缓存优先
+import { distance2D } from './stats.js?v=156';
+import { TAG_BASE, TAG_SEAL } from './deposit.js?v=156';   // 第 84 块：掉牌概率的真相源
+import audio from './audio.js?v=156';
 
 // 百分比文案（概率表里存的是 0.5 这种小数）
 const pct = (v) => `${Math.round(v * 100)}%`;
@@ -314,11 +314,26 @@ export const RELIC_DEFS = {
       '满级木箱：能装 3 只、每 5 秒收一只、落点伤害 2.8、摔伤 35%、冷却 20 秒 —— 围上来的一圈，一箱全收',
     ],
   },
+  // ---------------- 第十八关新增（第 139 块）：镇纸锤 ----------------
+  // 天亮前那间书房压在纸上的铁镇纸。本体（自动抡锤 / 破甲 / 技能）全在 blank.js，
+  // 这里只管「买没买 / 几级」。等级成长写在 blank.js 的 HAMMER_BASE：
+  // 抡锤间隔 [6.5/5.5/4.5] 秒、伤害 [3.2/4.4/5.6]、半径 2.0、冷却 [26/23/20] 秒。
+  hammer: {
+    name: '镇纸锤',
+    maxLevel: 3,
+    radius: [2.0, 2.0, 2.0],      // 仅占位（真实半径写在 blank.js 的 HAMMER_BASE）
+    desc: [
+      '书房压纸的铁镇纸：每 6.5 秒在身前砸一下，命中的怪破甲 20%（3 秒内吃更多伤害），对空白族 ×1.5。'
+        + '技能栏多一颗「砸地」：身前 4 格、伤害 25% 最大生命、钉住 1 秒，冷却 26 秒',
+      '锤子更沉：每 5.5 秒砸一下、伤害 4.4、砸地冷却 23 秒',
+      '满级镇纸锤：每 4.5 秒砸一下、伤害 5.6、砸地冷却 20 秒 —— 天亮之前，每一锤都算数',
+    ],
+  },
 };
 
 export function createRelicSystem({ scene, fx, enemies, onLanternReveal }) {
-  const levels = { spikes: 0, frost: 0, bell: 0, thorns: 0, stove: 0, lantern: 0, insulator: 0, woodfish: 0, seal: 0, puppet: 0, mine: 0, latte: 0, candle: 0, mark: 0, board: 0, guillotine: 0, ringlight: 0, pencil: 0, crate: 0 };
-  const cds = { spikes: 0, frost: 0, bell: 0, thorns: 0, stove: 0, lantern: 0, insulator: 0, woodfish: 0, seal: 0, puppet: 0, mine: 0, latte: 0, candle: 0, mark: 0, board: 0, guillotine: 0, ringlight: 0, pencil: 0, crate: 0 };
+  const levels = { spikes: 0, frost: 0, bell: 0, thorns: 0, stove: 0, lantern: 0, insulator: 0, woodfish: 0, seal: 0, puppet: 0, mine: 0, latte: 0, candle: 0, mark: 0, board: 0, guillotine: 0, ringlight: 0, pencil: 0, crate: 0, hammer: 0 };
+  const cds = { spikes: 0, frost: 0, bell: 0, thorns: 0, stove: 0, lantern: 0, insulator: 0, woodfish: 0, seal: 0, puppet: 0, mine: 0, latte: 0, candle: 0, mark: 0, board: 0, guillotine: 0, ringlight: 0, pencil: 0, crate: 0, hammer: 0 };
 
   // ---------------- 逐件法器增幅（第 118 块）----------------
   // 火种（逐件法器各一簇）与盲盒（法器属性）都往这张表里灌：

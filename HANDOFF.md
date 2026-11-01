@@ -1,11 +1,11 @@
 # 蛙步 · 夜行 —— 交接文档
 
 > 新对话从这里开始读，**别翻聊天记录**。要动手只读 §1 铁律 + §2 当前状态 + §3 坑。
-> 最后更新 2026-11-01 · 线上 **v=155** · 第 138 块。更早的细节查 `git log` / `git show`，本文件不重复。
+> 最后更新 2026-11-01 · 线上 **v=156** · 第 139 块。更早的细节查 `git log` / `git show`，本文件不重复。
 
 ## 0. 一句话
 
-Three.js r160 的单摇杆幸存者肉鸽《蛙步 · 夜行》：纯静态站点（无构建、无 CDN、零依赖、无 importmap），GitHub Pages 发布，**手机浏览器兼容是硬约束**。玩家是一只会走路的奶蛙，**十七关 × 20 回合**。
+Three.js r160 的单摇杆幸存者肉鸽《蛙步 · 夜行》：纯静态站点（无构建、无 CDN、零依赖、无 importmap），GitHub Pages 发布，**手机浏览器兼容是硬约束**。玩家是一只会走路的奶蛙，**十八关 × 20 回合**。
 
 | 项 | 值 |
 | --- | --- |
@@ -46,9 +46,45 @@ Three.js r160 的单摇杆幸存者肉鸽《蛙步 · 夜行》：纯静态站�
 
 ---
 
-## 2. 当前状态（v=155 · 第 138 块）
+## 2. 当前状态（v=156 · 第 139 块）
 
-### 2.1 第 131–138 块：合成台选残片 / 兜底配方 / 残片进档 / 锻造权重 + 骨币关卡倍率补齐 + 更新补贴码 + 系统分享面板与分段复制 + TXT 导出与自动识别导入 + 中文存档文件名（唯一来源）+ 存档备份独立成页（据点入口 + 页面版本号）
+### 2.1 第 139 块：第十八关「天亮之前」+ 名字被收 + 第 20 件法器「镇纸锤」
+
+设计稿 `DESIGN-LEVEL18.md`（唯一真相源，用户逐条定案）。**这是最后一关**，也是图鉴 / 法器 / 技能 / 卡池最后一次扩张。
+
+**① 场地机制「名字被收」（`js/blank.js` 的 `createBlankSystem`）**
+- 前 19 回合的八种残影，每种死后掉一枚**金色名字牌**（`onDeath` 调 `blank.dropPlate(e)`，靠 `cfg.blankMove` 判）。落地 **5.0 秒**后飘走（淡出 1.1 秒），**1.2 格**内走过去就抢回。
+- 抢回 1 个 = 名字板亮一格 + **30 金币** + 第 20 回合**封印空白对应的那一招**。同一招只掉一枚，已抢回的不再掉。
+- 名字板 UI 在 `index.html`（`#nameBoard` / `#nbGrid` / `#nbCount`），`main.js` 每抢回一格 `renderNameBoard()` 重绘。
+- 存档只记已抢回的招名（`blank.serialize()` → `{names:[...]}`），`restore` 会丢掉不认识的键。
+
+**② 八招 / 八只残影 / BOSS「空白」**
+- 八招 = 名字板八格：散名 / 盯上你 / 写错一笔 / 收走一样 / 照着我造 / 这里没有东西 / 合上这一页 / 最后一笔；每招一个新模型（图鉴 **37 → 46**）。
+- 登场节奏：R2 / R4 / R6 / R8 / R10 / R12 / R14 / R16 各一只，R17~R19 混编；**R20 只刷 `blank` 本体**（`boss:true`，不放任何普通小怪）。
+- 招式分「本体版 / 分身版」两套数值（`BLANK_BASE` 每招的 `boss` / `avatar` + `pct`）；所有伤害都按**主角最大生命的百分比**，不吃回合倍率。
+- **「收走一样」是固定六项轮转**（ground → skill → weapon → buff → combo → hp），放招时先弹 `stealWarn` 事件 —— 可预判就是它的玩法。
+- BOSS 三阶间隔 3.5 / 3.0 / 2.5 秒，上台带 2 只护卫（按剩余未封印的招招残影，全封印后退化成小空白），护卫死了 8 秒补一只，血每掉 1/3 多一只（最多 4 只）。
+- 八招全被封印后只剩**通用五式**（g1 近身拍 / g2 扇形字牌 / g3 冲刺 / g4 落点红圈 / g5 延迟白圈），`pickKey` 里 `specials` 为空就走 `GENERIC`。
+- `blank.js` **零业务依赖**（只 import three），怪的位置 / 受伤 / 冰冻 / 击退全走注入的 `enemies` 接口；要弹 UI 的事一律 push 进 `takeEvents()`（`name` / `stealWarn` / `minion` 三种事件）。
+- 纸墙走 `blank.clampPoint(x, z)`（玩家移动里夹住，不许跨过去）；白斑会把**怪也直接收走**（`takeDamage(e, maxHp*10)`），所以它只能留几秒。
+
+**③ 第 20 件法器「镇纸锤」（`createHammerSystem`，也在 `blank.js`）**
+- 被动：每 **6.5 / 5.5 / 4.5** 秒在身前 **2.4 格**砸一下，半径 **2.0**、伤害 **3.2 / 4.4 / 5.6**（吃 `amp.dmg`）、击退 0.8、**破甲 20%（3 秒）**，对空白族 **×1.5**。
+- 主动「砸地」= 技能第 15 格（**G** 键）：半径 **4.0**、伤害 = 最大生命 **25%**（至少 8）、钉 **1 秒**，冷却 **26 / 23 / 20**（下限 15）。
+- 五件齐：① `skills.js` 的 `hammer`（G、外圈冷却、`visible` 看 `hammer.owned`）；② 5 张卡（`hammerDmg` / `hammerRate` / `hammerRange` / `hammerArmor` / `hammerCd`）+ `weightOf` 的 `hammerOwned` 门 + `hammerChange()`；③ `shop.js` 本体 38 + 买断「加重锤头」20 / 「握柄」24；④ `relics.js` 的 `RELIC_DEFS.hammer` + `levels` / `cds`；⑤ 主循环 CD 缩短循环带上它。
+- ⚠️ **`applyCard(h)` 收的是卡片里的 hammer 描述**（`upgrade.js` 传的是 `up.hammer`，不是整张卡）。写成 `up.hammer` 会永远拿到 `undefined`、卡片静默失效 —— 本轮就是这么踩的（block139 逮住）。
+- 存档 `hammer.snapshot()` / `restore()`（mods + shop + cd + autoT）；`amp` 不进存档（主循环每帧从法器等级推）。
+
+**④ 数据 / 终章 / 规模**
+- `wave.js` 的 `LEVEL_18`（`theme:'blank'` / `arena 20` / 20 回合 / `hpMul 1.86 / dmgMul 2.20` / `blank:{arena, plateLife, pickRadius, coinPerName, totalNames, summon:['blankMinion']}`）+ `main.js` 选关表与 `LEVEL_18` import（**两处都要加**）。
+- 关底 `runEvent` 加了终章例外：`storyChapterAt(...)` 命中 s18（`atRound: 20`）就先播剧情再 `runUpgrade`。
+- 三条成就（`blank_names` / `blank_flawless` / `hammer_20`，成就 **117 → 121** 含全清改口「十八关皆通」）；骨币倍率 `campfire.js` 的 `levelMul[18] = 6.0`。
+- 9 只新怪 9 个新 glb（全部 CC0，`trebeljahr/quaternius-showcase`）：`avatar-parchment / ink / quill / drawer / mirror / eraser / pages / pen` + `blank.glb`；`avatar-paperdoll.glb` 与 `ledger.glb` md5 相同（重复）已删，换成**立式镜子**（`sourceHeight 0.938 / footY -0.469`、**不要**再给 `tiltX`，模型节点自带 −90°）。
+- `blankHoming` 是唯一带骨骼的残影（蜘蛛，5 段动画，`animFamily:'spider'`）；其余 8 只是静态道具（`blankAvatar:true` + `blankMove`），图鉴缩略图 `assets/codex/{id}.webp` 走 `.tmp-codex-shots.js` 重出。
+- `enemy.js` 分派铁律：`if (e.cfg.blankAvatar || e.cfg.blankBoss || e.cfg.blankMoves) { handleBlank(e, dt, ctx); return; }` 必须排在通用近战 / 施法者之前。
+- 回归：新建 `.tmp-block139-test.mjs`（**192 项**）；全量 68 套全绿；老套件按「怪 47 / 卡 138 / 商店 58 / 法器 20 / 技能 15 / 关卡 18 / glb 46 / 模块 76 / 成就 121」更新（124/125/126/128/130/52/63/64/65/67/72/73/77/82/84）。
+
+### 2.2 第 131–138 块：合成台选残片 / 兜底配方 / 残片进档 / 锻造权重 + 骨币关卡倍率补齐 + 更新补贴码 + 系统分享面板与分段复制 + TXT 导出与自动识别导入 + 中文存档文件名（唯一来源）+ 存档备份独立成页（据点入口 + 页面版本号）
 
 用户四连报（原话：「1.要确保所有碎片可以参与合成 2.玩一半存档，回档之后碎片会清零 3.可以适当提高剑鞘补满选项卡的概率 4.有时打怪显示掉落碎片了，实际背包没有出现」）。第 1 条定案「加『选碎片』+ 兜底配方」；第 4 条经追问确认是**合成台里的数量没涨**（不是 B 键背包）。
 
@@ -128,7 +164,7 @@ C —— 分段复制（`index.html` + `js/main.js` + `style.css`）：
 
 **发版**：`index.html` + `js/*.js` 的 `?v=` 一起 154 → **155**（172 处）。回归全绿，唯一红的是 `.tmp-story-test.mjs` 的 3 条（`局内有 16 夜` vs 实际 17 夜）—— 第 130 块起就红，与 131~138 无关。
 
-### 2.2 第 130 块：第十七关「钟楼顶」+ 钟声定身 + 空箱子 / 装箱
+### 2.3 第 130 块：第十七关「钟楼顶」+ 钟声定身 + 空箱子 / 装箱
 
 用户定案：场地机制 = **钟声定身**；两只新怪 = **撞钟的 + 铜壳**；配套 = **空箱子（第 19 件法器）+ 装箱（技能，`F`）**；数值取「更贪」档（`hpMul 1.80 / dmgMul 2.15`）。
 
@@ -156,7 +192,7 @@ C —— 分段复制（`index.html` + `js/main.js` + `style.css`）：
 **接线清单**：`wave.js` LEVEL_17（arena 19 / `hpMul 1.80` / `dmgMul 2.15` / 20 回合 / 15 种怪，`toll` 3.4 早于 `bronze` 4.2）+ `LEVELS_BY_ID[17]`；`scene.js` `roof` 主题（`makeRoofTexture()` 青石板错缝 + 铜绿渍 + 夜雾霜）；`story.js` s17 绑第 17 关；`main.js` 选关表 + import + `setLevel` 重建 + 主循环（`bell.setRound/update/takeEvents` → 冻结 + `rootPlayer` + `knockback`；`crate.setRelicLevel/update`）+ 存档 + 调试口（`__game.block114` 桶）；`shop.js` 三件货 + `itemLocked`；`upgrade.js` 六张卡 + `crateChange()` + `weightOf` 门；`relics.js` 定义 + `levels/cds`；`codex.js` 两条文案 + 两张缩略图。
 - 回归：新建 `.tmp-block130-test.mjs`（139 项）+ `.tmp-130-smoke.js`（CDP 实跑第十七关 PASS、零 console 报错）；老套件按十七关口径更新（怪 37 / 卡 133 / 商店 55 / 法器 19 / 技能 14 / 关卡 17 / glb 37 / 模块 75）。
 
-### 2.3 第 129 块：第十六关「钟楼画室」+ 铅笔线稿圈 + 铅笔 / 描红
+### 2.4 第 129 块：第十六关「钟楼画室」+ 铅笔线稿圈 + 铅笔 / 描红
 
 用户定案：场地机制 = **线稿定稿**；两只新怪 = **纸屑 + 画框**；配套 = **铅笔（第 18 件法器）+ 描红（技能，`R`）**；两只新怪各用一份新下载的 CC0 模型（零复用）。
 
@@ -187,7 +223,7 @@ C —— 分段复制（`index.html` + `js/main.js` + `style.css`）：
 - 回归：新建 `.tmp-block129-test.mjs`（137 项，七段）+ `.tmp-129-smoke.js`（CDP 实跑第十六关 PASS、零 console 报错）；19 个老套件的计数与源码断言按十六关口径更新（法器 18 / 技能 13 / 商店 52 / 卡 127 / 怪 35 / 关卡 16 / glb 35 / 模块 73）。
 - 缩略图坑：`paper / frame` 都是平摊模型，初版图只有影子。三处同时改才出得来 —— ① `doubleSided:true`（两处 traverse 都要设 `THREE.DoubleSide`）；② `.tmp-codex-shots.js` 的 `ELEV`（paper 0.62 / frame 0.30 提高俯角）；③ `SHADOW_K`（paper 0.28，影子小一点镜头才不拉远）。
 
-### 2.4 第 128 块：第十五关「钟楼直播间」+ 补光曝光区 + 环形灯 / 开播
+### 2.5 第 128 块：第十五关「钟楼直播间」+ 补光曝光区 + 环形灯 / 开播
 
 用户两轮定案：场地机制 = **补光曝光区**；两只新怪 = **超管 + 弹幕**；配套 = **环形灯（第 17 件法器）+ 开播（技能）**；键位 **Q / E**；两只新怪各用一份**新下载的 CC0 模型**；数值取「更贪」一档。
 
@@ -217,7 +253,7 @@ C —— 分段复制（`index.html` + `js/main.js` + `style.css`）：
 - 回归：新建 `.tmp-block128-test.mjs`（192 项，八段）；13 个老套件的计数与源码断言按十五关口径更新（法器 17 / 技能 12 / 商店 49 / 卡 122 / 怪 33 / 关卡 15 / glb 33）。
 - 实机自检：headless Chrome 加载 `?debug=1` → `setLevel(15)`，无运行时异常；光斑 2 盏、环形灯 / 开播 / 禁言三个口都响应，两只新怪能生成。
 
-### 2.5 第 127 块：收件人 / 回声减血 + 连杀「数字不封顶、加成封顶」
+### 2.6 第 127 块：收件人 / 回声减血 + 连杀「数字不封顶、加成封顶」
 
 用户两条实测反馈：①「收件人和回声的血太厚」；②「连击数量显示无上限，但是属性加成有上限」。
 
@@ -234,7 +270,7 @@ C —— 分段复制（`index.html` + `js/main.js` + `style.css`）：
 - 手感只改 `HEAT_BONUS_CAP` 一个常量；**别在 `setHeat` 里加 `Math.min`**（那是第 125 块修掉的 bug）。
 - 回归：`.tmp-block125-test.mjs` 的 ③ 段已按新语义改写（30 连杀 → 数字 30、加成 1.12 / 1.18），版本断言改成 `>=` 免得每次 bump 都红。
 
-### 2.6 第 126 块：照影换成主角同款模型（紫色）
+### 2.7 第 126 块：照影换成主角同款模型（紫色）
 
 用户一句话：「把模仿者的 3D 模型换成和主角一样，只不过把黄色换成紫色」。
 「模仿者」= 第十关的**照影**（`mirror`，唯一照抄玩家面板的怪）。
@@ -285,7 +321,7 @@ C —— 分段复制（`index.html` + `js/main.js` + `style.css`）：
 + `.tmp-126-cdp.js` 13 项（含**截图采样**验紫色、bounce 的 y 采样、spawn 态不进 handleMirror 的时机问题）。
 老套件回修 3 条：block52 把 mirror 加进静态模型白名单、block107 的 phantom 值、block110 的 height/radius。
 
-### 2.7 第 125 块：删「等的那个」+ 连杀不封顶
+### 2.8 第 125 块：删「等的那个」+ 连杀不封顶
 
 **用户两条实测反馈**（都是「设计一眼就不对」的类型，不是数值微调）：
 ① 「第十关里等的那个没有任何意义，直接删除」；② 「连击打到十次以上就不在往上了」。
@@ -310,7 +346,7 @@ C —— 分段复制（`index.html` + `js/main.js` + `style.css`）：
 - **顺手修了一个一直没接上的谎**：连杀浮现文案从第 117 块起就写着「攻速 +N%」，
   但 `heat.atkMul()` 只参与文案计算，从没乘进 `attackCd`。现在 `attackCd = 1 / (攻速 × heat.atkMul())`。
 
-### 2.8 第 124 块：第十四关「钟楼打样间」+ 裁切刀 + 裁纸刀
+### 2.9 第 124 块：第十四关「钟楼打样间」+ 裁切刀 + 裁纸刀
 
 **场地「裁切刀」**（`js/cutter.js`，零 import 引擎，和 `traffic / track / fog` 同款）
 - 相位机 `idle → warn(1.25s) → slice(0.22s) → recover(0.55s)`；`slots = [-7, -2.3, 2.3, 7]` 轮换 + 每换位翻一次横竖（八种组合）；`gap 5.2 → gapMin 3.1` 随回合加速；`roundNo >= 15` 起偶尔一次落两刀。
@@ -329,7 +365,7 @@ C —— 分段复制（`index.html` + `js/main.js` + `style.css`）：
 
 **接线**：`wave.js` 的 `LEVEL_14`（arena 19、`scale 1.65 / 2.00`、18 种怪、`cutter` 字段）+ `LEVELS_BY_ID[14]`；`main.js` 的 `LEVELS` 表 + import；`scene.js` 新增 `press` 主题（`makePressTexture()`）；`story.js` 的 s14 绑第十四关；`skills.js` 第 10 格；`upgrade.js` 四张卡 + `guillotineChange()`；`shop.js` 三件货。
 
-### 2.9 上一块：第 122 块（回合挑战 + 三选一刷新，细节见 git log）
+### 2.10 上一块：第 122 块（回合挑战 + 三选一刷新，细节见 git log）
 
 **回合挑战**（`js/challenge.js` 纯数据纯函数，零 DOM 零业务 import；接线全在 `main.js`）
 - 每关 `planRounds()` 从 `[3, rounds-1]` 无放回抽 **2 个回合**（独立 `chal` 随机流），**回合开始前**弹卡。
@@ -344,8 +380,9 @@ C —— 分段复制（`index.html` + `js/main.js` + `style.css`）：
 
 **生命周期**：效果 src 分别是 `chal` / `boost`，`clearRoundBuffs()` 里成对撤；`resumeGame` 成对抹 + `weapon.setMuted(false)` + `applySkillCdFactor(1)`；`resetRunState` 归零全部计数。存档带 `chal: {plan, used, seen}`。
 
-### 2.10 最近几块（一行一块）
+### 2.11 最近几块（一行一块）
 
+- **139 v=156**：第十八关「天亮之前」—— 名字被收（`blank.js`，残影死后掉名字牌，5 秒飘走 / 1.2 格内抢回 / 抢回一格封一招）+ 八招八残影 + R20 BOSS「空白」+ 第 20 件法器「镇纸锤」（自动抡破甲 + 砸地 G）；怪 46（+9）/ 卡 138 / 商店 58 / 法器 20 / 技能 15 / 关卡 18 / glb 46 / 模块 76 / 成就 121。
 - **138 v=155**：存档备份从设置里独立成 `#backupScr`（据点里新增 `#btnBackup` 横卡进页），备份页页脚显示 `v155`；`checkUpdate` 把 `backupScr` 也列进「别自动刷新」名单。
 - **137 v=154**：文件名收口到 `saveIO.fileName()` 一个来源（`main.js` 删掉自拼的 `saveFileName`），落盘名与 toast 名一致。
 - **136 v=153**：存档文件名改中文 `蛙步·夜行存档文件-日期-时间.txt`（`asciiFileName` → `saveFileName`），日期时分照旧防重名。
@@ -370,9 +407,9 @@ C —— 分段复制（`index.html` + `js/main.js` + `style.css`）：
 - **116/117**：第十二关「三幻神驿站」+ 车流 + 加急袋鼠 + 拿铁；声音开关移设置、删剑转、连杀改屏幕中央浮现。
 - 更早：查 `git log --oneline`。
 
-### 2.11 规模数字（改数值断言必看）
+### 2.12 规模数字（改数值断言必看）
 
-关卡 **17** · 怪 **37**（**37 个 glb，零复用，没有一只是手搓的**；图鉴 **37** webp）· 升级卡 **133** · 商店 **55** · 法器 **19** · 技能键 **14** · 火种簇 **23**（核心 9）· 成就 **117**（全清 8220）· 事件 **131** · 每日任务池 **39** · 礼包码 51 · 火种卡 16 · 诅咒 6。
+关卡 **18** · 怪 **47**（**46 个 glb，零复用，没有一只是手搓的**；`blankMinion` 是隐藏图鉴；图鉴 **46** webp）· 升级卡 **138** · 商店 **58** · 法器 **20** · 技能键 **15** · 火种簇 **23**（核心 9）· 成就 **121** · 事件 **131** · 每日任务池 **39** · 礼包码 52 · 火种卡 16 · 诅咒 6 · js 模块 **76**（`?v=156`）。
 
 ---
 
@@ -449,17 +486,17 @@ C —— 分段复制（`index.html` + `js/main.js` + `style.css`）：
 | `main.js`（~1 万行） | 主循环 + 所有 UI 面板 + 各系统接线 + `__game` 钩子。**改前先 grep 定位** |
 | `wave.js` | 20 回合编排、`roundScale`、`DIFFS`、升级/商店节点、吃 `roundMod` 四项（hp/dmg/speed/haste） |
 | `stats.js` / `weaponStats.js` | 两套属性引擎（`(base+Σflat)×(1+Σpct)×Πmul`） |
-| `enemy.js` | 37 只怪的行为、`CLIP_FAMILIES`、`cdOf`、`haste`、冰冻/定身（钟声免疫 `freezeImmune`）、装箱 `box/unbox`、并联体、称量官、看守五招、墨线、加急袋鼠、错版分裂、校对批注、画框囚笼、`moveToward`（嘲讽收口） |
+| `enemy.js` | 47 只怪的行为、`CLIP_FAMILIES`、`cdOf`、`haste`、冰冻/定身（钟声免疫 `freezeImmune`）、装箱 `box/unbox`、并联体、称量官、看守五招、墨线、加急袋鼠、错版分裂、校对批注、画框囚笼、空白族 `handleBlank`（`blankAvatar` / `blankBoss` / `blankMoves`）、`moveToward`（嘲讽收口） |
 | `weapon.js` | 环剑 3 把 + 6 元素剑（除铁剑外群伤 7 格）+ 万剑齐发；`setMuted()` / `holdOrbit()` |
-| `skills.js` | 技能注册表 14 格（万剑 / 箭雨 / 回血 / 傀儡 / 墨丸 / 拿铁 / 守夜烛 / 落款 / 纸立牌 / 裁纸刀 / 环形灯 `Q` / 开播 `E` / 描红 `R` / 装箱 `F`，第 10 格的键是 `0`） |
-| `upgrade.js` | 133 张升级卡、`weightOf` 门控、`*Change()` 文案函数 |
+| `skills.js` | 技能注册表 15 格（万剑 / 箭雨 / 回血 / 傀儡 / 墨丸 / 拿铁 / 守夜烛 / 落款 / 纸立牌 / 裁纸刀 / 环形灯 `Q` / 开播 `E` / 描红 `R` / 装箱 `F` / 砸地 `G`，第 10 格的键是 `0`） |
+| `upgrade.js` | 138 张升级卡、`weightOf` 门控、`*Change()` 文案函数 |
 | `challenge.js` | **第 122 块**：挑战九条 + 规划 + 奖励池，纯数据纯函数 |
-| `relics.js` + `mine/latte/golem/candle/mark/board/guillotine/ringlight/pencil/crate.js` | 19 件法器引擎（各 3 级，独立 `reset / applyCard / snapshot`）；`ringlight` 是第 17 件（Q 键，灯圈跟人走），`pencil` 是第 18 件（自动划线 + 描红），`crate` 是第 19 件（自动装箱 + 满箱倒出） |
+| `relics.js` + `mine/latte/golem/candle/mark/board/guillotine/ringlight/pencil/crate.js` + `blank.js` | 20 件法器引擎（各 3 级，独立 `reset / applyCard / snapshot`）；`ringlight` 是第 17 件（Q 键，灯圈跟人走），`pencil` 是第 18 件（自动划线 + 描红），`crate` 是第 19 件（自动装箱 + 满箱倒出），`blank.js` 里的 `createHammerSystem` 是第 20 件「镇纸锤」（G 键砸地） |
 | `broadcast.js` | 技能「开播」（不挂法器，`levelCleared(14)` 解锁；倒计时撤 mod 用独立 `on` 布尔，别拿 `t` 当开关） |
-| `shop.js` / `campfire.js` / `boons.js` / `curses.js` / `metaShop.js` | 商店 55 件 / 篝火 9 簇 / 火种 16 卡 / 诅咒（夜行 6 + 刷新减成 10）/ 盲盒 |
+| `shop.js` / `campfire.js` / `boons.js` / `curses.js` / `metaShop.js` | 商店 58 件 / 篝火 9 簇 / 火种 16 卡 / 诅咒（夜行 6 + 刷新减成 10）/ 盲盒 |
 | `events.js + eventsExtra + eventsSide + repEvents` | 131 个事件（99 随机 + 10 番外 + 13 连锁 + 9 民心），`TEMP_SCALE` |
 | `deposit.js` / `hazards.js` / `traffic.js` / `fog.js` / `track.js` / `cutter.js` / `spotlight.js` / `sketch.js` / `bell.js` | 第八关寄存柜 / 场地机关 / 第十二关车流 / 第十一关雾 / 第十三关跑道 / 第十四关裁切刀 / 第十五关补光曝光区 / 第十六关铅笔线稿圈 / 第十七关钟声（车流之后全是零 import，纯注入） |
-| `achievements.js` / `dailyQuest.js` / `signin.js` / `codex.js` / `story.js` | 117 成就（手动领取）/ 每日 39 条 / 签到 / 图鉴 37 种 / 18 夜主线（17 夜已绑关） |
+| `achievements.js` / `dailyQuest.js` / `signin.js` / `codex.js` / `story.js` | 121 成就（手动领取）/ 每日 39 条 / 签到 / 图鉴 46 种 / 18 夜主线（18 夜已绑关） |
 | `profile.js` / `runSave.js` / `saveIO.js` / `assetUrl.js` / `sw.js`(根目录) | 档案聚合 / 存档读 / 导入导出（`NWSZ1:` 压缩码）/ 给 glb 拼 `?v=` / Service Worker |
 
 ---
@@ -484,6 +521,7 @@ spotlight{on,state,list,inLight,reset} · ringlight{owned,active,ready,count,cap
 broadcast{owned,active,ready,remain,cdLeft,cdMax,bonuses,cast,reset} · silence() / silenceNow(sec)
 sketch{on,count,state,list,inkNow,frames/frame,clearFrames,clamp,reset} · pencil{owned,ready,cdLeft,cdMax,progress,bonuses,list,line,mark,long,twin,reset} · grantPencil(lv)
 bell{on,state,toll,count,pos,reset} · crate{owned,ready,count,cap,cdLeft,cdMax,progress,bonuses,list,box,dump,cast,lid,rope,reset} · grantCrate(lv)
+blank{names,moves,plates,walls,drop,config,state,serialize,restore} · hammer{owned,ready,cdLeft,cdMax,damage,radius,bonuses,cast,state,snapshot} · grantHammer(lv)
 ```
 > `chal.plan()` / `used()` 是**函数**不是属性；调试口一律回扁平值（见坑 35）。第 129 块起 `sketch / pencil / grantPencil`、第 130 块起 `bell / crate / grantCrate` 都挂在 **`__game.block114`** 桶里（不是 `__game.sketch`）。
 
@@ -492,7 +530,7 @@ bell{on,state,toll,count,pos,reset} · crate{owned,ready,count,cap,cdLeft,cdMax,
 ## 6. 发版与测试
 
 - **推送**：`git -c http.proxy=http://127.0.0.1:7897 push` → `git status -sb` 验证 → `curl --noproxy '*'` 连查两次版本号（Pages 约 1 分钟生效）。
-- **回归**：`sh .tmp-94-runall.sh`（**67 套 Node**，只报挂了的）；CDP 按需单套串行（第 124 块为 `.tmp-124-cdp.js` 47 项，第 128 块 `.tmp-128-smoke.js`，第 129 块 `.tmp-129-smoke.js`，第 130 块 `.tmp-130-smoke.js`）。
+- **回归**：`Get-ChildItem .tmp-block*-test.mjs` 逐个 `node` 跑（**68 套**，PowerShell 没有 `sh`）；要一把梭就写个 `ForEach-Object` 循环收集 `$LASTEXITCODE`。CDP 按需单套串行（第 124 块为 `.tmp-124-cdp.js` 47 项，第 128 块 `.tmp-128-smoke.js`，第 129 块 `.tmp-129-smoke.js`，第 130 块 `.tmp-130-smoke.js`）。
 - **已知黄账（别浪费时间）**：`camp-test` 84/22、`boon-test` 133/13、`eventui-test` 35/2、`block18` 34/1、`start-test` 33/15、`block30-cdp` 42/8、`ui-test` 15/7、`block54-cdp` 签到浮层 z-index。
 - 老套件 `ok()` 签名不统一：`block41` 是 `ok(name, cond)`，`block59/64/65/66/67/70` 是 `ok(cond, name)` —— 写新套件先看日志格式。
 
@@ -505,7 +543,8 @@ bell{on,state,toll,count,pos,reset} · crate{owned,ready,count,cap,cdLeft,cdMax,
 - [x] 第十五关（第 128 块，「钟楼直播间」+ 补光曝光区 + 环形灯 / 开播）
 - [x] 第十六关（第 129 块，「钟楼画室」+ 铅笔线稿圈 + 铅笔 / 描红）
 - [x] 第十七关（第 130 块，「钟楼顶」+ 钟声定身 + 空箱子 / 装箱）
-- [ ] **第十八关起**（`story.js` 还有 1 夜 `levelId:null`；模板照 `LEVEL_17` 抄，带场地机制的关加 `track` / `traffic` / `fog` / `cutter` / `spotlight` / `sketch` / `bell` 字段，**并且 `wave.js` 与 `main.js` 两处都要加**）
+- [x] 第十八关（第 139 块，「天亮之前」+ 名字被收 + 镇纸锤 / 砸地）—— **最后一关，18 夜主线全部绑关**
+- [ ] 后续新内容（关已出完；再做就加武器 / 技能 / 事件 / 局外成长，新法器仍要「五件齐」）
 - [ ] 更多武器 / 技能（技能栏还剩几格）
 - [ ] 性能优化（怪物合批 / 假阴影 / 视锥剔除）—— **等用户点头再动**
 - [x] 主菜单 3D 背景 —— 用户 2026-10-28 明确「暂时不做了」

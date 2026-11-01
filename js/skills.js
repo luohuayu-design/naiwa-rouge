@@ -32,7 +32,7 @@
 //
 // ctx 由 main.js 每帧拼好传进来：{ playing, weapon, playerPos, stats, coins }
 // ============================================================
-import audio from './audio.js?v=155';
+import audio from './audio.js?v=156';
 
 // 冷却数字统一两位小数（第 64 块用户需求：倒计时精确到两位小数）。
 // 不补零会跳字（3.4 → 3.35 期间宽度变化），toFixed(2) 宽度恒定。
@@ -624,6 +624,52 @@ export const SKILLS = [
       if (!ctx.crate) return false;
       const yaw = ctx.playerYaw ? ctx.playerYaw() : 0;
       const ok = ctx.crate.cast(ctx.playerPos, yaw);
+      if (ok) audio.sfx('swordHit', { vol: 0.35 });
+      return ok;
+    },
+  },
+
+  // ---- 第 20 件法器「镇纸锤」·技能「砸地」（第 139 块，第十八关专属） ----
+  // 场地机制是「名字被收」：残影死后掉名字牌，捡回来的一格会在决战里封掉一招。
+  // 镇纸锤不跟名字打交道 —— 它负责把残影按在地上：朝天亮的方向砸一圈，
+  // 命中的怪破甲 20%（三秒内吃更多伤害），对空白族本身还多 ×1.5。
+  // 被动每 6.5 秒自动抡一下身前，这一格是「现在、立刻、砸身前四格」的口子。
+  {
+    id: 'hammer',
+    name: '砸地',
+    // 内联 SVG：一柄木柄铁头锤 + 落地的一圈冲击
+    art: '<svg viewBox="0 0 40 40" aria-hidden="true">'
+      + '<rect x="18.6" y="12" width="3.2" height="22" rx="1.2" fill="#8a6136" stroke="#a8825a" stroke-width="1"/>'
+      + '<rect x="10" y="6" width="20" height="9" rx="1.6" fill="#8e9aa4" stroke="#c9d4dc" stroke-width="1.4"/>'
+      + '<path d="M9 34 q11 5 22 0" fill="none" stroke="#ffd86b" stroke-width="2" stroke-linecap="round" opacity=".8"/>'
+      + '<path d="M13 31 q7 3 14 0" fill="none" stroke="#ffe9a8" stroke-width="1.2" opacity=".55"/>'
+      + '</svg>',
+    ring: true,
+    hint: '砸身前 4 格：破甲 20%（3 秒）· 对空白族 ×1.5。冷却 26 秒',
+    key: 'g',
+    cd: 26.0,
+    cdNow: (ctx) => (ctx.hammer ? ctx.hammer.cdMax() : 26.0),
+    desc: '砸地：按下之后镇纸锤朝你面朝的方向砸下去，身前 4 格内的怪受到'
+      + '「最大生命 25%」的伤害（至少 8 点）、破甲 20% 持续 3 秒（这 3 秒里它们'
+      + '受到的伤害更高）、并被钉住 1 秒。对空白族与它的残影伤害 ×1.5。'
+      + '不按也会每 6.5 秒自动抡一下身前 —— 这一格只是让它「现在就来」。'
+      + '冷却 26 秒；法器三级冷却 20 秒。',
+    unlockNote: '夜行商店买到「镇纸锤」（第十八关起上架）后拥有',
+    visible: (ctx) => ctx.playing && !!ctx.hammer && ctx.hammer.owned,
+    state: (ctx) => {
+      if (!ctx.hammer || !ctx.hammer.owned) return 'lock';
+      return ctx.hammer.ready ? 'ready' : 'cd';
+    },
+    ready: (ctx) => !!ctx.hammer && ctx.hammer.owned && ctx.playing && ctx.hammer.ready,
+    progress: (ctx) => (ctx.hammer ? ctx.hammer.progress : 0),
+    cdText: (ctx) => {
+      if (!ctx.hammer || !ctx.hammer.owned) return '';
+      return ctx.hammer.ready ? '' : fmtCd(ctx.hammer.cdLeft);
+    },
+    press(ctx) {
+      if (!ctx.hammer) return false;
+      const yaw = ctx.playerYaw ? ctx.playerYaw() : 0;
+      const ok = ctx.hammer.cast(ctx.playerPos, yaw, ctx.stats ? ctx.stats.get('maxHp') : 10);
       if (ok) audio.sfx('swordHit', { vol: 0.35 });
       return ok;
     },

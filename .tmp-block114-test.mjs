@@ -67,7 +67,7 @@ sec('② 两只新怪');
 // ============================================================
 const clerk = E.ENEMY_TYPES.clerk;
 const col = E.ENEMY_TYPES.collector;
-ok(Object.keys(E.ENEMY_TYPES).length === 37, `怪种 35 只（第 128 块 +2，第 129 块 +2，实 ${Object.keys(E.ENEMY_TYPES).length}）`);
+ok(Object.keys(E.ENEMY_TYPES).length === 47, `怪种 47 只（第 139 块 +10，实 ${Object.keys(E.ENEMY_TYPES).length}）`);
 ok(!!clerk && clerk.name === '誊录员', 'clerk = 誊录员');
 ok(!!col && col.name === '收账人', 'collector = 收账人');
 // 模型：第 123 块把两只手搓的换成了下载资产（scaranto 墨笔 / Quaternius 摊开的书）。
@@ -191,7 +191,7 @@ const inkThick = S.SHOP_ITEMS.find((i) => i.id === 'buyInkThick');
 ok(!!buyMine && buyMine.type === 'relic' && buyMine.relic === 'mine', 'buyMine 是法器货');
 ok(buyMine.needLevel === 11, '墨丸只在第十一关起上架');
 ok(!!inkSac && !!inkThick && inkSac.type === 'ink' && inkThick.type === 'ink', '两件墨货 type = ink');
-ok(S.SHOP_ITEMS.length === 55, `商店货 52 件（28 + 3 + 3 + 6 + 3 + 3 + 3 + 3，实 ${S.SHOP_ITEMS.length}）`);
+ok(S.SHOP_ITEMS.length === 58, `商店货 58 件（第 139 块 +镇纸锤 3 件，实 ${S.SHOP_ITEMS.length}）`);
 ok(S.itemLocked(inkSac, {}) === '要先拥有「墨丸」', '没墨丸时墨货锁着');
 ok(S.itemLocked(inkSac, { mineLevel: 1, round: 9, level: 11 }) === null,
   '有墨丸 + 够了回合/关卡后解锁');
@@ -212,7 +212,7 @@ const pv = U.previewUpgrade(
 ok(Array.isArray(pv) && pv.length === 1 && pv[0].fromText && pv[0].toText,
   'previewUpgrade 能给出「原值 → 新值」（不会崩）',
   JSON.stringify(pv && pv[0]));
-ok(U.UPGRADES.length === 133, `卡池 127 张（87 + 6 + 6 + 10 + 4 + 4 + 5 + 5，实 ${U.UPGRADES.length}）`);
+ok(U.UPGRADES.length === 138, `卡池 138 张（第 139 块 +镇纸锤 5，实 ${U.UPGRADES.length}）`);
 
 // 技能栏
 const mineSkill = SK.SKILLS.find((s) => s.id === 'mine');
@@ -273,9 +273,9 @@ sec('⑥ 成就 / 图鉴 / 剧情 / 存档');
 for (const id of ['clear_11', 'clerk_10', 'collector_5', 'fog_20']) {
   ok(!!A.achById(id), `成就 ${id} 已注册`);
 }
-ok(A.achById('clear_all').name === '十二关皆通', 'clear_all 改名「十二关皆通」');
+ok(A.achById('clear_all').name === '十八关皆通', 'clear_all 改名「十八关皆通」');
 ok(A.achById('fog_20').prog && A.achById('fog_20').prog.key === 'fogKills', 'fog_20 读 fogKills');
-ok(A.ACH_COUNT === 117, `成就总数 117（实 ${A.ACH_COUNT}）`);
+ok(A.ACH_COUNT === 121, `成就总数 121（实 ${A.ACH_COUNT}）`);
 ok(/tryAch\('clear_11'\)/.test(mainSrc), '通关第十一关发 clear_11');
 
 const codexSrc = src('js/codex.js');

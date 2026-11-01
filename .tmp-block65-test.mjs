@@ -180,7 +180,8 @@ sec('七、民心事件关底不丢');
 // ============================================================
 // 第 67 块把这段统一进了 playRep（本回合、三选一之后再播），关底的临时 while 拆了。
 // 运行时「关底照样播」的覆盖在 .tmp-block67-cdp.js 的 C 组（真跑一遍第 20 回合）。
-ok(/if \(isLast\) \{ runUpgrade\(\); return; \}/.test(mainSrc),
+// 第 139 块：关底多了一个终章分支（打完之后才播 s18），所以这里只查「isLast 分支最后仍落到 runUpgrade」
+ok(/if \(isLast\) \{[\s\S]{0,600}?runUpgrade\(\);\s*return;/.test(mainSrc),
   '关底走 runUpgrade（民心事件在 playRep 里播，不再单独 while）');
 // 第 70 块给 openEvent 加了第 4 个参数（民心版式），这里只认「回调还是 playRep(next)」
 ok(/if \(rev\) \{[\s\S]{0,200}?openEvent\(rev, roundNo, \(\) => playRep\(next\)/.test(mainSrc),

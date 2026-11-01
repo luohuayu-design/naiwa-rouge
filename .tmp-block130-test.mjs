@@ -195,12 +195,12 @@ ok(/SHOP_PINNED[\s\S]{0,260}'buyCrate'/.test(shopSrc), '第 9 回合的固定货
 ok(['crateInterval', 'crateImpact', 'crateRange', 'crateCd', 'crateCap', 'crateFall'].every((id) => upgSrc.includes(`id: '${id}'`)),
   '六张空箱子卡都在');
 ok(upgSrc.includes('if (up.crate && !opts.crateOwned) return 0;'), '没买到空箱子前卡片不进池子');
-ok(/export function applyUpgrade\([^)]*crate = null\)/.test(upgSrc), 'applyUpgrade 末参加 crate');
-ok(/export function previewUpgrade\([^)]*crate = null\)/.test(upgSrc), 'previewUpgrade 末参加 crate');
+ok(/export function applyUpgrade\([^)]*crate = null, hammer = null\)/.test(upgSrc), 'applyUpgrade 末参加 crate（第 139 块尾随 hammer）');
+ok(/export function previewUpgrade\([^)]*crate = null, hammer = null\)/.test(upgSrc), 'previewUpgrade 末参加 crate（第 139 块尾随 hammer）');
 ok(upgSrc.includes('function crateChange(c, b)'), '升级卡有 changes 文案翻译');
 ok(/if \(up\.crate\)/.test(upgSrc), 'applyUpgrade / previewUpgrade 都有 crate 分支');
 
-ok(/LEVEL_16, LEVEL_17, LEVELS_BY_ID/.test(mainSrc), 'main.js 从 wave.js 引入了 LEVEL_17');
+ok(/LEVEL_16, LEVEL_17, LEVEL_18, LEVELS_BY_ID/.test(mainSrc), 'main.js 从 wave.js 引入了 LEVEL_17');
 ok(/\{ id: 17, name: LEVEL_17\.name, playable: true \}/.test(mainSrc), '选关表里有第 17 关');
 ok(mainSrc.includes("from './bell.js?v=") && mainSrc.includes("from './crate.js?v="),
   'main.js 引入了 bell / crate 两个模块');
@@ -230,12 +230,12 @@ ok(/bell: \{/.test(mainSrc) && /crate: \{/.test(mainSrc) && /grantCrate/.test(ma
 ok(/crate && lvCrate > 0/.test(mainSrc), '技能栏的 crate facade 按法器等级开关');
 
 // 总量口径
-ok(Object.keys(R.RELIC_DEFS).length === 19, '法器总数 19（本块 +空箱子）', String(Object.keys(R.RELIC_DEFS).length));
-ok(SK.SKILLS.length === 14, '技能格 14（本块 +装箱）', String(SK.SKILLS.length));
-ok(S.SHOP_ITEMS.length === 55, '商店货 55', String(S.SHOP_ITEMS.length));
-ok(U.UPGRADES.length === 133, '升级卡 133 张', String(U.UPGRADES.length));
-ok(Object.keys(E.ENEMY_TYPES).length === 37, '怪物种类 37', String(Object.keys(E.ENEMY_TYPES).length));
-ok(Object.keys(W.LEVELS_BY_ID).length === 17, '关卡 17 张表', String(Object.keys(W.LEVELS_BY_ID).length));
+ok(Object.keys(R.RELIC_DEFS).length === 20, '法器总数 20（第 139 块 +镇纸锤）', String(Object.keys(R.RELIC_DEFS).length));
+ok(SK.SKILLS.length === 15, '技能格 15（第 139 块 +砸地）', String(SK.SKILLS.length));
+ok(S.SHOP_ITEMS.length === 58, '商店货 58', String(S.SHOP_ITEMS.length));
+ok(U.UPGRADES.length === 138, '升级卡 138 张', String(U.UPGRADES.length));
+ok(Object.keys(E.ENEMY_TYPES).length === 47, '怪物种类 47', String(Object.keys(E.ENEMY_TYPES).length));
+ok(Object.keys(W.LEVELS_BY_ID).length === 18, '关卡 18 张表', String(Object.keys(W.LEVELS_BY_ID).length));
 
 // 守卫：加关卡 = 法器 + 技能 + 卡池一起加
 const NO_CARD_SKILLS = new Set(['swordRain', 'broadcast']);
@@ -265,7 +265,7 @@ ok(hashes.size === glbs.length, `${glbs.length} 个怪物模型一个都不重�
 ok(glbs.includes('chapel-bell.glb') && glbs.includes('bronze-knight.glb'), '两份新模型在盘上');
 ok(readFileSync(path.join(mdir, 'chapel-bell.glb')).length > 2048
   && readFileSync(path.join(mdir, 'bronze-knight.glb')).length > 2048, '两份模型都不是空文件');
-ok(glbs.length === 37, '怪物模型总数 37', String(glbs.length));
+ok(glbs.length === 46, '怪物模型总数 46', String(glbs.length));
 
 ok(+VER >= 147, '版本号至少到 147', VER);
 const jsFiles = readdirSync(path.join(ROOT, 'js')).filter((f) => f.endsWith('.js'));
@@ -276,7 +276,7 @@ for (const f of jsFiles) {
 }
 ok(badVer.length === 0, '所有 js 的 ?v= 都是同一个版本', badVer.slice(0, 5).join(', '));
 ok(indexHtml.includes(`main.js?v=${VER}`), 'index.html 引用的是新版本');
-ok(jsFiles.length === 75, 'js 模块 75 个', String(jsFiles.length));
+ok(jsFiles.length === 76, 'js 模块 76 个', String(jsFiles.length));
 
 console.log(`\n===== block130：${pass} ✓ / ${fail} ✗ =====`);
 if (fail) { console.log('失败项：'); for (const f of fails) console.log('  - ' + f); process.exitCode = 1; }

@@ -25,15 +25,15 @@
 // 第四关三只（wraith/leaper/mender，第 35 块，第 52 块换模型），
 // 各自在下面 ENEMY_TYPES 里有详细注释。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=155';
-import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=155';
-import { clone as cloneSkinned } from '../lib/jsm/utils/SkeletonUtils.js?v=155';
-import { distance2D } from './stats.js?v=155';
-import { createRangeRing } from './rangeRing.js?v=155';
-import { withV } from './assetUrl.js?v=155';
+import * as THREE from '../lib/three.module.js?v=156';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=156';
+import { clone as cloneSkinned } from '../lib/jsm/utils/SkeletonUtils.js?v=156';
+import { distance2D } from './stats.js?v=156';
+import { createRangeRing } from './rangeRing.js?v=156';
+import { withV } from './assetUrl.js?v=156';
 // 第 114 块：誊录员落笔 / 收账人翻账簿的提示音（以前这个文件不放音效，
 // 忘了 import 会在落笔那一帧抛 ReferenceError，整帧 AI 全断 —— 别省这一行）
-import audio from './audio.js?v=155';
+import audio from './audio.js?v=156';
 
 // KayKit 模型正面朝 +Z；如果哪天换模型发现怪倒着走，把这里改成 Math.PI
 export const ENEMY_MODEL_YAW = 0;
@@ -131,6 +131,15 @@ const CLIP_FAMILIES = {
     idle: 'Idle', walk: 'Walking_A', run: 'Running_A',
     attack: '1H_Melee_Attack_Slice_Horizontal', cast: '1H_Melee_Attack_Chop',
     death: 'Death_A', hit: 'Hit_A', spawn: 'Idle',
+  },
+  // 第 139 块：Quaternius 的 Spider（`avatar-ink.glb`，5 段动画）。
+  // 它是本关唯一带骨骼的残影（墨点蜘蛛）。名字全是 Spider_ 前缀，
+  // 没有 Punch / Weapon 这类通用键 —— 单独一族。
+  // attack 借 Spider_Attack（前扑咬）、cast 借 Spider_Jump（起跳撒墨）。
+  spider: {
+    idle: 'Spider_Idle', walk: 'Spider_Walk', run: 'Spider_Walk',
+    attack: 'Spider_Attack', cast: 'Spider_Jump',
+    death: 'Spider_Death', hit: 'Spider_Idle', spawn: 'Spider_Idle',
   },
 };
 
@@ -1899,6 +1908,270 @@ export const ENEMY_TYPES = {
       death: 'death', spawn: 'spawn',
     },
   },
+
+  // ============================================================
+  // 第 139 块：第十八关「天亮之前」—— 空白的八种残影 + 空白本体 + 小空白
+  //
+  // 这十只全部**不靠通用 AI**：`enemy.js` 只负责分派，招式、移动、阶段、护卫
+  // 全在 js/blank.js 的 `tick(e, dt, ctx)` 里（和 bell / sketch / crate 同一套写法）。
+  // 所以它们的 `damage` 一律 0、没有 attackRange —— 掉进通用近战分支就会
+  // 变成一个贴脸打人的怪，那这一整套设计就白写了（见分派区的 ⚠️）。
+  //
+  // 外观统一：tint 冷白 + emissive 冷白 + phantom 半透明 = 「雾状的残影」。
+  // `blankMove` 是它死后掉哪一枚名字牌（= 名字板的八格，见 blank.js 的 BLANK_MOVES）。
+  // 八只模型全部来自 trebeljahr/quaternius-showcase（CC0），标定见 .tmp-139-calib.js。
+  // ============================================================
+  // 1. 散名的残影 —— 破损的羊皮纸（平摊的一片纸，源高取包围盒最大边）
+  blankScatter: {
+    name: '散名的残影',
+    file: 'assets/monsters/avatar-parchment.glb',
+    sourceHeight: 0.938,
+    height: 0.95,
+    footY: -0.438,
+    radius: 0.52,
+    hp: 5.0,
+    armor: 0.10,
+    speed: 1.15,
+    damage: 0,
+    spawnTime: 0.9,
+    deathTime: 1.1,
+    selfDestruct: false,
+    blankAvatar: true,
+    blankMove: 'scatter',
+    color: 0xf2f6f8,
+    tint: 0xf2f6f8,
+    glow: { color: 0xdfe8ee, intensity: 0.5 },
+    phantom: 0.62,
+    doubleSided: true,
+    animFamily: null,
+    anim: { walk: 'idle', idle: 'idle', death: 'death', spawn: 'spawn' },
+  },
+  // 2. 盯上你的残影 —— 墨点蜘蛛（本关唯一带骨骼的残影，5 段动画）
+  blankHoming: {
+    name: '盯上你的残影',
+    file: 'assets/monsters/avatar-ink.glb',
+    sourceHeight: 1.938,
+    height: 1.50,
+    radius: 0.75,
+    hp: 5.0,
+    armor: 0.10,
+    speed: 1.20,
+    damage: 0,
+    spawnTime: 1.0,
+    deathTime: 1.1,
+    selfDestruct: false,
+    blankAvatar: true,
+    blankMove: 'homing',
+    color: 0x2a2338,
+    tint: 0x3a3448,
+    glow: { color: 0x6e6a86, intensity: 0.35 },
+    phantom: 0.78,
+    animFamily: 'spider',
+    anim: {
+      walk: 'walk', idle: 'idle', attack: 'attack',
+      death: 'death', spawn: 'spawn',
+    },
+  },
+  // 3. 写错一笔的残影 —— 会转的笔（镰刀形长杆，高 5.594 → 缩到 2.0）
+  blankArm: {
+    name: '写错一笔的残影',
+    file: 'assets/monsters/avatar-quill.glb',
+    sourceHeight: 5.594,
+    height: 2.00,
+    footY: -2.219,
+    radius: 0.40,
+    hp: 5.5,
+    armor: 0.12,
+    speed: 1.00,
+    damage: 0,
+    spawnTime: 1.0,
+    deathTime: 1.2,
+    selfDestruct: false,
+    blankAvatar: true,
+    blankMove: 'arm',
+    color: 0xd8c79a,
+    tint: 0xe6dcc4,
+    glow: { color: 0xc8b88a, intensity: 0.45 },
+    phantom: 0.68,
+    animFamily: null,
+    anim: { walk: 'idle', idle: 'idle', death: 'death', spawn: 'spawn' },
+  },
+  // 4. 收走一样的残影 —— 抽屉柜（宽 4.188，缩到 1.2 × 0.753）
+  blankSteal: {
+    name: '收走一样的残影',
+    file: 'assets/monsters/avatar-drawer.glb',
+    sourceHeight: 1.594,
+    height: 1.20,
+    radius: 0.72,
+    hp: 5.5,
+    armor: 0.12,
+    speed: 1.05,
+    damage: 0,
+    spawnTime: 1.0,
+    deathTime: 1.2,
+    selfDestruct: false,
+    blankAvatar: true,
+    blankMove: 'steal',
+    color: 0x9a8a6a,
+    tint: 0xcfc6b4,
+    glow: { color: 0xb0a68e, intensity: 0.35 },
+    phantom: 0.70,
+    animFamily: null,
+    anim: { walk: 'idle', idle: 'idle', death: 'death', spawn: 'spawn' },
+  },
+  // 5. 照着我造的残影 —— 一面空镜子（「照着」你，就照出一份）
+  // ⚠️ 原方案是摊开的书（Book2_Open），结果和第十一关收账人的 ledger.glb
+  // 是**同一个文件**（md5 一致，`avatar-paperdoll` 实为重复下载），回归里
+  // 「模型一个都不重复」直接红。换成同一套 Quaternius 馆藏的立式镜子
+  // （Bathroom_Mirror1.glb，CC0，6264 字节，其他任何怪都没用过）。
+  // 它出厂就是竖着的（节点自带 -90° 旋转），不用 tiltX，实测高 0.938 / 脚 -0.469。
+  blankCopy: {
+    name: '照着我造的残影',
+    file: 'assets/monsters/avatar-mirror.glb',
+    sourceHeight: 0.938,     // 实测：竖立渲染高度（.tmp-139-calib.js）
+    height: 1.15,
+    footY: -0.469,           // 实测：原点在镜面正中，脚底在 -0.469
+    hover: 0.16,
+    radius: 0.50,
+    hp: 6.0,
+    armor: 0.10,
+    speed: 1.10,
+    damage: 0,
+    spawnTime: 1.0,
+    deathTime: 1.2,
+    selfDestruct: false,
+    blankAvatar: true,
+    blankMove: 'copy',
+    color: 0xf4efe2,
+    tint: 0xf6f2e6,
+    glow: { color: 0xe8e2d0, intensity: 0.5 },
+    phantom: 0.66,
+    doubleSided: true,
+    animFamily: null,
+    anim: { walk: 'idle', idle: 'idle', death: 'death', spawn: 'spawn' },
+  },
+  // 6. 这里没有东西的残影 —— 橡皮（绿色垃圾桶，高 6.75 → 缩到 1.5）
+  blankSpot: {
+    name: '这里没有东西的残影',
+    file: 'assets/monsters/avatar-eraser.glb',
+    sourceHeight: 6.75,
+    height: 1.50,
+    radius: 0.55,
+    hp: 5.5,
+    armor: 0.12,
+    speed: 1.10,
+    damage: 0,
+    spawnTime: 1.0,
+    deathTime: 1.2,
+    selfDestruct: false,
+    blankAvatar: true,
+    blankMove: 'spot',
+    color: 0x8fae9a,
+    tint: 0xe4eee8,
+    glow: { color: 0xa8c4b6, intensity: 0.4 },
+    phantom: 0.70,
+    animFamily: null,
+    anim: { walk: 'idle', idle: 'idle', death: 'death', spawn: 'spawn' },
+  },
+  // 7. 合上这一页的残影 —— 立着的合页书（本身就是竖的，不用 tiltX）
+  blankWall: {
+    name: '合上这一页的残影',
+    file: 'assets/monsters/avatar-pages.glb',
+    sourceHeight: 0.813,
+    height: 1.25,
+    footY: -0.406,
+    radius: 0.44,
+    hp: 6.5,
+    armor: 0.15,
+    speed: 0.95,
+    damage: 0,
+    spawnTime: 1.0,
+    deathTime: 1.2,
+    selfDestruct: false,
+    blankAvatar: true,
+    blankMove: 'wall',
+    color: 0xd8c79a,
+    tint: 0xefe6d2,
+    glow: { color: 0xd8c8a0, intensity: 0.45 },
+    phantom: 0.68,
+    doubleSided: true,
+    animFamily: null,
+    anim: { walk: 'idle', idle: 'idle', death: 'death', spawn: 'spawn' },
+  },
+  // 8. 最后一笔的残影 —— 巨型铅笔（立着的剑，高 2.75 → 缩到 2.1）
+  blankStroke: {
+    name: '最后一笔的残影',
+    file: 'assets/monsters/avatar-pen.glb',
+    sourceHeight: 2.75,
+    height: 2.10,
+    footY: -0.156,
+    radius: 0.38,
+    hp: 6.0,
+    armor: 0.10,
+    speed: 1.15,
+    damage: 0,
+    spawnTime: 1.0,
+    deathTime: 1.2,
+    selfDestruct: false,
+    blankAvatar: true,
+    blankMove: 'stroke',
+    color: 0xffe9a8,
+    tint: 0xf6e6bc,
+    glow: { color: 0xffd86b, intensity: 0.5 },
+    phantom: 0.70,
+    animFamily: null,
+    anim: { walk: 'idle', idle: 'idle', death: 'death', spawn: 'spawn' },
+  },
+  // 9. 空白本体 —— 白色雾团（悬浮 0.4 格，约 2.4 格高）
+  blank: {
+    name: '空白',
+    file: 'assets/monsters/blank.glb',
+    sourceHeight: 2.156,
+    height: 2.40,
+    footY: -0.156,
+    hover: 0.40,
+    radius: 1.00,
+    hp: 36.0,          // 第 20 回合经 roundScale 约 780（普通难度），见设计稿 §5
+    armor: 0.18,
+    speed: 1.00,
+    damage: 0,
+    spawnTime: 1.4,
+    deathTime: 1.8,
+    selfDestruct: false,
+    blankBoss: true,
+    color: 0xf6f8fa,
+    tint: 0xffffff,
+    glow: { color: 0xdfe8f2, intensity: 0.8 },
+    phantom: 0.82,
+    animFamily: null,
+    anim: { walk: 'idle', idle: 'idle', death: 'death', spawn: 'spawn' },
+  },
+  // 10. 小空白（「照着我造」撕出来的那一只，只会散名）—— 复用雾团模型，缩到 0.55
+  // `planned: true`：图鉴停在 46（它和空白本体共用一格，不单列）。
+  blankMinion: {
+    name: '小空白',
+    file: 'assets/monsters/blank.glb',
+    sourceHeight: 2.156,
+    height: 2.00,
+    footY: -0.156,
+    hover: 0.28,
+    radius: 0.50,
+    hp: 6.0,
+    armor: 0,
+    speed: 1.25,
+    damage: 0,
+    spawnTime: 0.8,
+    deathTime: 0.8,
+    selfDestruct: false,
+    planned: true,
+    blankMoves: ['scatter'],
+    color: 0xf2f6f8,
+    tint: 0xffffff,
+    glow: { color: 0xdfe8f2, intensity: 0.55 },
+    phantom: 0.7,
+    animFamily: null,
+    anim: { walk: 'idle', idle: 'idle', death: 'death', spawn: 'spawn' },
+  },
 };
 
 // ------------------------------------------------------------
@@ -3099,12 +3372,14 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
         color: '#ffe6a8', y: e.height * 0.85, size: 0.5,
       });
     }
+    // 第 139 块：镇纸锤的「破甲」—— 直接把这 20% 从减伤里扣掉（扣穿成负数就是脆皮加成）。
+    const armBreak = (e.armorBreak && e.armorBreak.t > 0) ? e.armorBreak.add : 0;
     const red = Math.min(0.95, (e.auraArmor || 0) + (e.namedArmor || 0) + faceArmor
-      + (e.shieldUp && e.cfg.shield ? e.cfg.shield.reduce : 0));
+      + (e.shieldUp && e.cfg.shield ? e.cfg.shield.reduce : 0) - armBreak);
     // 第 124 块：被校对的批注过的怪**吃更多伤害**（乘法，作用在减伤之后）——
     // 批注改的是「你打它有多疼」，不是「它有多硬」，所以不能折进 red 那条加法链
     // （折进去会被 0.95 的上限吃掉，也会和护甲互相干扰）。
-    let dealt = (red > 0 ? amount * (1 - red) : amount);
+    let dealt = amount * (1 - red);
     if (e.proofed && e.proofed.t > 0) dealt *= e.proofed.dmgMul;
     // 第 129 块：「描红」—— 和批注一样是乘法，作用在减伤之后。
     if (e.redlined && e.redlined.t > 0) dealt *= e.redlined.dmgMul;
@@ -4748,6 +5023,12 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
       }
     }
 
+    // ---- 第 139 块：镇纸锤破甲倒计时（不挂任何网格，到期清掉就行）----
+    if (e.armorBreak) {
+      e.armorBreak.t -= dt;
+      if (e.armorBreak.t <= 0) e.armorBreak = null;
+    }
+
     // ---- 冰缓：减速倒计时（移速在 moveToward 里按 slowT 折算） ----
     if (e.slowT > 0) e.slowT -= dt;
 
@@ -5011,6 +5292,14 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
     // 和画框 / 超管同一性质：damage 0（它不打人），必须排在通用近战之前，
     // 否则会贴上来按 cfg.damage 打。
     if (e.cfg.toll) { handleToller(e, dt, ctx, dx, dz, dist); return; }
+
+    // ---- 第十八关 · 空白 / 残影（第 139 块）----
+    // 和撞钟的、画框同一性质：damage 0（本体与分身都不靠贴身打人），
+    // 招式全部由 js/blank.js 的 tick 接管，所以必须排在通用近战之前。
+    if (e.cfg.blankAvatar || e.cfg.blankBoss || e.cfg.blankMoves) {
+      handleBlank(e, dt, ctx);
+      return;
+    }
 
     // ---- 雾鬼：隐身 / 显形循环（第 35 块；第 61 块改规则）----
     // 隐身时不可被索敌、打不着；**但贴脸不再强制显形**，只能等它自己露头。
@@ -6627,6 +6916,21 @@ export function createEnemySystem({ scene, fx, arenaRadius = 15, onDeath, onSpaw
       return;
     }
     if (e.attackCd <= 0) e.attackCd = 0.25;   // 还没进圈：每 0.25 秒再看一次
+  }
+
+  // ---- 第 139 块：第十八关 · 空白本体 / 八种残影 / 小空白 ----
+  // enemy.js 只做两件事：把每帧交给 blank.js 的 tick（招式、移动、护卫、
+  // 阶段都在那边），再按「这一帧有没有挪动」切 idle / walk 动画。
+  // 本体的位置由 blank.js 直接写 e.pos，所以用位置差分判断在不在走。
+  function handleBlank(e, dt, ctx) {
+    const px = e.pos.x, pz = e.pos.z;
+    if (ctx.blank) ctx.blank.tick(e, dt, ctx);
+    const moved = Math.hypot(e.pos.x - px, e.pos.z - pz) > dt * 0.10;
+    const want = moved ? e.cfg.anim.walk : e.cfg.anim.idle;
+    if (e.currentAnim !== want) {
+      e.currentAnim = want;
+      e.play(want, { fade: 0.2 });
+    }
   }
 
   function handleWeigher(e, dt, ctx, dx, dz, dist) {

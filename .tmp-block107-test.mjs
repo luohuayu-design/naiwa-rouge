@@ -101,7 +101,7 @@ console.log('[§2] 三只新怪 cfg');
   ok(E.keepDistance >= 5, `回声站得远（${E.keepDistance} 格）`);
   ok(!!E.file && fs.existsSync(path.join(ROOT, E.file)), '回声有 glb');
 
-  ok(Object.keys(ENEMY_TYPES).length === 37, 'ENEMY_TYPES 共 35 只（第 128 块 +2，第 129 块 +2）');
+  ok(Object.keys(ENEMY_TYPES).length === 47, 'ENEMY_TYPES 共 47 只（第 139 块 +10，其中小空白 planned）');
 }
 
 // ============================================================ §3 收件人免疫契约
@@ -245,13 +245,13 @@ console.log('[§11] 剧情 / 成就 / 版本');
 {
   const s10 = STORY_CHAPTERS.find((c) => c.id === 's10');
   ok(s10 && s10.levelId === 10 && s10.atRound === 2, 's10 绑第十关第 2 回合');
-  ok(ACHS.length === 117, '成就 117 条（第 125 块 -waiter_5）', String(ACHS.length));
+  ok(ACHS.length === 121, '成就 121 条（第 139 块 +第十八关 4 条）', String(ACHS.length));
   for (const id of ['clear_10', 'mirror_10', 'addressee_10', 'echo_10']) {
     const a = achById(id);
     ok(!!a, `成就 ${id} 存在`);
   }
   ok(!achById('waiter_5'), '成就 waiter_5 已随「等的那个」一起删掉（第 125 块）');
-  ok(achById('clear_all').desc.includes('十二关'), '九关皆通改口径：十二关全部通关（第 116 块）');
+  ok(achById('clear_all').desc.includes('十八关'), '九关皆通改口径：十八关全部通关（第 139 块）');
   ok(/^\d+$/.test(VER) && idx.includes(`style.css?v=${VER}`), `版本号 ${VER} 两处一致`);
   for (const f of ['golem.js', 'skills.js', 'upgrade.js', 'shop.js', 'relics.js', 'enemy.js', 'main.js']) {
     ok(!src(f).includes('?v=' + (Number(VER) - 1)) && src(f).includes('?v=' + VER), `${f} 版本号跟随全站`);

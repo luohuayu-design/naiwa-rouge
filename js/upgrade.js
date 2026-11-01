@@ -34,9 +34,9 @@
 //   标了 scope:'weapon' 的项改的是武器表（剑系 / 元素系），其余改主角表。
 //   两块表都要传进来，没传 wstats 时武器项会退化到主角表（只为兼容老调用）。
 // ============================================================
-import { STAT_DEFS } from './stats.js?v=155';
-import { WEAPON_STAT_DEFS } from './weaponStats.js?v=155';
-import { RARITIES, rarityWeight, oddsOf } from './rarity.js?v=155';
+import { STAT_DEFS } from './stats.js?v=156';
+import { WEAPON_STAT_DEFS } from './weaponStats.js?v=156';
+import { RARITIES, rarityWeight, oddsOf } from './rarity.js?v=156';
 
 // 一张卡改的是哪块表
 function tableFor(scope, stats, wstats) {
@@ -850,6 +850,49 @@ const UNIQUE = [
     title: '摔伤 +6% 最大生命 · 落点伤害 +0.4',
     desc: '传说：箱底铺了一层碎石 —— 倒出来的怪摔掉更多最大生命（按比例，越厚的怪越疼）',
   },
+  // ---------------- 镇纸锤卡（第 139 块，第十八关专属法器） ----------------
+  // 买到「镇纸锤」后才会进池子（weightOf 里拦：opts.hammerOwned）。
+  // 五个通道：伤害 / 抡的频率 / 范围 / 破甲 / 冷却；up.hammer 转交 hammer.applyCard()。
+  {
+    id: 'hammerDmg', tag: 'atk', glyph: '🔨', name: '加厚的锤头',
+    rarity: 0,
+    w0: 0.60, gw: +0.015,
+    hammer: { stat: 'dmg', flat: 1.1 },
+    title: '镇纸锤伤害 +1.1',
+    desc: '锤头灌了铅（能重复拿）—— 自动抡的那一下也一起变重，砸空白族本身还 ×1.5',
+  },
+  {
+    id: 'hammerRate', tag: 'def', glyph: '⏳', name: '抡得更勤',
+    rarity: 1,
+    w0: 0.50, gw: +0.016,
+    hammer: { stat: 'interval', flat: 0.6 },
+    title: '自动抡锤间隔 −0.6 秒',
+    desc: '手上更顺（能重复拿，最快 1.8 秒一下）—— 不按技能键也在持续砸，破甲几乎不断',
+  },
+  {
+    id: 'hammerRange', tag: 'mov', glyph: '🪄', name: '换根长柄',
+    rarity: 1,
+    w0: 0.44, gw: +0.014,
+    hammer: { stat: 'radius', flat: 0.4 },
+    title: '砸地半径 +0.4 格',
+    desc: '柄加长一截（能重复拿）—— 自动抡与「砸地」都砸得更远，不用非贴着残影',
+  },
+  {
+    id: 'hammerCd', tag: 'mov', glyph: '⏱', name: '磨薄的锤座',
+    rarity: 2,
+    w0: 0.38, gw: +0.020,
+    hammer: { stat: 'cd', flat: 3.0 },
+    title: '砸地冷却 −3 秒',
+    desc: '锤座磨薄（能重复拿，最低 15 秒）—— 第 20 回合围殴里，多砸一次就是多清一圈',
+  },
+  {
+    id: 'hammerArmor', tag: 'atk', glyph: '🩸', name: '铁砧底',
+    rarity: 3,
+    w0: 0.34, gw: +0.010,
+    hammer: { stat: 'brk', flat: 0.08 },
+    title: '破甲 +8%',
+    desc: '传说：锤面加了棱 —— 被砸中的怪破甲更深（基础 20%，叠上去吃更多伤害）',
+  },
 ];
 
 // 把「族 × 三档」摊平成一张张卡。小档沿用原来的 id（老存档 / 老测试照旧认得）。
@@ -923,6 +966,8 @@ export function weightOf(up, round = 1, opts = {}) {
   if (up.pencil && !opts.pencilOwned) return 0;
   // 第 130 块：空箱子卡同理
   if (up.crate && !opts.crateOwned) return 0;
+  // 第 139 块：镇纸锤卡同理
+  if (up.hammer && !opts.hammerOwned) return 0;
   if (up.needsWeapon && !opts.hasWeapon) return 0;
   const r = Math.max(1, round);
   return Math.max(0, (up.w0 ?? 1) + (up.gw ?? 0) * (r - 1));
@@ -971,7 +1016,7 @@ export function rollChoices(rng = Math.random, opts = {}) {
 // wstats = 武器属性表：scope:'weapon' 的条目改它，其余改主角 stats。
 // weapon = 武器系统本身：只有「直接给一把剑」的卡（sword 字段）才需要它。
 // 返回 { src, changes }：changes 是精确的「选前 → 选后」（用于卡片/提示文案）。
-export function applyUpgrade(stats, up, serial = 0, wstats = null, weapon = null, golems = null, arrowRain = null, mines = null, latte = null, candle = null, mark = null, board = null, guillotine = null, ringlight = null, pencil = null, crate = null) {
+export function applyUpgrade(stats, up, serial = 0, wstats = null, weapon = null, golems = null, arrowRain = null, mines = null, latte = null, candle = null, mark = null, board = null, guillotine = null, ringlight = null, pencil = null, crate = null, hammer = null) {
   // 第 107 块：傀儡卡不碰属性表，交给傀儡系统记账（golem.applyCard）
   if (up.golem) {
     const g = up.golem;
@@ -1079,6 +1124,16 @@ export function applyUpgrade(stats, up, serial = 0, wstats = null, weapon = null
     return {
       src: `upg:${up.id}:${serial}`,
       changes: [crateChange(cr, before)],
+    };
+  }
+  // 第 139 块：镇纸锤卡交给 blank.js 的锤子系统记账
+  if (up.hammer) {
+    const hm = up.hammer;
+    const before = hammer ? hammer.bonuses() : null;
+    if (hammer) hammer.applyCard(hm);
+    return {
+      src: `upg:${up.id}:${serial}`,
+      changes: [hammerChange(hm, before)],
     };
   }
   // 剑阵这类「直接加一把剑」的卡：不碰属性表，交给武器系统上环
@@ -1431,7 +1486,32 @@ function crateChange(c, b) {
   };
 }
 
-export function previewUpgrade(stats, up, wstats = null, weapon = null, golems = null, arrowRain = null, mines = null, latte = null, candle = null, mark = null, board = null, guillotine = null, ringlight = null, pencil = null, crate = null) {
+// ---- 第 139 块：镇纸锤卡的 changes 文案（apply 与 preview 共用）----
+// 卡里的键（dmg / interval / radius / brk / cd）和 hammer.bonuses() 对应。
+// interval 与 cd 是「减」的方向，brk 是比例（面板上写百分比）。
+function hammerChange(c, b) {
+  const b0 = b || { dmg: 3.2, interval: 6.5, radius: 2.0, break: 0.20, cd: 26.0 };
+  const meta = {
+    dmg: { name: '锤击伤害', from: b0.dmg, fmt: (v) => `${v.toFixed(1)} 伤`, dflt: 0 },
+    interval: { name: '自动抡锤间隔', from: b0.interval, fmt: (v) => `${v.toFixed(1)} 秒`, dflt: 1.8 },
+    radius: { name: '砸地半径', from: b0.radius, fmt: (v) => `${v.toFixed(1)} 格`, dflt: 0 },
+    brk: { name: '破甲', from: b0.break, fmt: (v) => `${Math.round(v * 100)}%`, dflt: 0 },
+    cd: { name: '砸地冷却', from: b0.cd, fmt: (v) => `${v.toFixed(1)} 秒`, dflt: 15.0 },
+  };
+  const stat = meta[c.stat] ? c.stat : 'dmg';
+  const mm = meta[stat];
+  const flat = c.flat || 0;
+  const to = (stat === 'cd' || stat === 'interval')
+    ? Math.max(mm.dflt, mm.from - flat)
+    : mm.from + flat;
+  return {
+    key: `hammer_${stat}`, scope: 'hammer', name: mm.name,
+    from: mm.from, to, fromText: mm.fmt(mm.from), toText: mm.fmt(to),
+    text: `${mm.fmt(mm.from)} → ${mm.fmt(to)}`,
+  };
+}
+
+export function previewUpgrade(stats, up, wstats = null, weapon = null, golems = null, arrowRain = null, mines = null, latte = null, candle = null, mark = null, board = null, guillotine = null, ringlight = null, pencil = null, crate = null, hammer = null) {
   if (up.golem) {
     const g = up.golem;
     const b = golems ? golems.bonuses() : null;
@@ -1487,6 +1567,11 @@ export function previewUpgrade(stats, up, wstats = null, weapon = null, golems =
   if (up.crate) {
     const b = crate ? crate.bonuses() : null;
     return [crateChange(up.crate, b)];
+  }
+  // 第 139 块：镇纸锤卡 —— 同一个 hammerChange
+  if (up.hammer) {
+    const b = hammer ? hammer.bonuses() : null;
+    return [hammerChange(up.hammer, b)];
   }
   if (up.sword) {
     const n = weapon ? weapon.count : 0;

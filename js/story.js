@@ -2235,7 +2235,7 @@ export const STORY_CHAPTERS = [
   },
 
   {
-    id: 's18', no: 18, act: 3, levelId: null, atRound: null,
+    id: 's18', no: 18, act: 3, levelId: 18, atRound: 20,
     icon: '🐸', title: '齁齁齁', who: '奶蛙', place: '钟楼顶 · 天亮前',
     story:
       '最后一张纸铺在桌上。\n'

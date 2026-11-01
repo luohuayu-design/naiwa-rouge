@@ -1296,11 +1296,106 @@ export const LEVEL_17 = {
   ],
 };
 
+// ------------------------------------------------------------
+// 第十八关 · 天亮之前（第 139 块，用户定案）
+//
+// 这一关的「怪」不是怪，是**你自己被收走的名字**：
+//   · 场上的八种残影都是空白的同一个人的碎片，每种只会 BOSS 的一招；
+//   · 每打死一种残影，地上掉一枚金色名字牌，5 秒内踩上去就抢回来一格，
+//     BOSS 在第 20 回合就少一招 —— 抢得越多，决战越轻；
+//   · 第 20 回合 BOSS「空白」本体上台，带 2 只护卫，不放普通小怪。
+// 机制 / 招式 / 护卫全部在 js/blank.js，这里只给「什么回合出什么怪」。
+//
+// 数值：再抬一档 —— hpMul 1.86 / dmgMul 2.20（第十七关 1.80 / 2.15）。
+// 第 20 回合的 blank 血量 36 经 roundScale 约 ×22.4 ≈ 807（普通难度）。
+// ------------------------------------------------------------
+export const LEVEL_18 = {
+  id: 18,
+  name: '第十八关 · 天亮之前',
+  theme: 'blank',           // 一张还没写过字的纸（scene.js 的 THEMES）
+  arena: 20,
+  order: [
+    // 第十七关的老面孔 15 种（数量从这里往后一段一段加）
+    ['minion', 1], ['warrior', 1.5], ['archer', 1.8],
+    ['paper', 2.1], ['bowman', 2.2], ['toll', 2.3],
+    ['bronze', 2.4], ['frame', 2.5], ['wraith', 2.6],
+    ['shielder', 2.7], ['charger', 2.8], ['mender', 2.9],
+    ['proofreader', 3.0], ['addressee', 3.1], ['camera', 3.2],
+    // 八种残影（按登场顺序排，长得越靠后越晚来）
+    ['blankScatter', 3.3], ['blankHoming', 3.4], ['blankArm', 3.5], ['blankSteal', 3.6],
+    ['blankCopy', 3.7], ['blankSpot', 3.8], ['blankWall', 3.9], ['blankStroke', 4.0],
+    // 本体与小空白（小空白只在「照着我造」里被撕出来，回合表里永远是 0）
+    ['blankMinion', 4.1], ['blank', 4.2],
+  ],
+  spawnRadius: 17.4,
+  spawnJitter: 0.5,
+  minPlayerDistance: 7.4,
+  minSpawnGap: 2.4,
+  gapScale: 1.12,
+  gap: 2.6,
+  upgradeAfter: [1, 2, 3, 4, 5, 8, 10, 12, 15, 17, 19, 20],
+  shopAfter: [3, 6, 9, 12, 15, 18],
+  weaponAt: 4,
+  scale: { hp: 0.30, damage: 0.18, speed: 0.045, haste: 0.0105, curve: 0.28, hpMul: 1.86, dmgMul: 2.20 },
+  // 名字板 / 名字牌（js/blank.js 读这一份；summon 只用于预载模型）
+  blank: {
+    arena: 20, plateLife: 5.0, pickRadius: 1.2, coinPerName: 30, totalNames: 8,
+    summon: ['blankMinion'],
+  },
+  rounds: [
+    // ---- 第一幕（R1~R3）：先学会「抢名字」 ----
+    { minion: 5, warrior: 1, gap: 0.88,
+      tip: '它先把你的名字收走了。打碎那些残影，地上会掉一枚金色名字牌 —— 五秒内踩上去，那名字就归你，Boss 也少一招' },
+    { minion: 5, warrior: 2, blankScatter: 1, gap: 0.86,
+      tip: '新面孔·散名的残影：它一散就撒出名字。别急着追杀，站在它尸体旁边等牌子落地 —— 抢得到才算数' },
+    { minion: 5, warrior: 2, archer: 2, blankScatter: 1, gap: 0.82,
+      tip: '名字牌会往上飘、五秒就淡走。远处掉的别硬追 —— 先记着：这一枚没抢回来，决战它就多一招' },
+    // ---- 第二幕（R4~R9）：四种残影轮流上课 ----
+    { minion: 6, warrior: 3, archer: 2, blankScatter: 1, blankHoming: 1, gap: 0.78,
+      tip: '新面孔·盯上你的残影：它会一路跟着你，还会扔会拐弯的墨点。躲不掉就让它撞在柱子上' },
+    { minion: 6, warrior: 3, archer: 3, paper: 2, blankHoming: 1, gap: 0.74,
+      tip: '两枚名字牌可能同时掉在地上。先抢离你近的那枚 —— 抢到一枚比追两只残影划算' },
+    { minion: 6, warrior: 3, archer: 3, paper: 3, bowman: 2, blankHoming: 1, blankArm: 1, gap: 0.72,
+      tip: '新面孔·写错一笔的残影：它会伸出三条旋转的笔臂。别贴脸，绕着它转圈，等它转速慢下来再上' },
+    { minion: 7, warrior: 4, archer: 3, paper: 3, bowman: 2, toll: 1, blankArm: 1, gap: 0.70,
+      tip: '撞钟的又来了。钟响那半秒你动不了 —— 但名字牌的五秒不会等你，别在钟响前抢牌' },
+    { minion: 7, warrior: 4, archer: 4, paper: 4, bowman: 2, toll: 1, blankArm: 1, blankSteal: 1, gap: 0.68,
+      tip: '新面孔·收走一样的残影：它每几秒收走你身上一样东西（地面物 / 技能 / 剑 / 加成）。屏幕上方会提前告诉你下次收什么' },
+    { minion: 8, warrior: 4, archer: 4, paper: 4, bowman: 3, toll: 1, bronze: 1, blankSteal: 1, blankScatter: 1, gap: 0.66,
+      tip: '名字板已经亮了几格？亮满八格，第二十回合它就是空手站在你面前的' },
+    // ---- 第三幕（R10~R15）：它开始照着你造东西 ----
+    { minion: 8, warrior: 5, archer: 4, paper: 5, bowman: 3, toll: 1, bronze: 1, frame: 1, blankSteal: 1, blankCopy: 1, gap: 0.64,
+      tip: '新面孔·照着我造的残影：它读条结束会撕出一只小空白，只会散名 —— 但小空白身上**没有**名字牌，先杀它本体' },
+    { minion: 8, warrior: 5, archer: 5, paper: 5, bowman: 3, toll: 2, bronze: 1, frame: 1, wraith: 1, blankCopy: 1, blankHoming: 1, gap: 0.62,
+      tip: '雾鬼和残影一起上：雾鬼看不见，但残影身上的名字牌发光 —— 跟着光走，别跟着雾走' },
+    { minion: 9, warrior: 5, archer: 5, paper: 6, bowman: 3, toll: 2, bronze: 2, frame: 1, wraith: 1, shielder: 1, blankCopy: 1, blankSpot: 1, gap: 0.60,
+      tip: '新面孔·这里没有东西的残影：它会在地上涂出一块白斑，踩进去持续掉血。白斑一会儿就淡，别急着穿' },
+    { minion: 9, warrior: 6, archer: 5, paper: 6, bowman: 4, toll: 2, bronze: 2, frame: 2, wraith: 1, shielder: 1, charger: 1, blankSpot: 1, blankArm: 1, gap: 0.58,
+      tip: '白斑 + 旋转笔臂：它把「站不住」和「贴不上」摆在一起。先把笔臂那只引开，再绕回来抢牌' },
+    { minion: 9, warrior: 6, archer: 6, paper: 6, bowman: 4, toll: 2, bronze: 2, frame: 2, wraith: 2, shielder: 1, charger: 1, mender: 1, blankSpot: 1, blankWall: 1, gap: 0.56,
+      tip: '新面孔·合上这一页的残影：它立起一道纸墙把场地切开，三秒半不能穿过。别被隔在怪堆那一半' },
+    { minion: 10, warrior: 6, archer: 6, paper: 7, bowman: 4, toll: 2, bronze: 2, frame: 2, wraith: 2, shielder: 2, charger: 1, mender: 1, proofreader: 1, blankWall: 1, blankSteal: 1, gap: 0.54,
+      tip: '收走 + 纸墙：它可能先把你的技能收了，再把路堵上。身上留一个不靠技能的输出手段' },
+    // ---- 第四幕（R16~R19）：最后一笔，然后混编 ----
+    { minion: 10, warrior: 7, archer: 6, paper: 7, bowman: 4, toll: 3, bronze: 3, frame: 2, wraith: 2, shielder: 2, charger: 2, mender: 1, proofreader: 1, addressee: 1, blankWall: 1, blankStroke: 1, gap: 0.52,
+      tip: '新面孔·最后一笔的残影：它抬手扫过身前一百八十度，被扫到就是一大块血还会被钉住。看到黄色预警就横着跑' },
+    { minion: 10, warrior: 7, archer: 7, paper: 8, bowman: 5, toll: 3, bronze: 3, frame: 3, wraith: 2, shielder: 2, charger: 2, mender: 2, proofreader: 1, addressee: 1, camera: 1, blankStroke: 1, blankScatter: 1, blankSpot: 1, gap: 0.50,
+      tip: '三种残影混编开始：地上可能同时躺着两三枚名字牌。先抢名字、再清场 —— 名字比命长' },
+    { minion: 11, warrior: 7, archer: 7, paper: 8, bowman: 5, toll: 3, bronze: 4, frame: 3, wraith: 3, shielder: 3, charger: 2, mender: 2, proofreader: 2, addressee: 1, camera: 1, blankStroke: 1, blankHoming: 1, blankCopy: 1, gap: 0.48,
+      tip: '贴身追你的（盯上你）+ 撕小空白的（照着我造）同时在场。先杀会召唤的那只，不然永远清不完' },
+    { minion: 12, warrior: 8, archer: 8, paper: 9, bowman: 5, toll: 4, bronze: 4, frame: 3, wraith: 3, shielder: 3, charger: 3, mender: 3, proofreader: 2, addressee: 2, camera: 2, blankStroke: 1, blankWall: 1, blankArm: 1, blankSteal: 1, gap: 0.44,
+      tip: '倒数第二波：四种残影一起上，名字板还没亮的格子该补了。这一回合抢不到的，决战就得硬吃' },
+    // ---- 决战（R20）：BOSS「空白」本体，不放普通怪 ----
+    { blank: 1, gap: 0.0, boss: true,
+      tip: '它来了。名字板亮了几格，它就还剩几招 —— 抢回来的每一格，都是你自己从它手里夺回来的' },
+  ],
+};
+
 // 关卡号 → 关卡表（主流程 / 选关 / 测试都从这里取）
 export const LEVELS_BY_ID = {
   1: LEVEL_1, 2: LEVEL_2, 3: LEVEL_3, 4: LEVEL_4, 5: LEVEL_5, 6: LEVEL_6, 7: LEVEL_7, 8: LEVEL_8,
   9: LEVEL_9, 10: LEVEL_10, 11: LEVEL_11, 12: LEVEL_12, 13: LEVEL_13, 14: LEVEL_14, 15: LEVEL_15,
-  16: LEVEL_16, 17: LEVEL_17,
+  16: LEVEL_16, 17: LEVEL_17, 18: LEVEL_18,
 };
 
 // 第 roundNo 回合（从 1 开始）的怪物属性倍率
@@ -1386,6 +1481,11 @@ export function levelTypes(level = LEVEL_1) {
   // （约 480KB），玩家会看到一只**空白**站在柜门口等两秒。
   const summon = level.deposit && level.deposit.summon;
   if (summon && !out.includes(summon)) out.push(summon);
+  // 第 139 块：第十八关的「小空白」只在 BOSS 的「照着我造」里被撕出来，
+  // 回合表里也是 0 只 —— 同一个道理，不进清单就会出现一只等待下载的空白。
+  for (const t of (level.blank && level.blank.summon) || []) {
+    if (!out.includes(t)) out.push(t);
+  }
   return out;
 }
 

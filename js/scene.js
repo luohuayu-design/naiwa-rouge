@@ -8,7 +8,7 @@
 // 两套配色集中在 THEMES 里，buildNightScene({ theme }) 建哪套，
 // 局中要换就调返回的 setTheme('crypt')（不改几何，只改颜色和贴图）。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=155';
+import * as THREE from '../lib/three.module.js?v=156';
 
 export const THEMES = {
   // 第一关 · 荒草地：冷月光 + 青绿边圈 + 萤火虫
@@ -274,6 +274,22 @@ export const THEMES = {
     tuft: 0x3a4644, tuftVisible: false,     // 楼顶不长草
     fly: 0xcfe0dc, flyCount: 92,            // 雾里的水汽
     ground: 'roof',
+  },
+  // 第十八关 · 天亮之前（第 139 块）：一张还没写过字的纸。
+  // 配色思路：这一关最亮 —— 从第一关的深夜走到这里，天快亮了。
+  // 底色是纸的冷白，地上有淡淡的铅笔格和橡皮擦过的痕，边圈是还没落下的晨光。
+  // 萤火换成飘着的纸屑 / 橡皮屑（大量、很慢），因为屋子里的东西都已经被它收走了。
+  blank: {
+    bg: 0x2a2c30,
+    fog: 0x585a5e, fogDensity: 0.0115,
+    hemiSky: 0xf2f0e8, hemiGround: 0x2a2824, hemiIntensity: 1.62,
+    moon: 0xfffaf0, moonIntensity: 3.05, moonBase: 2.90,
+    rim: 0x9a9890, rimIntensity: 0.72,
+    edge: 0xffd86b, edgeOpacity: 0.32,      // 名字牌的铜金（和名字板同一个色）
+    stone: 0x50504e,
+    tuft: 0x6a6862, tuftVisible: false,     // 纸上不长草
+    fly: 0xf4f2ea, flyCount: 120,           // 飘着的纸屑
+    ground: 'blank',
   },
 };
 
@@ -1001,7 +1017,74 @@ function makeGroundTexture(kind) {
   if (kind === 'studio') return makeStudioTexture();
   if (kind === 'atelier') return makeAtelierTexture();
   if (kind === 'roof') return makeRoofTexture();
+  if (kind === 'blank') return makeBlankTexture();
   return makeGrassTexture();
+}
+
+// 天亮之前的纸面（第 139 块）：整张图只有三样东西 ——
+//   ① 纸的底色 + 一点点脏（不是纯白，纯白在暗场里会刺眼）；
+//   ② 很淡的方格（格子纸还没被写完就已经被擦掉了）；
+//   ③ 擦过的痕：几道偏白的斜向拖影 + 一圈圈橡皮屑。
+// 画得很轻，因为怪和名字牌压在上面时要看得清。
+function makeBlankTexture() {
+  const S = 512;
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = S;
+  const g = cv.getContext('2d');
+
+  g.fillStyle = '#b8b6b0';
+  g.fillRect(0, 0, S, S);
+
+  let seed = 139139;
+  const rnd = () => {
+    seed = (seed * 1103515245 + 12345) % 2147483648;
+    return seed / 2147483648;
+  };
+
+  // ① 脏：大块的深浅斑（被人翻过很多遍的纸）
+  for (let i = 0; i < 150; i++) {
+    const x = rnd() * S, y = rnd() * S, r = 30 + rnd() * 120;
+    const v = rnd() < 0.5 ? 0.05 : -0.05;
+    const rg = g.createRadialGradient(x, y, 0, x, y, r);
+    rg.addColorStop(0, `rgba(${v > 0 ? 255 : 0},${v > 0 ? 255 : 0},${v > 0 ? 245 : 0},${Math.abs(v)})`);
+    rg.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = rg;
+    g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+  }
+
+  // ② 很淡的方格（36 像素一格，和 512 能整除）
+  g.strokeStyle = 'rgba(90,92,96,0.16)';
+  g.lineWidth = 1;
+  for (let p = 0; p <= S; p += 36) {
+    g.beginPath(); g.moveTo(p, 0); g.lineTo(p, S); g.stroke();
+    g.beginPath(); g.moveTo(0, p); g.lineTo(S, p); g.stroke();
+  }
+
+  // ③ 擦过的痕：偏白的斜向拖影
+  for (let i = 0; i < 26; i++) {
+    const x = rnd() * S, y = rnd() * S;
+    const w = 40 + rnd() * 120;
+    g.strokeStyle = `rgba(240,240,236,${0.05 + rnd() * 0.08})`;
+    g.lineWidth = 6 + rnd() * 14;
+    g.beginPath();
+    g.moveTo(x, y);
+    g.lineTo(x + w * (rnd() - 0.5), y + w * (rnd() - 0.5));
+    g.stroke();
+  }
+
+  // ④ 橡皮屑：很小的白点
+  g.fillStyle = 'rgba(245,244,240,0.10)';
+  for (let i = 0; i < 260; i++) {
+    g.beginPath();
+    g.arc(rnd() * S, rnd() * S, 0.6 + rnd() * 1.4, 0, Math.PI * 2);
+    g.fill();
+  }
+
+  const tex = new THREE.CanvasTexture(cv);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(16, 16);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
 }
 
 // 钟楼外的雾原（第 114 块）：烧过一次、又被雾泡了几十年的焦土。
