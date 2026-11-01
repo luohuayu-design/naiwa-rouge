@@ -73,7 +73,7 @@ ok(L10.rounds.every((r) => r.tip && r.tip.length >= 10), '每回合仍有提示�
 
 // 成就 / 图鉴 / 埋点 / 资产
 ok(!A.ACHS.some((a) => a.id === 'waiter_5'), '成就 waiter_5 已删');
-ok(A.ACH_COUNT === 121, '成就总数 121', String(A.ACH_COUNT));
+ok(A.ACH_COUNT === 152, '成就总数 152', String(A.ACH_COUNT));
 ok(A.ACHS.every((a) => !a.prog || a.prog.id !== 'waiter'), '没有别的成就还在统计 waiter');
 ok(!/waiter/.test(codexSrc), '图鉴的数值行没有 waiter 分支');
 ok(!/tryAch\('waiter_5'\)/.test(mainSrc), 'main 里没有 waiter_5 的埋点');

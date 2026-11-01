@@ -114,7 +114,7 @@ ok(BOX_BY_ID.gold.curse < BOX_BY_ID.silver.curse && BOX_BY_ID.silver.curse < BOX
 // ============================================================ 3. 成就
 sec('3. 成就（八类 × 三档）');
 // 第 106 块：67 → 106（删掉「一线生机」+ 补 40 条）
-ok(ACH_COUNT === 121, `共 121 条成就（第 139 块 +第十八关 4 条）`, String(ACH_COUNT));
+ok(ACH_COUNT === 152, `共 152 条成就（第 140 块 +31 条）`, String(ACH_COUNT));
 ok(ACHS.length === ACH_COUNT, 'ACHS 长度与 ACH_COUNT 一致');
 ok(ACH_CATS.length === 8, '八个类别', String(ACH_CATS.length));
 {
@@ -147,9 +147,9 @@ ok(achTier(9).bones === 30, 'achTier 对越界档位回退到第一档（不会�
     '罕见档不是最多（档位真的代表难度）', byTier.join('/'));
   // 全清一共发多少骨币 —— 这是平衡口径，改档位会跟着变，必须钉住
   const totalBones = ACHS.reduce((a, x) => a + achTier(x.tier).bones, 0);
-  ok(totalBones === 8640, `121 条全清共 ${totalBones} 骨币（约 31 个金匣，克制档）`, String(totalBones));
-  // 第 139 块：121 条 = 8640 骨币 ≈ 30.9 个金匣，天花板从 30 抬到 32
-  ok(totalBones / 280 < 32, '全清骨币不到 32 个金匣（不会把盲盒那套成本平衡冲掉）',
+  ok(totalBones === 11400, `152 条全清共 ${totalBones} 骨币（约 41 个金匣，克制档）`, String(totalBones));
+  // 第 140 块：152 条 = 11400 骨币 ≈ 40.7 个金匣（成就又扩了一批，天花板抬到 45）
+  ok(totalBones / 280 < 45, '全清骨币不到 45 个金匣（不会把盲盒那套成本平衡冲掉）',
     (totalBones / 280).toFixed(1));
 }
 sec('3c. prog 数据源合法');

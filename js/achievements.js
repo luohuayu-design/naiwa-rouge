@@ -31,7 +31,7 @@
 //    · tier 决定骨币，**别手写骨币数字**（改档位只改 ACH_TIERS 一处）。
 // ============================================================
 
-import { profile, hasAch, achGot, markAchGot, addBones, save } from './profile.js?v=157';
+import { profile, hasAch, achGot, markAchGot, addBones, save } from './profile.js?v=158';
 
 // ---------------- 八类别 ----------------
 // icon 全部来自 game-icons.net（CC BY 3.0），和背包图标同源；
@@ -263,6 +263,50 @@ export const ACHS = [
   // ---- 第 106 块新增 ----
   { id: 'event_all', cat: 'secret', tier: 2, icon: '🗺️', name: '荒草地全图', desc: '把全部 131 种奇遇都撞一遍', prog: { k: 'events', need: 131 } },
   { id: 'all_swords', cat: 'secret', tier: 2, icon: '🪄', name: '六色剑谱', desc: '图鉴里集齐六种元素剑', prog: { k: 'swords', need: 6 } },
+
+  // ========== 第 140 块：跟着十七、十八关一起补的一大套 ==========
+  // 口径说明：
+  //   · 关卡类的 clear_13~17 与 levels_12 / levels_16 都在结算里对表（levelCleared / clearCount）；
+  //   · 怪物类全部走图鉴击倒数（`prog.k='enemy'`），埋点在 main.js 的 onDeath；
+  //   · 新计数器两个：`namesTaken`（抢回名字牌）与 `hammerCasts`（主动砸地），
+  //     分别在空白系统的事件循环、技能的 cast 口 +1；`hammerKills` 是老计数器（第 139 块）。
+  // 战斗（累计型，纯老计数器）
+  { id: 'kills_5000', cat: 'battle', tier: 2, icon: '🏗️', name: '五千根骨头', desc: '累计击倒 5000 只骷髅', prog: { k: 'stat', key: 'kills', need: 5000 } },
+  { id: 'crit_5000', cat: 'battle', tier: 2, icon: '🎇', name: '拳拳到骨', desc: '累计打出 5000 次暴击', prog: { k: 'stat', key: 'crits', need: 5000 } },
+  { id: 'dmg_5m', cat: 'battle', tier: 2, icon: '☄️', name: '灰都不剩', desc: '累计造成 500 万点伤害', prog: { k: 'stat', key: 'dmgDealt', need: 5000000 } },
+  { id: 'sword_20000', cat: 'battle', tier: 2, icon: '🌪️', name: '剑轮不歇', desc: '环剑累计命中 2 万次', prog: { k: 'stat', key: 'swordHits', need: 20000 } },
+  // 生存
+  { id: 'deaths_100', cat: 'survive', tier: 1, icon: '⚰️', name: '倒下一百次', desc: '累计倒下 100 次（骨塔的常客了）', prog: { k: 'stat', key: 'deaths', need: 100 } },
+  // 构筑：镇纸锤（第 20 件法器）与名字牌
+  { id: 'hammer_casts_100', cat: 'build', tier: 1, icon: '🔨', name: '抡热了', desc: '累计主动「砸地」100 次', prog: { k: 'stat', key: 'hammerCasts', need: 100 } },
+  { id: 'hammer_run_5', cat: 'build', tier: 1, icon: '💥', name: '一局五锤', desc: '单局主动砸地 5 次' },
+  { id: 'hammer_max', cat: 'build', tier: 2, icon: '⚒️', name: '镇纸锤满级', desc: '把镇纸锤升到 3 级（一局之内）' },
+  { id: 'names_30', cat: 'build', tier: 1, icon: '📛', name: '名字收藏家', desc: '累计从空白手里抢回 30 个名字牌', prog: { k: 'stat', key: 'namesTaken', need: 30 } },
+  // 关卡：十三~十七关各一条
+  { id: 'clear_13', cat: 'level', tier: 1, icon: '🏃', name: '绕着跑', desc: '通关「焦土操场」（环形跑道那关）' },
+  { id: 'clear_14', cat: 'level', tier: 2, icon: '📐', name: '对齐了', desc: '通关「钟楼打样间」' },
+  { id: 'clear_15', cat: 'level', tier: 2, icon: '📺', name: '下播', desc: '通关「钟楼直播间」' },
+  { id: 'clear_16', cat: 'level', tier: 2, icon: '🖌️', name: '定稿', desc: '通关「钟楼画室」' },
+  { id: 'clear_17', cat: 'level', tier: 2, icon: '🔔', name: '最后一响', desc: '通关「钟楼顶」' },
+  { id: 'levels_12', cat: 'level', tier: 1, icon: '🛤️', name: '走过十二关', desc: '累计通关 12 个不同的关卡' },
+  { id: 'levels_16', cat: 'level', tier: 2, icon: '🏔️', name: '走到钟楼顶', desc: '累计通关 16 个不同的关卡' },
+  { id: 'rounds_1000', cat: 'level', tier: 2, icon: '⏱️', name: '一千个回合', desc: '累计打满 1000 个回合', prog: { k: 'stat', key: 'rounds', need: 1000 } },
+  { id: 'wins_100', cat: 'level', tier: 2, icon: '🌟', name: '夜里的灯', desc: '累计通关 100 次', prog: { k: 'stat', key: 'wins', need: 100 } },
+  // 关卡：十三~十八关的新怪（击倒数就是进度；埋点在 onDeath 的一行里）
+  { id: 'standee_10', cat: 'level', tier: 1, icon: '🪧', name: '从背后拍', desc: '累计击倒 10 只立牌（它正面挡得厉害）', prog: { k: 'enemy', id: 'standee', need: 10 } },
+  { id: 'camera_10', cat: 'level', tier: 1, icon: '📷', name: '别站在取景框里', desc: '累计击倒 10 只取景的', prog: { k: 'enemy', id: 'camera', need: 10 } },
+  { id: 'misprint_10', cat: 'level', tier: 1, icon: '♻️', name: '印坏了就重印', desc: '累计击倒 10 只错版（死后还裂成两只）', prog: { k: 'enemy', id: 'misprint', need: 10 } },
+  { id: 'proofreader_5', cat: 'level', tier: 1, icon: '🖍️', name: '批注撕了', desc: '累计击倒 5 只校对的', prog: { k: 'enemy', id: 'proofreader', need: 5 } },
+  { id: 'danmaku_10', cat: 'level', tier: 1, icon: '💬', name: '横挪一步', desc: '累计击倒 10 只弹幕', prog: { k: 'enemy', id: 'danmaku', need: 10 } },
+  { id: 'moderator_5', cat: 'level', tier: 1, icon: '🚫', name: '把它禁言了', desc: '累计击倒 5 只超管', prog: { k: 'enemy', id: 'moderator', need: 5 } },
+  { id: 'paper_20', cat: 'level', tier: 1, icon: '📄', name: '碎纸机', desc: '累计击倒 20 只纸屑', prog: { k: 'enemy', id: 'paper', need: 20 } },
+  { id: 'frame_10', cat: 'level', tier: 1, icon: '🖼️', name: '框不住了', desc: '累计击倒 10 只画框', prog: { k: 'enemy', id: 'frame', need: 10 } },
+  { id: 'toll_10', cat: 'level', tier: 1, icon: '⏰', name: '别在钟边停', desc: '累计击倒 10 只撞钟的', prog: { k: 'enemy', id: 'toll', need: 10 } },
+  { id: 'bronze_5', cat: 'level', tier: 1, icon: '🥉', name: '铜壳破了', desc: '累计击倒 5 只铜壳（它对钟声免疫）', prog: { k: 'enemy', id: 'bronze', need: 5 } },
+  { id: 'blank_boss_3', cat: 'level', tier: 2, icon: '📃', name: '三次天亮', desc: '累计打倒 3 次「空白」本体', prog: { k: 'enemy', id: 'blank', need: 3 } },
+  { id: 'blank_avatars_50', cat: 'level', tier: 2, icon: '👥', name: '残影清仓', desc: '累计击倒 50 只空白的残影（八种合起来算）' },
+  // 局外
+  { id: 'box_500', cat: 'meta', tier: 2, icon: '🗃️', name: '五百个匣子', desc: '累计开启 500 个盲盒', prog: { k: 'meta', key: 'opened', need: 500 } },
 ];
 
 export const ACH_COUNT = ACHS.length;

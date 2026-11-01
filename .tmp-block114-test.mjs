@@ -275,7 +275,7 @@ for (const id of ['clear_11', 'clerk_10', 'collector_5', 'fog_20']) {
 }
 ok(A.achById('clear_all').name === '十八关皆通', 'clear_all 改名「十八关皆通」');
 ok(A.achById('fog_20').prog && A.achById('fog_20').prog.key === 'fogKills', 'fog_20 读 fogKills');
-ok(A.ACH_COUNT === 121, `成就总数 121（实 ${A.ACH_COUNT}）`);
+ok(A.ACH_COUNT === 152, `成就总数 152（实 ${A.ACH_COUNT}）`);
 ok(/tryAch\('clear_11'\)/.test(mainSrc), '通关第十一关发 clear_11');
 
 const codexSrc = src('js/codex.js');

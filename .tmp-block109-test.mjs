@@ -33,13 +33,13 @@ sec('1. 池子扩容 24 → 39');
 {
   const ids = DQ_POOL.map((t) => t.id);
   ok(new Set(ids).size === ids.length, '任务 id 不重复');
-  ok(DQ_POOL.length === 39, '池子 39 条', String(DQ_POOL.length));
+  ok(DQ_POOL.length === 63, '池子 63 条（第 140 块 +24）', String(DQ_POOL.length));
 
   const n = { easy: 0, mid: 0, hard: 0 };
   for (const t of DQ_POOL) n[t.tier]++;
-  ok(n.easy === 19, `简单池 19 条（含常驻）`, String(n.easy));
-  ok(n.mid === 11, `中等池 11 条`, String(n.mid));
-  ok(n.hard === 9, `困难池 9 条`, String(n.hard));
+  ok(n.easy === 27, `简单池 27 条（含常驻）`, String(n.easy));
+  ok(n.mid === 19, `中等池 19 条`, String(n.mid));
+  ok(n.hard === 17, `困难池 17 条`, String(n.hard));
 
   // 15 条新任务全在
   const NEW = ['dq_death_2', 'dq_shop_6', 'dq_potion_5', 'dq_runs_4', 'dq_arrow_20', 'dq_kill_100',

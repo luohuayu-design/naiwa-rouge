@@ -1,7 +1,7 @@
 # 蛙步 · 夜行 —— 交接文档
 
 > 新对话从这里开始读，**别翻聊天记录**。要动手只读 §1 铁律 + §2 当前状态 + §3 坑。
-> 最后更新 2026-11-01 · 线上 **v=157** · 第 140 块。更早的细节查 `git log` / `git show`，本文件不重复。
+> 最后更新 2026-11-01 · 线上 **v=158** · 第 140 块（第二批：成就 / 每日任务）。更早的细节查 `git log` / `git show`，本文件不重复。
 
 ## 0. 一句话
 
@@ -46,9 +46,43 @@ Three.js r160 的单摇杆幸存者肉鸽《蛙步 · 夜行》：纯静态站�
 
 ---
 
-## 2. 当前状态（v=157 · 第 140 块）
+## 2. 当前状态（v=158 · 第 140 块，两批）
 
-### 2.1 第 140 块：首屏加载提速（用户：「进入网站的加载很慢」，拍板 A + E）
+### 2.1 第 140 块 · 第二批：成就 121 → 152 / 每日任务池 39 → 63（v=158）
+
+用户原话：「根据目前新增的关卡和法器，技能，怪物，武器，新增一大套成就和每日任务」。
+
+**成就（`js/achievements.js`，+31 条 = 152，档位 22 / 81 / 49，全清 11400 骨币 ≈ 40.7 个金匣，天花板从 32 抬到 45）**
+
+| 组 | 新 id | 口径 |
+| --- | --- | --- |
+| 战斗 4（t2） | `kills_5000` / `crit_5000` / `dmg_5m` / `sword_20000` | 全走老计数器（`kills` / `crits` / `dmgDealt` / `swordHits`），`prog.k='stat'` |
+| 生存 1（t1） | `deaths_100` | `deaths` |
+| 构筑 4 | `hammer_casts_100`(t1) / `hammer_run_5`(t1) / `hammer_max`(t2) / `names_30`(t1) | 镇纸锤「砸地」与抢名字牌；累计走 `hammerCasts` / `namesTaken`，单局两条在结算手判 |
+| 关卡 5 | `clear_13`(t1) / `clear_14`~`clear_17`(t2) | 结算 `isWin` 里对 `levelCleared(13..17)` |
+| 关卡 4 | `levels_12`(t1) / `levels_16`(t2) / `rounds_1000`(t2) / `wins_100`(t2) | 前两条走 `clearCount()`，后两条走 `rounds` / `wins` |
+| 关卡 10（t1） | `standee_10` / `camera_10` / `misprint_10` / `proofreader_5` / `danmaku_10` / `moderator_5` / `paper_20` / `frame_10` / `toll_10` / `bronze_5` | `prog.k='enemy'`，读图鉴击倒数，`onDeath` 一行一条 |
+| 关卡 2（t2） | `blank_boss_3` / `blank_avatars_50` | BOSS 走 `codexCount('blank')`；残影按 `BLANK_AVATAR_IDS` 八种合计（**不含 `blankMinion` / `blank`**），由 main.js 手判 |
+| 局外 1（t2） | `box_500` | `metaShopState().opened` |
+
+**每日任务（`js/dailyQuest.js`，39 → 63 = 简单 27 / 中等 19 / 困难 17）**
+- `AGG` 新增 4 个键：`names:'sum'` / `namesRunMax:'max'` / `hammerCasts:'sum'` / `hammerRunMax:'max'`。
+- 简单 8：`dq_e_names1` / `dq_e_hammer3` + 六只新怪的 `kT:standee / paper / danmaku / toll / camera / bronze`。
+- 中等 8：`dq_m_lv13` / `dq_m_lv15` / `dq_m_names3` / `dq_m_hammer10` / `dq_m_hammer_run` + `kT:misprint / frame / moderator`。
+- 困难 8：`dq_h_lv18` / `dq_h_names8` / `dq_h_hammer30` / `dq_h_hammer_run5` / `dq_h_blank` / `dq_h_proof` / `dq_h_round18`（`roundMax 18`）/ `dq_h_kill300`（`killRunMax 300`）。
+- 抽签规则没动：常驻 `dq_clear_any` + 简单 2 + 中 1 + 难 1；`avail` 仍只挂箭雨 / 傀儡三条。
+
+**main.js 埋点（新计数器只有两个，其余复用现成设施）**
+- `runHammerCasts` / `runNames` 单局计数器：声明在单局变量区，`resetRunState()` 清零。
+- 砸地：`skillCtx().hammer.cast` 成功后 `bumpStat('hammerCasts')` + `runHammerCasts++` + `dqPump({ hammerCasts:1, hammerRunMax })`。
+- 名字牌：抢回事件里 `bumpStat('namesTaken')` + `runNames++` + `dqPump({ names:1, namesRunMax })`。
+- 结算：`dqRun` 加 `namesRunMax` / `hammerRunMax`；`isWin` 分支加 `clear_13~17` 与 `levels_12/16`；`isWin` 之外加 `hammer_max`（`relics.levels().hammer >= 3`）与 `hammer_run_5`。
+- 累计 10 条统一挂 `checkCumulativeAchs`（`kills_5000` / `crit_5000` / `dmg_5m` / `sword_20000` / `deaths_100` / `hammer_casts_100` / `names_30` / `rounds_1000` / `wins_100` / `box_500`）。
+- 回归：新套件 `.tmp-block140-test.mjs`（131 条断言）；老套件里写死的 121 / 8640 / 39 一并改了（block106 的分类条数 25/12/19/61/14/5/11/5、档位 22/81/49、11400）；全量 70 套绿。
+
+**版本**：`?v=157` → **158**（index.html 两处 + 46 个带版本串的 js）。
+
+### 2.2 第 140 块 · 第一批：首屏加载提速（v=157，用户：「进入网站的加载很慢」，拍板 A + E）
 
 **A —— 加载页不再等第一关的怪物模型（`js/main.js` 的 boot）**
 - 以前这里是 `await enemies.preload(levelTypes(LEVEL_1), ...)`：标题页必须等第一关 4 只怪下完（原始约 2.7MB / gzip 约 1MB，国内手机 3~10 秒）。
@@ -68,7 +102,7 @@ Three.js r160 的单摇杆幸存者肉鸽《蛙步 · 夜行》：纯静态站�
 **版本 / 回归**
 - 全部 `?v=` bump 到 **157**（index.html + 47 个 js）；老套件版本号都是动态从 index.html 读的，`block139` 断言是 `>= 156`，不用改数字。
 
-### 2.2 第 139 块：第十八关「天亮之前」+ 名字被收 + 第 20 件法器「镇纸锤」
+### 2.3 第 139 块：第十八关「天亮之前」+ 名字被收 + 第 20 件法器「镇纸锤」
 
 设计稿 `DESIGN-LEVEL18.md`（唯一真相源，用户逐条定案）。**这是最后一关**，也是图鉴 / 法器 / 技能 / 卡池最后一次扩张。
 
@@ -104,7 +138,7 @@ Three.js r160 的单摇杆幸存者肉鸽《蛙步 · 夜行》：纯静态站�
 - `enemy.js` 分派铁律：`if (e.cfg.blankAvatar || e.cfg.blankBoss || e.cfg.blankMoves) { handleBlank(e, dt, ctx); return; }` 必须排在通用近战 / 施法者之前。
 - 回归：新建 `.tmp-block139-test.mjs`（**192 项**）；全量 68 套全绿；老套件按「怪 47 / 卡 138 / 商店 58 / 法器 20 / 技能 15 / 关卡 18 / glb 46 / 模块 76 / 成就 121」更新（124/125/126/128/130/52/63/64/65/67/72/73/77/82/84）。
 
-### 2.3 第 131–138 块：合成台选残片 / 兜底配方 / 残片进档 / 锻造权重 + 骨币关卡倍率补齐 + 更新补贴码 + 系统分享面板与分段复制 + TXT 导出与自动识别导入 + 中文存档文件名（唯一来源）+ 存档备份独立成页（据点入口 + 页面版本号）
+### 2.4 第 131–138 块：合成台选残片 / 兜底配方 / 残片进档 / 锻造权重 + 骨币关卡倍率补齐 + 更新补贴码 + 系统分享面板与分段复制 + TXT 导出与自动识别导入 + 中文存档文件名（唯一来源）+ 存档备份独立成页（据点入口 + 页面版本号）
 
 用户四连报（原话：「1.要确保所有碎片可以参与合成 2.玩一半存档，回档之后碎片会清零 3.可以适当提高剑鞘补满选项卡的概率 4.有时打怪显示掉落碎片了，实际背包没有出现」）。第 1 条定案「加『选碎片』+ 兜底配方」；第 4 条经追问确认是**合成台里的数量没涨**（不是 B 键背包）。
 
@@ -184,7 +218,7 @@ C —— 分段复制（`index.html` + `js/main.js` + `style.css`）：
 
 **发版**：`index.html` + `js/*.js` 的 `?v=` 一起 154 → **155**（172 处）。回归全绿，唯一红的是 `.tmp-story-test.mjs` 的 3 条（`局内有 16 夜` vs 实际 17 夜）—— 第 130 块起就红，与 131~138 无关。
 
-### 2.4 第 130 块：第十七关「钟楼顶」+ 钟声定身 + 空箱子 / 装箱
+### 2.5 第 130 块：第十七关「钟楼顶」+ 钟声定身 + 空箱子 / 装箱
 
 用户定案：场地机制 = **钟声定身**；两只新怪 = **撞钟的 + 铜壳**；配套 = **空箱子（第 19 件法器）+ 装箱（技能，`F`）**；数值取「更贪」档（`hpMul 1.80 / dmgMul 2.15`）。
 
@@ -212,7 +246,7 @@ C —— 分段复制（`index.html` + `js/main.js` + `style.css`）：
 **接线清单**：`wave.js` LEVEL_17（arena 19 / `hpMul 1.80` / `dmgMul 2.15` / 20 回合 / 15 种怪，`toll` 3.4 早于 `bronze` 4.2）+ `LEVELS_BY_ID[17]`；`scene.js` `roof` 主题（`makeRoofTexture()` 青石板错缝 + 铜绿渍 + 夜雾霜）；`story.js` s17 绑第 17 关；`main.js` 选关表 + import + `setLevel` 重建 + 主循环（`bell.setRound/update/takeEvents` → 冻结 + `rootPlayer` + `knockback`；`crate.setRelicLevel/update`）+ 存档 + 调试口（`__game.block114` 桶）；`shop.js` 三件货 + `itemLocked`；`upgrade.js` 六张卡 + `crateChange()` + `weightOf` 门；`relics.js` 定义 + `levels/cds`；`codex.js` 两条文案 + 两张缩略图。
 - 回归：新建 `.tmp-block130-test.mjs`（139 项）+ `.tmp-130-smoke.js`（CDP 实跑第十七关 PASS、零 console 报错）；老套件按十七关口径更新（怪 37 / 卡 133 / 商店 55 / 法器 19 / 技能 14 / 关卡 17 / glb 37 / 模块 75）。
 
-### 2.5 第 129 块：第十六关「钟楼画室」+ 铅笔线稿圈 + 铅笔 / 描红
+### 2.6 第 129 块：第十六关「钟楼画室」+ 铅笔线稿圈 + 铅笔 / 描红
 
 用户定案：场地机制 = **线稿定稿**；两只新怪 = **纸屑 + 画框**；配套 = **铅笔（第 18 件法器）+ 描红（技能，`R`）**；两只新怪各用一份新下载的 CC0 模型（零复用）。
 
@@ -243,7 +277,7 @@ C —— 分段复制（`index.html` + `js/main.js` + `style.css`）：
 - 回归：新建 `.tmp-block129-test.mjs`（137 项，七段）+ `.tmp-129-smoke.js`（CDP 实跑第十六关 PASS、零 console 报错）；19 个老套件的计数与源码断言按十六关口径更新（法器 18 / 技能 13 / 商店 52 / 卡 127 / 怪 35 / 关卡 16 / glb 35 / 模块 73）。
 - 缩略图坑：`paper / frame` 都是平摊模型，初版图只有影子。三处同时改才出得来 —— ① `doubleSided:true`（两处 traverse 都要设 `THREE.DoubleSide`）；② `.tmp-codex-shots.js` 的 `ELEV`（paper 0.62 / frame 0.30 提高俯角）；③ `SHADOW_K`（paper 0.28，影子小一点镜头才不拉远）。
 
-### 2.6 第 128 块：第十五关「钟楼直播间」+ 补光曝光区 + 环形灯 / 开播
+### 2.7 第 128 块：第十五关「钟楼直播间」+ 补光曝光区 + 环形灯 / 开播
 
 用户两轮定案：场地机制 = **补光曝光区**；两只新怪 = **超管 + 弹幕**；配套 = **环形灯（第 17 件法器）+ 开播（技能）**；键位 **Q / E**；两只新怪各用一份**新下载的 CC0 模型**；数值取「更贪」一档。
 
@@ -273,7 +307,7 @@ C —— 分段复制（`index.html` + `js/main.js` + `style.css`）：
 - 回归：新建 `.tmp-block128-test.mjs`（192 项，八段）；13 个老套件的计数与源码断言按十五关口径更新（法器 17 / 技能 12 / 商店 49 / 卡 122 / 怪 33 / 关卡 15 / glb 33）。
 - 实机自检：headless Chrome 加载 `?debug=1` → `setLevel(15)`，无运行时异常；光斑 2 盏、环形灯 / 开播 / 禁言三个口都响应，两只新怪能生成。
 
-### 2.7 第 127 块：收件人 / 回声减血 + 连杀「数字不封顶、加成封顶」
+### 2.8 第 127 块：收件人 / 回声减血 + 连杀「数字不封顶、加成封顶」
 
 用户两条实测反馈：①「收件人和回声的血太厚」；②「连击数量显示无上限，但是属性加成有上限」。
 
@@ -290,7 +324,7 @@ C —— 分段复制（`index.html` + `js/main.js` + `style.css`）：
 - 手感只改 `HEAT_BONUS_CAP` 一个常量；**别在 `setHeat` 里加 `Math.min`**（那是第 125 块修掉的 bug）。
 - 回归：`.tmp-block125-test.mjs` 的 ③ 段已按新语义改写（30 连杀 → 数字 30、加成 1.12 / 1.18），版本断言改成 `>=` 免得每次 bump 都红。
 
-### 2.8 第 126 块：照影换成主角同款模型（紫色）
+### 2.9 第 126 块：照影换成主角同款模型（紫色）
 
 用户一句话：「把模仿者的 3D 模型换成和主角一样，只不过把黄色换成紫色」。
 「模仿者」= 第十关的**照影**（`mirror`，唯一照抄玩家面板的怪）。
@@ -341,7 +375,7 @@ C —— 分段复制（`index.html` + `js/main.js` + `style.css`）：
 + `.tmp-126-cdp.js` 13 项（含**截图采样**验紫色、bounce 的 y 采样、spawn 态不进 handleMirror 的时机问题）。
 老套件回修 3 条：block52 把 mirror 加进静态模型白名单、block107 的 phantom 值、block110 的 height/radius。
 
-### 2.9 第 125 块：删「等的那个」+ 连杀不封顶
+### 2.10 第 125 块：删「等的那个」+ 连杀不封顶
 
 **用户两条实测反馈**（都是「设计一眼就不对」的类型，不是数值微调）：
 ① 「第十关里等的那个没有任何意义，直接删除」；② 「连击打到十次以上就不在往上了」。
@@ -366,7 +400,7 @@ C —— 分段复制（`index.html` + `js/main.js` + `style.css`）：
 - **顺手修了一个一直没接上的谎**：连杀浮现文案从第 117 块起就写着「攻速 +N%」，
   但 `heat.atkMul()` 只参与文案计算，从没乘进 `attackCd`。现在 `attackCd = 1 / (攻速 × heat.atkMul())`。
 
-### 2.10 第 124 块：第十四关「钟楼打样间」+ 裁切刀 + 裁纸刀
+### 2.11 第 124 块：第十四关「钟楼打样间」+ 裁切刀 + 裁纸刀
 
 **场地「裁切刀」**（`js/cutter.js`，零 import 引擎，和 `traffic / track / fog` 同款）
 - 相位机 `idle → warn(1.25s) → slice(0.22s) → recover(0.55s)`；`slots = [-7, -2.3, 2.3, 7]` 轮换 + 每换位翻一次横竖（八种组合）；`gap 5.2 → gapMin 3.1` 随回合加速；`roundNo >= 15` 起偶尔一次落两刀。
@@ -385,7 +419,7 @@ C —— 分段复制（`index.html` + `js/main.js` + `style.css`）：
 
 **接线**：`wave.js` 的 `LEVEL_14`（arena 19、`scale 1.65 / 2.00`、18 种怪、`cutter` 字段）+ `LEVELS_BY_ID[14]`；`main.js` 的 `LEVELS` 表 + import；`scene.js` 新增 `press` 主题（`makePressTexture()`）；`story.js` 的 s14 绑第十四关；`skills.js` 第 10 格；`upgrade.js` 四张卡 + `guillotineChange()`；`shop.js` 三件货。
 
-### 2.11 上一块：第 122 块（回合挑战 + 三选一刷新，细节见 git log）
+### 2.12 上一块：第 122 块（回合挑战 + 三选一刷新，细节见 git log）
 
 **回合挑战**（`js/challenge.js` 纯数据纯函数，零 DOM 零业务 import；接线全在 `main.js`）
 - 每关 `planRounds()` 从 `[3, rounds-1]` 无放回抽 **2 个回合**（独立 `chal` 随机流），**回合开始前**弹卡。
@@ -400,8 +434,9 @@ C —— 分段复制（`index.html` + `js/main.js` + `style.css`）：
 
 **生命周期**：效果 src 分别是 `chal` / `boost`，`clearRoundBuffs()` 里成对撤；`resumeGame` 成对抹 + `weapon.setMuted(false)` + `applySkillCdFactor(1)`；`resetRunState` 归零全部计数。存档带 `chal: {plan, used, seen}`。
 
-### 2.12 最近几块（一行一块）
+### 2.13 最近几块（一行一块）
 
+- **140 v=158**：成就 121 → **152**（+31：十三~十七关通关 / 十只新怪 / 空白 BOSS 与残影 / 镇纸锤与名字牌 / 累计型；全清 11400 骨币）+ 每日任务池 39 → **63**（简单 27 / 中 19 / 难 17；新计数器 `names` / `hammerCasts` 与两条 `*RunMax`）；新套件 `.tmp-block140-test.mjs`。
 - **140 v=157**：首屏提速（A 加载页不等模型 / E 步骤提示 + 97% 停格）；
 - **139 v=156**：第十八关「天亮之前」—— 名字被收（`blank.js`，残影死后掉名字牌，5 秒飘走 / 1.2 格内抢回 / 抢回一格封一招）+ 八招八残影 + R20 BOSS「空白」+ 第 20 件法器「镇纸锤」（自动抡破甲 + 砸地 G）；怪 46（+9）/ 卡 138 / 商店 58 / 法器 20 / 技能 15 / 关卡 18 / glb 46 / 模块 76 / 成就 121。
 - **138 v=155**：存档备份从设置里独立成 `#backupScr`（据点里新增 `#btnBackup` 横卡进页），备份页页脚显示 `v155`；`checkUpdate` 把 `backupScr` 也列进「别自动刷新」名单。
@@ -428,9 +463,9 @@ C —— 分段复制（`index.html` + `js/main.js` + `style.css`）：
 - **116/117**：第十二关「三幻神驿站」+ 车流 + 加急袋鼠 + 拿铁；声音开关移设置、删剑转、连杀改屏幕中央浮现。
 - 更早：查 `git log --oneline`。
 
-### 2.13 规模数字（改数值断言必看）
+### 2.14 规模数字（改数值断言必看）
 
-关卡 **18** · 怪 **47**（**46 个 glb，零复用，没有一只是手搓的**；`blankMinion` 是隐藏图鉴；图鉴 **46** webp）· 升级卡 **138** · 商店 **58** · 法器 **20** · 技能键 **15** · 火种簇 **23**（核心 9）· 成就 **121** · 事件 **131** · 每日任务池 **39** · 礼包码 52 · 火种卡 16 · 诅咒 6 · js 模块 **76**（`?v=157`）。
+关卡 **18** · 怪 **47**（**46 个 glb，零复用，没有一只是手搓的**；`blankMinion` 是隐藏图鉴；图鉴 **46** webp）· 升级卡 **138** · 商店 **58** · 法器 **20** · 技能键 **15** · 火种簇 **23**（核心 9）· 成就 **152** · 事件 **131** · 每日任务池 **63** · 礼包码 52 · 火种卡 16 · 诅咒 6 · js 模块 **76**（`?v=158`）。
 
 ---
 
@@ -480,7 +515,7 @@ C —— 分段复制（`index.html` + `js/main.js` + `style.css`）：
 28. **别拿能力探测当门闩**：`canShare({files})` 手机大面积误报 false。一律「先试 → 失败降一档 → 最后才说不行」，文案说清改成了什么。
 
 **测试 / CDP**
-29. **测试里别写死版本号和数字**：版本运行时从 `index.html` 读；怪数 / 关卡数 / 卡池 / 成就数每次扩张都会让老断言变红。**改数值回头修老套件**（清单见 §2.3 末尾）。
+29. **测试里别写死版本号和数字**：版本运行时从 `index.html` 读；怪数 / 关卡数 / 卡池 / 成就数每次扩张都会让老断言变红。**改数值回头修老套件**（清单见 §2.4 末尾）。
 30. **Node 里 `./profile.js` 与 `./profile.js?v=N` 是两个模块实例** —— 测试必须带同一个版本号导入。
 31. **造靶子用 `warrior`（不用自爆的 `minion`），先钉血，`spawn` 后把 `state` 改成 `chase`**（spawn 态免疫伤害）；测伤害前确认 `adminOn() === false`（管理员模式里主角免疫一切）。
     **主角上限是 `stats.get('maxHp')`**，`stats.hp` 只有 `{cur}`（写成 `stats.hp.max` 会让血变 NaN）。

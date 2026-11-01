@@ -544,7 +544,7 @@ ok(Object.keys(R.RELIC_DEFS).length === 20, '法器 20 件', String(Object.keys(
 ok(S.SHOP_ITEMS.length === 58, '商店 58 件', String(S.SHOP_ITEMS.length));
 ok(U.UPGRADES.length === 138, '升级卡 138 张', String(U.UPGRADES.length));
 ok(SK.SKILLS.length === 15, '技能 15 格', String(SK.SKILLS.length));
-ok(A.ACH_COUNT === 121, '成就 121 条', String(A.ACH_COUNT));
+ok(A.ACH_COUNT === 152, '成就 152 条', String(A.ACH_COUNT));
 ok(Object.keys(W.LEVELS_BY_ID).length === 18, '关卡 18 张表', String(Object.keys(W.LEVELS_BY_ID).length));
 
 const glbs = readdirSync(path.join(ROOT, 'assets/monsters')).filter((f) => f.endsWith('.glb'));

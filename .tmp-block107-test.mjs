@@ -245,7 +245,7 @@ console.log('[§11] 剧情 / 成就 / 版本');
 {
   const s10 = STORY_CHAPTERS.find((c) => c.id === 's10');
   ok(s10 && s10.levelId === 10 && s10.atRound === 2, 's10 绑第十关第 2 回合');
-  ok(ACHS.length === 121, '成就 121 条（第 139 块 +第十八关 4 条）', String(ACHS.length));
+  ok(ACHS.length === 152, '成就 152 条（第 140 块 +31 条）', String(ACHS.length));
   for (const id of ['clear_10', 'mirror_10', 'addressee_10', 'echo_10']) {
     const a = achById(id);
     ok(!!a, `成就 ${id} 存在`);

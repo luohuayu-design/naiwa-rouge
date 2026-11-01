@@ -25,7 +25,7 @@
 //    关掉网页回来会发现“明明做完了却没算”。
 // ============================================================
 
-import { profile, save, addBones, bones } from './profile.js?v=157';
+import { profile, save, addBones, bones } from './profile.js?v=158';
 
 // ---------------- 三档难度 ----------------
 // 第 94 块定案用**克制档**：木匣首价 30、金匣 280。一天全清 320 骨币 ≈
@@ -55,6 +55,11 @@ const AGG = {
   arrowCasts: 'sum',        // 箭雨累计施放（pressSkill 收口埋点）
   arrowRunMax: 'max',       // 单局箭雨施放（结算时喂）
   golemSummons: 'sum',      // 傀儡累计召唤（hintChoiceCb 埋点）
+  // 第 140 块：第十六~十八关 / 镇纸锤联动的新计数器
+  names: 'sum',             // 抢回名字牌（第十八关，blank.takeEvents 的 'name' 事件）
+  namesRunMax: 'max',       // 单局抢回名字牌数（结算时喂）
+  hammerCasts: 'sum',       // 主动「砸地」累计（技能的 cast 口埋点）
+  hammerRunMax: 'max',      // 单局主动砸地次数（结算时喂）
 };
 // 按怪种分别记的击杀（键形如 'kT:minion'），一律 sum
 const KILL_KIND = (type) => `kT:${type}`;
@@ -159,6 +164,61 @@ export const DQ_POOL = [
     name: '单局打到第 20 回合', desc: '最后一波都见了，才算到底' },
   { id: 'dq_h_fast5', tier: 'hard', metric: 'fast5', need: 1,
     name: '5 分钟内通关', desc: '比 7 分钟那条更紧，速通流派的家常便饭' },
+
+  // ========== 第 140 块：跟着十三~十八关 / 镇纸锤补的一批 ==========
+  // 口径：kT:xxx 是「这个怪种当天打了几只」，和成就的图鉴击倒数走同一份数据；
+  // names / hammerCasts 是新计数器（见文件头 AGG），只在对应玩法里才有进项。
+  // ===== 简单 =====
+  { id: 'dq_e_names1', tier: 'easy', metric: 'names', need: 1,
+    name: '抢回 1 个名字牌', desc: '第十八关里，残影死后五秒内踩上去' },
+  { id: 'dq_e_hammer3', tier: 'easy', metric: 'hammerCasts', need: 3,
+    name: '主动砸地 3 次', desc: '买了镇纸锤后按 G，冷却好就砸' },
+  { id: 'dq_e_standee', tier: 'easy', metric: KILL_KIND('standee'), need: 5,
+    name: '击倒 5 只立牌', desc: '第十三关的立牌，记得从背后打' },
+  { id: 'dq_e_paper', tier: 'easy', metric: KILL_KIND('paper'), need: 20,
+    name: '击倒 20 只纸屑', desc: '第十六关那些一碰就炸的小纸片' },
+  { id: 'dq_e_danmaku', tier: 'easy', metric: KILL_KIND('danmaku'), need: 5,
+    name: '击倒 5 只弹幕', desc: '第十五关吐字牌的那种，横挪一步再打' },
+  { id: 'dq_e_toll', tier: 'easy', metric: KILL_KIND('toll'), need: 5,
+    name: '击倒 5 只撞钟的', desc: '第十七关，别在钟边站着不动' },
+  { id: 'dq_e_camera', tier: 'easy', metric: KILL_KIND('camera'), need: 5,
+    name: '击倒 5 只取景的', desc: '第十三关的锥形快门，绕到它背后' },
+  { id: 'dq_e_bronze', tier: 'easy', metric: KILL_KIND('bronze'), need: 3,
+    name: '击倒 3 只铜壳', desc: '第十七关，它对钟声免疫，得靠刀' },
+  // ===== 中等 =====
+  { id: 'dq_m_lv13', tier: 'mid', metric: 'clearLv', need: 13,
+    name: '通关第 13 关及以后', desc: '焦土操场往后，随便哪一关' },
+  { id: 'dq_m_lv15', tier: 'mid', metric: 'clearLv', need: 15,
+    name: '通关第 15 关及以后', desc: '钟楼直播间往后，随便哪一关' },
+  { id: 'dq_m_names3', tier: 'mid', metric: 'names', need: 3,
+    name: '一天抢回 3 个名字牌', desc: '可以分几局，抢回来就是少一招 BOSS 技能' },
+  { id: 'dq_m_hammer10', tier: 'mid', metric: 'hammerCasts', need: 10,
+    name: '一天主动砸地 10 次', desc: '冷却 20 秒上下，两局就够' },
+  { id: 'dq_m_hammer_run', tier: 'mid', metric: 'hammerRunMax', need: 3,
+    name: '单局主动砸地 3 次', desc: '一局之内按够三次 G' },
+  { id: 'dq_m_misprint', tier: 'mid', metric: KILL_KIND('misprint'), need: 5,
+    name: '击倒 5 只错版', desc: '第十四关的那种，死后还会裂成两只' },
+  { id: 'dq_m_frame', tier: 'mid', metric: KILL_KIND('frame'), need: 5,
+    name: '击倒 5 只画框', desc: '第十六关，它把方框扣在你脚下' },
+  { id: 'dq_m_moderator', tier: 'mid', metric: KILL_KIND('moderator'), need: 3,
+    name: '击倒 3 只超管', desc: '第十五关读条禁言的那只，抢在读条前打掉' },
+  // ===== 困难 =====
+  { id: 'dq_h_lv18', tier: 'hard', metric: 'clearLv', need: 18,
+    name: '通关第 18 关（天亮之前）', desc: '最后一关，打完就是通关全篇' },
+  { id: 'dq_h_names8', tier: 'hard', metric: 'names', need: 8,
+    name: '一天抢回 8 个名字牌', desc: '八招各抢一次，或者打两局凑' },
+  { id: 'dq_h_hammer30', tier: 'hard', metric: 'hammerCasts', need: 30,
+    name: '一天主动砸地 30 次', desc: '得有镇纸锤，还得打满一整天' },
+  { id: 'dq_h_hammer_run5', tier: 'hard', metric: 'hammerRunMax', need: 5,
+    name: '单局主动砸地 5 次', desc: '一局里砸够五次，得把冷却卡也带上' },
+  { id: 'dq_h_blank', tier: 'hard', metric: KILL_KIND('blank'), need: 1,
+    name: '打倒「空白」本体', desc: '第十八关第 20 回合的那个 BOSS' },
+  { id: 'dq_h_proof', tier: 'hard', metric: KILL_KIND('proofreader'), need: 3,
+    name: '击倒 3 只校对的', desc: '第十四关给血最厚的怪批注的那种' },
+  { id: 'dq_h_round18', tier: 'hard', metric: 'roundMax', need: 18,
+    name: '单局打到第 18 回合', desc: '离天亮只差两回合' },
+  { id: 'dq_h_kill300', tier: 'hard', metric: 'killRunMax', need: 300,
+    name: '单局击倒 300 只', desc: '整关二十回合都不中途退出' },
 ];
 
 const BY_ID = Object.fromEntries(DQ_POOL.map((t) => [t.id, t]));

@@ -72,7 +72,7 @@ console.log('\n[1] 「一线生机」彻底删干净');
 // ============================================================ 2. 106 条的账
 console.log('\n[2] 106 条 · 八类 · 三档');
 {
-  ok(ACH_COUNT === 121, '总数 121（第 139 块 +第十八关 4 条）', String(ACH_COUNT));
+  ok(ACH_COUNT === 152, '总数 152（第 140 块 +31 条：新关卡 / 新怪 / 镇纸锤）', String(ACH_COUNT));
   ok(ACHS.length === ACH_COUNT, 'ACHS 长度 = ACH_COUNT');
   const ids = ACHS.map((a) => a.id);
   ok(new Set(ids).size === ids.length, 'id 不重复');
@@ -81,14 +81,15 @@ console.log('\n[2] 106 条 · 八类 · 三档');
   // 八类各自的条数（面板上分组标题旁边就是这个数，改一条就会漂）
   // 第 107 块：level 24 → 29（clear_10 + 四只新怪里程碑）；第 114 块 → 33（clear_11 + 三只）；第 116 块 → 37（clear_12 + 三只）
   // 第 139 块：level 36 → 40（clear_18 / blank_names / blank_flawless / hammer_20）
-  const want = { battle: 21, survive: 11, build: 15, level: 40, challenge: 14, story: 5, meta: 10, secret: 5 };
+  // 第 140 块：battle 21→25、survive 11→12、build 15→19、level 40→61、meta 10→11，共 152 条
+  const want = { battle: 25, survive: 12, build: 19, level: 61, challenge: 14, story: 5, meta: 11, secret: 5 };
   for (const c of ACH_CATS) {
     ok(achsByCat(c.id).length === want[c.id], `${c.name} ${want[c.id]} 条`, String(achsByCat(c.id).length));
   }
   const byTier = [0, 1, 2].map((t) => ACHS.filter((a) => a.tier === t).length);
-  ok(byTier.join('/') === '22/65/34', '档位分布 寻常 22 / 不易 65 / 罕见 34', byTier.join('/'));
+  ok(byTier.join('/') === '22/81/49', '档位分布 寻常 22 / 不易 81 / 罕见 49', byTier.join('/'));
   const total = ACHS.reduce((n, a) => n + achTier(a.tier).bones, 0);
-  ok(total === 8640, '全清 8640 骨币（第 139 块 +420）', String(total));
+  ok(total === 11400, '全清 11400 骨币（第 140 块 152 条）', String(total));
   ok(ACHS.every((a) => !!a.name && !!a.desc && !!a.icon), '每条都有名字 / 描述 / 图标');
   ok(ACHS.every((a) => !/[*_`]/.test(a.desc)), '描述里没有 markdown（面板是 textContent 渲染）');
 }
