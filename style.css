@@ -2643,3 +2643,35 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
   color:#221606;font-size:14px;font-weight:800;letter-spacing:.08em;cursor:pointer;
   font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
 .cr-btn:active{background:linear-gradient(180deg,#e8c880,#c08a3e)}
+
+/* 第 142 块：合成结果卡 —— 以前只写进标题下那行 10.5px 小字，几乎看不见。
+   现在是一整张带品质色的大卡：档位标签 + 大号结果名 + 描述 + 实际拿到什么。 */
+.cr-result{display:none;margin:0 14px 10px}
+.cr-result.on{display:block}
+.cr-card{padding:11px 14px 12px;border-radius:14px;text-align:center;
+  border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.04);
+  animation:crPop .26s cubic-bezier(.2,.9,.3,1.25) both}
+.cr-tag{display:inline-block;padding:1px 10px;border-radius:999px;font-size:10.5px;
+  font-weight:800;letter-spacing:.16em;border:1px solid currentColor;opacity:.9}
+.cr-name{margin-top:7px;font-size:19px;font-weight:800;letter-spacing:.04em;line-height:1.25}
+.cr-desc{margin-top:4px;font-size:12px;line-height:1.5;color:rgba(228,214,186,.86)}
+.cr-gain{margin-top:7px;padding-top:7px;font-size:11.5px;font-weight:700;letter-spacing:.02em;
+  border-top:1px dashed rgba(255,255,255,.12);color:rgba(255,235,190,.9)}
+/* 四档配色：杰作金 / 成功绿 / 赌输灰 / 炸炉红 */
+.cr-result.is-master .cr-card{border-color:rgba(255,214,120,.65);color:#ffe4a8;
+  background:radial-gradient(circle at 50% 0%,rgba(255,200,90,.22),rgba(60,36,8,.85));
+  box-shadow:0 0 0 1px rgba(255,220,150,.24),0 10px 26px rgba(255,180,70,.18)}
+.cr-result.is-master .cr-name{color:#fff0c4;text-shadow:0 0 16px rgba(255,200,110,.5)}
+.cr-result.is-normal .cr-card{border-color:rgba(150,230,175,.5);color:#bff0cd;
+  background:radial-gradient(circle at 50% 0%,rgba(110,220,150,.16),rgba(14,38,24,.82))}
+.cr-result.is-normal .cr-name{color:#ddffe8}
+.cr-result.is-junk .cr-card{border-color:rgba(190,170,150,.36);color:rgba(206,190,170,.85);
+  background:rgba(34,28,20,.8)}
+.cr-result.is-junk .cr-name{color:rgba(226,208,184,.92)}
+.cr-result.is-accident .cr-card{border-color:rgba(232,120,108,.6);color:#ffc0b8;
+  background:radial-gradient(circle at 50% 0%,rgba(220,80,60,.2),rgba(44,12,10,.86))}
+.cr-result.is-accident .cr-name{color:#ffd9d2;text-shadow:0 0 14px rgba(230,110,90,.4)}
+@keyframes crPop{
+  from{opacity:0;transform:translateY(8px) scale(.96)}
+  to{opacity:1;transform:none}
+}

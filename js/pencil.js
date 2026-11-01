@@ -16,7 +16,7 @@
 // 骨架照 ringlight.js：等级 / 卡 / 商店两件买断各有独立通道，
 // 临时属性 mod 全带 src，到期 / reset 必须撤掉（这里有 cd 与标记，没有玩家属性）。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=159';
+import * as THREE from '../lib/three.module.js?v=160';
 
 export const PENCIL_BASE = {
   cd: 30.0,

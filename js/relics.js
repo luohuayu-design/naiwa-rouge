@@ -16,12 +16,12 @@
 // 与环剑（自动索敌、消耗制）和炮台（固定点位）互补；价格定在
 // 商店里「买得起但要攒一攒」的档，让 9/12/15/18 回合的商店有取舍。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=159';
-import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=159';
-import { withV } from './assetUrl.js?v=159';   // 第 80 块：glb 带版本号，SW 才走缓存优先
-import { distance2D } from './stats.js?v=159';
-import { TAG_BASE, TAG_SEAL } from './deposit.js?v=159';   // 第 84 块：掉牌概率的真相源
-import audio from './audio.js?v=159';
+import * as THREE from '../lib/three.module.js?v=160';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js?v=160';
+import { withV } from './assetUrl.js?v=160';   // 第 80 块：glb 带版本号，SW 才走缓存优先
+import { distance2D } from './stats.js?v=160';
+import { TAG_BASE, TAG_SEAL } from './deposit.js?v=160';   // 第 84 块：掉牌概率的真相源
+import audio from './audio.js?v=160';
 
 // 百分比文案（概率表里存的是 0.5 这种小数）
 const pct = (v) => `${Math.round(v * 100)}%`;

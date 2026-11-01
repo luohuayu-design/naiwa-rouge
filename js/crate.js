@@ -24,7 +24,7 @@
 // 唯一要小心的：reset / 换关时**先把箱里的怪放出来**（unbox），否则它们会
 // 以 visible=false 的状态留到下一关（clearField 就是为了这件事）。
 // ============================================================
-import * as THREE from '../lib/three.module.js?v=159';
+import * as THREE from '../lib/three.module.js?v=160';
 
 export const CRATE_BASE = {
   cd: [26.0, 23.0, 20.0],      // 装箱技能冷却
