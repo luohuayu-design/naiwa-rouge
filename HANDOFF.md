@@ -1,11 +1,11 @@
-# 蛙步 · 夜行 —— 交接文档
+# 奶蛙 · 夜行 —— 交接文档
 
 > 新对话从这里开始读，**别翻聊天记录**。要动手只读 §1 铁律 + §2 当前状态 + §3 坑。
-> 最后更新 2026-11-01 · 线上 **v=161** · 第 143 块（安卓 App 壳）。更早的细节查 `git log` / `git show`，本文件不重复。
+> 最后更新 2026-11-01 · 线上 **v=162** · 第 144 块（改名「奶蛙 · 夜行」+ 换 App 图标）。更早的细节查 `git log` / `git show`，本文件不重复。
 
 ## 0. 一句话
 
-Three.js r160 的单摇杆幸存者肉鸽《蛙步 · 夜行》：纯静态站点（无构建、无 CDN、零依赖、无 importmap），GitHub Pages 发布，**手机浏览器兼容是硬约束**。玩家是一只会走路的奶蛙，**十八关 × 20 回合**。
+Three.js r160 的单摇杆幸存者肉鸽《奶蛙 · 夜行》：纯静态站点（无构建、无 CDN、零依赖、无 importmap），GitHub Pages 发布，**手机浏览器兼容是硬约束**。玩家是一只会走路的奶蛙，**十八关 × 20 回合**。
 
 | 项 | 值 |
 | --- | --- |
@@ -46,23 +46,39 @@ Three.js r160 的单摇杆幸存者肉鸽《蛙步 · 夜行》：纯静态站�
 16. **App 发版三件套**（用户 2026-11-01 定：桌面始终留一份最新的 APK）：
    ① 游戏 `?v=` bump 的同时改 `naiwa-app/android/app/build.gradle` 的 `versionCode / versionName`（只增不减）；
    ② 跑 `cd naiwa-app && npm run apk`；
-   ③ 脚本会自动把新包复制成 `C:\Users\MECHREVO\Desktop\蛙步夜行-v<versionName>.apk` 并删掉桌面上自己那套命名的旧版本 —— **桌面只留最新一版**，别手动改这个名字，否则旧版删不掉。
+   ③ 脚本会自动把新包复制成 `C:\Users\MECHREVO\Desktop\奶蛙夜行-v<versionName>.apk` 并删掉桌面上自己那套命名的旧版本（旧前缀「蛙步夜行」也认，改名那次留下的会被顺手清掉）—— **桌面只留最新一版**，别手动改这个名字，否则旧版删不掉。
 
 ---
 
-## 2. 当前状态（v=161 · 第 143 块）
+## 2. 当前状态（v=162 · 第 144 块）
 
-### 2.1 第 143 块：安卓 App 壳（Capacitor，v=161）
+### 2.1 第 144 块：改名「奶蛙 · 夜行」+ 换 App 图标（v=162）
+
+用户原话：「图标改成这个，名字改成奶蛙·夜行吧」，随后单发了一张 1536×1536 的图标原图（像素风：奶蛙抱剑，旁边一只骷髅，头顶月亮与星星）。
+
+**改名（游戏内文案 + App 显示名一起换；包名 / 存档内部标识一律不动）**：
+- `index.html`：`<title>`、HUD 的 `.hud-title`、公告页与宣传页各一句《奶蛙 · 夜行》、两处 QQ 群标签「奶蛙夜行」。
+- `main.js`：加载页轮播第二条、`navigator.share` 的 title；`saveIO.js`：存档文件名 `奶蛙·夜行存档文件-YYYYMMDD-HHMM.txt`、导入失败提示文案。
+- **不能动的**：`saveIO.js` 的 `APP = 'naiwa-rouge'`、包名 `com.luohuayu.naiwa`、keystore —— 老存档照样导入，覆盖安装照样保数据。
+- App 侧：`capacitor.config.json` 的 `appName`、`strings.xml` 的 `app_name` / `title_activity_main`、`package.json` 描述、桌面副本名（`蛙步夜行-v*.apk` → `奶蛙夜行-v*.apk`，脚本同时清旧前缀）。
+- **保留不改**：正文 / 素材出处里的「同作者的音游《蛙步》」（那是另一款作品，不是本作的旧名）。
+- 连带改测试断言：`.tmp-block104-test.mjs` ④（文件名与正则）、`.tmp-block78-test.mjs` 七（文件名正则）。
+
+**换图标**：原图存为 `naiwa-app/assets/icon.jpg`，`make-icons.ps1` 重生成 5 个密度 ×（方形 / 圆角 / 自适应前景）+ 11 张 splash，再 `npm run apk`。启动图底色沿用 `#081014`，自适应图标底色仍是 `#0B1B2A`。
+**发版**：`?v=161` → **162**（index 2 处 + 45 个 js 共 174 处）；`build.gradle` → `versionCode 162 / "1.0.162"`；APK `dist/naiwa-nightwalk-1.0.162.apk`（14.2 MB，`apksigner verify` 过），桌面副本 `奶蛙夜行-v1.0.162.apk`（旧的 `蛙步夜行-v1.0.161.apk` 已自动删除）。
+**回归**：全量 74 套 `.tmp-*-test.mjs` 全绿。
+
+### 2.2 第 143 块：安卓 App 壳（Capacitor，v=161）
 
 用户原话：「如果把目前的版本做成APP……现在做APP版给我」。四个选择由用户拍板：**只要安卓 APK** / **内置离线包**（把网页打进 APK，不连服务器）/ **首装迁移引导** / **包名与签名由我定**。
 
 **工程在 `../naiwa-app`（独立目录，不进本仓库）**：Capacitor 6 + `android/`。
 - `sync-web.mjs`：把本仓库的 `index.html / style.css / sw.js / js / lib / assets` 复制成 `www/`（跳过 `.tmp-*` 与 `.git`），只读本仓库、不回写。
-- `build-apk.mjs`（`npm run apk`）：串联 `sync-web` → `npx cap sync android` → `android/gradlew.bat assembleRelease` → `apksigner verify`，最后把产物收成 `naiwa-app/dist/naiwa-nightwalk-<versionName>.apk`，**并同步一份到桌面 `C:\Users\MECHREVO\Desktop\蛙步夜行-v<versionName>.apk`（自动删掉桌面上旧的版本，桌面永远只留最新一版）**；日志里会比对游戏 `?v=` 与 `versionCode`，不一致只警告不中断。
-- 包名 `com.luohuayu.naiwa`、应用名「蛙步 · 夜行」、竖屏锁定（`AndroidManifest` 的 `screenOrientation="portrait"`）、自适应图标底色 `#0B1B2A`。
+- `build-apk.mjs`（`npm run apk`）：串联 `sync-web` → `npx cap sync android` → `android/gradlew.bat assembleRelease` → `apksigner verify`，最后把产物收成 `naiwa-app/dist/naiwa-nightwalk-<versionName>.apk`，**并同步一份到桌面 `C:\Users\MECHREVO\Desktop\奶蛙夜行-v<versionName>.apk`（自动删掉桌面上旧的版本，桌面永远只留最新一版）**；日志里会比对游戏 `?v=` 与 `versionCode`，不一致只警告不中断。
+- 包名 `com.luohuayu.naiwa`、应用名「奶蛙 · 夜行」（第 144 块改名）、竖屏锁定（`AndroidManifest` 的 `screenOrientation="portrait"`）、自适应图标底色 `#0B1B2A`。
 - 签名：`android/app/naiwa-release.keystore`（alias `naiwa`，口令 `naiwa2026`，RSA2048 / 10000 天）。**包名 + keystore 永久不许换** —— 换了就是另一个 App，老用户覆盖安装会被系统拒绝，等于丢档。
 
-**版本号规则**：`android/app/build.gradle` 的 `versionCode / versionName` 跟游戏 `?v=` 同步（当前 `161 / "1.0.161"`）。**每次发版必须 +1**，否则同一个版本号装不上（Android 只认更大的 versionCode）。
+**版本号规则**：`android/app/build.gradle` 的 `versionCode / versionName` 跟游戏 `?v=` 同步（当前 `162 / "1.0.162"`）。**每次发版必须 +1**，否则同一个版本号装不上（Android 只认更大的 versionCode）。
 **gradle wrapper** 的 `distributionUrl` 已改走腾讯镜像（`services.gradle.org` 国内直连 10s 超时，第一版就是这么失败的）。
 
 **游戏侧三处改动（本仓库）**：
@@ -73,7 +89,7 @@ Three.js r160 的单摇杆幸存者肉鸽《蛙步 · 夜行》：纯静态站�
 **存档真相（回复用户时的口径）**：网页版与 App 是两套 `localStorage`，**首装一定空白**，迁移靠现有的存档码；App **覆盖安装（同包名同签名）保数据**，**卸载即清空**（`allowBackup="true"` 只是让系统有机会在重装时帮忙恢复，不保证）。
 **回归**：全量 74 套 `.tmp-*-test.mjs` 全绿（Node 里没有 `window.Capacitor`，`isNativeApp()` 恒 false，老逻辑零变化）；`?v=160` → **161**（index 2 处 + 45 个 js 共 174 处）。
 
-### 2.2 第 142 块：合成台结果改成大卡片（v=160）
+### 2.3 第 142 块：合成台结果改成大卡片（v=160）
 
 用户原话：「合成台那里，每次合成之后弹窗显示结果，只出一行字太不明显」。
 
@@ -88,7 +104,7 @@ Three.js r160 的单摇杆幸存者肉鸽《蛙步 · 夜行》：纯静态站�
 **回归**：全量 74 套 `.tmp-*-test.mjs` 全绿（没有套件引用 craftSub / craftPanel，改动不动数值与存档）；`?v=159` → **160**（index 2 处 + 46 个 js 共 172 处）。
 **顺手注意**：`craftSubEl` 保留给两类提示文案（「这一枚残片凑不出配方」「还没有残片」），结果不再走它。
 
-### 2.3 第 141 块：三选一「减冷却」卡实测核查 + 纸立牌/裁纸刀全族修复（v=159）
+### 2.4 第 141 块：三选一「减冷却」卡实测核查 + 纸立牌/裁纸刀全族修复（v=159）
 
 用户原话：「检验三选一中减少技能cd的，是否真的减了」。用真实系统实例（Node 里造 11 个系统 + 桩 `document`）逐张 apply 后比对 `cdMax`，不是读代码猜。
 
@@ -109,7 +125,7 @@ Three.js r160 的单摇杆幸存者肉鸽《蛙步 · 夜行》：纯静态站�
 - 全量 74 套 `.tmp-*-test.mjs` 全绿（含新增 5 条守卫断言）；`?v=158` → **159**（index 2 处 + 45 个 js 文件共 172 处）。
 - 临时探针 `.tmp-cd-check.mjs`（真实实例 before/after 打印）留在项目根，改卡池后可重跑；不提交。
 
-### 2.4 第 140 块 · 第二批：成就 121 → 152 / 每日任务池 39 → 63（v=158）
+### 2.5 第 140 块 · 第二批：成就 121 → 152 / 每日任务池 39 → 63（v=158）
 
 用户原话：「根据目前新增的关卡和法器，技能，怪物，武器，新增一大套成就和每日任务」。
 
@@ -143,7 +159,7 @@ Three.js r160 的单摇杆幸存者肉鸽《蛙步 · 夜行》：纯静态站�
 
 **版本**：`?v=157` → **158**（index.html 两处 + 46 个带版本串的 js）。
 
-### 2.5 第 140 块 · 第一批：首屏加载提速（v=157，用户：「进入网站的加载很慢」，拍板 A + E）
+### 2.6 第 140 块 · 第一批：首屏加载提速（v=157，用户：「进入网站的加载很慢」，拍板 A + E）
 
 **A —— 加载页不再等第一关的怪物模型（`js/main.js` 的 boot）**
 - 以前这里是 `await enemies.preload(levelTypes(LEVEL_1), ...)`：标题页必须等第一关 4 只怪下完（原始约 2.7MB / gzip 约 1MB，国内手机 3~10 秒）。
@@ -163,7 +179,7 @@ Three.js r160 的单摇杆幸存者肉鸽《蛙步 · 夜行》：纯静态站�
 **版本 / 回归**
 - 全部 `?v=` bump 到 **157**（index.html + 47 个 js）；老套件版本号都是动态从 index.html 读的，`block139` 断言是 `>= 156`，不用改数字。
 
-### 2.6 第 139 块：第十八关「天亮之前」+ 名字被收 + 第 20 件法器「镇纸锤」
+### 2.7 第 139 块：第十八关「天亮之前」+ 名字被收 + 第 20 件法器「镇纸锤」
 
 设计稿 `DESIGN-LEVEL18.md`（唯一真相源，用户逐条定案）。**这是最后一关**，也是图鉴 / 法器 / 技能 / 卡池最后一次扩张。
 
@@ -199,7 +215,7 @@ Three.js r160 的单摇杆幸存者肉鸽《蛙步 · 夜行》：纯静态站�
 - `enemy.js` 分派铁律：`if (e.cfg.blankAvatar || e.cfg.blankBoss || e.cfg.blankMoves) { handleBlank(e, dt, ctx); return; }` 必须排在通用近战 / 施法者之前。
 - 回归：新建 `.tmp-block139-test.mjs`（**192 项**）；全量 68 套全绿；老套件按「怪 47 / 卡 138 / 商店 58 / 法器 20 / 技能 15 / 关卡 18 / glb 46 / 模块 76 / 成就 121」更新（124/125/126/128/130/52/63/64/65/67/72/73/77/82/84）。
 
-### 2.7 第 131–138 块：合成台选残片 / 兜底配方 / 残片进档 / 锻造权重 + 骨币关卡倍率补齐 + 更新补贴码 + 系统分享面板与分段复制 + TXT 导出与自动识别导入 + 中文存档文件名（唯一来源）+ 存档备份独立成页（据点入口 + 页面版本号）
+### 2.8 第 131–138 块：合成台选残片 / 兜底配方 / 残片进档 / 锻造权重 + 骨币关卡倍率补齐 + 更新补贴码 + 系统分享面板与分段复制 + TXT 导出与自动识别导入 + 中文存档文件名（唯一来源）+ 存档备份独立成页（据点入口 + 页面版本号）
 
 用户四连报（原话：「1.要确保所有碎片可以参与合成 2.玩一半存档，回档之后碎片会清零 3.可以适当提高剑鞘补满选项卡的概率 4.有时打怪显示掉落碎片了，实际背包没有出现」）。第 1 条定案「加『选碎片』+ 兜底配方」；第 4 条经追问确认是**合成台里的数量没涨**（不是 B 键背包）。
 
@@ -265,7 +281,7 @@ C —— 分段复制（`index.html` + `js/main.js` + `style.css`）：
 - 回归：`.tmp-block104-test.mjs` ④⑤① 断言换成 text/plain / .txt，新增 ⑩ 段真跑 `parseAny`（JSON 全文 / 存档码 / 折行三种都能进），80 项全绿。
 
 **⑨ 中文存档文件名（第 136 / 137 块）**
-- 名字统一由 `js/saveIO.js` 的 `fileName()` 产出：`蛙步·夜行存档文件-YYYYMMDD-HHMM.txt`（第 136 块起中文；扩展名 `.txt` 与 `makeHref` 的 `text/plain` 配套）。日期时分防同名覆盖。
+- 名字统一由 `js/saveIO.js` 的 `fileName()` 产出：`奶蛙·夜行存档文件-YYYYMMDD-HHMM.txt`（第 136 块起中文，第 144 块改名；扩展名 `.txt` 与 `makeHref` 的 `text/plain` 配套）。日期时分防同名覆盖。
 - 第 137 块收口：`main.js` 里那份自己拼的 `saveFileName()` 删掉，`exportFile()` 直接用 `saveIO.fileName()` —— **落盘名与 toast 名从此是同一个字符串**（以前 toast 停在 `蛙步夜行-存档-….json`，容易被误判成「下的还是旧文件」）。
 - 第 104 块把名字改成 ASCII 是为了照顾安卓下载管理器；现在手机端先走系统分享面板，可读性优先。桌面 / 原生浏览器对 `a.download` 里的中文名没有兼容问题。
 - 回归：`.tmp-block104-test.mjs` ④ 改成中文名断言 + 「main.js 不许再自己拼名」，`.tmp-block78-test.mjs` 七 同步新名，81 / 102 项全绿。
@@ -279,7 +295,7 @@ C —— 分段复制（`index.html` + `js/main.js` + `style.css`）：
 
 **发版**：`index.html` + `js/*.js` 的 `?v=` 一起 154 → **155**（172 处）。回归全绿，唯一红的是 `.tmp-story-test.mjs` 的 3 条（`局内有 16 夜` vs 实际 17 夜）—— 第 130 块起就红，与 131~138 无关。
 
-### 2.8 第 130 块：第十七关「钟楼顶」+ 钟声定身 + 空箱子 / 装箱
+### 2.9 第 130 块：第十七关「钟楼顶」+ 钟声定身 + 空箱子 / 装箱
 
 用户定案：场地机制 = **钟声定身**；两只新怪 = **撞钟的 + 铜壳**；配套 = **空箱子（第 19 件法器）+ 装箱（技能，`F`）**；数值取「更贪」档（`hpMul 1.80 / dmgMul 2.15`）。
 
@@ -307,7 +323,7 @@ C —— 分段复制（`index.html` + `js/main.js` + `style.css`）：
 **接线清单**：`wave.js` LEVEL_17（arena 19 / `hpMul 1.80` / `dmgMul 2.15` / 20 回合 / 15 种怪，`toll` 3.4 早于 `bronze` 4.2）+ `LEVELS_BY_ID[17]`；`scene.js` `roof` 主题（`makeRoofTexture()` 青石板错缝 + 铜绿渍 + 夜雾霜）；`story.js` s17 绑第 17 关；`main.js` 选关表 + import + `setLevel` 重建 + 主循环（`bell.setRound/update/takeEvents` → 冻结 + `rootPlayer` + `knockback`；`crate.setRelicLevel/update`）+ 存档 + 调试口（`__game.block114` 桶）；`shop.js` 三件货 + `itemLocked`；`upgrade.js` 六张卡 + `crateChange()` + `weightOf` 门；`relics.js` 定义 + `levels/cds`；`codex.js` 两条文案 + 两张缩略图。
 - 回归：新建 `.tmp-block130-test.mjs`（139 项）+ `.tmp-130-smoke.js`（CDP 实跑第十七关 PASS、零 console 报错）；老套件按十七关口径更新（怪 37 / 卡 133 / 商店 55 / 法器 19 / 技能 14 / 关卡 17 / glb 37 / 模块 75）。
 
-### 2.9 第 129 块：第十六关「钟楼画室」+ 铅笔线稿圈 + 铅笔 / 描红
+### 2.10 第 129 块：第十六关「钟楼画室」+ 铅笔线稿圈 + 铅笔 / 描红
 
 用户定案：场地机制 = **线稿定稿**；两只新怪 = **纸屑 + 画框**；配套 = **铅笔（第 18 件法器）+ 描红（技能，`R`）**；两只新怪各用一份新下载的 CC0 模型（零复用）。
 
@@ -338,7 +354,7 @@ C —— 分段复制（`index.html` + `js/main.js` + `style.css`）：
 - 回归：新建 `.tmp-block129-test.mjs`（137 项，七段）+ `.tmp-129-smoke.js`（CDP 实跑第十六关 PASS、零 console 报错）；19 个老套件的计数与源码断言按十六关口径更新（法器 18 / 技能 13 / 商店 52 / 卡 127 / 怪 35 / 关卡 16 / glb 35 / 模块 73）。
 - 缩略图坑：`paper / frame` 都是平摊模型，初版图只有影子。三处同时改才出得来 —— ① `doubleSided:true`（两处 traverse 都要设 `THREE.DoubleSide`）；② `.tmp-codex-shots.js` 的 `ELEV`（paper 0.62 / frame 0.30 提高俯角）；③ `SHADOW_K`（paper 0.28，影子小一点镜头才不拉远）。
 
-### 2.10 第 128 块：第十五关「钟楼直播间」+ 补光曝光区 + 环形灯 / 开播
+### 2.11 第 128 块：第十五关「钟楼直播间」+ 补光曝光区 + 环形灯 / 开播
 
 用户两轮定案：场地机制 = **补光曝光区**；两只新怪 = **超管 + 弹幕**；配套 = **环形灯（第 17 件法器）+ 开播（技能）**；键位 **Q / E**；两只新怪各用一份**新下载的 CC0 模型**；数值取「更贪」一档。
 
@@ -368,7 +384,7 @@ C —— 分段复制（`index.html` + `js/main.js` + `style.css`）：
 - 回归：新建 `.tmp-block128-test.mjs`（192 项，八段）；13 个老套件的计数与源码断言按十五关口径更新（法器 17 / 技能 12 / 商店 49 / 卡 122 / 怪 33 / 关卡 15 / glb 33）。
 - 实机自检：headless Chrome 加载 `?debug=1` → `setLevel(15)`，无运行时异常；光斑 2 盏、环形灯 / 开播 / 禁言三个口都响应，两只新怪能生成。
 
-### 2.11 第 127 块：收件人 / 回声减血 + 连杀「数字不封顶、加成封顶」
+### 2.12 第 127 块：收件人 / 回声减血 + 连杀「数字不封顶、加成封顶」
 
 用户两条实测反馈：①「收件人和回声的血太厚」；②「连击数量显示无上限，但是属性加成有上限」。
 
@@ -385,7 +401,7 @@ C —— 分段复制（`index.html` + `js/main.js` + `style.css`）：
 - 手感只改 `HEAT_BONUS_CAP` 一个常量；**别在 `setHeat` 里加 `Math.min`**（那是第 125 块修掉的 bug）。
 - 回归：`.tmp-block125-test.mjs` 的 ③ 段已按新语义改写（30 连杀 → 数字 30、加成 1.12 / 1.18），版本断言改成 `>=` 免得每次 bump 都红。
 
-### 2.12 第 126 块：照影换成主角同款模型（紫色）
+### 2.13 第 126 块：照影换成主角同款模型（紫色）
 
 用户一句话：「把模仿者的 3D 模型换成和主角一样，只不过把黄色换成紫色」。
 「模仿者」= 第十关的**照影**（`mirror`，唯一照抄玩家面板的怪）。
@@ -436,7 +452,7 @@ C —— 分段复制（`index.html` + `js/main.js` + `style.css`）：
 + `.tmp-126-cdp.js` 13 项（含**截图采样**验紫色、bounce 的 y 采样、spawn 态不进 handleMirror 的时机问题）。
 老套件回修 3 条：block52 把 mirror 加进静态模型白名单、block107 的 phantom 值、block110 的 height/radius。
 
-### 2.13 第 125 块：删「等的那个」+ 连杀不封顶
+### 2.14 第 125 块：删「等的那个」+ 连杀不封顶
 
 **用户两条实测反馈**（都是「设计一眼就不对」的类型，不是数值微调）：
 ① 「第十关里等的那个没有任何意义，直接删除」；② 「连击打到十次以上就不在往上了」。
@@ -461,7 +477,7 @@ C —— 分段复制（`index.html` + `js/main.js` + `style.css`）：
 - **顺手修了一个一直没接上的谎**：连杀浮现文案从第 117 块起就写着「攻速 +N%」，
   但 `heat.atkMul()` 只参与文案计算，从没乘进 `attackCd`。现在 `attackCd = 1 / (攻速 × heat.atkMul())`。
 
-### 2.14 第 124 块：第十四关「钟楼打样间」+ 裁切刀 + 裁纸刀
+### 2.15 第 124 块：第十四关「钟楼打样间」+ 裁切刀 + 裁纸刀
 
 **场地「裁切刀」**（`js/cutter.js`，零 import 引擎，和 `traffic / track / fog` 同款）
 - 相位机 `idle → warn(1.25s) → slice(0.22s) → recover(0.55s)`；`slots = [-7, -2.3, 2.3, 7]` 轮换 + 每换位翻一次横竖（八种组合）；`gap 5.2 → gapMin 3.1` 随回合加速；`roundNo >= 15` 起偶尔一次落两刀。
@@ -480,7 +496,7 @@ C —— 分段复制（`index.html` + `js/main.js` + `style.css`）：
 
 **接线**：`wave.js` 的 `LEVEL_14`（arena 19、`scale 1.65 / 2.00`、18 种怪、`cutter` 字段）+ `LEVELS_BY_ID[14]`；`main.js` 的 `LEVELS` 表 + import；`scene.js` 新增 `press` 主题（`makePressTexture()`）；`story.js` 的 s14 绑第十四关；`skills.js` 第 10 格；`upgrade.js` 四张卡 + `guillotineChange()`；`shop.js` 三件货。
 
-### 2.15 上一块：第 122 块（回合挑战 + 三选一刷新，细节见 git log）
+### 2.16 上一块：第 122 块（回合挑战 + 三选一刷新，细节见 git log）
 
 **回合挑战**（`js/challenge.js` 纯数据纯函数，零 DOM 零业务 import；接线全在 `main.js`）
 - 每关 `planRounds()` 从 `[3, rounds-1]` 无放回抽 **2 个回合**（独立 `chal` 随机流），**回合开始前**弹卡。
@@ -495,7 +511,7 @@ C —— 分段复制（`index.html` + `js/main.js` + `style.css`）：
 
 **生命周期**：效果 src 分别是 `chal` / `boost`，`clearRoundBuffs()` 里成对撤；`resumeGame` 成对抹 + `weapon.setMuted(false)` + `applySkillCdFactor(1)`；`resetRunState` 归零全部计数。存档带 `chal: {plan, used, seen}`。
 
-### 2.16 最近几块（一行一块）
+### 2.17 最近几块（一行一块）
 
 - **143 v=161**：安卓 App 壳（工程在 `../naiwa-app`，Capacitor 6，包名 `com.luohuayu.naiwa`）；游戏侧只动三处（SW 原生跳过 / `askAppMigrate()` 首装迁移引导 / `backButton` 分级拦截），网页版行为与数值零变化。
 - **142 v=160**：合成台结果从「一行小字」改成面板内大结果卡（档位标签 + 结果名 + 描述 + 实际拿到什么，四档配色 + 弹入动画）；index/style/main 三处小改。
@@ -527,9 +543,9 @@ C —— 分段复制（`index.html` + `js/main.js` + `style.css`）：
 - **116/117**：第十二关「三幻神驿站」+ 车流 + 加急袋鼠 + 拿铁；声音开关移设置、删剑转、连杀改屏幕中央浮现。
 - 更早：查 `git log --oneline`。
 
-### 2.17 规模数字（改数值断言必看）
+### 2.18 规模数字（改数值断言必看）
 
-关卡 **18** · 怪 **47**（**46 个 glb，零复用，没有一只是手搓的**；`blankMinion` 是隐藏图鉴；图鉴 **46** webp）· 升级卡 **138** · 商店 **58** · 法器 **20** · 技能键 **15** · 火种簇 **23**（核心 9）· 成就 **152** · 事件 **131** · 每日任务池 **63** · 礼包码 52 · 火种卡 16 · 诅咒 6 · js 模块 **76**（`?v=161`）。
+关卡 **18** · 怪 **47**（**46 个 glb，零复用，没有一只是手搓的**；`blankMinion` 是隐藏图鉴；图鉴 **46** webp）· 升级卡 **138** · 商店 **58** · 法器 **20** · 技能键 **15** · 火种簇 **23**（核心 9）· 成就 **152** · 事件 **131** · 每日任务池 **63** · 礼包码 52 · 火种卡 16 · 诅咒 6 · js 模块 **76**（`?v=162`）。
 
 ---
 

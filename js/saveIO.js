@@ -241,7 +241,7 @@ export function payloadCode(payload) {
 // File 名，不再自己拼一份，免得 toast 和真实文件名对不上。
 export function fileName(now = new Date()) {
   const p = (n) => String(n).padStart(2, '0');
-  return '蛙步·夜行存档文件-' + now.getFullYear() + p(now.getMonth() + 1) + p(now.getDate())
+  return '奶蛙·夜行存档文件-' + now.getFullYear() + p(now.getMonth() + 1) + p(now.getDate())
     + '-' + p(now.getHours()) + p(now.getMinutes()) + '.txt';
 }
 
@@ -250,7 +250,7 @@ export function fileName(now = new Date()) {
 // ------------------------------------------------------------
 export function validate(p) {
   if (!p || typeof p !== 'object' || Array.isArray(p)) return { ok: false, err: '这不是存档数据' };
-  if (p.app !== APP) return { ok: false, err: '这不是《蛙步 · 夜行》的存档' };
+  if (p.app !== APP) return { ok: false, err: '这不是《奶蛙 · 夜行》的存档' };
   if (!p.data || typeof p.data !== 'object' || Array.isArray(p.data)) return { ok: false, err: '存档里没有数据' };
   if (p.data[K_PROFILE] == null) return { ok: false, err: '存档缺少进度数据' };
   const prof = parseJson(p.data[K_PROFILE]);
