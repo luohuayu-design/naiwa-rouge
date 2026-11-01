@@ -76,12 +76,12 @@ ok(lookupGift(bare.slice(0, -1) + 'Z') === null, '改掉最后一个字母就认
 // ============================================================
 sec('④ 与老码互不干扰');
 // ============================================================
-ok(GIFT_COUNT === 51, '码表共 51 条（40 老码 + 10 夜行礼包 + 1 建群大典）', String(GIFT_COUNT));
+ok(GIFT_COUNT === 52, '码表共 52 条（40 老码 + 10 夜行礼包 + 1 建群大典 + 1 更新补贴）', String(GIFT_COUNT));
 {
   const rows = [...giftSrc.matchAll(/\[\s*'([0-9a-f]{16})'\s*,\s*(\d+)(?:\s*,\s*'([^']*)')?\s*\]/g)];
   const hashes = rows.map((r) => r[1]);
-  ok(rows.length === 51, '源码里能数出 51 条表项', String(rows.length));
-  ok(new Set(hashes).size === hashes.length, '51 条哈希互不相同（没有碰撞）', `${new Set(hashes).size}/${hashes.length}`);
+  ok(rows.length === 52, '源码里能数出 52 条表项', String(rows.length));
+  ok(new Set(hashes).size === hashes.length, '52 条哈希互不相同（没有碰撞）', `${new Set(hashes).size}/${hashes.length}`);
   const n888 = rows.filter((r) => r[2] === '888').length;
   ok(n888 === 1, '888 面额只有这一条', String(n888));
   ok(!new RegExp('\\[\\s*\'' + HASH + '\'\\s*,\\s*(?!888)\\d+').test(giftSrc), '这条哈希没被别处复用成别面额');

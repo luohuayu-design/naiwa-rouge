@@ -92,7 +92,7 @@ ok(!/tt-promo-btn/.test(cssSrc), '.tt-row .tt-promo-btn 那两条死样式已删
 // ============================================================
 sec('B、兑换码：宣传礼包 300 ×10 / 推荐礼包 100 ×10');
 
-ok(GIFT_COUNT === 51, `码表共 51 个（第一批 20 + 本批 20 + 第 94 块夜行礼包 10 + 第 101 块建群大典 1，实际 ${GIFT_COUNT}）`);
+ok(GIFT_COUNT === 52, `码表共 52 个（第一批 20 + 本批 20 + 第 94 块夜行礼包 10 + 第 101 块建群大典 1 + 第 133 块更新补贴 1，实际 ${GIFT_COUNT}）`);
 const promoRows = [...giftSrc.matchAll(/\['([0-9a-f]{16})', 300, '宣传礼包'\]/g)];
 const recRows = [...giftSrc.matchAll(/\['([0-9a-f]{16})', 100, '推荐礼包'\]/g)];
 ok(promoRows.length === 10, `宣传礼包 10 条（实际 ${promoRows.length}）`);
