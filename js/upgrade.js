@@ -1,4 +1,4 @@
-﻿// ============================================================
+// ============================================================
 // upgrade.js —— 局内成长：回合结束的三选一
 //
 // 设计原则：
@@ -34,9 +34,9 @@
 //   标了 scope:'weapon' 的项改的是武器表（剑系 / 元素系），其余改主角表。
 //   两块表都要传进来，没传 wstats 时武器项会退化到主角表（只为兼容老调用）。
 // ============================================================
-import { STAT_DEFS } from './stats.js?v=147';
-import { WEAPON_STAT_DEFS } from './weaponStats.js?v=147';
-import { RARITIES, rarityWeight, oddsOf } from './rarity.js?v=147';
+import { STAT_DEFS } from './stats.js?v=148';
+import { WEAPON_STAT_DEFS } from './weaponStats.js?v=148';
+import { RARITIES, rarityWeight, oddsOf } from './rarity.js?v=148';
 
 // 一张卡改的是哪块表
 function tableFor(scope, stats, wstats) {
@@ -172,7 +172,10 @@ export const FAMILIES = [
     desc: () => '剑转得更快，同样时间扫过更多怪',
   },
   {
-    id: 'swordForge', tag: 'atk', glyph: '⚒', name: '锻造', w0: 0.90, gw: +0.010,
+    // 第 131 块（用户要求「适当提高剑匣补满的概率」）：w0 0.90 → 1.20，gw 0.010 → 0.014。
+    // 基础权重 +33%（第 1 回合 0.90 → 第 10 回合 0.99 的老曲线，现在是 1.20 → 1.33），
+    // 品质仍是普通（rarity 0，mul 1.00），所以排到三选一里的实际概率同比上升。
+    id: 'swordForge', tag: 'atk', glyph: '⚒', name: '锻造', w0: 1.20, gw: +0.014,
     needsWeapon: true, scope: 'weapon',
     stat: 'swordRefill', mode: 'flat', vals: [-2.0, -3.5, -6.0],
     title: (v) => `剑匣补满 −${trim(Math.abs(v))} 秒`,

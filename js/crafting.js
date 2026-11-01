@@ -39,6 +39,27 @@ const ELITE_BONUS = 0.06;      // 精英怪额外 +6%
 // 权重已按用户定案：废 40 / 平 40 / 杰作 15 / 事故 5。
 const OUTCOME_W = { junk: 40, normal: 40, master: 15, accident: 5 };
 
+// ---------------- 兜底结果（第 131 块） ----------------
+// 兜底配方不走武器 / 法器，所以结果只可能是「碎料折算成骨币」。
+// kind:'coins' 由 main.js 的 applyCraftResult 结算（本模块不碰金币系统）。
+const FALLBACK_GOOD = {
+  kind: 'coins', coins: 4,
+  name: '边角料', desc: '合不出正品，碎料被商人收走，换了几枚骨币',
+};
+const FALLBACK_BAD = {
+  kind: 'coins', coins: 1,
+  name: '一点渣', desc: '火候不对，只刮出一枚骨币',
+};
+
+// 六条兜底配方：每种残片各一条，只吃自己 1 个，无武器 / 法器要求。
+const FALLBACK_RECIPES = SHARD_IDS.map((id) => ({
+  id: `${id}_fallback`,
+  fallback: true,
+  match: { shards: { [id]: 1 }, weapon: undefined, relic: undefined },
+  good: FALLBACK_GOOD,
+  bad: FALLBACK_BAD,
+}));
+
 // ---------------- 配方表（内部实现用，玩家不可见） ----------------
 // 每个配方给「好 / 坏」两种可能结果；同配方也可能赌输。
 // match 描述原料需求（三种语义严格区分）：
@@ -83,6 +104,14 @@ export const RECIPES = [
     good: { kind: 'sword', sword: 'master', name: '冬雷', desc: '冻结 + 全场连锁', master: true },
     bad:  { kind: 'junk_sword', name: '哑雷', desc: '雷剑不再连锁', noChain: true },
   },
+
+  // ---------------- 兜底配方（第 131 块 · 用户定案） ----------------
+  // 上面 6 条都要求「特定的剑 / 法器」，现实里经常凑不齐 —— 于是有的残片永远用不上。
+  // 兜底配方只吃**这一枚残片**（1 个，不需要任何武器 / 法器），结果降一档：
+  // 合不出正品，只能把碎料折算成骨币（好 4 枚 / 坏 1 枚）。
+  // ⚠️ 必须排在专属配方**之后**：findRecipe 取第一条命中的，
+  //    有铁剑 + 锈铁屑时依旧先走 rust_iron，兜底只当「实在没得选」的那条。
+  ...FALLBACK_RECIPES,
 ];
 
 // 通用「事故」彩蛋：炸炉 —— 全场怪受伤 + 玩家也被震掉血。

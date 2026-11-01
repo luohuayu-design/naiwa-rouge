@@ -161,6 +161,24 @@ console.log('=== 合成台引擎契约测试 ===\n');
   okEq('重置后 crafted 清空', sys2.craftedList().length, 0);
 }
 
+// ---- ⑥ 兜底配方：6 种残片都能单独合（第 131 块） ----
+{
+  for (const id of SHARD_IDS) {
+    const sys = createCraftingSystem({ rng: () => 0.5 });   // 0.5*100=50 → normal
+    sys.restore({ shards: { [id]: 1 }, crafted: [] });
+    // 不递任何武器 / 法器：兜底配方必须照样能吃下这一枚
+    const rec = sys.craft({ shards: { [id]: 1 }, weapon: null, relic: null });
+    ok(`${id} 的兜底配方存在`, rec.outcome !== 'no_recipe');
+    okEq(`${id} 兜底结果折算骨币`, rec.result && rec.result.kind, 'coins');
+    okEq(`${id} 合完归零`, sys.shardCount(id), 0);
+  }
+  // 专属配方仍然排在兜底之前：有铁剑时锈铁屑走 rust_iron
+  const sys = createCraftingSystem({ rng: () => 0.5 });
+  sys.restore({ shards: { rust: 1 }, crafted: [] });
+  const rec = sys.craft({ shards: { rust: 1 }, weapon: 'iron', relic: undefined });
+  okEq('专属配方优先于兜底', rec.recipe, 'rust_iron');
+}
+
 // ---- 残片定义完整性 ----
 {
   okEq('残片数量=6', SHARD_IDS.length, 6);

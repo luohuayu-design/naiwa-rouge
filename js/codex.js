@@ -1,4 +1,4 @@
-﻿// ============================================================
+// ============================================================
 // codex.js —— 图鉴（第 18 块）
 //
 // 五个页签：怪物 / 武器 / 法器 / 升级卡 / 奇遇。
@@ -13,13 +13,13 @@
 // （击杀 / 弹事件卡 / 选升级卡）。
 // ============================================================
 
-import { ENEMY_TYPES } from './enemy.js?v=147';
-import { SWORD_KINDS } from './swordKinds.js?v=147';
-import { RELIC_DEFS } from './relics.js?v=147';
-import { UPGRADES } from './upgrade.js?v=147';
-import { ALL_EVENTS } from './events.js?v=147';
-import { RARITIES } from './rarity.js?v=147';
-import { codexAll, codexCount } from './profile.js?v=147';
+import { ENEMY_TYPES } from './enemy.js?v=148';
+import { SWORD_KINDS } from './swordKinds.js?v=148';
+import { RELIC_DEFS } from './relics.js?v=148';
+import { UPGRADES } from './upgrade.js?v=148';
+import { ALL_EVENTS } from './events.js?v=148';
+import { RARITIES } from './rarity.js?v=148';
+import { codexAll, codexCount } from './profile.js?v=148';
 
 export const CODEX_TABS = [
   { id: 'enemies', name: '怪物' },
