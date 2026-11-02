@@ -181,8 +181,8 @@ ok(/function clearRoundBuffs\(\)[\s\S]{0,900}clearBoost\(\)/.test(mainSrc),
 ok(/boostSrc/.test(mainSrc) && !/roundBuffSrc = boostSrc/.test(mainSrc),
   '大涨用独立 boostSrc，不抢 roundBuffSrc');
 // 受击加重
-ok(/const raw = amount \* \(1 \+ runCurseDmg\) \* \(1 \+ boxCurseDmg\) \* \(1 \+ chalDmgTaken\) \* lightMul;/.test(mainSrc),
-  '破防挑战乘在 hurtPlayer 的 raw 上（盲盒减成也各占一项；第 128 块尾部再乘曝光/开播）');
+ok(/const raw = Math\.min\([^;]*amount \* \(1 \+ runCurseDmg\) \* \(1 \+ boxCurseDmg\) \* \(1 \+ chalDmgTaken\) \* lightMul[^;]*\);/.test(mainSrc),
+  '破防挑战 / 盲盒 / 曝光都乘在 hurtPlayer 的 raw 上，外面再套第 146 块的 35% 防秒护栏');
 // 攻击力用 mul 不用 flat
 ok(/stats\.addMod\(\{ stat: 'attack', mul: target \/ Math\.max/.test(mainSrc),
   '绵软挑战用 mul 折算（flat 会被 pct 放大）');
