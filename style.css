@@ -7,7 +7,7 @@
    签到红点就是这么「签完了还亮着」的（第 60 块修的）。这条放在最前面，管住全站所有
    `el.hidden = true` 的开关。 */
 [hidden]{display:none!important}
-html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
+html,body{width:100%;height:100%;max-width:100vw;overflow:hidden;overflow-x:hidden;background:#080f14;
   font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
   color:#e8f3ee;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;
   overscroll-behavior:none;touch-action:none}
@@ -2321,11 +2321,19 @@ html,body{width:100%;height:100%;overflow:hidden;background:#080f14;
    visualViewport.height 的较大值，绝不比原来矮）；这里给所有 position:fixed
    的全屏层显式高度（inset:0 下 top+height 生效、bottom 被忽略），并把各卡片
    的 vh 限高换成同一个变量。没有 JS / 老浏览器的退路：100vh → 有 dvh 用 dvh。 */
-:root{--app-h:100vh}
+:root{--app-h:100vh;--app-w:100vw}
 @supports (height:100dvh){:root{--app-h:100dvh}}
 #app,#touchLayer,.attr-panel,#hurtFx,.result,#failTip,#meetCard,.upgrade,
 #loading,.title-scr,.tt-sub-scr,.modal,.wcard,.bag-panel,.event-card,.shop,
 .story-read,#noticeOv,.pack-get,#promoOv{height:var(--app-h,100vh)}
+/* 第 145 块（荣耀 / HarmonyOS 真机）：布局视口被算宽时，右对齐 / 居中的东西会被推到
+   屏幕外。--app-w 是 JS 按「真实可视宽度」写的；100vw 仍是布局视口，两者之差就是
+   要往左退的量（正常机型两边相等，退 0）。 */
+#app,#touchLayer{width:var(--app-w,100vw)}
+#waveHud{right:calc(100vw - var(--app-w,100vw))}
+.name-board{right:calc(100vw - var(--app-w,100vw))}
+#skillBar{right:calc(14px + env(safe-area-inset-right) + 100vw - var(--app-w,100vw))}
+#hint{left:calc(var(--app-w,100vw) / 2)}
 
 /* ---------- 图鉴 / 夜行记忆卡顿（第 57 块，用户报「非常卡顿」） ----------
    根因：.tt-sub-scr 带 backdrop-filter 模糊，而画布在菜单期间一直每帧重绘

@@ -197,7 +197,7 @@ ok(/\.notice-box,\.promo-box\{max-height:calc\(var\(--app-h,100vh\) - 24px\)\}/.
 // ============================================================
 sec('G、全屏浮层 --app-h（截图：浮层只盖八成、底部露黑、卡片被切）');
 
-ok(/:root\{--app-h:100vh\}/.test(cssSrc), 'CSS 侧默认 --app-h:100vh');
+ok(/:root\{--app-h:100vh/.test(cssSrc), 'CSS 侧默认 --app-h:100vh（第 145 块起同一行还写 --app-w）');
 ok(/@supports \(height:100dvh\)\{:root\{--app-h:100dvh\}\}/.test(cssSrc.replace(/\n/g, '')),
   '有 dvh 的环境默认值升级成 100dvh');
 const layerRule = (cssSrc.match(/#app,#touchLayer[\s\S]*?#promoOv\{height:var\(--app-h,100vh\)\}/) || [''])[0];
@@ -216,10 +216,11 @@ ok(/function appH\(\)/.test(mainSrc), '有 appH()（取 innerHeight 与 visualVi
 ok(/function syncAppHeight\(\)/.test(mainSrc), '有 syncAppHeight()');
 ok(/document\.documentElement\.style\.setProperty\('--app-h'/.test(mainSrc), '写到 :root 的 --app-h');
 ok(/syncAppHeight\(\);[\s\S]{0,80}window\.addEventListener\('resize', syncAppHeight\)/.test(mainSrc), 'resize 时重算');
-ok(/window\.visualViewPort|window\.visualViewport\) window\.visualViewport\.addEventListener\('resize', syncAppHeight\)/.test(mainSrc),
+ok(/if \(window\.visualViewport\) \{[\s\S]{0,260}?visualViewport\.addEventListener\('resize', syncAppHeight\)/.test(mainSrc),
   'visualViewport.resize 时重算（工具栏收起的那一刻）');
-ok(/orientationchange', \(\) => setTimeout\(syncAppHeight, 120\)/.test(mainSrc), '转屏后重算');
-ok(/const w = window\.innerWidth, h = appH\(\);/.test(mainSrc), '渲染器尺寸也用 appH()（画布跟着盖满）');
+ok(/orientationchange', \(\) => setTimeout\(\(\) => \{ syncAppHeight\(\); syncAppWidth\(\); \}, 120\)/.test(mainSrc), '转屏后重算');
+ok(/function appW\(\)/.test(mainSrc), '有 appW()（第 145 块：鸿蒙宽视口兜底）');
+ok(/const w = appW\(\), h = appH\(\);/.test(mainSrc), '渲染器尺寸用 appW()/appH()（画布跟着盖满、且不横向溢出）');
 
 // ============================================================
 console.log(`\n结果：${pass} 通过 / ${fail} 失败`);

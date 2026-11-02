@@ -36,7 +36,10 @@ export function createJoystick({ layer, el, maxRadius = 46, leftRatio = 0.58, de
   function onDown(e) {
     if (pid !== null) return;                       // 已经有一根手指在控制
     // 默认只认左半屏（右侧留给技能键）；右手模式反过来
-    if (rightHand ? e.clientX < innerWidth * (1 - ratio) : e.clientX > innerWidth * ratio) return;
+    // 第 145 块：按触摸层自己的宽度算，别用 innerWidth —— 国产 WebView 放大过页面时
+    // 两者不相等，会让「左半屏」的边界跑到屏幕外、看起来像是按不到。
+    const halfW = layer.clientWidth || innerWidth;
+    if (rightHand ? e.clientX < halfW * (1 - ratio) : e.clientX > halfW * ratio) return;
     if (e.pointerType === 'mouse' && e.button !== 0) return;
 
     pid = e.pointerId;
