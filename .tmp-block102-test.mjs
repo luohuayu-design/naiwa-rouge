@@ -1,10 +1,8 @@
-// 第 102 块契约（纯 Node，不起浏览器）
-// 用户：在公告里添加 QQ 群号 1132440548（支持一键复制）。
-//   · 公告弹窗（#noticeOv）加一行「👥 QQ 群」+ 数字 + 📋 复制按钮，样式复用 .cp-row
-//   · 「宣传有礼」弹层（#promoOv）里也有同一套联系方式块，一起加上保持两处信息一致
-//   · 复制走现成的 delegation（.notice-copy + data-copy），不另写逻辑
-//   · 公告/宣传有礼都有「日期 + 版本」本机记录，改内容必须把 NOTICE_VER / PROMO_VER +1，
-//     否则今天勾过「今日不再弹出」的老玩家永远看不到新增的群号
+// 第 147 块契约（纯 Node，不起浏览器）
+// 用户 2026-11-02：公告的全部内容（QQ 号 / QQ 群 / 本站网址）全部删去，改成「每次更新的内容」。
+//   · #noticeOv 正文换成更新日志（.nt-rel + .nt-ver），不再有任何联系方式与复制按钮
+//   · 公告弹窗上那套 .notice-copy 委托一并删掉；copyText 保留（宣传有礼还在用）
+//   · 改内容必须把 NOTICE_VER +1，否则今天勾过「今日不再弹出」的老玩家看不到新版
 // 跑法：node .tmp-block102-test.mjs（cwd = naiwa-rouge）
 import { readFileSync, readdirSync } from 'node:fs';
 
@@ -22,8 +20,6 @@ const cssSrc = read('./style.css');
 const mainSrc = read('./js/main.js');
 const VER = (htmlSrc.match(/js\/main\.js\?v=(\d+)/) || [, ''])[1];
 
-const GROUP = '1132440548';
-
 // 切块：按注释锚点／相邻弹层的 id 取片段
 function block(startPat, endPat) {
   const i = htmlSrc.search(startPat);
@@ -32,68 +28,52 @@ function block(startPat, endPat) {
   return htmlSrc.slice(i, j < 0 ? i + 4000 : j);
 }
 const noticeHtml = block(/<div id="noticeOv"/, '<div id="signOv"');
-const promoHtml = block(/<div id="promoOv"/, '<div id="packGet"');
 
 // ============================================================
-sec('① 公告里有群号，且挂着一键复制');
+sec('① 公告里不再有任何联系方式');
 // ============================================================
 ok(noticeHtml.length > 0, '切到了 #noticeOv 区块', String(noticeHtml.length));
-ok(noticeHtml.includes(`data-copy="${GROUP}"`), '公告里有 data-copy="' + GROUP + '" 的复制按钮');
-ok(new RegExp(`<span class="cp-val">${GROUP}</span>`).test(noticeHtml), '群号写在同一行的 .cp-val 里（一眼能看到，不用点）');
-ok(/QQ 群/.test(noticeHtml), '标签文案写了「QQ 群」');
-// 标签必须能跟「本人 QQ」「本站网址」一样单行放得下（太长会把群号挤到第三行，几行高矮不齐）
-{
-  const label = (noticeHtml.match(/<span class="cp-label">([^<]*QQ 群[^<]*)<\/span>/) || [, ''])[1];
-  ok(label.length <= 16 && !/[（(]/.test(label), '标签够短（能单行放下，不把群号挤到下一行）', `${label} · ${label.length} 字符`);
-}
-ok((noticeHtml.match(/class="notice-copy"/g) || []).length === 3,
-  '公告里共 3 个复制按钮（本人 QQ / QQ 群 / 本站网址）',
-  String((noticeHtml.match(/class="notice-copy"/g) || []).length));
-ok((noticeHtml.match(/class="cp-row"/g) || []).length === 3, '三行联系方式结构一致（.cp-row）');
+ok(!/3829845261/.test(noticeHtml), '没有本人 QQ 号');
+ok(!/1132440548/.test(noticeHtml), '没有 QQ 群号');
+ok(!/github\.io/.test(noticeHtml), '没有本站网址');
+ok(!/data-copy=|class="notice-copy"|class="cp-row"/.test(noticeHtml), '复制按钮 / 联系方式行全部移除');
+ok(!/QQ|群号|网址/.test(noticeHtml), '正文里不再出现 QQ / 群 / 网址字样');
 
 // ============================================================
-sec('② 宣传有礼弹层同步（同一套联系方式，两处不许打架）');
+sec('② 公告正文 = 每次更新的内容');
 // ============================================================
-ok(promoHtml.length > 0, '切到了 #promoOv 区块', String(promoHtml.length));
-ok(promoHtml.includes(`data-copy="${GROUP}"`), '宣传有礼里也有群号复制按钮');
-ok(new RegExp(`<span class="cp-val">${GROUP}</span>`).test(promoHtml), '宣传有礼里的群号同样直接显示');
-ok((promoHtml.match(/class="cp-row"/g) || []).length === 3, '宣传有礼里也是三行联系方式');
+ok(/notice-hd">📢 更新日志/.test(noticeHtml), '标题改成「更新日志」');
+ok((noticeHtml.match(/class="nt-rel"/g) || []).length >= 3, '至少三条版本更新',
+  String((noticeHtml.match(/class="nt-rel"/g) || []).length));
+ok((noticeHtml.match(/class="nt-ver"/g) || []).length >= 3, '每条都带版本号');
+ok(/35%/.test(noticeHtml), '写了防秒护栏这一版');
+ok(/鸿蒙|荣耀/.test(noticeHtml), '写了鸿蒙 / 荣耀错位修复这一版');
+ok(/奶蛙|改名/.test(noticeHtml), '写了改名换图标这一版');
+ok(/nb-note/.test(noticeHtml) && /存档备份/.test(noticeHtml), '保留存档提示（不是联系方式）');
 
-// 全页只许这两处，避免复制粘贴出一堆重复行
-ok((htmlSrc.match(new RegExp(GROUP, 'g')) || []).length === 4,
-  '全页群号共 4 处 = 2 个 .cp-val + 2 个 data-copy（没有多余拷贝）',
-  String((htmlSrc.match(new RegExp(GROUP, 'g')) || []).length));
-
 // ============================================================
-sec('③ 复制逻辑复用现成的 delegation（不另起一套）');
+sec('③ 公告的复制委托已删，copyText 仍给宣传有礼用');
 // ============================================================
-ok(/noticeOv\.addEventListener\('click', async \(e\) => \{[\s\S]{0,200}?closest\('\.notice-copy'\)/.test(mainSrc),
-  '公告弹窗上有 .notice-copy 的事件委托');
+ok(!/noticeOv\.addEventListener\('click'/.test(mainSrc), '公告弹窗不再绑 .notice-copy 委托');
 ok(/promoOv\.addEventListener\('click', async \(e\) => \{[\s\S]{0,200}?closest\('\.notice-copy'\)/.test(mainSrc),
-  '宣传有礼弹窗上也有同样的委托');
-ok(/copyText\(b\.dataset\.copy \|\| ''\)/.test(mainSrc), '复制取的是按钮上的 data-copy');
-ok((mainSrc.match(/copyText\(/g) || []).length >= 2, 'copyText 有 clipboard + execCommand 兜底（老 WebView 也能复制）');
-ok(/function copyText/.test(mainSrc) && /execCommand\('copy'\)/.test(mainSrc), '兜底路径真的存在');
+  '宣传有礼仍保留复制委托（另一处内容没动）');
+ok(/function copyText/.test(mainSrc) && /execCommand\('copy'\)/.test(mainSrc), 'copyText 与兜底路径都还在');
 
 // ============================================================
-sec('④ 版本号 +1（否则今天勾过「不再弹出」的人看不到新群号）');
+sec('④ 版本号 +1（否则今天勾过「不再弹出」的人看不到新内容）');
 // ============================================================
 const nVer = (mainSrc.match(/const NOTICE_VER = '(\d+)'/) || [, ''])[1];
-const pVer = (mainSrc.match(/const PROMO_VER = '(\d+)'/) || [, ''])[1];
-ok(nVer === '3', 'NOTICE_VER = 3（v3 加了群号）', nVer);
-ok(pVer === '2', 'PROMO_VER = 2（v2 加了群号）', pVer);
-ok(/NOTICE_VER/.test(mainSrc) && /noticeToday\(\)\}\|\$\{NOTICE_VER\}/.test(mainSrc),
-  '公告的「日期 + 版本」还是同一个键（换版 = 重新弹一次）');
+ok(nVer === '4', 'NOTICE_VER = 4（正文改成更新日志）', nVer);
+ok(/noticeToday\(\)\}\|\$\{NOTICE_VER\}/.test(mainSrc), '公告的「日期 + 版本」还是同一个键（换版 = 重新弹一次）');
 ok(/noticeHideToday/.test(mainSrc) && /noticeHideToday\.checked/.test(mainSrc),
   '「今日内不再弹出」的勾选逻辑没被改动');
 
 // ============================================================
-sec('⑤ 样式没新加一套（复用 .cp-row / .cp-val / .notice-copy）');
+sec('⑤ 样式');
 // ============================================================
-ok(/\.cp-row\{/.test(cssSrc), '.cp-row 样式存在');
-ok(/\.cp-val\{/.test(cssSrc), '.cp-val 样式存在');
-ok(/\.notice-copy\{/.test(cssSrc), '.notice-copy 样式存在');
-ok(!/cp-row-group|qq-group-row|notice-group/.test(cssSrc), '没有为群号新造一个样式类');
+ok(/\.notice-bd \.nt-rel\{/.test(cssSrc), '更新日志条目样式在');
+ok(/\.notice-bd \.nt-ver\{/.test(cssSrc), '版本号样式在');
+ok(/\.cp-row\{/.test(cssSrc), '宣传有礼在用的 .cp-row 没被误删');
 
 // ============================================================
 sec('⑥ 版本号：全站同一版（从 index.html 读，不写死）');
