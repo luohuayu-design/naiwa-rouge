@@ -37,9 +37,10 @@ ok(/id="promoArt"/.test(htmlSrc), '有艺术字特效层 #promoArt');
 ok(/id="promoHideToday"/.test(htmlSrc), '有「今日内不再弹出」勾选框 #promoHideToday');
 ok(/id="promoOk"/.test(htmlSrc), '有「我知道了」按钮 #promoOk');
 ok(/id="promoX"/.test(htmlSrc), '有 ✕ 关闭按钮 #promoX');
-ok(/id="btnPromo"/.test(htmlSrc), '主菜单有「🎁 宣传有礼」入口按钮');
-// 第 106 块：宣传搬去「据点」页，外观类从 tt-promo-btn 换成 .bp-it.promo
-ok(/class="bp-it promo" id="btnPromo"/.test(htmlSrc), '入口挂了专用样式类 bp-it promo');
+// 第 148 块（用户 2026-11-02 定）：宣传有礼整体下线 —— 主菜单入口删掉，弹层 DOM 留着
+ok(!/id="btnPromo"/.test(htmlSrc), '主菜单的「宣传有礼」入口已移除');
+ok(/id="promoOv"/.test(htmlSrc), '弹层 DOM 保留（PROMO_ON 改回 true 就能恢复）');
+ok(/const PROMO_ON = false;/.test(mainSrc), 'main.js 里 PROMO_ON = false（唯一开关）');
 // 艺术字层里就是「宣传有礼」四个大字 + 副题
 const artHtml = (htmlSrc.match(/<div class="promo-art"[\s\S]*?<\/div>/) || [''])[0];
 ok(/<b>宣传有礼<\/b>/.test(artHtml), '艺术字层主字就是「宣传有礼」');

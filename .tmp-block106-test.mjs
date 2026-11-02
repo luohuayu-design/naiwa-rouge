@@ -155,9 +155,10 @@ console.log('\n[6] index.html · 四个 tab 与据点面板');
   }
   ok(/class="tt-pane on" id="ttPaneMain"/.test(idx), '默认落在主页面');
   ok(/class="tt-tab on" id="ttTabMain"/.test(idx), '默认亮「主页面」那个 tab');
-  // 搬过去的八个入口：DOM 在据点面板里，id 一个都不能改（监听靠 id 挂的）
+  // 搬过去的七个入口：DOM 在据点面板里，id 一个都不能改（监听靠 id 挂的）
+  // 第 148 块：btnPromo 随宣传有礼一起下线，不再搬进据点面板
   const moved = ['btnCodex', 'btnStory', 'btnRecords', 'btnBoons',
-    'btnGift', 'btnSettings', 'btnNotice', 'btnPromo'];
+    'btnGift', 'btnSettings', 'btnNotice'];
   const base = idx.slice(idx.indexOf('id="ttPaneBase"'), idx.indexOf('id="ttTabs"'));
   for (const id of moved) {
     ok(base.includes(`id="${id}"`), `${id} 已经搬进据点面板`);

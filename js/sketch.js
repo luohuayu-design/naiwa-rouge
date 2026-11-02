@@ -16,7 +16,7 @@
 //
 // 零业务 import（和 spotlight.js / cutter.js / track.js 一套写法）：
 // 自己建几何、自己算位置，业务侧只调 update() / 查询函数 / takeEvents()。
-import * as THREE from '../lib/three.module.js?v=165';
+import * as THREE from '../lib/three.module.js?v=166';
 
 const Y = 0.046;   // 贴地抬高，别和地面 z-fighting
 
