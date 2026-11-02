@@ -41,6 +41,14 @@ ok(/id="promoX"/.test(htmlSrc), '有 ✕ 关闭按钮 #promoX');
 ok(!/id="btnPromo"/.test(htmlSrc), '主菜单的「宣传有礼」入口已移除');
 ok(/id="promoOv"/.test(htmlSrc), '弹层 DOM 保留（PROMO_ON 改回 true 就能恢复）');
 ok(/const PROMO_ON = false;/.test(mainSrc), 'main.js 里 PROMO_ON = false（唯一开关）');
+// 第 149 块：v=166 只挡了 closeSignin 那条，afterNoticeChain（今天已签）照样会弹 ——
+// 以后任何新增的自动弹点都必须被 PROMO_ON 包住，这条守住「一处都不能漏」。
+{
+  const idxs = [...mainSrc.matchAll(/showPromo\(false/g)].map((m) => m.index);
+  const unguarded = idxs.filter((i) => !mainSrc.slice(Math.max(0, i - 320), i).includes('PROMO_ON'));
+  ok(idxs.length >= 2, '两处自动弹点都还在（只挡不删）', String(idxs.length));
+  ok(unguarded.length === 0, `所有自动弹点都被 PROMO_ON 挡住（${idxs.length} 处）`, String(unguarded.length));
+}
 // 艺术字层里就是「宣传有礼」四个大字 + 副题
 const artHtml = (htmlSrc.match(/<div class="promo-art"[\s\S]*?<\/div>/) || [''])[0];
 ok(/<b>宣传有礼<\/b>/.test(artHtml), '艺术字层主字就是「宣传有礼」');
@@ -68,8 +76,9 @@ ok(/promoOv\.classList\.add\('art'\)/.test(mainSrc) && /promoTimer = setTimeout\
   '播艺术字 → 到点自动摘 .art（特效消散变标题）');
 // 第 63 块修正（过期测试）：链路后来重构成了 afterNoticeChain() + titleIdle()，
 //   「公告 → 签到（没签才弹）→ 宣传有礼」三级，判断条件也不再是裸的 gameState === 'title'。
-ok(/function afterNoticeChain\(\)[\s\S]{0,240}?if \(!promoOv\.classList\.contains\('on'\)\) showPromo\(false, true\);/.test(mainSrc),
-  '公告关闭 → 链上宣传有礼（艺术字版，带防重）');
+// 第 149 块：链路本身还在（艺术字版 + 防重），但被 PROMO_ON 挡住 —— PROMO_ON = false 时不弹
+ok(/function afterNoticeChain\(\)[\s\S]{0,320}?PROMO_ON && !promoOv\.classList\.contains\('on'\)\) showPromo\(false, true\);/.test(mainSrc),
+  '公告关闭 → 链上宣传有礼（整条被 PROMO_ON 挡住，代码保留）');
 ok(/if \(!signedToday\(\)\) \{ showSignin\(true\); return; \}/.test(mainSrc)
   && /function titleIdle\(\)[\s\S]{0,200}?gameState !== 'title'\) return false/.test(mainSrc),
   '链条带防重：标题页且没开子面板才弹（titleIdle）');
