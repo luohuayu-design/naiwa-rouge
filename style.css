@@ -2334,6 +2334,20 @@ html,body{width:100%;height:100%;max-width:100vw;overflow:hidden;overflow-x:hidd
    屏幕外。--app-w 是 JS 按「真实可视宽度」写的；100vw 仍是布局视口，两者之差就是
    要往左退的量（正常机型两边相等，退 0）。 */
 #app,#touchLayer{width:var(--app-w,100vw)}
+/* 第 150 块（鸿蒙真机：能移动了，但界面还是错位）：
+   v=163 只收窄了 #app / 触摸层和三个右对齐元素，**所有全屏浮层仍是 inset:0 → 宽度跟
+   布局视口（比屏幕宽）**，里面的 flex 居中按 100vw 居中，卡片就跑出屏幕右边、标题页
+   偏右被裁。这里把这些浮层也锁到 --app-w；正常机型 --app-w 就是 100vw，零变化。 */
+.attr-panel,.result,#failTip,.upgrade,#loading,.title-scr,.tt-sub-scr,.modal,.wcard,
+.bag-panel,.event-card,.shop,.story-read,#noticeOv,#promoOv,.pack-get,#hurtFx{
+  width:var(--app-w,100vw);max-width:var(--app-w,100vw)}
+/* 浮层里的卡片（.lv-card / .notice-box 等）仍写着 92vw / min(92vw,430px)，在宽视口
+   下会算出比屏幕还宽的尺寸 —— 统一压回容器内容宽。 */
+.title-scr > *,.tt-sub-scr > *,.modal > *,.result > *,#failTip > *,.upgrade > *,.shop > *,
+.event-card > *,.wcard > *,.bag-panel > *,.pack-get > *,.story-read > *,
+#noticeOv > *,#promoOv > *{max-width:100%}
+/* 布局视口比屏幕宽时，body 会出现横向滚动条 —— 一横向滑了整页就会「错位」，禁掉。 */
+html,body{max-width:100%;overflow-x:hidden}
 #waveHud{right:calc(100vw - var(--app-w,100vw))}
 .name-board{right:calc(100vw - var(--app-w,100vw))}
 #skillBar{right:calc(14px + env(safe-area-inset-right) + 100vw - var(--app-w,100vw))}
